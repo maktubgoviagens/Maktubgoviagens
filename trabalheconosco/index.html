@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trabalhe Conosco — Maktub Go</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green-dark:  #1b3826;
+      --green-mid:   #234832;
+      --green-light: #2d5c3f;
+      --gold:        #c9a96e;
+      --gold-light:  #dfc08a;
+      --cream:       #f5f0e8;
+      --white:       #ffffff;
+      --text-muted:  rgba(245,240,232,0.72);
+      --border:      rgba(201,169,110,0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--green-dark);
+      color: var(--cream);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── FADE-IN ANIMATION ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { opacity: 0; }
+    .reveal.visible { animation: fadeUp 0.8s ease forwards; }
+    .reveal.visible.d1 { animation-delay: 0.1s; }
+    .reveal.visible.d2 { animation-delay: 0.22s; }
+    .reveal.visible.d3 { animation-delay: 0.34s; }
+    .reveal.visible.d4 { animation-delay: 0.46s; }
+    .reveal.visible.d5 { animation-delay: 0.58s; }
+
+    /* ── CONTAINER ── */
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: var(--gold);
+      margin: 0 auto 56px;
+      opacity: 0.7;
+    }
+
+    /* ── SECTION LABEL ── */
+    .label {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+
+    /* ── HEADINGS ── */
+    h1, h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--white);
+    }
+    .italic-gold {
+      font-style: italic;
+      color: var(--gold);
+      font-weight: 300;
+    }
+
+    /* ══════════════════════════════
+       HERO
+    ══════════════════════════════ */
+    .hero {
+      text-align: center;
+      padding: 64px 32px 72px;
+      background-color: var(--green-dark);
+    }
+
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 52px;
+    }
+    .logo-wrap svg {
+      width: 36px;
+      height: 36px;
+    }
+    .logo-text {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--cream);
+      opacity: 0.85;
+    }
+    .logo-sub {
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--cream);
+      opacity: 0.5;
+    }
+
+    .hero h1 {
+      font-size: clamp(44px, 8vw, 82px);
+      margin-bottom: 6px;
+    }
+    .hero .subtitle-vaga {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 28px;
+      margin-bottom: 52px;
+    }
+
+    /* BENEFITS GRID */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border: 1px solid var(--border);
+      margin-top: 0;
+    }
+    .benefit-col {
+      padding: 22px 18px;
+      border-right: 1px solid var(--border);
+    }
+    .benefit-col:last-child { border-right: none; }
+    .benefit-label {
+      font-size: 8.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .benefit-value {
+      font-family: 'Jost', sans-serif;
+      font-size: 12.5px;
+      font-weight: 300;
+      line-height: 1.55;
+      color: var(--cream);
+    }
+    .benefit-row-full {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border);
+      padding: 20px 18px;
+      text-align: center;
+    }
+
+    /* ══════════════════════════════
+       SECTIONS
+    ══════════════════════════════ */
+    section {
+      padding: 88px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    /* QUEM SOMOS */
+    .quem-somos h2 {
+      font-size: clamp(36px, 6vw, 56px);
+      margin-bottom: 6px;
+    }
+    .quem-somos p {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin-top: 28px;
+    }
+    .quem-somos p + p { margin-top: 16px; }
+    .quem-somos strong { color: var(--cream); font-weight: 500; }
+
+    /* ESSENCIA */
+    .essencia h2 {
+      font-size: clamp(34px, 5.5vw, 52px);
+      margin-bottom: 6px;
+    }
+    .essencia p {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin-top: 20px;
+    }
+    .essencia p + p { margin-top: 14px; }
+    .essencia strong { color: var(--cream); font-weight: 500; }
+
+    /* SOBRE A VAGA */
+    .vaga h2 {
+      font-size: clamp(34px, 5.5vw, 52px);
+      margin-bottom: 6px;
+    }
+    .vaga ul {
+      list-style: none;
+      margin-top: 32px;
+      max-width: 620px;
+    }
+    .vaga ul li {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(201,169,110,0.12);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .vaga ul li::before {
+      content: '·';
+      color: var(--gold);
+      font-size: 22px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* PERFIL */
+    .perfil h2 {
+      font-size: clamp(34px, 5.5vw, 52px);
+      margin-bottom: 6px;
+    }
+    .cards-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 36px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      padding: 28px 30px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .card:hover {
+      border-color: rgba(201,169,110,0.55);
+      background: rgba(201,169,110,0.04);
+    }
+    .card-title {
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+    .card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ══════════════════════════════
+       CTA FOOTER
+    ══════════════════════════════ */
+    .cta-section {
+      text-align: center;
+      padding: 96px 32px;
+      border-top: 1px solid var(--border);
+    }
+    .cta-tagline {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: clamp(20px, 3.5vw, 28px);
+      font-weight: 300;
+      color: var(--text-muted);
+      margin-bottom: 44px;
+    }
+    .btn-candidatar {
+      display: inline-block;
+      padding: 16px 48px;
+      border: 1px solid var(--gold);
+      font-family: 'Jost', sans-serif;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cream);
+      text-decoration: none;
+      transition: background 0.3s, color 0.3s;
+      cursor: pointer;
+      background: transparent;
+    }
+    .btn-candidatar:hover {
+      background: var(--gold);
+      color: var(--green-dark);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .benefit-col:nth-child(2) { border-right: none; }
+      .benefit-col:nth-child(3) { border-top: 1px solid var(--border); }
+      .benefit-col:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+      .benefit-col:nth-child(5) { grid-column: 1 / -1; border-top: 1px solid var(--border); border-right: none; }
+    }
+    @media (max-width: 480px) {
+      .container { padding: 0 20px; }
+      .benefits-grid { grid-template-columns: 1fr; }
+      .benefit-col { border-right: none; border-top: 1px solid var(--border); }
+      .benefit-col:first-child { border-top: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ HERO ══ -->
+  <div class="hero">
+    <!-- Logo -->
+    <div class="logo-wrap reveal d1">
+      <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="30,4 56,52 4,52" stroke="#c9a96e" stroke-width="1.6" fill="none"/>
+        <line x1="30" y1="4" x2="30" y2="52" stroke="#c9a96e" stroke-width="1.2"/>
+        <circle cx="30" cy="30" r="5" stroke="#c9a96e" stroke-width="1.2" fill="none"/>
+      </svg>
+      <span class="logo-text">MAKTUB GO</span>
+      <span class="logo-sub">AGÊNCIA DE VIAGENS</span>
+    </div>
+
+    <div class="divider reveal d2"></div>
+
+    <h1 class="reveal d2">
+      Venha fazer parte<br/>
+      <span class="italic-gold">do nosso time</span>
+    </h1>
+
+    <p class="subtitle-vaga reveal d3">Assistente de Planejamento e Operações de Viagem</p>
+
+    <!-- Benefits table -->
+    <div class="container">
+      <div class="benefits-grid reveal d4">
+        <div class="benefit-col">
+          <div class="benefit-label">Remuneração</div>
+          <div class="benefit-value">R$ 1.500 fixo + 5% sobre o lucro + bônus por meta</div>
+        </div>
+        <div class="benefit-col">
+          <div class="benefit-label">Horário</div>
+          <div class="benefit-value">Seg a sex · início entre 8h–10h · 9h/dia</div>
+        </div>
+        <div class="benefit-col">
+          <div class="benefit-label">Modelo</div>
+          <div class="benefit-value">Home office · migração presencial em breve</div>
+        </div>
+        <div class="benefit-col">
+          <div class="benefit-label">Contrato</div>
+          <div class="benefit-value">PJ — MEI</div>
+        </div>
+        <div class="benefit-col">
+          <div class="benefit-label">Desenvolvimento</div>
+          <div class="benefit-value">1h de estudo diário sobre turismo · feedbacks e acompanhamento de performance semanal</div>
+        </div>
+        <div class="benefit-row-full">
+          <div class="benefit-label" style="margin-bottom:8px;">Crescimento</div>
+          <div class="benefit-value">Plano de carreira estruturado</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ QUEM SOMOS ══ -->
+  <section class="quem-somos">
+    <div class="container">
+      <p class="label reveal d1">Quem somos</p>
+      <h2 class="reveal d2">Não vendemos destinos.<br/>
+        <span class="italic-gold">Criamos memórias.</span>
+      </h2>
+      <p class="reveal d3">
+        A <strong>Maktub Go</strong> é uma alfaiataria de viagens premium. Cada experiência é construída sob medida — não existe pacote padrão aqui. Existe escuta, critério e entrega. Criamos memórias com atendimento humanizado e experiências únicas para quem aprecia o exclusivo!
+      </p>
+      <p class="reveal d4">
+        Estamos em crescimento acelerado e buscamos pessoas de <strong>alta performance</strong> para nos acompanhar — com vontade de vencer, autonomia, pensamento estratégico e alinhamento total com nossos valores.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ NOSSA ESSÊNCIA ══ -->
+  <section class="essencia">
+    <div class="container">
+      <p class="label reveal d1">Nossa essência</p>
+      <h2 class="reveal d2">Propósito, fé<br/>
+        <span class="italic-gold">e resultado.</span>
+      </h2>
+      <p class="reveal d3">
+        A Maktub Go nasceu com um propósito: <strong>planejar experiências de vida através de viagens e da conexão com pessoas</strong>. Acreditamos que cultura, gastronomia e novas experiências precisam ser vivenciadas. Há algo de transformador em cada viagem — voltamos diferentes, com novos olhares, querendo o próximo destino.
+      </p>
+      <p class="reveal d4">
+        Nossos princípios são ligados a <strong>Deus</strong>. Acreditamos que a prosperidade vem do trabalho bem feito, da integridade e do cuidado genuíno com as pessoas. Valorizamos <strong>família, meritocracia e engajamento genuíno</strong>. Aqui, celebramos vitórias juntos, aprendemos com os desafios e crescemos como pessoas.
+      </p>
+      <p class="reveal d5">
+        A Maktub Go exige <strong>fé, comprometimento e vontade</strong>. Buscamos pessoas que queiram estar aqui de verdade — que vibrem com os resultados e que tenham mentalidade de dono, não de executor de tarefas.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ SOBRE A VAGA ══ -->
+  <section class="vaga">
+    <div class="container">
+      <p class="label reveal d1">Sobre a vaga</p>
+      <h2 class="reveal d2">O que você vai<br/>
+        <span class="italic-gold">fazer aqui</span>
+      </h2>
+      <ul class="reveal d3">
+        <li>Apoiar pesquisas de voos, hospedagens, seguros, transfers e demais itens da viagem</li>
+        <li>Auxiliar na construção de cotações e propostas personalizadas</li>
+        <li>Alimentar e manter atualizados o CRM e os controles internos</li>
+        <li>Apoiar o acompanhamento de reservas, prazos e status operacionais</li>
+        <li>Conferir dados com atenção extrema — erros em nomes e datas não existem aqui</li>
+        <li>Sinalizar riscos, inconsistências e pontos de atenção na operação</li>
+        <li>Manter organização interna e previsibilidade para os sócios</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══ O PERFIL ══ -->
+  <section class="perfil">
+    <div class="container">
+      <p class="label reveal d1">O que buscamos</p>
+      <h2 class="reveal d2">O perfil que queremos<br/>
+        <span class="italic-gold">ao nosso lado</span>
+      </h2>
+      <div class="cards-grid">
+        <div class="card reveal d3">
+          <div class="card-title">Meritocracia</div>
+          <p>Resultados, esforço e dedicação fazem a diferença aqui. Não há espaço para conversas deselegantes, desmotivadoras ou de baixa sintonia.</p>
+        </div>
+        <div class="card reveal d4">
+          <div class="card-title">Fé acima de tudo</div>
+          <p>Na Maktub, Deus está acima de tudo e de todas as coisas. Não importa a religião — devemos colocar amor em tudo que fazemos. O que buscamos é alguém que carregue a fé como princípio de vida. Sua fé se soma à nossa.</p>
+        </div>
+        <div class="card reveal d3">
+          <div class="card-title">Engajamento genuíno</div>
+          <p>Queremos pessoas que vibrem com os resultados, que torçam pelos colegas e que queiram estar aqui — não apenas cumprir horário. Pessoas que pensam o negócio, sinalizam riscos e celebram a prosperidade juntas.</p>
+        </div>
+        <div class="card reveal d4">
+          <div class="card-title">Atenção e organização</div>
+          <p>Em uma agência de viagens, um erro em um nome ou data pode comprometer toda a experiência do cliente. Precisamos de quem se importa com cada detalhe — somos especialistas em experiência.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CTA ══ -->
+  <div class="cta-section">
+    <p class="cta-tagline reveal d1">Se você se vê aqui, estamos esperando por você.</p>
+    <a href="#" class="btn-candidatar reveal d2">Quero me candidatar</a>
+  </div>
+
+  <script>
+    // Intersection Observer for reveal animations
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
