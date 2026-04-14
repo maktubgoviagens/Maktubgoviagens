@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet" />
   <style>
-    :root{--green:#1a3826;--gold:#a07830;--gold-light:#b8922a;--gold-muted:rgba(160,120,48,.12);--cream:#f9f6f1;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-gold:rgba(160,120,48,.40)}
+    :root{--green:#1a3826;--gold:#8a6520;--gold-light:#a07830;--gold-muted:rgba(138,101,32,.10);--cream:#f9f6f1;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-gold:rgba(138,101,32,.45)}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
-    body{background:var(--white);color:var(--text);font-family:'Jost',sans-serif;font-size:17px;font-weight:300;line-height:1.8;overflow-x:hidden}
+    body{background:var(--white);color:var(--text);font-family:'Jost',sans-serif;font-size:17px;font-weight:400;line-height:1.8;overflow-x:hidden}
     a{color:inherit;text-decoration:none}
     @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
     .reveal{opacity:0}
@@ -37,7 +37,7 @@
     .nav-logo{display:flex;align-items:center;gap:12px}
     .nav-logo-box{width:36px;height:36px;background:var(--green);display:flex;align-items:center;justify-content:center}
     .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-logo-name{font-size:13px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+    .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
     .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted)}
     .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
     .nav-links a{font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
@@ -53,7 +53,7 @@
     .hero .label{margin-bottom:28px}
     .hero h1{font-size:clamp(52px,9vw,96px);letter-spacing:-.01em}
     .hero h1 .italic-gold{display:block}
-    .hero-desc{max-width:580px;margin:32px auto 52px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(19px,2.5vw,24px);color:var(--text-mid);line-height:1.75}
+    .hero-desc{max-width:580px;margin:32px auto 52px;font-family:'Cormorant Garamond',serif;font-style:normal;font-size:clamp(19px,2.5vw,24px);color:#1a1a1a;font-weight:600;line-height:1.75}
     .hero-cta{display:inline-block;padding:17px 52px;border:1px solid var(--gold);font-size:12px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--green);transition:background .3s,color .3s,border-color .3s}
     .hero-cta:hover{background:var(--green);color:var(--white);border-color:var(--green)}
     .hero-scroll{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#6b6b6b;display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -66,7 +66,7 @@
     /* QUEM SOMOS */
     .quem-somos{background:var(--cream)}
     .quem-somos h2{font-size:clamp(38px,6vw,64px)}
-    .quem-somos p{font-size:17px;color:#3d3d3d;max-width:640px;margin-top:24px}
+    .quem-somos p{font-size:17px;color:#2c2c2c;max-width:640px;margin-top:24px}
     .quem-somos strong{color:var(--text);font-weight:500}
     .quote-block{margin-top:52px;padding:36px 44px;border-left:2px solid var(--gold);background:var(--white)}
     .quote-block p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(20px,2.5vw,26px);color:#3d3d3d;line-height:1.65;margin:0}
@@ -79,8 +79,8 @@
     .servico-card:hover{background:var(--cream)}
     .s-icon{width:36px;height:36px;margin-bottom:20px}
     .s-icon svg{width:100%;height:100%;stroke:var(--gold);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
-    .servico-card h3{font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
-    .servico-card p{font-size:16px;color:#4a4a4a;line-height:1.7}
+    .servico-card h3{font-family:'Jost',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
+    .servico-card p{font-size:16px;color:#2c2c2c;line-height:1.7}
 
     /* ESSÊNCIA */
     .essencia{background:var(--green)}
@@ -101,9 +101,9 @@
     .pmv-item{padding:36px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 1fr;gap:32px;align-items:start}
     .pmv-item:first-child{border-top:1px solid var(--border)}
     .pmv-num{font-size:13px;letter-spacing:.14em;color:var(--gold);margin-bottom:6px}
-    .pmv-cat{font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#5c5c5c}
+    .pmv-cat{font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d}
     .pmv-content h3{font-size:clamp(22px,3vw,30px);color:var(--green);margin-bottom:10px}
-    .pmv-content p{font-size:17px;color:#4a4a4a;line-height:1.75}
+    .pmv-content p{font-size:17px;color:#2c2c2c;line-height:1.75}
 
     /* VALORES */
     .valores{background:var(--white)}
@@ -112,8 +112,8 @@
     .valor-item{background:var(--white);padding:32px 28px;transition:background .25s}
     .valor-item:hover{background:var(--cream)}
     .valor-sym{font-size:22px;color:var(--gold);margin-bottom:14px}
-    .valor-title{font-family:'Jost',sans-serif;font-size:12.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
-    .valor-item p{font-size:15px;color:#4a4a4a;line-height:1.7}
+    .valor-title{font-family:'Jost',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
+    .valor-item p{font-size:15px;color:#2c2c2c;line-height:1.7}
 
     /* TIME */
     .time{background:var(--cream)}
@@ -123,7 +123,7 @@
     .time-initials{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold);margin-bottom:24px}
     .time-name{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,3vw,36px);color:var(--green);margin-bottom:8px}
     .time-role{font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:24px}
-    .time-bio{font-size:16px;color:#3d3d3d;line-height:1.75}
+    .time-bio{font-size:16px;color:#2c2c2c;line-height:1.75}
     .time-bio+.time-bio{margin-top:12px}
 
     /* CONTATO */
@@ -347,7 +347,7 @@
   </div>
 </footer>
 
-<a class="wa-float" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="WhatsApp">
+<a class="wa-float" href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="WhatsApp">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
 </a>
 
