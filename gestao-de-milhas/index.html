@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="description" content="Gestão de Milhas Concierge — Maktub Go. Acompanhamento estratégico contínuo do seu patrimônio de milhas. Como um assessor financeiro acompanha investimentos." />
+  <meta name="keywords" content="gestão de milhas, concierge de viagens, milhas premium, assessoria de milhas, planejamento de viagens" />
+  <meta property="og:title" content="Gestão de Milhas Concierge — Maktub Go" />
+  <meta property="og:description" content="Milhas como patrimônio. Viagens como estratégia. Acompanhamento o ano inteiro." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#1a3826" />
+  <title>Gestão de Milhas Concierge — Maktub Go</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{--green:#1a3826;--green-mid:#234832;--gold:#8a6520;--gold-light:#a07830;--gold-warm:#c9a96e;--gold-muted:rgba(138,101,32,.10);--cream:#f9f6f1;--cream-deep:#f5f0e8;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-gold:rgba(138,101,32,.45)}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--white);color:var(--text);font-family:'Jost',sans-serif;font-size:17px;font-weight:400;line-height:1.8;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    .reveal{opacity:0}
+    .reveal.visible{animation:fadeUp .9s cubic-bezier(.16,1,.3,1) forwards}
+    .d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}.d4{animation-delay:.35s}.d5{animation-delay:.45s}.d6{animation-delay:.55s}
+    .container{max-width:900px;margin:0 auto;padding:0 36px}
+    .container--wide{max-width:1140px;margin:0 auto;padding:0 36px}
+    .label{font-family:'Jost',sans-serif;font-size:12px;font-weight:400;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);display:block}
+    h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:400;line-height:1.1;color:var(--green)}
+    .italic-gold{font-style:italic;color:var(--gold)}
+    .divider{width:36px;height:1px;background:var(--gold);opacity:.55;margin:18px 0 36px}
+
+    /* NAV - igual ao site principal */
+    nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+    nav.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1140px;margin:0 auto;padding:0 36px}
+    .nav-logo{display:flex;align-items:center;gap:12px}
+    .nav-logo-img{width:42px;height:32px;object-fit:contain}
+    .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
+    .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+    .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted)}
+    .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
+    .nav-links a{font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
+    .nav-links a:hover{color:var(--green)}
+    .nav-cta{border:1px solid var(--border-gold)!important;padding:9px 20px!important;color:var(--green)!important;transition:background .25s,border-color .25s!important;font-weight:500!important}
+    .nav-cta:hover{background:var(--gold-muted)!important;border-color:var(--gold)!important}
+    .nav-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+    .nav-burger span{display:block;width:22px;height:1.5px;background:var(--green)}
+
+    /* HERO */
+    .hero{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:130px 36px 90px;position:relative;overflow:hidden;background:var(--cream)}
+    .hero::before{content:'';position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(ellipse,rgba(138,101,32,.08) 0%,transparent 65%);pointer-events:none}
+    .hero-mark{margin-bottom:30px;animation:fadeUp 1s ease-out}
+    .hero-mark img{width:auto;height:96px;display:block;margin:0 auto}
+    .hero .label{margin-bottom:24px}
+    .hero h1{font-size:clamp(46px,8vw,84px);letter-spacing:-.01em;max-width:900px;line-height:1.05}
+    .hero h1 .italic-gold{display:block;font-weight:300}
+    .hero-desc{max-width:620px;margin:36px auto 52px;font-family:'Cormorant Garamond',serif;font-size:clamp(20px,2.5vw,25px);color:#1a1a1a;font-weight:500;line-height:1.6;font-style:italic}
+    .hero-actions{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+    .btn-primary{display:inline-block;padding:17px 44px;background:var(--green);color:var(--white);font-size:12px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;transition:background .3s}
+    .btn-primary:hover{background:var(--green-mid)}
+    .btn-secondary{display:inline-block;padding:17px 44px;border:1px solid var(--gold);color:var(--green);font-size:12px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;transition:background .3s,color .3s}
+    .btn-secondary:hover{background:var(--green);color:var(--white);border-color:var(--green)}
+
+    section{padding:110px 0}
+
+    /* DIFERENÇA */
+    .diferenca{background:var(--white);text-align:center}
+    .diferenca .container{max-width:780px}
+    .diferenca h2{font-size:clamp(38px,5.5vw,58px);margin-bottom:20px}
+    .diferenca .lead{font-size:19px;color:var(--text-mid);margin-bottom:60px;font-weight:300}
+    .diferenca-grid{display:grid;grid-template-columns:1fr 1px 1fr;gap:48px;margin-top:48px;align-items:start;text-align:left}
+    .diferenca-col h3{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;margin-bottom:24px}
+    .diferenca-col.before h3{color:var(--text-muted)}
+    .diferenca-col.after h3{color:var(--gold)}
+    .diferenca-col ul{list-style:none}
+    .diferenca-col li{padding:14px 0;border-bottom:1px solid var(--border);font-size:16px;color:var(--text-mid);line-height:1.6}
+    .diferenca-col.after li{color:var(--text)}
+    .diferenca-col li::before{display:inline-block;width:18px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;margin-right:8px}
+    .diferenca-col.before li::before{content:'—';color:var(--text-muted)}
+    .diferenca-col.after li::before{content:'✦';color:var(--gold);font-style:normal;font-size:13px}
+    .diferenca-divider{width:1px;background:var(--border)}
+
+    /* COMO FUNCIONA */
+    .como-funciona{background:var(--cream)}
+    .como-funciona h2{font-size:clamp(38px,5.5vw,58px)}
+    .passos{margin-top:60px}
+    .passo{display:grid;grid-template-columns:130px 1fr;gap:40px;padding:42px 0;border-bottom:1px solid var(--border);align-items:start}
+    .passo:first-child{border-top:1px solid var(--border)}
+    .passo-num{font-family:'Cormorant Garamond',serif;font-size:54px;color:var(--gold);line-height:1;font-style:italic;font-weight:300}
+    .passo-content h3{font-family:'Cormorant Garamond',serif;font-size:clamp(24px,3vw,32px);color:var(--green);margin-bottom:14px;font-weight:400}
+    .passo-content p{font-size:17px;color:var(--text-mid);line-height:1.75;max-width:640px}
+
+    /* O QUE VC TEM ACESSO */
+    .acesso-preview{background:var(--green);color:var(--cream);text-align:center}
+    .acesso-preview h2{color:var(--white);font-size:clamp(38px,5.5vw,58px);margin-bottom:20px}
+    .acesso-preview h2 .italic-gold{color:var(--gold-warm)}
+    .acesso-preview .label{color:var(--gold-warm)}
+    .acesso-preview .lead{font-size:19px;color:rgba(249,246,241,.85);max-width:680px;margin:24px auto 60px;font-weight:300;line-height:1.7}
+    .preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:30px;background:rgba(201,169,110,.18);text-align:left}
+    .preview-card{background:var(--green);padding:36px 32px;transition:background .3s}
+    .preview-card:hover{background:var(--green-mid)}
+    .preview-icon{width:32px;height:32px;margin-bottom:22px;color:var(--gold-warm)}
+    .preview-icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+    .preview-card h3{font-family:'Jost',sans-serif;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-warm);margin-bottom:12px}
+    .preview-card p{font-size:15px;color:rgba(249,246,241,.78);line-height:1.7;font-weight:300}
+
+    /* MOCK PAINEL */
+    .mock-section{background:var(--cream-deep);padding:90px 0 110px}
+    .mock-section .container--wide{text-align:center}
+    .mock-section .label{margin-bottom:18px}
+    .mock-section h2{font-size:clamp(34px,4.8vw,52px);margin-bottom:18px}
+    .mock-section .lead{font-size:17px;color:var(--text-mid);max-width:600px;margin:0 auto 60px;font-weight:300}
+    .mock-frame{background:var(--white);border:1px solid var(--border);box-shadow:0 30px 80px rgba(26,56,38,.12);border-radius:4px;overflow:hidden;text-align:left;max-width:1080px;margin:0 auto;position:relative}
+    .mock-bar{background:var(--green);padding:14px 22px;display:flex;align-items:center;gap:10px}
+    .mock-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.18)}
+    .mock-url{flex:1;background:rgba(255,255,255,.08);padding:6px 16px;border-radius:3px;font-family:monospace;font-size:11px;color:rgba(249,246,241,.7);margin-left:14px;letter-spacing:.04em}
+    .mock-body{padding:36px}
+    .mock-row{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:18px}
+    .mock-card{background:var(--cream);padding:22px;border:1px solid var(--border)}
+    .mock-card-label{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px}
+    .mock-card-num{font-family:'Cormorant Garamond',serif;font-size:42px;color:var(--green);font-weight:400;line-height:1.1}
+    .mock-card-num .small{font-size:18px;color:var(--text-muted);font-style:italic;margin-left:4px}
+    .mock-card-trend{font-size:11px;color:var(--green);margin-top:8px;letter-spacing:.05em}
+    .mock-card-trend strong{color:#5a8c5e}
+    .mock-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    .mock-mini{background:var(--white);padding:16px;text-align:center;border:1px solid var(--border)}
+    .mock-mini-label{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-weight:600}
+    .mock-mini-num{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);font-weight:500}
+    .mock-mini-num .currency{font-size:13px;color:var(--text-muted);font-style:italic;margin-right:2px}
+    .mock-bars{padding:22px;background:var(--cream)}
+    .mock-bar-row{display:grid;grid-template-columns:90px 1fr 60px;gap:12px;align-items:center;padding:8px 0}
+    .mock-bar-label{font-family:'Cormorant Garamond',serif;font-size:14px;color:var(--green)}
+    .mock-bar-track{height:3px;background:rgba(138,101,32,.15);position:relative}
+    .mock-bar-fill{height:100%;background:var(--gold)}
+    .mock-bar-val{font-size:11px;color:var(--text-mid);text-align:right;font-family:monospace}
+
+    /* CTA FINAL */
+    .cta-final{background:var(--green);text-align:center;padding:120px 36px;color:var(--cream);position:relative;overflow:hidden}
+    .cta-final::before{content:'';position:absolute;width:600px;height:600px;border:1px solid rgba(201,169,110,.15);border-radius:50%;top:-200px;left:50%;transform:translateX(-50%)}
+    .cta-final::after{content:'';position:absolute;width:380px;height:380px;border:1px solid rgba(201,169,110,.1);border-radius:50%;top:-80px;left:50%;transform:translateX(-50%)}
+    .cta-final > *{position:relative;z-index:2}
+    .cta-final .label{color:var(--gold-warm);margin-bottom:24px}
+    .cta-final h2{color:var(--white);font-size:clamp(44px,7vw,76px);line-height:1.05;margin-bottom:24px}
+    .cta-final h2 .italic-gold{color:var(--gold-warm)}
+    .cta-final p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(20px,2.4vw,24px);color:rgba(249,246,241,.85);max-width:540px;margin:0 auto 48px;line-height:1.6}
+    .cta-final .actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+    .btn-gold{display:inline-flex;align-items:center;gap:10px;padding:18px 48px;background:var(--gold);color:var(--green);font-size:13px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;transition:opacity .25s;border:1px solid var(--gold)}
+    .btn-gold:hover{opacity:.88}
+    .btn-outline-gold{display:inline-flex;align-items:center;gap:10px;padding:18px 48px;border:1px solid rgba(201,169,110,.4);color:rgba(249,246,241,.9);font-size:13px;font-weight:400;letter-spacing:.24em;text-transform:uppercase;transition:border-color .25s,color .25s}
+    .btn-outline-gold:hover{border-color:var(--gold);color:#fff}
+
+    /* FOOTER - igual */
+    footer{background:var(--green);border-top:1px solid rgba(201,169,110,.12);padding:48px 36px}
+    .footer-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    .footer-brand{display:flex;align-items:center;gap:12px}
+    .footer-brand-logo{width:36px;height:auto;opacity:.85}
+    .footer-brand-text{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.65)}
+    .footer-links{display:flex;gap:24px;list-style:none}
+    .footer-links a{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,246,241,.55);transition:color .25s}
+    .footer-links a:hover{color:var(--gold)}
+    .footer-copy{font-size:12px;color:rgba(249,246,241,.4)}
+
+    /* WA */
+    .wa-float{position:fixed;bottom:28px;right:28px;z-index:999;width:52px;height:52px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.35);transition:transform .25s,box-shadow .25s}
+    .wa-float:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(37,211,102,.45)}
+    .wa-float svg{width:26px;height:26px;fill:#fff}
+
+    @media(max-width:768px){
+      .nav-links{display:none}
+      .nav-links.open{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:24px 36px;gap:18px;z-index:999}
+      .nav-burger{display:flex}
+      .container,.container--wide{padding:0 22px}
+      section{padding:72px 0}
+      .diferenca-grid{grid-template-columns:1fr;gap:32px}
+      .diferenca-divider{display:none}
+      .passo{grid-template-columns:1fr;gap:14px;padding:32px 0}
+      .preview-grid{grid-template-columns:1fr}
+      .mock-row{grid-template-columns:1fr}
+      .mock-grid-4{grid-template-columns:repeat(2,1fr)}
+      .mock-body{padding:22px}
+      .footer-inner{flex-direction:column;align-items:flex-start;gap:16px}
+    }
+  </style>
+</head>
+<body>
+
+<nav id="navbar">
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go" class="nav-logo-img" />
+      <div class="nav-logo-text">
+        <span class="nav-logo-name">Maktub Go</span>
+        <span class="nav-logo-sub">Alfaiataria de Viagens</span>
+      </div>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/#quem-somos">Quem Somos</a></li>
+      <li><a href="/#servicos">Serviços</a></li>
+      <li><a href="/gestao-de-milhas">Gestão de Milhas</a></li>
+      <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
+      <li><a href="/acesso" class="nav-cta">Acesso Cliente</a></li>
+    </ul>
+    <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-mark reveal d1">
+    <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
+  </div>
+  <span class="label reveal d2">Gestão de Milhas Concierge</span>
+  <h1 class="reveal d3">Suas milhas merecem<span class="italic-gold">um gestor.</span></h1>
+  <p class="hero-desc reveal d4">Como um assessor financeiro acompanha investimentos, acompanhamos suas milhas o ano inteiro — antecipando oportunidades, otimizando cartões e transformando consumo cotidiano em viagens.</p>
+  <div class="hero-actions reveal d5">
+    <a href="/acesso" class="btn-primary">Acessar Painel</a>
+    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20conhecer%20a%20Gest%C3%A3o%20de%20Milhas%20Concierge%20da%20Maktub%20Go." class="btn-secondary" target="_blank" rel="noopener">Conversar pelo WhatsApp</a>
+  </div>
+</section>
+
+<section class="diferenca">
+  <div class="container">
+    <span class="label reveal d1">A diferença</span>
+    <div class="divider reveal d1" style="margin-left:auto;margin-right:auto"></div>
+    <h2 class="reveal d2">Não vendemos passagens.<br><span class="italic-gold">Construímos viagens.</span></h2>
+    <p class="lead reveal d3">A maioria das pessoas trata milhas como cupons de desconto. Nós tratamos como patrimônio — e cuidamos com método.</p>
+    <div class="diferenca-grid">
+      <div class="diferenca-col before reveal d4">
+        <h3>Gestão Comum</h3>
+        <ul>
+          <li>Pensa só na próxima viagem</li>
+          <li>Procura passagem quando precisa</li>
+          <li>Acumula milhas sem estratégia</li>
+          <li>Aceita o cartão que o banco oferece</li>
+          <li>Perde promoções por desatenção</li>
+          <li>Reage ao mercado</li>
+        </ul>
+      </div>
+      <div class="diferenca-divider"></div>
+      <div class="diferenca-col after reveal d5">
+        <h3>Gestão Maktub Go</h3>
+        <ul>
+          <li>Planeja o ano inteiro de viagens</li>
+          <li>Antecipa emissões em janelas ideais</li>
+          <li>Direciona gastos para máximo acúmulo</li>
+          <li>Otimiza setup de cartões mês a mês</li>
+          <li>Avisa toda promoção estratégica</li>
+          <li>Antecipa o mercado</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="como-funciona">
+  <div class="container">
+    <span class="label reveal d1">Como funciona</span>
+    <div class="divider reveal d1"></div>
+    <h2 class="reveal d2">Um método simples,<br><span class="italic-gold">construído com cuidado.</span></h2>
+    <div class="passos">
+      <div class="passo reveal d3">
+        <div class="passo-num">01</div>
+        <div class="passo-content">
+          <h3>Diagnóstico inicial</h3>
+          <p>Conversamos para mapear seus cartões atuais, programas cadastrados, padrão de gastos e objetivos de viagem. É a partir dessa escuta que desenhamos a estratégia sob medida.</p>
+        </div>
+      </div>
+      <div class="passo reveal d4">
+        <div class="passo-num">02</div>
+        <div class="passo-content">
+          <h3>Painel privado</h3>
+          <p>Você recebe acesso a uma área exclusiva no maktubgo.com.br, com seu patrimônio de milhas, cartões, calendário de viagens e movimentos estratégicos do mês — sempre atualizada.</p>
+        </div>
+      </div>
+      <div class="passo reveal d5">
+        <div class="passo-num">03</div>
+        <div class="passo-content">
+          <h3>Gestão contínua</h3>
+          <p>Acompanhamos diariamente promoções, transferências bonificadas, lançamentos de cartões e janelas ideais de emissão. Quando há oportunidade relevante, agimos.</p>
+        </div>
+      </div>
+      <div class="passo reveal d6">
+        <div class="passo-num">04</div>
+        <div class="passo-content">
+          <h3>Reunião mensal</h3>
+          <p>Uma reunião por mês para revisar resultados, alinhar próximos passos e planejar viagens futuras. Estrutura semelhante a uma reunião com seu assessor de investimentos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="acesso-preview">
+  <div class="container--wide">
+    <span class="label reveal d1">No seu painel privado</span>
+    <h2 class="reveal d2">Tudo o que importa,<br><span class="italic-gold">em um só lugar.</span></h2>
+    <p class="lead reveal d3">Acesso exclusivo, atualizado mensalmente. Visualize seu patrimônio de milhas como visualiza seus investimentos.</p>
+    <div class="preview-grid">
+      <div class="preview-card reveal d1">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div>
+        <h3>Patrimônio Consolidado</h3>
+        <p>Saldo total em milhas e equivalente em reais. Distribuição por programa, evolução do mês e do ano.</p>
+      </div>
+      <div class="preview-card reveal d2">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <h3>Economia Gerada</h3>
+        <p>Quanto a Maktub Go te economizou no dia, na semana, no mês e no ano. O número que justifica o serviço.</p>
+      </div>
+      <div class="preview-card reveal d3">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+        <h3>Seus Cartões</h3>
+        <p>Pontuação, anuidade, gasto médio, próximo upgrade previsto e recomendações de uso para cada cartão.</p>
+      </div>
+      <div class="preview-card reveal d4">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <h3>Calendário de Viagens</h3>
+        <p>Viagens planejadas, emitidas e em estratégia. Datas ideais de emissão e status de cada destino do ano.</p>
+      </div>
+      <div class="preview-card reveal d5">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Próximos Movimentos</h3>
+        <p>Recomendações estratégicas do mês: transferências bonificadas, antecipações de emissão, novos cartões.</p>
+      </div>
+      <div class="preview-card reveal d6">
+        <div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <h3>Histórico de Reuniões</h3>
+        <p>Registro de cada reunião mensal, decisões tomadas e evolução da gestão ao longo do tempo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mock-section">
+  <div class="container--wide">
+    <span class="label reveal d1">Visualização</span>
+    <h2 class="reveal d2">Uma <span class="italic-gold">prévia</span> do que você verá.</h2>
+    <p class="lead reveal d3">Cada cliente tem seu próprio painel, com dados atualizados pela equipe Maktub Go.</p>
+    <div class="mock-frame reveal d4">
+      <div class="mock-bar">
+        <div class="mock-dot"></div>
+        <div class="mock-dot"></div>
+        <div class="mock-dot"></div>
+        <div class="mock-url">maktubgo.com.br/painel</div>
+      </div>
+      <div class="mock-body">
+        <div class="mock-row">
+          <div class="mock-card">
+            <div class="mock-card-label">◆ Patrimônio Consolidado</div>
+            <div class="mock-card-num">970.000<span class="small"> milhas</span></div>
+            <div class="mock-card-trend">Equivalente: <strong>R$ 38.200</strong> · Crescimento mês: +8,2%</div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-label">◆ Economia Gerada · Ano</div>
+            <div class="mock-card-num"><span class="small">R$</span>47.320</div>
+            <div class="mock-card-trend">Em emissões otimizadas vs. tarifa cheia</div>
+          </div>
+        </div>
+        <div class="mock-grid-4">
+          <div class="mock-mini">
+            <div class="mock-mini-label">Hoje</div>
+            <div class="mock-mini-num"><span class="currency">R$</span>0</div>
+          </div>
+          <div class="mock-mini">
+            <div class="mock-mini-label">Semana</div>
+            <div class="mock-mini-num"><span class="currency">R$</span>1.240</div>
+          </div>
+          <div class="mock-mini">
+            <div class="mock-mini-label">Mês</div>
+            <div class="mock-mini-num"><span class="currency">R$</span>4.890</div>
+          </div>
+          <div class="mock-mini">
+            <div class="mock-mini-label">Ano</div>
+            <div class="mock-mini-num"><span class="currency">R$</span>47.320</div>
+          </div>
+        </div>
+        <div class="mock-bars" style="margin-top:14px">
+          <div class="mock-bar-row">
+            <span class="mock-bar-label">Latam Pass</span>
+            <div class="mock-bar-track"><div class="mock-bar-fill" style="width:85%"></div></div>
+            <span class="mock-bar-val">412.000</span>
+          </div>
+          <div class="mock-bar-row">
+            <span class="mock-bar-label">Smiles</span>
+            <div class="mock-bar-track"><div class="mock-bar-fill" style="width:60%"></div></div>
+            <span class="mock-bar-val">285.000</span>
+          </div>
+          <div class="mock-bar-row">
+            <span class="mock-bar-label">Livelo</span>
+            <div class="mock-bar-track"><div class="mock-bar-fill" style="width:38%"></div></div>
+            <span class="mock-bar-val">178.000</span>
+          </div>
+          <div class="mock-bar-row">
+            <span class="mock-bar-label">Esfera</span>
+            <div class="mock-bar-track"><div class="mock-bar-fill" style="width:20%"></div></div>
+            <span class="mock-bar-val">95.000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <span class="label reveal d1">Comece sua gestão</span>
+  <h2 class="reveal d2">Sua próxima viagem<br><span class="italic-gold">já começou.</span></h2>
+  <p class="reveal d3">"Maktub — estava escrito. Tinha que acontecer."</p>
+  <div class="actions reveal d4">
+    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20conhecer%20a%20Gest%C3%A3o%20de%20Milhas%20Concierge%20da%20Maktub%20Go." class="btn-gold" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
+      Falar no WhatsApp
+    </a>
+    <a href="/acesso" class="btn-outline-gold">Acesso Cliente</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="/ativos/simbolo-creme.png" alt="Maktub Go" class="footer-brand-logo" />
+      <span class="footer-brand-text">Maktub Go · Alfaiataria de Viagens</span>
+    </div>
+    <ul class="footer-links">
+      <li><a href="/#quem-somos">Quem Somos</a></li>
+      <li><a href="/gestao-de-milhas">Gestão de Milhas</a></li>
+      <li><a href="/#valores">Valores</a></li>
+      <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
+    </ul>
+    <span class="footer-copy">© 2026 Maktub Go. Todos os direitos reservados.</span>
+  </div>
+</footer>
+
+<a class="wa-float" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20conhecer%20a%20Gest%C3%A3o%20de%20Milhas%20Concierge%20da%20Maktub%20Go." target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
+</a>
+
+<script>
+  const navbar=document.getElementById('navbar');
+  window.addEventListener('scroll',()=>navbar.classList.toggle('scrolled',window.scrollY>20),{passive:true});
+  const burger=document.getElementById('burger'),navLinks=document.getElementById('navLinks');
+  burger.addEventListener('click',()=>navLinks.classList.toggle('open'));
+  navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navLinks.classList.remove('open')));
+  const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:.10});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
