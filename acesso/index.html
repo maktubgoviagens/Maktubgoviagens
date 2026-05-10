@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
   <style>
-    :root{--green:#1a3826;--green-mid:#234832;--gold:#8a6520;--gold-light:#a07830;--gold-warm:#c9a96e;--cream:#f9f6f1;--cream-deep:#f5f0e8;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-strong:rgba(26,56,38,.18)}
+    :root{--green:#1a3826;--green-mid:#234832;--gold:#8a6520;--gold-light:#a07830;--gold-warm:#c9a96e;--cream:#f9f6f1;--cream-deep:#f5f0e8;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-strong:rgba(26,56,38,.18);--danger:#c97b6b}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{background:var(--cream);color:var(--text);font-family:'Jost',sans-serif;font-size:16px;font-weight:400;line-height:1.7;overflow-x:hidden}
@@ -58,6 +58,7 @@
     .field input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border-strong);color:var(--text);padding:12px 0;font-size:16px;font-family:inherit;transition:border-color .3s;font-weight:400}
     .field input:focus{outline:none;border-bottom-color:var(--gold)}
     .field input::placeholder{color:var(--text-muted);opacity:.6}
+    .field input:disabled{opacity:.5;cursor:not-allowed}
 
     .field-row{display:flex;justify-content:space-between;align-items:center;margin-top:-8px;margin-bottom:32px}
     .check-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid);cursor:pointer}
@@ -65,16 +66,33 @@
     .forgot{font-size:12px;color:var(--gold);letter-spacing:.05em;transition:color .25s}
     .forgot:hover{color:var(--green)}
 
-    .btn-submit{width:100%;background:var(--green);color:var(--white);border:none;padding:18px;font-size:12px;letter-spacing:.28em;text-transform:uppercase;cursor:pointer;font-family:inherit;font-weight:500;transition:background .3s}
+    .btn-submit{width:100%;background:var(--green);color:var(--white);border:none;padding:18px;font-size:12px;letter-spacing:.28em;text-transform:uppercase;cursor:pointer;font-family:inherit;font-weight:500;transition:background .3s;position:relative}
     .btn-submit:hover{background:var(--green-mid)}
+    .btn-submit:disabled{opacity:.7;cursor:wait}
+    .btn-submit.loading{color:transparent}
+    .btn-submit.loading::after{content:'';position:absolute;top:50%;left:50%;width:18px;height:18px;margin-top:-9px;margin-left:-9px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin 0.7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
     .form-footer{margin-top:32px;padding-top:32px;border-top:1px solid var(--border);text-align:center}
     .form-footer p{font-size:13px;color:var(--text-muted);margin-bottom:8px}
     .form-footer a{color:var(--gold);font-size:13px;font-weight:500;transition:color .25s}
     .form-footer a:hover{color:var(--green)}
 
-    .back-link{position:absolute;top:32px;right:48px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);transition:color .25s}
+    .back-link{position:absolute;top:32px;right:48px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);transition:color .25s;z-index:10}
     .back-link:hover{color:var(--green)}
+
+    /* Mensagens */
+    .alert{padding:14px 16px;border-radius:2px;margin-bottom:24px;font-size:13.5px;line-height:1.5;display:none}
+    .alert.show{display:block;animation:slideDown .25s ease-out}
+    .alert-error{background:rgba(201,123,107,.08);border-left:3px solid var(--danger);color:#8a3e2e}
+    .alert-success{background:rgba(122,162,107,.1);border-left:3px solid #7aa26b;color:#3d5e2e}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Estado de carregamento inicial */
+    .checking-auth{position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:20px}
+    .checking-auth img{width:54px;height:auto;opacity:.8}
+    .checking-auth .spinner{width:24px;height:24px;border:2px solid rgba(26,56,38,.15);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite}
+    .checking-auth p{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
 
     @media(max-width:900px){
       .login-page{grid-template-columns:1fr}
@@ -85,6 +103,13 @@
   </style>
 </head>
 <body>
+
+<!-- Tela de checagem inicial -->
+<div class="checking-auth" id="checkingAuth">
+  <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
+  <div class="spinner"></div>
+  <p>Verificando acesso</p>
+</div>
 
 <a href="/" class="back-link">← Voltar ao site</a>
 
@@ -117,23 +142,26 @@
       <h1>Bem-vindo<br/><em>de volta.</em></h1>
       <p class="intro">Acesse seu painel privado de gestão de milhas. Suas viagens, organizadas como um patrimônio.</p>
 
-      <form id="loginForm" onsubmit="event.preventDefault(); window.location.href='/painel/';">
+      <div class="alert alert-error" id="alertError"></div>
+      <div class="alert alert-success" id="alertSuccess"></div>
+
+      <form id="loginForm" autocomplete="on">
         <div class="field">
           <label>E-mail</label>
-          <input type="email" name="email" placeholder="seu@email.com" required />
+          <input type="email" name="email" id="emailInput" placeholder="seu@email.com" required autocomplete="email" />
         </div>
         <div class="field">
           <label>Senha</label>
-          <input type="password" name="password" placeholder="••••••••" required />
+          <input type="password" name="password" id="passwordInput" placeholder="••••••••" required autocomplete="current-password" />
         </div>
         <div class="field-row">
           <label class="check-row">
-            <input type="checkbox" />
+            <input type="checkbox" id="keepConnected" />
             Manter conectado
           </label>
           <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Esqueci%20minha%20senha%20do%20painel%20Maktub%20Go." class="forgot" target="_blank" rel="noopener">Esqueci a senha</a>
         </div>
-        <button type="submit" class="btn-submit">Entrar no Painel</button>
+        <button type="submit" class="btn-submit" id="btnSubmit">Entrar no Painel</button>
       </form>
 
       <div class="form-footer">
@@ -143,6 +171,121 @@
     </div>
   </main>
 </div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+  const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+
+  const checkingAuth = document.getElementById('checkingAuth');
+  const form = document.getElementById('loginForm');
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const btnSubmit = document.getElementById('btnSubmit');
+  const alertError = document.getElementById('alertError');
+  const alertSuccess = document.getElementById('alertSuccess');
+
+  // Se já estiver logado, redireciona direto pro painel
+  (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.replace('/painel/');
+        return;
+      }
+    } catch (err) {
+      console.error('Erro ao verificar sessão:', err);
+    }
+    checkingAuth.style.display = 'none';
+  })();
+
+  function showError(msg) {
+    alertSuccess.classList.remove('show');
+    alertError.textContent = msg;
+    alertError.classList.add('show');
+  }
+
+  function showSuccess(msg) {
+    alertError.classList.remove('show');
+    alertSuccess.textContent = msg;
+    alertSuccess.classList.add('show');
+  }
+
+  function clearAlerts() {
+    alertError.classList.remove('show');
+    alertSuccess.classList.remove('show');
+  }
+
+  function translateError(message) {
+    const m = (message || '').toLowerCase();
+    if (m.includes('invalid login') || m.includes('invalid credentials')) {
+      return 'E-mail ou senha incorretos. Verifique e tente novamente.';
+    }
+    if (m.includes('email not confirmed')) {
+      return 'Seu e-mail ainda não foi confirmado. Entre em contato com a Maktub Go.';
+    }
+    if (m.includes('too many requests') || m.includes('rate limit')) {
+      return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.';
+    }
+    if (m.includes('user not found')) {
+      return 'Usuário não encontrado. Entre em contato com a Maktub Go.';
+    }
+    if (m.includes('network') || m.includes('fetch')) {
+      return 'Falha de conexão. Verifique sua internet e tente novamente.';
+    }
+    return 'Não foi possível fazer login. Tente novamente em instantes.';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAlerts();
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      showError('Preencha e-mail e senha.');
+      return;
+    }
+
+    btnSubmit.disabled = true;
+    btnSubmit.classList.add('loading');
+    emailInput.disabled = true;
+    passwordInput.disabled = true;
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showError(translateError(error.message));
+        btnSubmit.disabled = false;
+        btnSubmit.classList.remove('loading');
+        emailInput.disabled = false;
+        passwordInput.disabled = false;
+        return;
+      }
+
+      if (data && data.session) {
+        showSuccess('Acesso confirmado. Redirecionando ao seu painel...');
+        setTimeout(() => {
+          window.location.replace('/painel/');
+        }, 700);
+      }
+    } catch (err) {
+      console.error('Erro no login:', err);
+      showError('Ocorreu um erro inesperado. Tente novamente em instantes.');
+      btnSubmit.disabled = false;
+      btnSubmit.classList.remove('loading');
+      emailInput.disabled = false;
+      passwordInput.disabled = false;
+    }
+  });
+</script>
 
 </body>
 </html>
