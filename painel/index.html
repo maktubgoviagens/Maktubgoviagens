@@ -6,7 +6,7 @@
   <meta name="description" content="Painel privado do cliente Maktub Go." />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#1a3826" />
-  <title>Painel · Ricardo Almeida — Maktub Go</title>
+  <title>Painel Privado — Maktub Go</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
@@ -18,10 +18,32 @@
     a{color:inherit;text-decoration:none}
 
     .num{font-family:'Cormorant Garamond',serif;font-feature-settings:"tnum"}
-    .mono{font-family:'Jost',sans-serif;font-feature-settings:"tnum";font-weight:500;letter-spacing:.02em}
+
+    /* Loading inicial */
+    .loading-screen{position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:18px;transition:opacity .4s}
+    .loading-screen img{width:54px;height:auto;opacity:.85}
+    .loading-screen .spinner{width:24px;height:24px;border:2px solid rgba(26,56,38,.15);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite}
+    .loading-screen p{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+    .loading-screen.hide{opacity:0;pointer-events:none}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Tela de erro / aguardando */
+    .empty-state{position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:999;padding:40px 24px}
+    .empty-state-card{max-width:520px;text-align:center}
+    .empty-state-card img{width:60px;height:auto;margin-bottom:24px;opacity:.9}
+    .empty-state-card h2{font-family:'Cormorant Garamond',serif;font-size:36px;color:var(--green);font-weight:400;margin-bottom:14px;line-height:1.2}
+    .empty-state-card h2 em{color:var(--gold);font-style:italic}
+    .empty-state-card p{font-size:15px;color:var(--text-mid);line-height:1.7;margin-bottom:28px;font-weight:300}
+    .empty-state-card .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .empty-state-card .btn{display:inline-block;padding:14px 28px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .25s}
+    .empty-state-card .btn-primary{background:var(--green);color:var(--white)}
+    .empty-state-card .btn-primary:hover{background:var(--green-mid)}
+    .empty-state-card .btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+    .empty-state-card .btn-ghost:hover{background:var(--gold);color:var(--white)}
 
     /* === LAYOUT === */
-    .dash{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+    .dash{display:grid;grid-template-columns:260px 1fr;min-height:100vh;opacity:0;transition:opacity .4s}
+    .dash.show{opacity:1}
 
     /* === SIDEBAR === */
     .sidebar{background:var(--green);color:var(--cream);padding:28px 22px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--green-dark)}
@@ -46,7 +68,7 @@
     .sb-user{flex:1;min-width:0}
     .sb-user .name{font-size:13px;color:var(--white);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sb-user .role{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.4);margin-top:2px}
-    .sb-logout{color:rgba(249,246,241,.4);transition:color .25s;cursor:pointer}
+    .sb-logout{color:rgba(249,246,241,.4);transition:color .25s;cursor:pointer;background:none;border:none;padding:0}
     .sb-logout:hover{color:var(--gold-warm)}
     .sb-logout svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5}
 
@@ -93,6 +115,8 @@
     .prog-amt .v{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500;font-style:italic}
     .prog-amt .l{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-top:2px;font-weight:600}
 
+    .empty-progs{padding:24px 0;text-align:center;color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:15px}
+
     /* === BLOCO 2: ECONOMIA === */
     .savings{margin-bottom:48px}
     .savings-card{background:var(--green);color:var(--cream);padding:38px;position:relative;overflow:hidden}
@@ -117,11 +141,11 @@
     .card-vis.itau{background:linear-gradient(135deg,#1a1a1a,#2d2422);border-bottom:2px solid var(--gold-warm)}
     .card-vis.latam{background:linear-gradient(135deg,#16223e,#0d1428);border-bottom:2px solid #d04a3a}
     .card-vis.nubank{background:linear-gradient(135deg,#2a1f3d,#1a1326);border-bottom:2px solid #9c6ad9}
+    .card-vis.santander{background:linear-gradient(135deg,#7a1818,#4d0e0e);border-bottom:2px solid #ec0000}
+    .card-vis.bradesco{background:linear-gradient(135deg,#4a1a1a,#2d0d0d);border-bottom:2px solid #cc092f}
+    .card-vis.green{background:linear-gradient(135deg,#1a3826,#142d1f);border-bottom:2px solid var(--gold-warm)}
     .c-bank{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:500}
-    .c-tier{font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;margin-top:3px;font-weight:400}
-    .c-tier-gold{color:var(--gold-warm)}
-    .c-tier-red{color:#e8907f}
-    .c-tier-purple{color:#b890e8}
+    .c-tier{font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;margin-top:3px;font-weight:400;color:var(--gold-warm)}
     .c-chip{width:30px;height:22px;background:linear-gradient(135deg,var(--gold-warm),var(--gold));border-radius:3px;margin-bottom:10px}
     .c-num{font-family:'Jost',sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.7);font-size:12px;font-weight:400;font-feature-settings:"tnum"}
 
@@ -139,6 +163,8 @@
     .upg-prog-fill{height:100%;background:var(--gold)}
     .upg-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--text-muted);letter-spacing:.1em}
 
+    .empty-cards{padding:60px 24px;text-align:center;background:var(--white);border:1px solid var(--border);color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:17px}
+
     /* === BLOCO 4: VIAGENS === */
     .travels{margin-bottom:48px}
     .travels-list{background:var(--white);border:1px solid var(--border)}
@@ -155,10 +181,12 @@
     .tr-class{text-align:right}
     .tr-class .ml{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold);font-weight:500;font-style:italic}
     .tr-class .l{font-size:9px;color:var(--text-muted);letter-spacing:.22em;text-transform:uppercase;margin-top:2px;font-weight:600}
-    .tr-status{padding:5px 12px;font-size:9px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;border:1px solid}
+    .tr-status{padding:5px 12px;font-size:9px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;border:1px solid;white-space:nowrap}
     .st-emit{color:var(--success);border-color:var(--success)}
     .st-plan{color:var(--warning);border-color:var(--warning)}
     .st-strat{color:var(--gold);border-color:var(--gold)}
+
+    .empty-list{padding:48px 24px;text-align:center;color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:16px}
 
     /* === BLOCO 5: MOVIMENTOS === */
     .moves{margin-bottom:48px}
@@ -178,7 +206,7 @@
     /* === BLOCO 6: HISTÓRICO === */
     .history{margin-bottom:36px}
     .history-list{background:var(--white);border:1px solid var(--border)}
-    .h-item{display:grid;grid-template-columns:auto 1fr auto;gap:24px;padding:20px 28px;border-bottom:1px solid var(--border);align-items:center;cursor:pointer;transition:background .2s}
+    .h-item{display:grid;grid-template-columns:auto 1fr auto;gap:24px;padding:20px 28px;border-bottom:1px solid var(--border);align-items:center;transition:background .2s}
     .h-item:last-child{border-bottom:none}
     .h-item:hover{background:var(--cream)}
     .h-icon{width:38px;height:38px;border:1px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:15px}
@@ -191,7 +219,8 @@
       .dash{grid-template-columns:1fr}
       .sidebar{position:relative;height:auto;flex-direction:row;align-items:center;padding:18px 22px;border-right:none;border-bottom:1px solid var(--green-dark)}
       .sb-logo{margin-bottom:0;flex:1}
-      .sb-section,.sb-nav,.sb-foot{display:none}
+      .sb-section,.sb-nav{display:none}
+      .sb-foot{padding-top:0;margin-top:0;border-top:none;border-left:1px solid rgba(201,169,110,.15);padding-left:16px}
       .main{padding:24px 20px 60px}
       .head{flex-direction:column;align-items:flex-start;gap:20px}
       .head-meta{text-align:left}
@@ -211,7 +240,28 @@
 </head>
 <body>
 
-<div class="dash">
+<!-- Tela de loading inicial -->
+<div class="loading-screen" id="loadingScreen">
+  <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
+  <div class="spinner"></div>
+  <p>Carregando seu painel</p>
+</div>
+
+<!-- Tela de "Aguardando configuração" se cliente ainda não tem dados -->
+<div class="empty-state" id="emptyState" style="display:none;">
+  <div class="empty-state-card">
+    <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
+    <h2>Seu painel está sendo <em>preparado.</em></h2>
+    <p>Bem-vindo à Maktub Go! Sua equipe está finalizando a configuração inicial do seu painel privado de gestão de milhas. Em breve, todos os seus dados estarão disponíveis aqui.</p>
+    <div class="actions">
+      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Acessei%20meu%20painel%20Maktub%20Go%20e%20gostaria%20de%20atualiza%C3%A7%C3%B5es." target="_blank" rel="noopener" class="btn btn-primary">Falar com a Maktub</a>
+      <button class="btn btn-ghost" id="btnLogoutEmpty">Sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- Painel principal -->
+<div class="dash" id="dashboard">
   <!-- ============= SIDEBAR ============= -->
   <aside class="sidebar">
     <a class="sb-logo" href="/">
@@ -228,49 +278,17 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Painel Principal
       </li>
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
-        Patrimônio
-      </li>
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-        Cartões
-      </li>
-    </ul>
-
-    <div class="sb-section">Viagens</div>
-    <ul class="sb-nav">
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Calendário
-      </li>
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
-        Destinos
-      </li>
-    </ul>
-
-    <div class="sb-section">Estratégia</div>
-    <ul class="sb-nav">
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        Próximos Movimentos
-      </li>
-      <li class="sb-link">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>
-        Histórico
-      </li>
     </ul>
 
     <div class="sb-foot">
-      <div class="sb-avatar">RA</div>
+      <div class="sb-avatar" id="avatarUser">··</div>
       <div class="sb-user">
-        <div class="name">Ricardo Almeida</div>
+        <div class="name" id="nameUser">Carregando...</div>
         <div class="role">Cliente Concierge</div>
       </div>
-      <a href="/" class="sb-logout" title="Sair">
+      <button class="sb-logout" id="btnLogout" title="Sair">
         <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      </a>
+      </button>
     </div>
   </aside>
 
@@ -278,13 +296,13 @@
   <main class="main">
     <header class="head">
       <div class="head-greet">
-        <span class="label">Painel Privado · Atualizado em 09/05/2026</span>
-        <h1>Bom dia, <em>Ricardo.</em></h1>
-        <p>Seu patrimônio de milhas cresceu 8,2% este mês. Confira os movimentos estratégicos.</p>
+        <span class="label" id="labelDate">Painel Privado</span>
+        <h1 id="greeting">Bem-vindo, <em>cliente</em>.</h1>
+        <p id="greetingSub">Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.</p>
       </div>
       <div class="head-meta">
         <div class="l">Próxima Reunião</div>
-        <div class="v">02 de junho · 14h</div>
+        <div class="v" id="nextMeeting">A definir</div>
       </div>
     </header>
 
@@ -292,65 +310,28 @@
     <section class="heritage">
       <div class="heritage-total">
         <div class="blk-title">Patrimônio Consolidado</div>
-        <div class="h-amount num">970.000<span class="u">milhas</span></div>
-        <div class="h-equiv">Equivalente estimado: <strong>R$ 38.200</strong> em emissões otimizadas</div>
+        <div class="h-amount num" id="patrimonioTotal">0<span class="u">milhas</span></div>
+        <div class="h-equiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> em emissões otimizadas</div>
         <div class="h-trend">
           <div class="h-trend-item">
             <div class="l">Evolução Mês</div>
-            <div class="v up">+ 73.500</div>
+            <div class="v" id="evolucaoMes">—</div>
           </div>
           <div class="h-trend-item">
             <div class="l">Evolução Ano</div>
-            <div class="v up">+ 482.000</div>
+            <div class="v" id="evolucaoAno">—</div>
           </div>
           <div class="h-trend-item">
             <div class="l">Crescimento</div>
-            <div class="v up">8,2%</div>
+            <div class="v" id="crescimentoPct">—</div>
           </div>
         </div>
       </div>
 
       <div class="heritage-progs">
         <div class="blk-title">Por Programa</div>
-        <div class="prog">
-          <div class="prog-info">
-            <div class="nm">Latam Pass</div>
-            <div class="bar"><div class="bar-fill" style="width:85%"></div></div>
-          </div>
-          <div class="prog-amt">
-            <div class="v">412.000</div>
-            <div class="l">pontos</div>
-          </div>
-        </div>
-        <div class="prog">
-          <div class="prog-info">
-            <div class="nm">Smiles</div>
-            <div class="bar"><div class="bar-fill" style="width:60%"></div></div>
-          </div>
-          <div class="prog-amt">
-            <div class="v">285.000</div>
-            <div class="l">milhas</div>
-          </div>
-        </div>
-        <div class="prog">
-          <div class="prog-info">
-            <div class="nm">Livelo</div>
-            <div class="bar"><div class="bar-fill" style="width:38%"></div></div>
-          </div>
-          <div class="prog-amt">
-            <div class="v">178.000</div>
-            <div class="l">pontos</div>
-          </div>
-        </div>
-        <div class="prog">
-          <div class="prog-info">
-            <div class="nm">Esfera</div>
-            <div class="bar"><div class="bar-fill" style="width:20%"></div></div>
-          </div>
-          <div class="prog-amt">
-            <div class="v">95.000</div>
-            <div class="l">pontos</div>
-          </div>
+        <div id="programasList">
+          <div class="empty-progs">Aguardando dados</div>
         </div>
       </div>
     </section>
@@ -366,19 +347,19 @@
           </div>
           <div class="sav-cell">
             <div class="p">Hoje</div>
-            <div class="a"><span class="c">R$</span>0</div>
+            <div class="a"><span class="c">R$</span><span id="ecoHoje">0</span></div>
           </div>
           <div class="sav-cell">
             <div class="p">Semana</div>
-            <div class="a"><span class="c">R$</span>1.240</div>
+            <div class="a"><span class="c">R$</span><span id="ecoSemana">0</span></div>
           </div>
           <div class="sav-cell">
             <div class="p">Mês</div>
-            <div class="a"><span class="c">R$</span>4.890</div>
+            <div class="a"><span class="c">R$</span><span id="ecoMes">0</span></div>
           </div>
           <div class="sav-cell">
             <div class="p">Ano</div>
-            <div class="a"><span class="c">R$</span>47.320</div>
+            <div class="a"><span class="c">R$</span><span id="ecoAno">0</span></div>
           </div>
         </div>
       </div>
@@ -387,269 +368,377 @@
     <!-- ============= BLOCO 3: CARTÕES ============= -->
     <section class="cards">
       <div class="blk-title">Cartões Ativos · Otimização Contínua</div>
-      <div class="cards-grid">
-        <div class="card-item">
-          <div class="card-vis itau">
-            <div>
-              <div class="c-bank">Itaú Personnalité</div>
-              <div class="c-tier c-tier-gold">Visa Infinite</div>
-            </div>
-            <div>
-              <div class="c-chip"></div>
-              <div class="c-num">•••• •••• •••• 4427</div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="card-row"><div class="l">Pontuação</div><div class="v">2,8 pts/R$</div></div>
-            <div class="card-row"><div class="l">Gasto Médio/Mês</div><div class="v">R$ 18.400</div></div>
-            <div class="card-row"><div class="l">Anuidade</div><div class="v">Isenta</div></div>
-            <div class="c-upgrade">
-              <div class="l">Próximo Upgrade</div>
-              <div class="t">Migração para <em>Itaú Black</em> em <strong>4 meses</strong>, mantendo padrão atual.</div>
-              <div class="upg-prog"><div class="upg-prog-fill" style="width:62%"></div></div>
-              <div class="upg-meta"><span>62% do volume</span><span>Setembro/2026</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-item">
-          <div class="card-vis latam">
-            <div>
-              <div class="c-bank">Itaucard Latam Pass</div>
-              <div class="c-tier c-tier-red">Black</div>
-            </div>
-            <div>
-              <div class="c-chip"></div>
-              <div class="c-num">•••• •••• •••• 8194</div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="card-row"><div class="l">Pontuação</div><div class="v">3,1 pts/R$</div></div>
-            <div class="card-row"><div class="l">Gasto Médio/Mês</div><div class="v">R$ 4.800</div></div>
-            <div class="card-row"><div class="l">Anuidade</div><div class="v">R$ 1.260</div></div>
-            <div class="c-upgrade">
-              <div class="l">Recomendação Atual</div>
-              <div class="t">Concentrar em <em>combustível e supermercado</em>. Multiplicador 5x ativo até <strong>30/06</strong>.</div>
-              <div class="upg-prog"><div class="upg-prog-fill" style="width:45%"></div></div>
-              <div class="upg-meta"><span>Bônus mensal</span><span>R$ 7.200 restantes</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-item">
-          <div class="card-vis nubank">
-            <div>
-              <div class="c-bank">Nubank</div>
-              <div class="c-tier c-tier-purple">Ultravioleta</div>
-            </div>
-            <div>
-              <div class="c-chip"></div>
-              <div class="c-num">•••• •••• •••• 0271</div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="card-row"><div class="l">Cashback</div><div class="v">1,0% + CDI</div></div>
-            <div class="card-row"><div class="l">Gasto Médio/Mês</div><div class="v">R$ 1.800</div></div>
-            <div class="card-row"><div class="l">Anuidade</div><div class="v">R$ 49/mês</div></div>
-            <div class="c-upgrade">
-              <div class="l">Avaliação</div>
-              <div class="t">Manter como <em>cartão complementar.</em> Cashback rendendo + CDI no portfólio.</div>
-              <div class="upg-prog"><div class="upg-prog-fill" style="width:100%;background:var(--success);"></div></div>
-              <div class="upg-meta"><span>Setup ideal</span><span>Sem ação necessária</span></div>
-            </div>
-          </div>
-        </div>
+      <div id="cardsContainer">
+        <div class="empty-cards">Aguardando cadastro de cartões</div>
       </div>
     </section>
 
     <!-- ============= BLOCO 4: VIAGENS ============= -->
     <section class="travels">
-      <div class="blk-title">Calendário de Viagens · 2026</div>
-      <div class="travels-list">
-        <div class="travel">
-          <div class="tr-date">
-            <div class="m">Mai</div>
-            <div class="d">22</div>
-            <div class="y">2026</div>
-          </div>
-          <div class="tr-info">
-            <div class="dest">Lisboa <em>+ Madri</em></div>
-            <div class="dt">Casal · 9 dias · Latam Executiva GRU–LIS / IB MAD–GRU</div>
-          </div>
-          <div class="tr-class">
-            <div class="ml">285.000 pts</div>
-            <div class="l">Latam Pass</div>
-          </div>
-          <div class="tr-status st-emit">Emitida</div>
-        </div>
-
-        <div class="travel">
-          <div class="tr-date">
-            <div class="m">Set</div>
-            <div class="d">14</div>
-            <div class="y">2026</div>
-          </div>
-          <div class="tr-info">
-            <div class="dest">Tóquio <em>· Destino dos sonhos</em></div>
-            <div class="dt">Família 4 pax · 14 dias · Estratégia Latam executiva via Lima ou parceria ANA</div>
-          </div>
-          <div class="tr-class">
-            <div class="ml">~520.000 pts</div>
-            <div class="l">Em construção</div>
-          </div>
-          <div class="tr-status st-strat">Estratégia</div>
-        </div>
-
-        <div class="travel">
-          <div class="tr-date">
-            <div class="m">Dez</div>
-            <div class="d">20</div>
-            <div class="y">2026</div>
-          </div>
-          <div class="tr-info">
-            <div class="dest">Orlando <em>Disney</em></div>
-            <div class="dt">Família 4 pax · 12 dias · Avaliando Smiles American x Latam Pass</div>
-          </div>
-          <div class="tr-class">
-            <div class="ml">~340.000 milhas</div>
-            <div class="l">Em planejamento</div>
-          </div>
-          <div class="tr-status st-plan">Planejamento</div>
-        </div>
-
-        <div class="travel">
-          <div class="tr-date">
-            <div class="m">Fev</div>
-            <div class="d">10</div>
-            <div class="y">2027</div>
-          </div>
-          <div class="tr-info">
-            <div class="dest">Fernando de Noronha</div>
-            <div class="dt">Casal · 7 dias · Aniversário de casamento · Azul executiva</div>
-          </div>
-          <div class="tr-class">
-            <div class="ml">~95.000 pts</div>
-            <div class="l">Reservar em jul/26</div>
-          </div>
-          <div class="tr-status st-strat">Estratégia</div>
-        </div>
+      <div class="blk-title">Calendário de Viagens</div>
+      <div class="travels-list" id="travelsList">
+        <div class="empty-list">Nenhuma viagem cadastrada ainda</div>
       </div>
     </section>
 
     <!-- ============= BLOCO 5: MOVIMENTOS ============= -->
     <section class="moves">
       <div class="blk-title">Próximos Movimentos Estratégicos</div>
-      <div class="moves-grid">
-        <div class="move-card priority">
-          <div class="mv-tag">★ Prioridade Alta · Janela curta</div>
-          <h4>Transferência <em>Livelo → Smiles</em> com bônus de 100%</h4>
-          <p>A promoção encerra em 15/05. Recomendação: transferir 178.000 pts da Livelo, gerando 356.000 milhas Smiles. Suficientes para emitir Orlando em executiva no fim do ano.</p>
-          <div class="mv-meta">
-            <div class="mv-meta-i">
-              <div class="l">Prazo</div>
-              <div class="v gold">15/05/2026</div>
-            </div>
-            <div class="mv-meta-i">
-              <div class="l">Ganho líquido</div>
-              <div class="v gold">+178.000 milhas</div>
-            </div>
-            <div class="mv-meta-i">
-              <div class="l">Status</div>
-              <div class="v">Aguardando aprovação</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="move-card">
-          <div class="mv-tag">Próxima ação</div>
-          <h4>Antecipar emissão <em>Tóquio</em> em julho</h4>
-          <p>Janelas de disponibilidade Latam abrem 330 dias antes. Setembro/26 entra em janela em julho/26. Reservar trecho LIM–NRT executiva enquanto há disponibilidade.</p>
-          <div class="mv-meta">
-            <div class="mv-meta-i">
-              <div class="l">Quando agir</div>
-              <div class="v">Jul/2026</div>
-            </div>
-            <div class="mv-meta-i">
-              <div class="l">Custo estimado</div>
-              <div class="v">520.000 pts</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="move-card">
-          <div class="mv-tag">Otimização de cartão</div>
-          <h4>Ativar bônus <em>Personnalité Black</em></h4>
-          <p>Faltam R$ 28.000 em gastos para ativar o upgrade automático para Itaú Black. Concentrar despesas dos próximos 4 meses no Personnalité.</p>
-          <div class="mv-meta">
-            <div class="mv-meta-i">
-              <div class="l">Meta</div>
-              <div class="v gold">R$ 28.000</div>
-            </div>
-            <div class="mv-meta-i">
-              <div class="l">Previsão</div>
-              <div class="v">Set/2026</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="move-card">
-          <div class="mv-tag">Oportunidade</div>
-          <h4>Cadastrar <em>Latam Pass Itaú Infinite</em></h4>
-          <p>Cartão recém-lançado com bônus de 80.000 pontos no primeiro gasto. Combinaria perfeitamente com o setup atual e abriria acesso ao programa Black da Latam.</p>
-          <div class="mv-meta">
-            <div class="mv-meta-i">
-              <div class="l">Bônus</div>
-              <div class="v gold">80.000 pts</div>
-            </div>
-            <div class="mv-meta-i">
-              <div class="l">Anuidade</div>
-              <div class="v">R$ 1.380/ano</div>
-            </div>
-          </div>
-        </div>
+      <div class="moves-grid" id="movesContainer">
+        <div class="empty-list" style="grid-column:1/-1">Nenhum movimento cadastrado ainda</div>
       </div>
     </section>
 
     <!-- ============= BLOCO 6: HISTÓRICO ============= -->
     <section class="history">
       <div class="blk-title">Histórico de Reuniões Mensais</div>
-      <div class="history-list">
-        <div class="h-item">
-          <div class="h-icon">M</div>
-          <div class="h-info">
-            <div class="t">Reunião de Maio · 04/05/2026</div>
-            <div class="d">Definição da viagem a Lisboa. Análise da promoção Livelo. Avaliação do Personnalité.</div>
-          </div>
-          <div class="h-arrow">→</div>
-        </div>
-        <div class="h-item">
-          <div class="h-icon">A</div>
-          <div class="h-info">
-            <div class="t">Reunião de Abril · 06/04/2026</div>
-            <div class="d">Início do planejamento Disney 2026. Recomendação de troca do Bradesco Visa Infinite para Latam Pass.</div>
-          </div>
-          <div class="h-arrow">→</div>
-        </div>
-        <div class="h-item">
-          <div class="h-icon">M</div>
-          <div class="h-info">
-            <div class="t">Reunião de Março · 02/03/2026</div>
-            <div class="d">Estruturação do plano anual de viagens. Definição do Japão como destino dos sonhos.</div>
-          </div>
-          <div class="h-arrow">→</div>
-        </div>
-        <div class="h-item">
-          <div class="h-icon">F</div>
-          <div class="h-info">
-            <div class="t">Reunião Inicial · 12/02/2026</div>
-            <div class="d">Diagnóstico de cartões e programas. Definição de objetivos. Onboarding completo.</div>
-          </div>
-          <div class="h-arrow">→</div>
-        </div>
+      <div class="history-list" id="historyList">
+        <div class="empty-list">Nenhuma reunião registrada ainda</div>
       </div>
     </section>
   </main>
 </div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+  const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+
+  const $ = (id) => document.getElementById(id);
+
+  // ===== Helpers de formatação =====
+  const fmtNum = (n) => {
+    if (n === null || n === undefined || isNaN(n)) return '0';
+    return Number(n).toLocaleString('pt-BR');
+  };
+  const fmtMoney = (n) => {
+    if (n === null || n === undefined || isNaN(n)) return '0';
+    return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  };
+  const fmtDate = (dateStr) => {
+    if (!dateStr) return { m: '—', d: '—', y: '—' };
+    const d = new Date(dateStr + 'T12:00:00');
+    if (isNaN(d.getTime())) return { m: '—', d: '—', y: '—' };
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return {
+      m: meses[d.getMonth()],
+      d: String(d.getDate()).padStart(2, '0'),
+      y: d.getFullYear()
+    };
+  };
+  const initialsOf = (name) => {
+    if (!name) return '··';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+  const firstName = (name) => {
+    if (!name) return 'cliente';
+    return name.trim().split(/\s+/)[0];
+  };
+  const greetingByHour = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+  const todayLabel = () => {
+    const d = new Date();
+    return `Painel Privado · Atualizado em ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  };
+  const escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+  const formatTextWithEm = (str) => {
+    if (!str) return '';
+    return escapeHtml(str).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  };
+
+  // ===== Logout =====
+  async function doLogout() {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Erro ao sair:', err);
+    }
+    window.location.replace('/acesso/');
+  }
+  $('btnLogout').addEventListener('click', doLogout);
+  const btnLogoutEmpty = $('btnLogoutEmpty');
+  if (btnLogoutEmpty) btnLogoutEmpty.addEventListener('click', doLogout);
+
+  // ===== Render functions =====
+  function renderProgramas(programas) {
+    const cont = $('programasList');
+    if (!programas || programas.length === 0) {
+      cont.innerHTML = '<div class="empty-progs">Aguardando dados</div>';
+      return;
+    }
+    const max = Math.max(...programas.map(p => p.saldo || 0), 1);
+    cont.innerHTML = programas.map(p => {
+      const pct = Math.max(8, ((p.saldo || 0) / max) * 100);
+      return `
+        <div class="prog">
+          <div class="prog-info">
+            <div class="nm">${escapeHtml(p.programa)}</div>
+            <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="prog-amt">
+            <div class="v">${fmtNum(p.saldo)}</div>
+            <div class="l">${escapeHtml(p.unidade || 'milhas')}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderCartoes(cartoes) {
+    const cont = $('cardsContainer');
+    if (!cartoes || cartoes.length === 0) {
+      cont.innerHTML = '<div class="empty-cards">Aguardando cadastro de cartões</div>';
+      cont.className = '';
+      return;
+    }
+    cont.className = 'cards-grid';
+    cont.innerHTML = cartoes.map(c => {
+      const cor = c.cor_visual || 'green';
+      const upgradeBlock = c.upgrade_titulo || c.upgrade_texto ? `
+        <div class="c-upgrade">
+          <div class="l">${escapeHtml(c.upgrade_titulo || 'Recomendação')}</div>
+          <div class="t">${formatTextWithEm(c.upgrade_texto || '')}</div>
+          ${c.upgrade_progresso !== null && c.upgrade_progresso !== undefined ? `
+            <div class="upg-prog"><div class="upg-prog-fill" style="width:${Math.min(100, Math.max(0, c.upgrade_progresso))}%"></div></div>
+            <div class="upg-meta">
+              <span>${escapeHtml(c.upgrade_meta_label || '')}</span>
+              <span>${escapeHtml(c.upgrade_prazo_label || '')}</span>
+            </div>
+          ` : ''}
+        </div>
+      ` : '';
+      return `
+        <div class="card-item">
+          <div class="card-vis ${escapeHtml(cor)}">
+            <div>
+              <div class="c-bank">${escapeHtml(c.banco || 'Cartão')}</div>
+              <div class="c-tier">${escapeHtml(c.categoria || '')}</div>
+            </div>
+            <div>
+              <div class="c-chip"></div>
+              <div class="c-num">•••• •••• •••• ${escapeHtml(c.final_cartao || '••••')}</div>
+            </div>
+          </div>
+          <div class="card-body">
+            ${c.pontuacao ? `<div class="card-row"><div class="l">Pontuação</div><div class="v">${escapeHtml(c.pontuacao)}</div></div>` : ''}
+            ${c.gasto_medio_mes ? `<div class="card-row"><div class="l">Gasto Médio/Mês</div><div class="v">R$ ${fmtMoney(c.gasto_medio_mes)}</div></div>` : ''}
+            ${c.anuidade ? `<div class="card-row"><div class="l">Anuidade</div><div class="v">${escapeHtml(c.anuidade)}</div></div>` : ''}
+            ${upgradeBlock}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderViagens(viagens) {
+    const cont = $('travelsList');
+    if (!viagens || viagens.length === 0) {
+      cont.innerHTML = '<div class="empty-list">Nenhuma viagem cadastrada ainda</div>';
+      return;
+    }
+    cont.innerHTML = viagens.map(v => {
+      const date = fmtDate(v.data_viagem);
+      const statusClass = v.status === 'emitida' ? 'st-emit' : (v.status === 'planejamento' ? 'st-plan' : 'st-strat');
+      const statusLabel = v.status === 'emitida' ? 'Emitida' : (v.status === 'planejamento' ? 'Planejamento' : 'Estratégia');
+      return `
+        <div class="travel">
+          <div class="tr-date">
+            <div class="m">${date.m}</div>
+            <div class="d">${date.d}</div>
+            <div class="y">${date.y}</div>
+          </div>
+          <div class="tr-info">
+            <div class="dest">${escapeHtml(v.destino)}${v.destino_complemento ? ' <em>' + escapeHtml(v.destino_complemento) + '</em>' : ''}</div>
+            <div class="dt">${escapeHtml(v.detalhes || '')}</div>
+          </div>
+          <div class="tr-class">
+            <div class="ml">${escapeHtml(v.milhas_estimadas || '—')}</div>
+            <div class="l">${escapeHtml(v.programa_usado || '')}</div>
+          </div>
+          <div class="tr-status ${statusClass}">${statusLabel}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderMovimentos(movs) {
+    const cont = $('movesContainer');
+    if (!movs || movs.length === 0) {
+      cont.innerHTML = '<div class="empty-list" style="grid-column:1/-1">Nenhum movimento cadastrado ainda</div>';
+      return;
+    }
+    cont.innerHTML = movs.map(m => {
+      const metas = [
+        m.meta_1_label && m.meta_1_valor ? { label: m.meta_1_label, valor: m.meta_1_valor, gold: true } : null,
+        m.meta_2_label && m.meta_2_valor ? { label: m.meta_2_label, valor: m.meta_2_valor, gold: false } : null,
+        m.meta_3_label && m.meta_3_valor ? { label: m.meta_3_label, valor: m.meta_3_valor, gold: false } : null
+      ].filter(Boolean);
+      const metaHtml = metas.map(meta => `
+        <div class="mv-meta-i">
+          <div class="l">${escapeHtml(meta.label)}</div>
+          <div class="v ${meta.gold ? 'gold' : ''}">${escapeHtml(meta.valor)}</div>
+        </div>
+      `).join('');
+      return `
+        <div class="move-card ${m.prioridade ? 'priority' : ''}">
+          ${m.tag ? `<div class="mv-tag">${escapeHtml(m.tag)}</div>` : ''}
+          <h4>${formatTextWithEm(m.titulo)}</h4>
+          ${m.descricao ? `<p>${escapeHtml(m.descricao)}</p>` : ''}
+          ${metas.length > 0 ? `<div class="mv-meta">${metaHtml}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderReunioes(reunioes) {
+    const cont = $('historyList');
+    if (!reunioes || reunioes.length === 0) {
+      cont.innerHTML = '<div class="empty-list">Nenhuma reunião registrada ainda</div>';
+      return;
+    }
+    cont.innerHTML = reunioes.map(r => {
+      const date = fmtDate(r.data_reuniao);
+      const initial = (r.titulo || 'M')[0].toUpperCase();
+      return `
+        <div class="h-item">
+          <div class="h-icon">${escapeHtml(initial)}</div>
+          <div class="h-info">
+            <div class="t">${escapeHtml(r.titulo)}${r.data_reuniao ? ' · ' + date.d + '/' + String(new Date(r.data_reuniao + 'T12:00:00').getMonth()+1).padStart(2,'0') + '/' + date.y : ''}</div>
+            <div class="d">${escapeHtml(r.resumo || '')}</div>
+          </div>
+          <div class="h-arrow">→</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== Inicialização =====
+  (async () => {
+    try {
+      // 1. Verificar se está logado
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr || !session) {
+        window.location.replace('/acesso/');
+        return;
+      }
+      const user = session.user;
+
+      // 2. Buscar dados do cliente
+      const { data: cliente, error: cliErr } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (cliErr) {
+        console.error('Erro ao buscar cliente:', cliErr);
+      }
+
+      // Se não há registro na tabela clientes, mostrar empty state
+      if (!cliente) {
+        $('loadingScreen').classList.add('hide');
+        setTimeout(() => $('loadingScreen').style.display = 'none', 400);
+        $('emptyState').style.display = 'flex';
+        return;
+      }
+
+      // 3. Preencher header e sidebar
+      const nome = cliente.nome_completo || user.email || 'Cliente';
+      $('nameUser').textContent = nome;
+      $('avatarUser').textContent = initialsOf(nome);
+      $('greeting').innerHTML = `${greetingByHour()}, <em>${escapeHtml(firstName(nome))}.</em>`;
+      $('labelDate').textContent = todayLabel();
+
+      // 4. Buscar todos os dados em paralelo
+      const [programasRes, cartoesRes, viagensRes, movimentosRes, reunioesRes, economiaRes] = await Promise.all([
+        supabase.from('programas_milhas').select('*').eq('cliente_id', user.id).order('ordem').order('saldo', { ascending: false }),
+        supabase.from('cartoes').select('*').eq('cliente_id', user.id).order('ordem'),
+        supabase.from('viagens').select('*').eq('cliente_id', user.id).order('data_viagem', { ascending: true }),
+        supabase.from('movimentos_estrategicos').select('*').eq('cliente_id', user.id).order('prioridade', { ascending: false }).order('ordem'),
+        supabase.from('reunioes').select('*').eq('cliente_id', user.id).order('data_reuniao', { ascending: false }).limit(8),
+        supabase.from('economia_gerada').select('*').eq('cliente_id', user.id).maybeSingle()
+      ]);
+
+      const programas = programasRes.data || [];
+      const cartoes = cartoesRes.data || [];
+      const viagens = viagensRes.data || [];
+      const movimentos = movimentosRes.data || [];
+      const reunioes = reunioesRes.data || [];
+      const economia = economiaRes.data;
+
+      // 5. Renderizar Bloco 1: Patrimônio
+      const totalMilhas = programas.reduce((sum, p) => sum + Number(p.saldo || 0), 0);
+      $('patrimonioTotal').innerHTML = `${fmtNum(totalMilhas)}<span class="u">milhas</span>`;
+
+      if (economia) {
+        $('patrimonioBrl').textContent = `R$ ${fmtMoney(economia.patrimonio_equivalente_brl)}`;
+        if (economia.evolucao_mes && Number(economia.evolucao_mes) > 0) {
+          $('evolucaoMes').textContent = `+ ${fmtNum(economia.evolucao_mes)}`;
+          $('evolucaoMes').classList.add('up');
+        } else {
+          $('evolucaoMes').textContent = fmtNum(economia.evolucao_mes || 0);
+        }
+        if (economia.evolucao_ano && Number(economia.evolucao_ano) > 0) {
+          $('evolucaoAno').textContent = `+ ${fmtNum(economia.evolucao_ano)}`;
+          $('evolucaoAno').classList.add('up');
+        } else {
+          $('evolucaoAno').textContent = fmtNum(economia.evolucao_ano || 0);
+        }
+        if (economia.crescimento_pct && Number(economia.crescimento_pct) > 0) {
+          $('crescimentoPct').textContent = `${Number(economia.crescimento_pct).toLocaleString('pt-BR', {maximumFractionDigits: 1})}%`;
+          $('crescimentoPct').classList.add('up');
+        } else {
+          $('crescimentoPct').textContent = '—';
+        }
+        if (economia.proxima_reuniao) {
+          $('nextMeeting').textContent = economia.proxima_reuniao;
+        }
+
+        // Bloco 2: Economia
+        $('ecoHoje').textContent = fmtMoney(economia.economia_hoje);
+        $('ecoSemana').textContent = fmtMoney(economia.economia_semana);
+        $('ecoMes').textContent = fmtMoney(economia.economia_mes);
+        $('ecoAno').textContent = fmtMoney(economia.economia_ano);
+      }
+
+      renderProgramas(programas);
+      renderCartoes(cartoes);
+      renderViagens(viagens);
+      renderMovimentos(movimentos);
+      renderReunioes(reunioes);
+
+      // 6. Mostrar dashboard
+      $('loadingScreen').classList.add('hide');
+      setTimeout(() => $('loadingScreen').style.display = 'none', 400);
+      $('dashboard').classList.add('show');
+
+    } catch (err) {
+      console.error('Erro ao carregar painel:', err);
+      $('loadingScreen').classList.add('hide');
+      setTimeout(() => $('loadingScreen').style.display = 'none', 400);
+      $('emptyState').style.display = 'flex';
+    }
+  })();
+</script>
 
 </body>
 </html>
