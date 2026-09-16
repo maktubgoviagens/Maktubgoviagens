@@ -6,7 +6,7 @@
   <meta name="description" content="Painel privado do cliente Maktub Go." />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#1a3826" />
-  <title>Painel Privado — Maktub Go</title>
+  <title>Painel Privado | Maktub Go</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
@@ -44,6 +44,7 @@
     /* === LAYOUT === */
     .dash{display:grid;grid-template-columns:260px 1fr;min-height:100vh;opacity:0;transition:opacity .4s}
     .dash.show{opacity:1}
+    .dash>*{min-width:0}
 
     /* === SIDEBAR === */
     .sidebar{background:var(--green);color:var(--cream);padding:28px 22px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--green-dark)}
@@ -214,12 +215,175 @@
     .h-info .d{font-size:12.5px;color:var(--text-mid);font-weight:300}
     .h-arrow{color:var(--text-muted);font-size:18px;font-family:'Cormorant Garamond',serif}
 
+    /* === NAVEGAÇÃO ENTRE ÁREAS === */
+    .sb-nav .sb-section{list-style:none}
+    .sb-nav a.sb-link{text-decoration:none}
+    .sb-link.wa{color:rgba(249,246,241,.55)}
+    .sb-link.wa:hover{color:var(--gold-warm)}
+    .view[hidden]{display:none!important}
+    .view{animation:viewIn .35s ease-out}
+    @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .sec{margin-bottom:48px}
+
+    /* KPIs */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:48px}
+    .kpi{background:var(--white);padding:24px 26px}
+    .kpi .l{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:10px}
+    .kpi .v{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--green);line-height:1;font-weight:400}
+    .kpi .v .c{font-size:15px;color:var(--text-muted);font-style:italic;margin-right:3px}
+    .kpi .s{font-size:11.5px;color:var(--text-muted);margin-top:8px;font-weight:300}
+    .kpi.hl{background:var(--green)}
+    .kpi.hl .l{color:rgba(249,246,241,.55)}
+    .kpi.hl .v{color:var(--gold-warm)}
+    .kpi.hl .v .c,.kpi.hl .s{color:rgba(249,246,241,.6)}
+
+    /* Gráfico de barras */
+    .chart-card{background:var(--white);border:1px solid var(--border);padding:28px 28px 20px}
+    .chart-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+    .chart-top h3{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green);font-weight:400}
+    .chart-top h3 em{color:var(--gold);font-style:italic;font-weight:300}
+    .sel{font-family:inherit;font-size:12px;letter-spacing:.06em;color:var(--green);background:var(--cream);border:1px solid var(--border-strong);padding:8px 12px;cursor:pointer}
+    .bars{position:relative;height:220px;display:flex;align-items:flex-end;gap:6px;padding-top:24px;border-bottom:1px solid var(--border-strong)}
+    .bars .grid{position:absolute;left:0;right:0;border-top:1px dashed var(--border);pointer-events:none}
+    .bar-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative;cursor:default;outline:none}
+    .bar-col .b{width:100%;max-width:44px;background:var(--gold-warm);border-radius:4px 4px 0 0;min-height:2px;transition:background .2s}
+    .bar-col.last .b{background:var(--green)}
+    .bar-col:hover .b,.bar-col:focus .b{background:var(--gold)}
+    .bar-col .top{position:absolute;font-size:11px;color:var(--text);font-weight:500;white-space:nowrap;transform:translateY(-100%);padding-bottom:4px}
+    .bar-x{display:flex;gap:6px;margin-top:8px}
+    .bar-x span{flex:1;text-align:center;font-size:10px;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase}
+    .tip{position:absolute;z-index:5;background:var(--green-dark);color:var(--cream);padding:9px 12px;font-size:12px;line-height:1.45;pointer-events:none;white-space:nowrap;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);opacity:0;transition:opacity .15s}
+    .tip strong{color:var(--gold-warm);font-weight:500}
+    .bar-col:hover .tip,.bar-col:focus .tip{opacity:1}
+    .chart-empty{padding:56px 20px;text-align:center;color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:17px}
+
+    /* Tabelas / listas */
+    .tbl{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--border)}
+    .tbl th{text-align:left;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:600;padding:14px 20px;border-bottom:1px solid var(--border-strong);background:var(--cream-deep)}
+    .tbl td{padding:15px 20px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .r{text-align:right;white-space:nowrap}
+    .tbl .mute{color:var(--text-muted);font-size:12px}
+    .tbl .pos{color:var(--success);font-weight:500}
+    .tbl .neg{color:#9a4a3a;font-weight:500}
+    .tbl .strike{text-decoration:line-through;color:var(--text-muted)}
+    .tbl .eco{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--green);font-weight:500}
+    .pill{display:inline-block;font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;padding:3px 8px;border:1px solid var(--border-strong);color:var(--text-mid)}
+    .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    @media(max-width:700px){.tbl{min-width:620px}.tbl td:nth-child(2){min-width:190px}}
+
+    /* Próximo voo (destaque no painel principal) */
+    .nextflight{display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;background:var(--white);border:1px solid var(--border);border-left:3px solid var(--gold);padding:22px 28px;margin-bottom:36px;cursor:pointer;transition:background .2s}
+    .nextflight:hover{background:var(--cream-deep)}
+    .nf-count{text-align:center;padding-right:24px;border-right:1px solid var(--border)}
+    .nf-count .n{font-family:'Cormorant Garamond',serif;font-size:40px;color:var(--gold);line-height:1}
+    .nf-count .t{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-top:4px}
+    .nf-info .k{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:4px}
+    .nf-info .rt{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--green)}
+    .nf-info .d{font-size:12.5px;color:var(--text-muted);font-weight:300}
+    .nf-go{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--green);font-weight:600;white-space:nowrap}
+
+    /* Voos */
+    .flights{display:grid;gap:16px}
+    .flight{background:var(--white);border:1px solid var(--border);display:grid;grid-template-columns:120px 1fr;overflow:hidden}
+    .fl-side{background:var(--green);color:var(--cream);padding:22px 16px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+    .fl-side .m{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-style:italic;color:var(--gold-warm)}
+    .fl-side .d{font-family:'Cormorant Garamond',serif;font-size:42px;line-height:1;margin:2px 0}
+    .fl-side .y{font-size:10px;letter-spacing:.18em;color:rgba(249,246,241,.6)}
+    .fl-side .cd{margin-top:12px;padding-top:10px;border-top:1px solid rgba(201,169,110,.25);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-warm);font-weight:500}
+    .fl-main{padding:22px 28px}
+    .fl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+    .fl-route{display:flex;align-items:flex-start;gap:18px}
+    .fl-pt .code{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--green);line-height:1;letter-spacing:.02em}
+    .fl-pt .city{font-size:11px;color:var(--text-muted);margin-top:3px}
+    .fl-pt .hr{font-size:13px;color:var(--text);font-weight:500;margin-top:2px}
+    .fl-line{width:70px;height:1px;background:var(--gold);position:relative;opacity:.7;margin-top:18px}
+    .fl-line::after{content:'✈';position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);background:var(--white);color:var(--gold);padding:0 6px;font-size:13px}
+    .fl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding-top:14px;border-top:1px solid var(--border)}
+    .fl-grid .l{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:3px}
+    .fl-grid .v{font-size:13.5px;color:var(--text);font-weight:500;word-break:break-word}
+    .loc{font-family:'Jost',sans-serif;letter-spacing:.14em;background:var(--cream-deep);padding:2px 8px;border:1px dashed var(--border-strong);cursor:pointer}
+    .fl-obs{margin-top:12px;font-size:12.5px;color:var(--text-mid);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:15px}
+    .st-ok{color:var(--success);border-color:var(--success)}
+    .st-warn{color:var(--warning);border-color:var(--warning)}
+    .st-off{color:#9a4a3a;border-color:#9a4a3a}
+    .st-done{color:var(--text-muted);border-color:var(--border-strong)}
+    .past-toggle{margin-top:24px;background:none;border:none;font-family:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);cursor:pointer;font-weight:600;padding:6px 0}
+    .flight.past{opacity:.7}
+    .flight.past .fl-side{background:var(--text-muted)}
+
+    /* Agendar reunião */
+    .meet{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;align-items:start}
+    .form-card{background:var(--white);border:1px solid var(--border);padding:32px}
+    .form-card h3{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--green);font-weight:400;margin-bottom:6px}
+    .form-card h3 em{color:var(--gold);font-style:italic;font-weight:300}
+    .form-card>p{font-size:13.5px;color:var(--text-mid);font-weight:300;margin-bottom:24px}
+    .fld{margin-bottom:20px}
+    .fld>label,.fld .lb{display:block;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:8px}
+    .fld input[type=date],.fld textarea{width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--cream);border:1px solid var(--border-strong);padding:12px 14px;outline:none;transition:border-color .2s}
+    .fld input:focus,.fld textarea:focus{border-color:var(--gold)}
+    .fld textarea{min-height:96px;resize:vertical}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chips input{position:absolute;opacity:0;pointer-events:none}
+    .chips label{padding:10px 16px;border:1px solid var(--border-strong);font-size:12px;letter-spacing:.06em;color:var(--text-mid);cursor:pointer;transition:all .2s;background:var(--white)}
+    .chips input:checked+label{background:var(--green);border-color:var(--green);color:var(--white)}
+    .chips input:focus-visible+label{outline:2px solid var(--gold);outline-offset:2px}
+    .btn-main{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:var(--green);color:var(--white);font-family:inherit;font-size:11px;letter-spacing:.26em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background .25s}
+    .btn-main:hover{background:var(--green-mid)}
+    .btn-main:disabled{opacity:.55;cursor:wait}
+    .btn-line{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:1px solid var(--gold);color:var(--green);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;transition:background .25s}
+    .btn-line:hover{background:var(--gold-soft)}
+    .form-msg{margin-top:16px;padding:16px 18px;font-size:13.5px;line-height:1.55;display:none}
+    .form-msg.ok{display:block;background:rgba(90,140,94,.08);border-left:2px solid var(--success);color:var(--text)}
+    .form-msg.err{display:block;background:rgba(154,74,58,.07);border-left:2px solid #9a4a3a;color:var(--text)}
+    .form-msg .btn-line{margin-top:12px}
+    .req-list{background:var(--white);border:1px solid var(--border)}
+    .req{padding:18px 22px;border-bottom:1px solid var(--border)}
+    .req:last-child{border-bottom:none}
+    .req-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+    .req-top .t{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500}
+    .req .d{font-size:12.5px;color:var(--text-muted);font-weight:300}
+    .req .btn-line{margin-top:10px;padding:9px 14px}
+    .meet-note{margin-top:16px;padding:18px 20px;background:var(--cream-deep);border-left:2px solid var(--gold);font-size:13px;color:var(--text-mid);line-height:1.6}
+
+    .bar-col:first-child .tip{left:0;transform:none}
+    .bar-col:last-child .tip{left:auto;right:0;transform:none}
+
     /* === MOBILE === */
     @media(max-width:1100px){
       .dash{grid-template-columns:1fr}
       .sidebar{position:relative;height:auto;flex-direction:row;align-items:center;padding:18px 22px;border-right:none;border-bottom:1px solid var(--green-dark)}
-      .sb-logo{margin-bottom:0;flex:1}
-      .sb-section,.sb-nav{display:none}
+      .sb-logo{margin-bottom:0;flex:1;order:1}
+      .sb-foot{order:2;max-width:52%;min-width:0}
+      .sb-logo{min-width:0}
+      .sb-user .role{display:none}
+      .sidebar{flex-wrap:wrap}
+      .sb-nav{display:flex;order:3;flex:0 0 100%;width:100%;overflow-x:auto;gap:2px;margin-top:14px;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+      .sb-nav::-webkit-scrollbar{display:none}
+      .sb-nav .sb-section{display:none}
+      .sb-link{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:9px 12px;font-size:12px}
+      .sb-link.active{border-bottom-color:var(--gold-warm)}
+      .sb-link svg{display:none}
+      .kpis{grid-template-columns:1fr 1fr}
+      .kpi{padding:18px}
+      .kpi .v{font-size:28px}
+      .meet{grid-template-columns:1fr}
+      .form-card{padding:22px}
+      .nextflight{grid-template-columns:auto 1fr;gap:18px;padding:18px}
+      .nf-count{padding-right:16px}
+      .nf-go{display:none}
+      .flight{grid-template-columns:1fr}
+      .fl-side{flex-direction:row;align-items:baseline;justify-content:flex-start;gap:10px;padding:12px 20px}
+      .fl-side .d{font-size:28px}
+      .fl-side .cd{margin:0 0 0 auto;padding:0;border:none}
+      .fl-main{padding:18px 20px}
+      .fl-grid{grid-template-columns:1fr 1fr}
+      .fl-pt .code{font-size:28px}
+      .fl-line{width:36px}
+      .bars{height:180px;gap:3px}
+      .bar-x{gap:3px}
+      .bar-x span{font-size:8.5px;letter-spacing:0}
+      .bar-col .top{font-size:10px}
       .sb-foot{padding-top:0;margin-top:0;border-top:none;border-left:1px solid rgba(201,169,110,.15);padding-left:16px}
       .main{padding:24px 20px 60px}
       .head{flex-direction:column;align-items:flex-start;gap:20px}
@@ -272,12 +436,34 @@
       </div>
     </a>
 
-    <div class="sb-section">Visão Geral</div>
-    <ul class="sb-nav">
-      <li class="sb-link active">
+    <ul class="sb-nav" id="sbNav">
+      <li class="sb-section">Visão Geral</li>
+      <li><a class="sb-link active" href="#inicio" data-view="inicio">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Painel Principal
-      </li>
+      </a></li>
+      <li class="sb-section">Minha Gestão</li>
+      <li><a class="sb-link" href="#voos" data-view="voos">
+        <svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+        Próximos Voos
+      </a></li>
+      <li><a class="sb-link" href="#milhas" data-view="milhas">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+        Histórico de Milhas
+      </a></li>
+      <li><a class="sb-link" href="#economias" data-view="economias">
+        <svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Histórico de Economias
+      </a></li>
+      <li><a class="sb-link" href="#reuniao" data-view="reuniao">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+        Agendar Reunião
+      </a></li>
+      <li class="sb-section">Atendimento</li>
+      <li><a class="sb-link wa" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Estou%20no%20meu%20painel%20Maktub%20Go%20e%20gostaria%20de%20falar%20com%20a%20equipe." target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        Falar com a Maktub
+      </a></li>
     </ul>
 
     <div class="sb-foot">
@@ -306,6 +492,9 @@
       </div>
     </header>
 
+    <!-- ============= VIEW: PAINEL PRINCIPAL ============= -->
+    <div class="view" id="view-inicio">
+    <div id="nextFlightSlot"></div>
     <!-- ============= BLOCO 1: PATRIMÔNIO ============= -->
     <section class="heritage">
       <div class="heritage-total">
@@ -346,8 +535,8 @@
             <p>Diferença entre o valor pago em milhas e o valor de mercado em reais.</p>
           </div>
           <div class="sav-cell">
-            <div class="p">Hoje</div>
-            <div class="a"><span class="c">R$</span><span id="ecoHoje">0</span></div>
+            <div class="p">Desde o início</div>
+            <div class="a"><span class="c">R$</span><span id="ecoTotal">0</span></div>
           </div>
           <div class="sav-cell">
             <div class="p">Semana</div>
@@ -396,6 +585,93 @@
         <div class="empty-list">Nenhuma reunião registrada ainda</div>
       </div>
     </section>
+    </div>
+
+    <!-- ============= VIEW: PRÓXIMOS VOOS ============= -->
+    <div class="view" id="view-voos" hidden>
+      <section class="sec">
+        <div class="blk-title">Próximos Voos</div>
+        <div class="flights" id="flightsUpcoming"><div class="empty-cards">Carregando voos</div></div>
+        <div id="flightsPastWrap" hidden>
+          <button class="past-toggle" id="pastToggle" type="button">Ver voos realizados</button>
+          <div class="flights" id="flightsPast" hidden style="margin-top:16px"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============= VIEW: HISTÓRICO DE MILHAS ============= -->
+    <div class="view" id="view-milhas" hidden>
+      <div class="kpis" id="milhasKpis"></div>
+      <section class="sec">
+        <div class="chart-card">
+          <div class="chart-top">
+            <h3>Evolução do <em>saldo</em></h3>
+            <select class="sel" id="progFilter" aria-label="Filtrar por programa"><option value="">Todos os programas</option></select>
+          </div>
+          <div id="milhasChart"></div>
+        </div>
+      </section>
+      <section class="sec">
+        <div class="blk-title">Extrato de Movimentações</div>
+        <div class="tbl-wrap" id="extratoWrap"></div>
+      </section>
+    </div>
+
+    <!-- ============= VIEW: HISTÓRICO DE ECONOMIAS ============= -->
+    <div class="view" id="view-economias" hidden>
+      <div class="kpis" id="ecoKpis"></div>
+      <section class="sec">
+        <div class="chart-card">
+          <div class="chart-top"><h3>Economia <em>mês a mês</em></h3></div>
+          <div id="ecoChart"></div>
+        </div>
+      </section>
+      <section class="sec">
+        <div class="blk-title">Emissões e Economia Gerada</div>
+        <div class="tbl-wrap" id="ecoTableWrap"></div>
+      </section>
+    </div>
+
+    <!-- ============= VIEW: AGENDAR REUNIÃO ============= -->
+    <div class="view" id="view-reuniao" hidden>
+      <div class="meet">
+        <form class="form-card" id="meetForm" novalidate>
+          <h3>Sua reunião <em>mensal</em></h3>
+          <p>Escolha a data e o período de sua preferência. Nossa equipe confirma o horário exato e envia o link.</p>
+          <div class="fld">
+            <label for="mDate">Data de preferência</label>
+            <input type="date" id="mDate" required />
+          </div>
+          <div class="fld">
+            <span class="lb">Período</span>
+            <div class="chips">
+              <input type="radio" name="periodo" id="pManha" value="Manhã" checked><label for="pManha">Manhã</label>
+              <input type="radio" name="periodo" id="pTarde" value="Tarde"><label for="pTarde">Tarde</label>
+              <input type="radio" name="periodo" id="pNoite" value="Noite"><label for="pNoite">Noite</label>
+            </div>
+          </div>
+          <div class="fld">
+            <span class="lb">Formato</span>
+            <div class="chips">
+              <input type="radio" name="formato" id="fVideo" value="Videochamada" checked><label for="fVideo">Videochamada</label>
+              <input type="radio" name="formato" id="fTel" value="Ligação"><label for="fTel">Ligação</label>
+              <input type="radio" name="formato" id="fPres" value="Presencial"><label for="fPres">Presencial</label>
+            </div>
+          </div>
+          <div class="fld">
+            <label for="mPauta">O que você quer tratar? (opcional)</label>
+            <textarea id="mPauta" maxlength="1000" placeholder="Ex.: planejar as férias de julho, revisar cartões, dúvidas sobre uma promoção"></textarea>
+          </div>
+          <button class="btn-main" type="submit" id="meetBtn">Solicitar reunião</button>
+          <div class="form-msg" id="meetMsg" role="status"></div>
+        </form>
+        <div>
+          <div class="blk-title">Suas Solicitações</div>
+          <div class="req-list" id="reqList"><div class="empty-list">Nenhuma solicitação ainda</div></div>
+          <div class="meet-note">A reunião mensal é o momento de revisar resultados, alinhar os próximos movimentos e planejar suas viagens. As anotações de cada encontro ficam no histórico do Painel Principal.</div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -571,7 +847,7 @@
             <div class="dt">${escapeHtml(v.detalhes || '')}</div>
           </div>
           <div class="tr-class">
-            <div class="ml">${escapeHtml(v.milhas_estimadas || '—')}</div>
+            <div class="ml">${escapeHtml(v.milhas_estimadas || '')}</div>
             <div class="l">${escapeHtml(v.programa_usado || '')}</div>
           </div>
           <div class="tr-status ${statusClass}">${statusLabel}</div>
@@ -630,6 +906,254 @@
       `;
     }).join('');
   }
+
+  // ===== Utilidades das novas áreas =====
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const WA_NUM = '5521976275225';
+  const parseDate = (s) => { if (!s) return null; const d = new Date(String(s).slice(0,10) + 'T12:00:00'); return isNaN(d) ? null : d; };
+  const todayMid = () => { const d = new Date(); d.setHours(12,0,0,0); return d; };
+  const daysUntil = (s) => { const d = parseDate(s); return d ? Math.round((d - todayMid()) / 86400000) : null; };
+  const brDate = (s) => { const d = parseDate(s); return d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : ''; };
+  const monthKey = (s) => String(s).slice(0,7);
+  const monthLabel = (k) => { const [y,m] = k.split('-'); return `${MESES[Number(m)-1]}/${y.slice(2)}`; };
+  const hhmm = (t) => t ? String(t).slice(0,5) : '';
+  const countdownLabel = (n) => n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : n > 1 ? `Em ${n} dias` : '';
+  const compact = (n) => {
+    const v = Number(n) || 0, a = Math.abs(v);
+    if (a >= 1e6) return (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi';
+    if (a >= 1e3) return (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits: a >= 1e5 ? 0 : 1}) + ' mil';
+    return fmtNum(v);
+  };
+  // Busca tolerante: se a tabela ainda não existir, a área fica vazia sem quebrar o painel
+  const safe = async (q) => { try { const r = await q; if (r.error) { console.warn('Supabase:', r.error.message); return []; } return r.data || []; } catch (e) { console.warn(e); return []; } };
+
+  // Gráfico de barras (uma série, tooltip no hover/foco)
+  function barChart(el, rows, { fmt, tipLabel }) {
+    if (!rows.length) { el.innerHTML = '<div class="chart-empty">Os dados aparecem aqui assim que a equipe registrar o primeiro mês.</div>'; return; }
+    const max = Math.max(...rows.map(r => r.value), 1);
+    const grid = [0.25,0.5,0.75,1].map(f => `<div class="grid" style="bottom:${f*100*(196/220)}%"></div>`).join('');
+    const cols = rows.map((r, i) => {
+      const h = Math.max(1, (r.value / max) * 100);
+      const last = i === rows.length - 1;
+      return `<div class="bar-col ${last ? 'last' : ''}" tabindex="0" aria-label="${escapeHtml(r.label)}: ${escapeHtml(fmt(r.value))}">
+        <div class="tip">${escapeHtml(r.full || r.label)}<br><strong>${escapeHtml(fmt(r.value))}</strong>${tipLabel ? ' ' + escapeHtml(tipLabel) : ''}</div>
+        ${last ? `<div class="top" style="bottom:${h*0.89}%">${escapeHtml(fmt(r.value))}</div>` : ''}
+        <div class="b" style="height:${h*0.89}%"></div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div class="bars">${grid}${cols}</div><div class="bar-x">${rows.map(r => `<span>${escapeHtml(r.label)}</span>`).join('')}</div>`;
+  }
+
+  // ===== Próximos voos =====
+  const FL_STATUS = {
+    confirmado: ['Confirmado','st-ok'], checkin_aberto: ['Check-in aberto','st-warn'],
+    alterado: ['Alterado pela cia.','st-warn'], concluido: ['Realizado','st-done'], cancelado: ['Cancelado','st-off']
+  };
+  function flightCard(f, past) {
+    const d = parseDate(f.data_voo), n = daysUntil(f.data_voo);
+    const [stLabel, stCls] = FL_STATUS[f.status] || FL_STATUS.confirmado;
+    const info = [
+      ['Companhia', escapeHtml([f.companhia, f.numero_voo].filter(Boolean).join(' · '))],
+      ['Localizador', f.localizador ? `<span class="loc" data-copy="${escapeHtml(f.localizador)}" title="Copiar">${escapeHtml(f.localizador)}</span>` : ''],
+      ['Classe', escapeHtml(f.classe || '')],
+      ['Passageiros', escapeHtml(f.passageiros || '')],
+      ['Emissão', [f.milhas_utilizadas ? fmtNum(f.milhas_utilizadas) + ' milhas' : '', f.programa].filter(Boolean).map(escapeHtml).join(' · ')],
+      ['Taxas', f.taxas_brl ? 'R$ ' + Number(f.taxas_brl).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '']
+    ].filter(x => x[1]);
+    return `<article class="flight ${past ? 'past' : ''}">
+      <div class="fl-side">
+        <div class="m">${d ? MESES[d.getMonth()] : ''}</div>
+        <div class="d">${d ? String(d.getDate()).padStart(2,'0') : ''}</div>
+        <div class="y">${d ? d.getFullYear() : ''}</div>
+        ${!past && n !== null && n >= 0 ? `<div class="cd">${countdownLabel(n)}</div>` : ''}
+      </div>
+      <div class="fl-main">
+        <div class="fl-head">
+          <div class="fl-route">
+            <div class="fl-pt"><div class="code">${escapeHtml(f.origem_codigo || '')}</div><div class="city">${escapeHtml(f.origem_cidade || '')}</div><div class="hr">${hhmm(f.hora_partida)}</div></div>
+            <div class="fl-line"></div>
+            <div class="fl-pt"><div class="code">${escapeHtml(f.destino_codigo || '')}</div><div class="city">${escapeHtml(f.destino_cidade || '')}</div><div class="hr">${hhmm(f.hora_chegada)}</div></div>
+          </div>
+          <span class="tr-status ${stCls}">${stLabel}</span>
+        </div>
+        ${info.length ? `<div class="fl-grid">${info.map(([l,v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join('')}</div>` : ''}
+        ${f.observacoes ? `<div class="fl-obs">${escapeHtml(f.observacoes)}</div>` : ''}
+      </div>
+    </article>`;
+  }
+  function renderVoos(voos) {
+    const up = voos.filter(v => (daysUntil(v.data_voo) ?? -1) >= 0 && v.status !== 'concluido' && v.status !== 'cancelado');
+    const past = voos.filter(v => !up.includes(v)).reverse();
+    $('flightsUpcoming').innerHTML = up.length ? up.map(f => flightCard(f, false)).join('')
+      : '<div class="empty-cards">Nenhum voo emitido no momento. Assim que uma emissão for feita, ela aparece aqui com localizador e horários.</div>';
+    $('flightsPastWrap').hidden = !past.length;
+    $('flightsPast').innerHTML = past.map(f => flightCard(f, true)).join('');
+    const nf = up[0];
+    if (nf) {
+      const n = daysUntil(nf.data_voo);
+      $('nextFlightSlot').innerHTML = `<div class="nextflight" role="link" tabindex="0" data-goto="voos">
+        <div class="nf-count"><div class="n">${n === 0 ? 'Hoje' : n}</div><div class="t">${n === 0 ? 'embarque' : n === 1 ? 'dia' : 'dias'}</div></div>
+        <div class="nf-info"><div class="k">Próximo voo</div>
+          <div class="rt">${escapeHtml(nf.origem_cidade || nf.origem_codigo || '')} → ${escapeHtml(nf.destino_cidade || nf.destino_codigo || '')}</div>
+          <div class="d">${brDate(nf.data_voo)}${nf.hora_partida ? ' · ' + hhmm(nf.hora_partida) : ''}${nf.companhia ? ' · ' + escapeHtml(nf.companhia) : ''}${nf.localizador ? ' · Localizador ' + escapeHtml(nf.localizador) : ''}</div>
+        </div>
+        <div class="nf-go">Ver detalhes →</div>
+      </div>`;
+    }
+  }
+  $('pastToggle').addEventListener('click', () => {
+    const el = $('flightsPast'); el.hidden = !el.hidden;
+    $('pastToggle').textContent = el.hidden ? 'Ver voos realizados' : 'Ocultar voos realizados';
+  });
+  document.addEventListener('click', async (e) => {
+    const c = e.target.closest('[data-copy]');
+    if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); const o = c.textContent; c.textContent = 'Copiado'; setTimeout(() => c.textContent = o, 1200); } catch (_) {} }
+    const g = e.target.closest('[data-goto]');
+    if (g) location.hash = g.dataset.goto;
+  });
+  document.addEventListener('keydown', (e) => { const g = e.target.closest && e.target.closest('[data-goto]'); if (g && e.key === 'Enter') location.hash = g.dataset.goto; });
+
+  // ===== Histórico de milhas =====
+  let SALDOS = [];
+  function renderMilhasChart() {
+    const prog = $('progFilter').value;
+    const byMonth = {};
+    SALDOS.filter(r => !prog || r.programa === prog).forEach(r => { const k = monthKey(r.mes); byMonth[k] = (byMonth[k] || 0) + Number(r.saldo || 0); });
+    const rows = Object.keys(byMonth).sort().slice(-12).map(k => ({ label: monthLabel(k), full: monthLabel(k) + (prog ? ' · ' + prog : ''), value: byMonth[k] }));
+    barChart($('milhasChart'), rows, { fmt: compact, tipLabel: 'milhas' });
+  }
+  function renderMilhas(saldos, extrato, programasAtuais) {
+    SALDOS = saldos;
+    const progs = [...new Set(saldos.map(s => s.programa))].sort();
+    $('progFilter').innerHTML = '<option value="">Todos os programas</option>' + progs.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+    $('progFilter').onchange = renderMilhasChart;
+    renderMilhasChart();
+
+    const atual = programasAtuais.reduce((s, p) => s + Number(p.saldo || 0), 0);
+    const ano = String(new Date().getFullYear());
+    const doAno = extrato.filter(x => String(x.data).startsWith(ano));
+    const soma = (arr) => arr.reduce((s, x) => s + Number(x.quantidade || 0), 0);
+    const entradas = soma(doAno.filter(x => Number(x.quantidade) > 0));
+    const bonus = soma(doAno.filter(x => x.tipo === 'bonus'));
+    const usadas = Math.abs(soma(doAno.filter(x => x.tipo === 'emissao')));
+    $('milhasKpis').innerHTML = [
+      ['Saldo atual', compact(atual), 'Somando todos os programas', true],
+      [`Entradas em ${ano}`, compact(entradas), 'Acúmulo, bônus e transferências'],
+      [`Bônus em ${ano}`, compact(bonus), 'Ganho com promoções e transferências bonificadas'],
+      [`Usadas em ${ano}`, compact(usadas), 'Milhas convertidas em viagens']
+    ].map(([l,v,s,hl]) => `<div class="kpi ${hl ? 'hl' : ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+
+    const TIPOS = { acumulo:'Acúmulo', bonus:'Bônus', transferencia:'Transferência', emissao:'Emissão', expiracao:'Expiração', ajuste:'Ajuste' };
+    $('extratoWrap').innerHTML = extrato.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Programa</th><th>Tipo</th><th>Descrição</th><th class="r">Milhas</th></tr></thead><tbody>
+      ${extrato.slice(0, 60).map(x => { const q = Number(x.quantidade || 0); return `<tr>
+        <td class="mute">${brDate(x.data)}</td><td>${escapeHtml(x.programa || '')}</td>
+        <td><span class="pill">${TIPOS[x.tipo] || escapeHtml(x.tipo || '')}</span></td>
+        <td>${escapeHtml(x.descricao || '')}</td>
+        <td class="r ${q >= 0 ? 'pos' : 'neg'}">${q >= 0 ? '+' : '−'} ${fmtNum(Math.abs(q))}</td></tr>`; }).join('')}
+      </tbody></table>` : '<div class="empty-cards">Nenhuma movimentação registrada ainda.</div>';
+  }
+
+  // ===== Histórico de economias =====
+  let ECO_TOTAL = 0;
+  function renderEconomias(rows) {
+    const money = (n) => 'R$ ' + fmtMoney(n);
+    const eco = (r) => Number(r.valor_mercado_brl || 0) - Number(r.valor_pago_brl || 0);
+    const total = rows.reduce((s, r) => s + eco(r), 0);
+    const mercado = rows.reduce((s, r) => s + Number(r.valor_mercado_brl || 0), 0);
+    ECO_TOTAL = total;
+    const pct = mercado > 0 ? Math.round((total / mercado) * 100) : 0;
+    $('ecoKpis').innerHTML = [
+      ['Economia acumulada', `<span class="c">R$</span>${fmtMoney(total)}`, 'Desde o início da gestão', true],
+      ['Emissões', fmtNum(rows.length), 'Passagens emitidas com milhas'],
+      ['Economia média', `${pct}%`, 'Em relação ao valor de mercado'],
+      ['Por emissão', `<span class="c">R$</span>${fmtMoney(rows.length ? total / rows.length : 0)}`, 'Economia média por emissão']
+    ].map(([l,v,s,hl]) => `<div class="kpi ${hl ? 'hl' : ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+
+    const byMonth = {};
+    rows.forEach(r => { const k = monthKey(r.data); byMonth[k] = (byMonth[k] || 0) + eco(r); });
+    barChart($('ecoChart'), Object.keys(byMonth).sort().slice(-12).map(k => ({ label: monthLabel(k), value: byMonth[k] })), { fmt: (v) => 'R$ ' + compact(v) });
+
+    $('ecoTableWrap').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Emissão</th><th class="r">Valor de mercado</th><th class="r">Você investiu</th><th class="r">Economia</th></tr></thead><tbody>
+      ${[...rows].reverse().map(r => { const e = eco(r), p = Number(r.valor_mercado_brl) > 0 ? Math.round(e / Number(r.valor_mercado_brl) * 100) : 0; return `<tr>
+        <td class="mute">${brDate(r.data)}</td>
+        <td>${escapeHtml(r.descricao || '')}<div class="mute">${[r.milhas_utilizadas ? fmtNum(r.milhas_utilizadas) + ' milhas' : '', r.programa].filter(Boolean).map(escapeHtml).join(' · ')}</div></td>
+        <td class="r strike">${money(r.valor_mercado_brl)}</td>
+        <td class="r">${money(r.valor_pago_brl)}</td>
+        <td class="r"><span class="eco">${money(e)}</span><div class="mute">${p}% menos</div></td></tr>`; }).join('')}
+      </tbody></table>` : '<div class="empty-cards">As economias de cada emissão aparecem aqui, com o valor de mercado e o valor investido.</div>';
+  }
+
+  // ===== Agendar reunião =====
+  const REQ_STATUS = { solicitada:['Aguardando confirmação','st-warn'], confirmada:['Confirmada','st-ok'], realizada:['Realizada','st-done'], cancelada:['Cancelada','st-off'] };
+  const fmtDateTime = (iso) => { const d = new Date(iso); if (isNaN(d)) return ''; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} às ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`; };
+  const waLink = (msg) => `https://wa.me/${WA_NUM}?text=${encodeURIComponent(msg)}`;
+  function renderAgendamentos(list) {
+    $('reqList').innerHTML = list.length ? list.map(a => {
+      const [lb, cls] = REQ_STATUS[a.status] || REQ_STATUS.solicitada;
+      const quando = a.status === 'confirmada' && a.data_confirmada ? fmtDateTime(a.data_confirmada) : `${brDate(a.data_preferida)} · ${escapeHtml(a.periodo || '')}`;
+      return `<div class="req">
+        <div class="req-top"><div class="t">${quando}</div><span class="tr-status ${cls}">${lb}</span></div>
+        <div class="d">${escapeHtml(a.formato || '')}${a.pauta ? ' · ' + escapeHtml(a.pauta) : ''}</div>
+        ${a.status === 'confirmada' && a.link_reuniao && /^https:\/\//.test(a.link_reuniao) ? `<a class="btn-line" href="${escapeHtml(a.link_reuniao)}" target="_blank" rel="noopener">Entrar na reunião</a>` : ''}
+      </div>`;
+    }).join('') : '<div class="empty-list">Nenhuma solicitação ainda</div>';
+    const prox = list.filter(a => a.status === 'confirmada' && a.data_confirmada && new Date(a.data_confirmada) > new Date())
+      .sort((a,b) => new Date(a.data_confirmada) - new Date(b.data_confirmada))[0];
+    if (prox) $('nextMeeting').textContent = fmtDateTime(prox.data_confirmada);
+  }
+  function setupMeetForm(user, nome, agendamentos) {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    $('mDate').min = iso(t);
+    $('meetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('meetMsg'), btn = $('meetBtn');
+      const data = $('mDate').value;
+      msg.className = 'form-msg';
+      if (!data || data < $('mDate').min) { msg.className = 'form-msg err'; msg.textContent = 'Escolha uma data a partir de amanhã.'; return; }
+      const periodo = document.querySelector('input[name=periodo]:checked').value;
+      const formato = document.querySelector('input[name=formato]:checked').value;
+      const pauta = $('mPauta').value.trim().slice(0, 1000);
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      const { data: novo, error } = await supabase.from('agendamentos_reuniao')
+        .insert({ cliente_id: user.id, data_preferida: data, periodo, formato, pauta: pauta || null })
+        .select().single();
+      btn.disabled = false; btn.textContent = 'Solicitar reunião';
+      const texto = `Olá! Sou ${nome} e solicitei pelo painel a reunião mensal para ${brDate(data)}, período da ${periodo.toLowerCase()}, formato ${formato.toLowerCase()}.${pauta ? ' Pauta: ' + pauta : ''}`;
+      if (error) {
+        console.error(error);
+        msg.className = 'form-msg err';
+        msg.innerHTML = `Não conseguimos registrar pelo painel agora. Envie a solicitação pelo WhatsApp que a equipe agenda para você.<br><a class="btn-line" target="_blank" rel="noopener" href="${waLink(texto)}">Enviar pelo WhatsApp</a>`;
+        return;
+      }
+      agendamentos.unshift(novo);
+      renderAgendamentos(agendamentos);
+      $('meetForm').reset(); $('mDate').min = iso(t);
+      msg.className = 'form-msg ok';
+      msg.innerHTML = `Solicitação registrada para <strong>${brDate(data)}</strong>. Vamos confirmar o horário e enviar o link. Se quiser agilizar, avise a equipe:<br><a class="btn-line" target="_blank" rel="noopener" href="${waLink(texto)}">Avisar no WhatsApp</a>`;
+    });
+  }
+
+  // ===== Navegação entre áreas =====
+  const VIEW_SUB = {
+    inicio: 'Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.',
+    voos: 'Seus voos emitidos, com localizador, horários e detalhes da emissão.',
+    milhas: 'A evolução do seu saldo e cada movimentação registrada pela equipe.',
+    economias: 'Quanto cada emissão teria custado em dinheiro e quanto você economizou.',
+    reuniao: 'Solicite sua reunião mensal com a equipe Maktub Go.'
+  };
+  function route() {
+    const v = (location.hash || '#inicio').slice(1);
+    const view = VIEW_SUB[v] ? v : 'inicio';
+    document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== 'view-' + view);
+    document.querySelectorAll('.sb-link[data-view]').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+    $('greetingSub').textContent = VIEW_SUB[view];
+    const act = document.querySelector('.sb-link.active');
+    const nav = $('sbNav');
+    if (act && window.innerWidth <= 1100) nav.scrollLeft = act.offsetLeft - (nav.clientWidth - act.offsetWidth) / 2;
+    window.scrollTo({ top: 0 });
+  }
+  window.addEventListener('hashchange', route);
 
   // ===== Inicialização =====
   (async () => {
@@ -714,7 +1238,6 @@
         }
 
         // Bloco 2: Economia
-        $('ecoHoje').textContent = fmtMoney(economia.economia_hoje);
         $('ecoSemana').textContent = fmtMoney(economia.economia_semana);
         $('ecoMes').textContent = fmtMoney(economia.economia_mes);
         $('ecoAno').textContent = fmtMoney(economia.economia_ano);
@@ -725,6 +1248,23 @@
       renderViagens(viagens);
       renderMovimentos(movimentos);
       renderReunioes(reunioes);
+
+      // 5b. Novas áreas (tabelas opcionais: se ainda não existirem, as áreas ficam vazias)
+      const uid = user.id;
+      const [voos, saldos, extrato, economias, agendamentos] = await Promise.all([
+        safe(supabase.from('voos').select('*').eq('cliente_id', uid).order('data_voo', { ascending: true }).order('hora_partida', { ascending: true })),
+        safe(supabase.from('historico_saldos').select('*').eq('cliente_id', uid).order('mes', { ascending: true })),
+        safe(supabase.from('extrato_milhas').select('*').eq('cliente_id', uid).order('data', { ascending: false })),
+        safe(supabase.from('historico_economia').select('*').eq('cliente_id', uid).order('data', { ascending: true })),
+        safe(supabase.from('agendamentos_reuniao').select('*').eq('cliente_id', uid).order('created_at', { ascending: false }).limit(12))
+      ]);
+      renderVoos(voos);
+      renderMilhas(saldos, extrato, programas);
+      renderEconomias(economias);
+      $('ecoTotal').textContent = economias.length ? fmtMoney(ECO_TOTAL) : '—';
+      renderAgendamentos(agendamentos);
+      setupMeetForm(user, firstName(nome), [...agendamentos]);
+      route();
 
       // 6. Mostrar dashboard
       $('loadingScreen').classList.add('hide');
