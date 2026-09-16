@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Acesso exclusivo do Cliente Maktub Go — Gestão de Milhas Concierge." />
+  <meta name="description" content="Acesso exclusivo do cliente Maktub Go, Gestão de Milhas Concierge." />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#1a3826" />
-  <title>Acesso Cliente — Maktub Go</title>
+  <title>Acesso Cliente | Maktub Go</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
@@ -100,11 +100,24 @@
       .login-form-area{padding:80px 32px 56px;min-height:100vh}
       .back-link{top:20px;right:20px}
     }
+    .step[hidden]{display:none}
+    .code-inputs{display:flex;gap:10px;margin:8px 0 28px}
+    .code-inputs input{width:100%;min-width:0;height:60px;text-align:center;font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--green);background:var(--white);border:1px solid var(--border-strong);transition:border-color .2s}
+    .code-inputs input:focus{outline:none;border-color:var(--gold)}
+    .sent-to{font-size:14px;color:var(--text-mid);margin-bottom:22px;font-weight:300}
+    .sent-to strong{color:var(--green);font-weight:500}
+    .link-btn{background:none;border:none;font-family:inherit;font-size:12px;color:var(--gold);cursor:pointer;letter-spacing:.05em;padding:0}
+    .link-btn:disabled{color:var(--text-muted);cursor:default}
+    .link-btn:hover:not(:disabled){color:var(--green)}
+    .step-actions{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:12px;flex-wrap:wrap}
+    .secure-note{display:flex;gap:10px;align-items:flex-start;margin-top:28px;font-size:12px;color:var(--text-muted);line-height:1.55}
+    .secure-note svg{width:16px;height:16px;flex-shrink:0;margin-top:2px;stroke:var(--gold);fill:none;stroke-width:1.5}
   </style>
+  <link rel="manifest" href="/painel/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
 </head>
 <body>
 
-<!-- Tela de checagem inicial -->
 <div class="checking-auth" id="checkingAuth">
   <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
   <div class="spinner"></div>
@@ -122,52 +135,107 @@
         <span class="nav-logo-sub">Alfaiataria de Viagens</span>
       </div>
     </div>
-
     <div class="side-quote">
       <div class="quote-mark">"</div>
-      <p>Não somos uma agência. Somos uma <em>alfaiataria de viagens</em> — cada experiência é pensada, construída e entregue sob medida.</p>
+      <p>Não somos uma agência. Somos uma <em>alfaiataria de viagens</em>: cada experiência é pensada, construída e entregue sob medida.</p>
       <div class="quote-line"></div>
       <div class="quote-author">Filosofia Maktub Go</div>
     </div>
-
     <div class="side-bottom">Acesso Cliente · Gestão de Milhas Concierge</div>
   </aside>
 
   <main class="login-form-area">
     <div class="form-wrapper">
-      <div class="form-mark">
-        <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
-      </div>
-      <span class="form-label">Acesso Privado</span>
-      <h1>Bem-vindo<br/><em>de volta.</em></h1>
-      <p class="intro">Acesse seu painel privado de gestão de milhas. Suas viagens, organizadas como um patrimônio.</p>
+      <div class="form-mark"><img src="/ativos/simbolo-verde.png" alt="Maktub Go" /></div>
 
-      <div class="alert alert-error" id="alertError"></div>
-      <div class="alert alert-success" id="alertSuccess"></div>
+      <div class="alert alert-error" id="alertError" role="alert"></div>
+      <div class="alert alert-success" id="alertSuccess" role="status"></div>
 
-      <form id="loginForm" autocomplete="on">
-        <div class="field">
-          <label>E-mail</label>
-          <input type="email" name="email" id="emailInput" placeholder="seu@email.com" required autocomplete="email" />
+      <!-- ETAPA 1: e-mail e senha -->
+      <section class="step" id="stepLogin">
+        <span class="form-label">Acesso Privado</span>
+        <h1>Bem-vindo<br/><em>de volta.</em></h1>
+        <p class="intro">Acesse seu painel privado de gestão de milhas. Suas viagens, organizadas como um patrimônio.</p>
+        <form id="loginForm" autocomplete="on" novalidate>
+          <div class="field">
+            <label for="emailInput">E-mail</label>
+            <input type="email" id="emailInput" placeholder="seu@email.com" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="passwordInput">Senha</label>
+            <input type="password" id="passwordInput" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <div class="field-row">
+            <label class="check-row"><input type="checkbox" id="keepConnected" checked /> Manter conectado</label>
+            <button type="button" class="link-btn" id="goForgot">Esqueci a senha</button>
+          </div>
+          <button type="submit" class="btn-submit" id="btnLogin">Continuar</button>
+        </form>
+        <div class="secure-note">
+          <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span id="secureText">Acesso protegido em duas etapas: após a senha, enviamos um código ao seu e-mail.</span>
         </div>
-        <div class="field">
-          <label>Senha</label>
-          <input type="password" name="password" id="passwordInput" placeholder="••••••••" required autocomplete="current-password" />
+        <div class="form-footer">
+          <p>Ainda não é cliente Maktub Go?</p>
+          <a href="/gestao-de-milhas/#convite">Solicite seu convite →</a>
         </div>
-        <div class="field-row">
-          <label class="check-row">
-            <input type="checkbox" id="keepConnected" />
-            Manter conectado
-          </label>
-          <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Esqueci%20minha%20senha%20do%20painel%20Maktub%20Go." class="forgot" target="_blank" rel="noopener">Esqueci a senha</a>
-        </div>
-        <button type="submit" class="btn-submit" id="btnSubmit">Entrar no Painel</button>
-      </form>
+      </section>
 
-      <div class="form-footer">
-        <p>Ainda não é cliente Maktub Go?</p>
-        <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20conhecer%20a%20Gest%C3%A3o%20de%20Milhas%20Concierge%20da%20Maktub%20Go." target="_blank" rel="noopener">Conheça o serviço Concierge →</a>
-      </div>
+      <!-- ETAPA 2: código por e-mail -->
+      <section class="step" id="stepCode" hidden>
+        <span class="form-label">Verificação em duas etapas</span>
+        <h1>Confirme que<br/><em>é você.</em></h1>
+        <p class="sent-to">Enviamos um código de 6 dígitos para <strong id="sentTo"></strong>.</p>
+        <form id="codeForm" novalidate>
+          <div class="code-inputs" id="codeInputs">
+            <input inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Dígito 1" />
+            <input inputmode="numeric" maxlength="1" aria-label="Dígito 2" />
+            <input inputmode="numeric" maxlength="1" aria-label="Dígito 3" />
+            <input inputmode="numeric" maxlength="1" aria-label="Dígito 4" />
+            <input inputmode="numeric" maxlength="1" aria-label="Dígito 5" />
+            <input inputmode="numeric" maxlength="1" aria-label="Dígito 6" />
+          </div>
+          <button type="submit" class="btn-submit" id="btnCode">Entrar no Painel</button>
+        </form>
+        <div class="step-actions">
+          <button type="button" class="link-btn" id="backToLogin">← Voltar</button>
+          <button type="button" class="link-btn" id="resendCode" disabled>Reenviar código</button>
+        </div>
+        <p class="secure-note" style="margin-top:22px">Não recebeu? Confira a caixa de spam. O código vale por poucos minutos.</p>
+      </section>
+
+      <!-- ESQUECI A SENHA -->
+      <section class="step" id="stepForgot" hidden>
+        <span class="form-label">Recuperar acesso</span>
+        <h1>Redefinir<br/><em>sua senha.</em></h1>
+        <p class="intro">Informe seu e-mail de acesso. Enviaremos um link seguro para você criar uma nova senha.</p>
+        <form id="forgotForm" novalidate>
+          <div class="field">
+            <label for="forgotEmail">E-mail</label>
+            <input type="email" id="forgotEmail" placeholder="seu@email.com" required autocomplete="email" />
+          </div>
+          <button type="submit" class="btn-submit" id="btnForgot">Enviar link</button>
+        </form>
+        <div class="step-actions"><button type="button" class="link-btn" id="forgotBack">← Voltar ao login</button></div>
+      </section>
+
+      <!-- NOVA SENHA (chegou pelo link do e-mail) -->
+      <section class="step" id="stepReset" hidden>
+        <span class="form-label">Nova senha</span>
+        <h1>Crie sua<br/><em>nova senha.</em></h1>
+        <p class="intro">Use pelo menos 8 caracteres, com letras e números.</p>
+        <form id="resetForm" novalidate>
+          <div class="field">
+            <label for="newPass">Nova senha</label>
+            <input type="password" id="newPass" required autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label for="newPass2">Repita a nova senha</label>
+            <input type="password" id="newPass2" required autocomplete="new-password" />
+          </div>
+          <button type="submit" class="btn-submit" id="btnReset">Salvar nova senha</button>
+        </form>
+      </section>
     </div>
   </main>
 </div>
@@ -175,115 +243,174 @@
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
+  // ===== CONFIGURAÇÃO =====
+  // true = depois da senha, pede um código enviado por e-mail.
+  // Só funciona depois de configurar o SMTP próprio no Supabase (ver guia).
+  const EXIGIR_CODIGO = true;
   const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  const $ = (id) => document.getElementById(id);
+  const isRecovery = /type=recovery/.test(location.hash) || new URLSearchParams(location.search).has('redefinir');
+  const nextParam = new URLSearchParams(location.search).get('next') || '';
+  const destino = /^\/(painel|admin)\/?[\w\-\/.#]*$/.test(nextParam) ? nextParam : '/painel/';
 
-  const checkingAuth = document.getElementById('checkingAuth');
-  const form = document.getElementById('loginForm');
-  const emailInput = document.getElementById('emailInput');
-  const passwordInput = document.getElementById('passwordInput');
-  const btnSubmit = document.getElementById('btnSubmit');
-  const alertError = document.getElementById('alertError');
-  const alertSuccess = document.getElementById('alertSuccess');
+  if (!EXIGIR_CODIGO) $('secureText').textContent = 'Conexão protegida. Seus dados ficam visíveis apenas para você e seu gestor.';
 
-  // Se já estiver logado, redireciona direto pro painel
-  (async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        window.location.replace('/painel/');
-        return;
-      }
-    } catch (err) {
-      console.error('Erro ao verificar sessão:', err);
-    }
-    checkingAuth.style.display = 'none';
-  })();
+  const jwtAmr = (token) => {
+    try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.amr || []).map(a => a.method); }
+    catch (_) { return []; }
+  };
+  const sessaoValida = (s) => !!s && (!EXIGIR_CODIGO || jwtAmr(s.access_token).some(m => m === 'otp' || m === 'magiclink'));
 
-  function showError(msg) {
-    alertSuccess.classList.remove('show');
-    alertError.textContent = msg;
-    alertError.classList.add('show');
+  function show(step) {
+    ['stepLogin','stepCode','stepForgot','stepReset'].forEach(id => $(id).hidden = id !== step);
+    clearAlerts();
   }
-
-  function showSuccess(msg) {
-    alertError.classList.remove('show');
-    alertSuccess.textContent = msg;
-    alertSuccess.classList.add('show');
-  }
-
-  function clearAlerts() {
-    alertError.classList.remove('show');
-    alertSuccess.classList.remove('show');
-  }
+  function showError(msg) { $('alertSuccess').classList.remove('show'); $('alertError').textContent = msg; $('alertError').classList.add('show'); }
+  function showSuccess(msg) { $('alertError').classList.remove('show'); $('alertSuccess').textContent = msg; $('alertSuccess').classList.add('show'); }
+  function clearAlerts() { $('alertError').classList.remove('show'); $('alertSuccess').classList.remove('show'); }
+  function busy(btn, on) { btn.disabled = on; btn.classList.toggle('loading', on); }
 
   function translateError(message) {
     const m = (message || '').toLowerCase();
-    if (m.includes('invalid login') || m.includes('invalid credentials')) {
-      return 'E-mail ou senha incorretos. Verifique e tente novamente.';
-    }
-    if (m.includes('email not confirmed')) {
-      return 'Seu e-mail ainda não foi confirmado. Entre em contato com a Maktub Go.';
-    }
-    if (m.includes('too many requests') || m.includes('rate limit')) {
-      return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.';
-    }
-    if (m.includes('user not found')) {
-      return 'Usuário não encontrado. Entre em contato com a Maktub Go.';
-    }
-    if (m.includes('network') || m.includes('fetch')) {
-      return 'Falha de conexão. Verifique sua internet e tente novamente.';
-    }
-    return 'Não foi possível fazer login. Tente novamente em instantes.';
+    if (m.includes('invalid login') || m.includes('invalid credentials')) return 'E-mail ou senha incorretos. Verifique e tente novamente.';
+    if (m.includes('email not confirmed')) return 'Seu e-mail ainda não foi confirmado. Fale com seu gestor Maktub Go.';
+    if (m.includes('expired') || m.includes('invalid') && m.includes('token')) return 'Código inválido ou expirado. Peça um novo código.';
+    if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) return 'Muitas tentativas seguidas. Aguarde um minuto e tente novamente.';
+    if (m.includes('signups not allowed') || m.includes('user not found')) return 'Não encontramos um acesso com este e-mail. Fale com seu gestor Maktub Go.';
+    if (m.includes('should be different')) return 'A nova senha precisa ser diferente da anterior.';
+    if (m.includes('network') || m.includes('fetch')) return 'Falha de conexão. Verifique sua internet e tente novamente.';
+    return 'Não foi possível concluir agora. Tente novamente em instantes.';
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearAlerts();
+  function entrar() {
+    try {
+      if ($('keepConnected').checked) localStorage.removeItem('mg_sessao_temporaria');
+      else { localStorage.setItem('mg_sessao_temporaria', '1'); sessionStorage.setItem('mg_aba_ativa', '1'); }
+    } catch (_) {}
+    showSuccess('Acesso confirmado. Abrindo seu painel...');
+    setTimeout(() => location.replace(destino), 600);
+  }
 
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
+  // ===== Estado inicial =====
+  let recoveryHandled = false;
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY' && !recoveryHandled) { recoveryHandled = true; $('checkingAuth').style.display = 'none'; show('stepReset'); }
+  });
+  (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (isRecovery) {
+        if (session) { recoveryHandled = true; show('stepReset'); }
+        else setTimeout(() => { if (!recoveryHandled) { show('stepForgot'); showError('O link de redefinição expirou. Peça um novo abaixo.'); } }, 1500);
+      } else if (sessaoValida(session)) { location.replace(destino); return; }
+      else if (session) await supabase.auth.signOut({ scope: 'local' });
+    } catch (err) { console.error(err); }
+    $('checkingAuth').style.display = 'none';
+  })();
 
-    if (!email || !password) {
-      showError('Preencha e-mail e senha.');
-      return;
-    }
-
-    btnSubmit.disabled = true;
-    btnSubmit.classList.add('loading');
-    emailInput.disabled = true;
-    passwordInput.disabled = true;
-
+  // ===== Etapa 1: senha =====
+  let emailAtual = '';
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); clearAlerts();
+    const email = $('emailInput').value.trim().toLowerCase(), password = $('passwordInput').value;
+    if (!email || !password) return showError('Preencha e-mail e senha.');
+    busy($('btnLogin'), true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (!EXIGIR_CODIGO) return entrar();
+      await supabase.auth.signOut({ scope: 'local' });
+      emailAtual = email;
+      await enviarCodigo();
+    } catch (err) { showError(translateError(err.message)); }
+    finally { busy($('btnLogin'), false); }
+  });
 
-      if (error) {
-        showError(translateError(error.message));
-        btnSubmit.disabled = false;
-        btnSubmit.classList.remove('loading');
-        emailInput.disabled = false;
-        passwordInput.disabled = false;
-        return;
-      }
+  let timer = null;
+  async function enviarCodigo() {
+    const { error } = await supabase.auth.signInWithOtp({ email: emailAtual, options: { shouldCreateUser: false } });
+    if (error) throw error;
+    $('sentTo').textContent = emailAtual;
+    show('stepCode');
+    codeInputs.forEach(i => i.value = '');
+    codeInputs[0].focus();
+    let s = 60; $('resendCode').disabled = true; $('resendCode').textContent = `Reenviar código em ${s}s`;
+    clearInterval(timer);
+    timer = setInterval(() => {
+      s--; if (s > 0) { $('resendCode').textContent = `Reenviar código em ${s}s`; return; }
+      clearInterval(timer); $('resendCode').disabled = false; $('resendCode').textContent = 'Reenviar código';
+    }, 1000);
+  }
+  $('resendCode').addEventListener('click', async () => {
+    try { await enviarCodigo(); showSuccess('Enviamos um novo código.'); } catch (err) { showError(translateError(err.message)); }
+  });
+  $('backToLogin').addEventListener('click', () => { clearInterval(timer); show('stepLogin'); $('passwordInput').value = ''; });
 
-      if (data && data.session) {
-        showSuccess('Acesso confirmado. Redirecionando ao seu painel...');
-        setTimeout(() => {
-          window.location.replace('/painel/');
-        }, 700);
-      }
-    } catch (err) {
-      console.error('Erro no login:', err);
-      showError('Ocorreu um erro inesperado. Tente novamente em instantes.');
-      btnSubmit.disabled = false;
-      btnSubmit.classList.remove('loading');
-      emailInput.disabled = false;
-      passwordInput.disabled = false;
-    }
+  // ===== Etapa 2: código =====
+  const codeInputs = [...document.querySelectorAll('#codeInputs input')];
+  codeInputs.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g, '').slice(-1);
+      if (inp.value && i < 5) codeInputs[i + 1].focus();
+      if (codeInputs.every(x => x.value)) $('codeForm').requestSubmit();
+    });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !inp.value && i > 0) codeInputs[i - 1].focus(); });
+    inp.addEventListener('paste', (e) => {
+      const d = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+      if (!d) return; e.preventDefault();
+      d.split('').forEach((c, k) => { if (codeInputs[k]) codeInputs[k].value = c; });
+      if (d.length === 6) $('codeForm').requestSubmit(); else codeInputs[d.length].focus();
+    });
+  });
+  $('codeForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); clearAlerts();
+    const token = codeInputs.map(i => i.value).join('');
+    if (token.length !== 6) return showError('Digite os 6 dígitos do código.');
+    busy($('btnCode'), true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email: emailAtual, token, type: 'email' });
+      if (error) throw error;
+      clearInterval(timer);
+      entrar();
+    } catch (err) { showError(translateError(err.message)); codeInputs.forEach(i => i.value = ''); codeInputs[0].focus(); }
+    finally { busy($('btnCode'), false); }
+  });
+
+  // ===== Esqueci a senha =====
+  $('goForgot').addEventListener('click', () => { $('forgotEmail').value = $('emailInput').value; show('stepForgot'); });
+  $('forgotBack').addEventListener('click', () => show('stepLogin'));
+  $('forgotForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); clearAlerts();
+    const email = $('forgotEmail').value.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return showError('Informe um e-mail válido.');
+    busy($('btnForgot'), true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/acesso/?redefinir=1' });
+      if (error && !/not found/i.test(error.message)) throw error;
+      showSuccess('Se este e-mail tiver acesso ao painel, você receberá um link em instantes. Confira também a caixa de spam.');
+    } catch (err) { showError(translateError(err.message)); }
+    finally { busy($('btnForgot'), false); }
+  });
+
+  // ===== Nova senha =====
+  $('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); clearAlerts();
+    const p1 = $('newPass').value, p2 = $('newPass2').value;
+    if (p1.length < 8 || !/[a-zA-Z]/.test(p1) || !/\d/.test(p1)) return showError('A senha precisa ter pelo menos 8 caracteres, com letras e números.');
+    if (p1 !== p2) return showError('As senhas não conferem.');
+    busy($('btnReset'), true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: p1 });
+      if (error) throw error;
+      await supabase.auth.signOut({ scope: 'local' });
+      history.replaceState(null, '', '/acesso/');
+      show('stepLogin');
+      showSuccess('Senha atualizada. Entre com a nova senha.');
+    } catch (err) { showError(translateError(err.message)); }
+    finally { busy($('btnReset'), false); }
   });
 </script>
 

@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  <meta name="description" content="Maktub Go — Alfaiataria de Viagens. Planejamento premium sob medida, com exclusividade e cuidado em cada detalhe." />
+  <meta name="description" content="Maktub Go, Alfaiataria de Viagens. Planejamento premium sob medida e Gestão de Milhas Concierge, com exclusividade e cuidado em cada detalhe." />
   <meta name="keywords" content="agência de viagens, viagens premium, viagens sob medida, consultoria de viagens, alfaiataria de viagens" />
-  <meta property="og:title" content="Maktub Go — Alfaiataria de Viagens" />
+  <meta property="og:title" content="Maktub Go | Alfaiataria de Viagens" />
   <meta property="og:description" content="Seu destino começa aqui. Planejamento premium, sob medida, com exclusividade." />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.maktubgo.com.br/" />
+  <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="/ativos/app-icon-192.png" />
+  <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
   <meta name="theme-color" content="#1a3826" />
-  <title>Maktub Go — Alfaiataria de Viagens</title>
+  <title>Maktub Go | Alfaiataria de Viagens</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet" />
@@ -35,11 +43,23 @@
     nav.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07)}
     .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1140px;margin:0 auto;padding:0 36px}
     .nav-logo{display:flex;align-items:center;gap:12px}
-    .nav-logo-box{width:36px;height:36px;background:var(--green);display:flex;align-items:center;justify-content:center}
+    .nav-logo-img{width:42px;height:32px;object-fit:contain}
+    .nav-links a.nav-gold{color:var(--gold);font-weight:500}
+    .s-link{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:500}
+    .s-link:hover{color:var(--green)}
+    .footer-brand-logo{width:34px;height:auto;opacity:.85}
     .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
     .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
     .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted)}
-    .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
+    .nav-links{display:flex;align-items:center;gap:26px;list-style:none}
+    .nav-links a{white-space:nowrap}
+    @media(max-width:1240px){.nav-links{gap:20px}.nav-links a{letter-spacing:.12em!important}.nav-hide{display:none}}
+    @media(max-width:1024px){
+      .nav-links{display:none}
+      .nav-links.open{display:flex;flex-direction:column;align-items:flex-start;position:fixed;top:68px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:24px 36px;gap:18px;z-index:999}
+      .nav-links.open .nav-hide{display:list-item}
+      .nav-burger{display:flex}
+    }
     .nav-links a{font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
     .nav-links a:hover{color:var(--green)}
     .nav-cta{border:1px solid var(--border-gold)!important;padding:9px 20px!important;color:var(--green)!important;transition:background .25s,border-color .25s!important;font-weight:500!important}
@@ -143,7 +163,7 @@
     .footer-brand{display:flex;align-items:center;gap:10px}
     .footer-brand-icon{width:30px;height:30px;border:1px solid rgba(201,169,110,.25);display:flex;align-items:center;justify-content:center}
     .footer-brand-text{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.65)}
-    .footer-links{display:flex;gap:24px;list-style:none}
+    .footer-links{display:flex;gap:14px 24px;list-style:none;flex-wrap:wrap}
     .footer-links a{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,246,241,.55);transition:color .25s}
     .footer-links a:hover{color:var(--gold)}
     .footer-copy{font-size:12px;color:rgba(249,246,241,.4)}
@@ -180,9 +200,7 @@
 <nav id="navbar">
   <div class="nav-inner">
     <a class="nav-logo" href="#inicio">
-      <div class="nav-logo-box">
-        <svg width="20" height="20" viewBox="0 0 40 40" fill="none"><polygon points="20,4 36,34 4,34" stroke="#c9a96e" stroke-width="1.8" fill="none"/><line x1="20" y1="4" x2="20" y2="34" stroke="#c9a96e" stroke-width="1.3"/><circle cx="20" cy="21" r="4.5" stroke="#c9a96e" stroke-width="1.3" fill="none"/></svg>
-      </div>
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go" class="nav-logo-img" />
       <div class="nav-logo-text">
         <span class="nav-logo-name">Maktub Go</span>
         <span class="nav-logo-sub">Alfaiataria de Viagens</span>
@@ -191,10 +209,10 @@
     <ul class="nav-links" id="navLinks">
       <li><a href="#quem-somos">Quem Somos</a></li>
       <li><a href="#servicos">Serviços</a></li>
-      <li><a href="#valores">Valores</a></li>
-      <li><a href="#time">O Time</a></li>
+      <li><a href="/gestao-de-milhas/" class="nav-gold">Gestão de Milhas</a></li>
+      <li class="nav-hide"><a href="#time">O Time</a></li>
       <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
-      <li><a href="#contato" class="nav-cta">Falar com a Maktub</a></li>
+      <li><a href="/acesso/" class="nav-cta">Acesso Cliente</a></li>
     </ul>
     <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
@@ -203,7 +221,7 @@
 <section class="hero" id="inicio">
   <span class="label reveal d1">Alfaiataria de Viagens</span>
   <h1 class="reveal d2">Seu destino<span class="italic-gold">começa aqui.</span></h1>
-  <p class="hero-desc reveal d3">Na Maktub Go, cada viagem começa com uma conversa. Ouvimos o que você sonha, entendemos como você vive — e planejamos tudo sob medida, com exclusividade.</p>
+  <p class="hero-desc reveal d3">Na Maktub Go, cada viagem começa com uma conversa. Ouvimos o que você sonha, entendemos como você vive e planejamos tudo sob medida, com exclusividade.</p>
   <a href="#quem-somos" class="hero-cta reveal d4">Conhecer a Maktub</a>
   <div class="hero-scroll">Descer</div>
 </section>
@@ -213,11 +231,11 @@
     <span class="label reveal d1">Quem Somos</span>
     <div class="divider reveal d1"></div>
     <h2 class="reveal d2">Não vendemos destinos.<br><span class="italic-gold">Criamos memórias.</span></h2>
-    <p class="reveal d3">A <strong>Maktub Go</strong> é uma alfaiataria de viagens premium. Cada experiência é construída sob medida — não existe pacote padrão aqui. Existe escuta, critério e entrega. Criamos memórias com atendimento humanizado e experiências únicas para quem aprecia o exclusivo.</p>
-    <p class="reveal d4">Estamos em crescimento acelerado e buscamos pessoas de <strong>alta performance</strong> para nos acompanhar — com vontade de vencer, autonomia, pensamento estratégico e alinhamento total com nossos valores.</p>
+    <p class="reveal d3">A <strong>Maktub Go</strong> é uma alfaiataria de viagens premium. Cada experiência é construída sob medida: não existe pacote padrão aqui. Existe escuta, critério e entrega. Criamos memórias com atendimento humanizado e experiências únicas para quem aprecia o exclusivo.</p>
+    <p class="reveal d4">Estamos em crescimento acelerado e buscamos pessoas de <strong>alta performance</strong> para nos acompanhar, com vontade de vencer, autonomia, pensamento estratégico e alinhamento total com nossos valores.</p>
     <div class="quote-block reveal d5">
-      <p>"Não somos uma agência. Somos uma alfaiataria de viagens — cada experiência é pensada, construída e entregue sob medida. Porque viajar bem começa com ser bem cuidado."</p>
-      <cite>— Maktub Go</cite>
+      <p>"Não somos uma agência. Somos uma alfaiataria de viagens: cada experiência é pensada, construída e entregue sob medida. Porque viajar bem começa com ser bem cuidado."</p>
+      <cite>Maktub Go</cite>
     </div>
   </div>
 </section>
@@ -230,11 +248,11 @@
       <h2 class="reveal d2">Cada viagem,<br><span class="italic-gold">um projeto único.</span></h2>
     </div>
     <div class="servicos-grid" style="margin-top:52px">
-      <div class="servico-card reveal d1"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><h3>Planejamento Completo</h3><p>Roteiros personalizados do início ao fim. Voos, hotéis, transfers, restaurantes e experiências exclusivas — tudo pensado para o seu perfil e estilo de vida.</p></div>
+      <div class="servico-card reveal d1"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><h3>Planejamento Completo</h3><p>Roteiros personalizados do início ao fim. Voos, hotéis, transfers, restaurantes e experiências exclusivas, tudo pensado para o seu perfil e estilo de vida.</p></div>
       <div class="servico-card reveal d2"><div class="s-icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div><h3>Hospedagem Premium</h3><p>Curadoria de hotéis e resorts com negociação de tarifas, upgrades e benefícios exclusivos para nossos clientes em destinos nacionais e internacionais.</p></div>
-      <div class="servico-card reveal d3"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.29h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.85a16 16 0 0 0 6.29 6.29l1.12-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><h3>Suporte Humanizado</h3><p>Uma pessoa real, que ouve, pensa e resolve. Do primeiro contato ao seu retorno — com a tranquilidade de saber que alguém cuida de tudo por você.</p></div>
+      <div class="servico-card reveal d3"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.29h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.85a16 16 0 0 0 6.29 6.29l1.12-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><h3>Suporte Humanizado</h3><p>Uma pessoa real, que ouve, pensa e resolve. Do primeiro contato ao seu retorno, com a tranquilidade de saber que alguém cuida de tudo por você.</p></div>
       <div class="servico-card reveal d4"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg></div><h3>Transfers &amp; Traslados</h3><p>Transfers privados, locação de veículos e traslados VIP em destinos nacionais e internacionais. Conforto e pontualidade garantidos.</p></div>
-      <div class="servico-card reveal d5"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div><h3>Gestão de Milhas</h3><p>Compra, transferência e otimização de pontos. Viaje mais, pagando menos — com estratégia, segurança e curadoria especializada.</p></div>
+      <div class="servico-card reveal d5"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div><h3>Gestão de Milhas Concierge</h3><p>Compra, transferência e otimização de pontos. Viaje mais, pagando menos, com estratégia, segurança e curadoria especializada.</p><a class="s-link" href="/gestao-de-milhas/">Conhecer o serviço →</a></div>
       <div class="servico-card reveal d6"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10z"/><path d="M12 6v6l4 2"/></svg></div><h3>Seguro Viagem</h3><p>Assessoria completa na escolha do seguro ideal para cada destino e perfil. Proteção real para você viajar com segurança e total tranquilidade.</p></div>
     </div>
   </div>
@@ -247,12 +265,12 @@
     <h2 class="reveal d2">Propósito, fé<br><span class="italic-gold">e resultado.</span></h2>
     <p class="reveal d3">A Maktub Go nasceu com um propósito: <strong>planejar experiências de vida através de viagens e da conexão com pessoas</strong>. Acreditamos que cultura, gastronomia e novas experiências precisam ser vivenciadas. Há algo de transformador em cada viagem.</p>
     <p class="reveal d4">Nossos princípios têm <strong>Deus no centro</strong>. A prosperidade que buscamos vem do trabalho bem feito, da integridade e do cuidado genuíno. Valorizamos <strong>família, meritocracia e engajamento genuíno</strong>.</p>
-    <p class="reveal d5">A Maktub Go exige <strong>fé, comprometimento e vontade</strong>. Buscamos pessoas que queiram estar aqui de verdade — que vibrem com os resultados e que tenham mentalidade de dono, não de executor de tarefas.</p>
+    <p class="reveal d5">A Maktub Go exige <strong>fé, comprometimento e vontade</strong>. Buscamos pessoas que queiram estar aqui de verdade, que vibrem com os resultados e que tenham mentalidade de dono, não de executor de tarefas.</p>
     <div class="manifesto-block reveal d6">
       <span class="label">Manifesto</span>
       <p>Acreditamos que <span class="gold">viajar é um dos atos mais humanos que existem</span>. É quando saímos do automático, respiramos diferente e voltamos maiores do que éramos.</p>
-      <p>A Maktub Go existe para garantir que essa experiência comece <span class="gold">antes do embarque</span> — na escuta, no planejamento, no cuidado com cada detalhe que você nem sabia que precisava.</p>
-      <p><span class="gold">Maktub — estava escrito</span>. Essa viagem, essa conexão, esse momento. Se era para acontecer, então que aconteça da melhor forma possível.</p>
+      <p>A Maktub Go existe para garantir que essa experiência comece <span class="gold">antes do embarque</span>: na escuta, no planejamento, no cuidado com cada detalhe que você nem sabia que precisava.</p>
+      <p><span class="gold">Maktub: estava escrito</span>. Essa viagem, essa conexão, esse momento. Se era para acontecer, então que aconteça da melhor forma possível.</p>
       <p class="manifesto-footer">Maktub Go · Alfaiataria de Viagens · Seu Destino Começa Aqui</p>
     </div>
   </div>
@@ -264,9 +282,9 @@
     <div class="divider reveal d1"></div>
     <h2 class="reveal d2">Propósito, Missão<br><span class="italic-gold">e Visão</span></h2>
     <div class="pmv-items">
-      <div class="pmv-item reveal d3"><div><p class="pmv-num">01</p><p class="pmv-cat">Propósito</p></div><div class="pmv-content"><h3>Planejar experiências que marcam</h3><p>Viajar amplia quem você é. Transforma perspectivas, fortalece relações e marca ciclos. Nosso propósito é retirar toda a fricção do caminho para que você simplesmente chegue — e viva.</p></div></div>
-      <div class="pmv-item reveal d4"><div><p class="pmv-num">02</p><p class="pmv-cat">Missão</p></div><div class="pmv-content"><h3>Cuidar de cada etapa com suporte humanizado</h3><p>Planejamos, organizamos e acompanhamos cada viagem com segurança, clareza e atenção. Do primeiro contato ao seu retorno — com a tranquilidade de saber que há alguém real cuidando de tudo por você.</p></div></div>
-      <div class="pmv-item reveal d5"><div><p class="pmv-num">03</p><p class="pmv-cat">Visão</p></div><div class="pmv-content"><h3>Ser referência nacional em experiência premium</h3><p>Crescer com reputação sólida, consistência e indicação espontânea. Construir uma presença que vai além do Brasil — levando o padrão Maktub para onde as pessoas sonham chegar.</p></div></div>
+      <div class="pmv-item reveal d3"><div><p class="pmv-num">01</p><p class="pmv-cat">Propósito</p></div><div class="pmv-content"><h3>Planejar experiências que marcam</h3><p>Viajar amplia quem você é. Transforma perspectivas, fortalece relações e marca ciclos. Nosso propósito é retirar toda a fricção do caminho para que você simplesmente chegue e viva.</p></div></div>
+      <div class="pmv-item reveal d4"><div><p class="pmv-num">02</p><p class="pmv-cat">Missão</p></div><div class="pmv-content"><h3>Cuidar de cada etapa com suporte humanizado</h3><p>Planejamos, organizamos e acompanhamos cada viagem com segurança, clareza e atenção. Do primeiro contato ao seu retorno, com a tranquilidade de saber que há alguém real cuidando de tudo por você.</p></div></div>
+      <div class="pmv-item reveal d5"><div><p class="pmv-num">03</p><p class="pmv-cat">Visão</p></div><div class="pmv-content"><h3>Ser referência nacional em experiência premium</h3><p>Crescer com reputação sólida, consistência e indicação espontânea. Construir uma presença que vai além do Brasil, levando o padrão Maktub para onde as pessoas sonham chegar.</p></div></div>
     </div>
   </div>
 </section>
@@ -280,14 +298,14 @@
     </div>
     <div class="valores-grid" style="margin-top:52px">
       <div class="valor-item reveal d1"><p class="valor-sym">✦</p><p class="valor-title">Deus Acima de Tudo</p><p>O alicerce de tudo o que somos e construímos. Com propósito, integridade e trabalho bem feito, o caminho se abre.</p></div>
-      <div class="valor-item reveal d2"><p class="valor-sym">◷</p><p class="valor-title">Pontualidade</p><p>Respeitar o tempo do outro é uma das formas mais concretas de demonstrar cuidado. Pontualidade é compromisso — e compromisso é caráter.</p></div>
+      <div class="valor-item reveal d2"><p class="valor-sym">◷</p><p class="valor-title">Pontualidade</p><p>Respeitar o tempo do outro é uma das formas mais concretas de demonstrar cuidado. Pontualidade é compromisso, e compromisso é caráter.</p></div>
       <div class="valor-item reveal d3"><p class="valor-sym">◈</p><p class="valor-title">Respeito</p><p>Todo ser humano carrega dignidade e valor intrínseco. Na Maktub Go, enxergar o Criador em cada pessoa é nosso sinônimo de respeito.</p></div>
-      <div class="valor-item reveal d4"><p class="valor-sym">♡</p><p class="valor-title">Conexão com Pessoas</p><p>A conexão que move a Maktub vai além do cliente — ela está em cada relação, em cada troca, em cada pessoa que faz parte dessa história.</p></div>
-      <div class="valor-item reveal d5"><p class="valor-sym">◇</p><p class="valor-title">Excelência</p><p>Somos especialistas em experiência. Cada detalhe importa — porque um erro em um nome ou uma data pode comprometer tudo que foi planejado.</p></div>
+      <div class="valor-item reveal d4"><p class="valor-sym">♡</p><p class="valor-title">Conexão com Pessoas</p><p>A conexão que move a Maktub vai além do cliente: ela está em cada relação, em cada troca, em cada pessoa que faz parte dessa história.</p></div>
+      <div class="valor-item reveal d5"><p class="valor-sym">◇</p><p class="valor-title">Excelência</p><p>Somos especialistas em experiência. Cada detalhe importa, porque um erro em um nome ou uma data pode comprometer tudo que foi planejado.</p></div>
       <div class="valor-item reveal d6"><p class="valor-sym">◎</p><p class="valor-title">Transparência</p><p>A verdade sempre vem antes do conforto. Comunicamos com clareza, agimos com precisão e construímos confiança a cada entrega.</p></div>
-      <div class="valor-item reveal d1"><p class="valor-sym">▪</p><p class="valor-title">Disciplina</p><p>Constância, método e comprometimento com o processo. É a disciplina diária que transforma intenção em resultado — e promessa em entrega.</p></div>
-      <div class="valor-item reveal d2"><p class="valor-sym">◉</p><p class="valor-title">Responsabilidade Total</p><p>Todos vestem a mesma camisa. Quando surge um problema, o time se une — porque o que importa é autonomia, qualidade e resultado bem feito.</p></div>
-      <div class="valor-item reveal d3"><p class="valor-sym">△</p><p class="valor-title">Evolução Contínua</p><p>Quem para de crescer começa a regredir. Na Maktub, nos desafiamos todos os dias a ser melhores — no atendimento, no processo, como pessoas.</p></div>
+      <div class="valor-item reveal d1"><p class="valor-sym">▪</p><p class="valor-title">Disciplina</p><p>Constância, método e comprometimento com o processo. É a disciplina diária que transforma intenção em resultado, e promessa em entrega.</p></div>
+      <div class="valor-item reveal d2"><p class="valor-sym">◉</p><p class="valor-title">Responsabilidade Total</p><p>Todos vestem a mesma camisa. Quando surge um problema, o time se une, porque o que importa é autonomia, qualidade e resultado bem feito.</p></div>
+      <div class="valor-item reveal d3"><p class="valor-sym">△</p><p class="valor-title">Evolução Contínua</p><p>Quem para de crescer começa a regredir. Na Maktub, nos desafiamos todos os dias a ser melhores: no atendimento, no processo, como pessoas.</p></div>
     </div>
   </div>
 </section>
@@ -304,14 +322,14 @@
         <div class="time-initials">IL</div>
         <h3 class="time-name">Isadora Lombardi</h3>
         <p class="time-role">Co-Fundadora · Operações, Estratégia Comercial &amp; Pessoas</p>
-        <p class="time-bio">Com sete anos de trajetória construída dentro das maiores operações do setor — MaxMilhas, 123milhas e Localiza&amp;Co — Isadora acumulou uma bagagem de alta performance raramente vista no turismo.</p>
+        <p class="time-bio">Com sete anos de trajetória construída dentro das maiores operações do setor (MaxMilhas, 123milhas e Localiza&amp;Co), Isadora acumulou uma bagagem de alta performance raramente vista no turismo.</p>
         <p class="time-bio">Fundou e estruturou do zero a GPI Viagens, assumindo a construção e fluxo estratégico da operação. Hoje, como co-fundadora da Maktub Go, traz o que anos de experiência real ensinam: método, presença e cuidado em cada detalhe.</p>
       </div>
       <div class="time-card reveal d4">
         <div class="time-initials">MB</div>
         <h3 class="time-name">Matheus Braga</h3>
         <p class="time-role">Co-Fundador · Estratégia, Finanças &amp; Curadoria</p>
-        <p class="time-bio">Engenheiro de produção em formação, Matheus construiu sua trajetória dentro do mercado financeiro — como assessor de investimentos e gerente financeiro, desenvolvendo o olhar analítico de quem aprende a enxergar risco e analisar oportunidades.</p>
+        <p class="time-bio">Engenheiro de produção em formação, Matheus construiu sua trajetória dentro do mercado financeiro, como assessor de investimentos e gerente financeiro, desenvolvendo o olhar analítico de quem aprende a enxergar risco e analisar oportunidades.</p>
         <p class="time-bio">Curador em milhas e planejamento estratégico de viagens, chegou à Maktub Go com algo raro: a combinação entre estabilidade de perfil e ambição de crescimento. Garante que cada decisão da operação tenha critério, segurança e visão de longo prazo.</p>
       </div>
     </div>
@@ -321,7 +339,7 @@
 <section class="contato" id="contato">
   <span class="label reveal d1">Fale com a Maktub</span>
   <h2 class="reveal d2">Então vá.<br><span class="italic-gold">Seu destino espera.</span></h2>
-  <p class="contato-desc reveal d3">"Maktub — estava escrito. Tinha que acontecer."</p>
+  <p class="contato-desc reveal d3">"Maktub. Estava escrito, tinha que acontecer."</p>
   <div class="contato-btns reveal d4">
     <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." class="btn-p" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
@@ -334,16 +352,17 @@
 <footer>
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="footer-brand-icon"><svg width="14" height="14" viewBox="0 0 40 40" fill="none"><polygon points="20,4 36,34 4,34" stroke="#c9a96e" stroke-width="1.8" fill="none"/><line x1="20" y1="4" x2="20" y2="34" stroke="#c9a96e" stroke-width="1.3"/><circle cx="20" cy="21" r="4.5" stroke="#c9a96e" stroke-width="1.3" fill="none"/></svg></div>
+      <img src="/ativos/simbolo-creme.png" alt="Maktub Go" class="footer-brand-logo" />
       <span class="footer-brand-text">Maktub Go · Alfaiataria de Viagens</span>
     </div>
     <ul class="footer-links">
       <li><a href="#quem-somos">Quem Somos</a></li>
       <li><a href="#servicos">Serviços</a></li>
+      <li><a href="/gestao-de-milhas/">Gestão de Milhas</a></li>
       <li><a href="#valores">Valores</a></li>
-      <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
+      <li><a href="/acesso/">Acesso Cliente</a></li>
     </ul>
-    <span class="footer-copy">© 2025 Maktub Go. Todos os direitos reservados.</span>
+    <span class="footer-copy">© 2026 Maktub Go. Todos os direitos reservados.</span>
   </div>
 </footer>
 

@@ -7,6 +7,13 @@
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#1a3826" />
   <title>Painel Privado | Maktub Go</title>
+  <link rel="manifest" href="/painel/manifest.webmanifest" />
+  <link rel="icon" href="/ativos/app-icon-192.png" />
+  <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Maktub Go" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
@@ -122,13 +129,14 @@
     .savings{margin-bottom:48px}
     .savings-card{background:var(--green);color:var(--cream);padding:38px;position:relative;overflow:hidden}
     .savings-card::before{content:'';position:absolute;width:300px;height:300px;border:1px solid rgba(201,169,110,.15);border-radius:50%;top:-100px;right:-100px;pointer-events:none}
-    .sav-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:24px;align-items:center;position:relative;z-index:2}
+    .sav-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:24px;align-items:center;position:relative;z-index:2}
     .sav-headline .blk-title{color:var(--gold-warm);margin-bottom:14px}
     .sav-headline .blk-title::before{background:var(--gold-warm)}
     .sav-headline h3{font-family:'Cormorant Garamond',serif;font-size:26px;line-height:1.2;color:var(--white);font-weight:400;margin-bottom:10px}
     .sav-headline h3 em{color:var(--gold-warm);font-style:italic;font-weight:300}
     .sav-headline p{font-size:13px;color:rgba(249,246,241,.65);line-height:1.55;font-weight:300}
     .sav-cell{text-align:center;padding:0 14px;border-left:1px solid rgba(201,169,110,.18)}
+    .sav-cell .p span{color:var(--gold-warm)}
     .sav-cell .p{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(249,246,241,.5);margin-bottom:10px;font-weight:600}
     .sav-cell .a{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold-warm);font-weight:400;line-height:1;letter-spacing:-.01em}
     .sav-cell .a .c{font-size:14px;color:rgba(249,246,241,.55);font-style:italic;margin-right:3px;font-weight:300}
@@ -272,6 +280,28 @@
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
     @media(max-width:700px){.tbl{min-width:620px}.tbl td:nth-child(2){min-width:190px}}
 
+    /* Economias: resumo + detalhamento */
+    .kpi-link{cursor:pointer;transition:background .2s}
+    .kpi-link:hover,.kpi-link:focus{background:var(--cream-deep);outline:none}
+    .eco-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;scroll-margin-top:20px}
+    .eco-filters{display:flex;gap:6px;flex-wrap:wrap}
+    .eco-filters button{font-family:inherit;font-size:11px;letter-spacing:.08em;padding:8px 14px;border:1px solid var(--border-strong);background:var(--white);color:var(--text-mid);cursor:pointer;transition:all .2s}
+    .eco-filters button.on{background:var(--green);border-color:var(--green);color:var(--white)}
+    .eco-list{background:var(--white);border:1px solid var(--border)}
+    .eco-item{display:grid;grid-template-columns:96px 1fr auto;gap:24px;align-items:center;padding:20px 26px;border-bottom:1px solid var(--border)}
+    .eco-item:last-child{border-bottom:none}
+    .eco-date{font-size:12px;color:var(--text-muted)}
+    .eco-body .pill{margin-bottom:8px}
+    .eco-h{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);line-height:1.3}
+    .eco-h strong{color:var(--gold);font-weight:600}
+    .eco-d{font-size:12.5px;color:var(--text-muted);margin-top:4px;font-weight:300}
+    .eco-d .strike{text-decoration:line-through}
+    .eco-v{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--green);white-space:nowrap;text-align:right}
+    .eco-v .c{font-size:14px;color:var(--text-muted);font-style:italic;margin-right:3px}
+    .pill.cat-emissao{border-color:var(--green);color:var(--green)}
+    .pill.cat-acumulo{border-color:var(--gold);color:var(--gold)}
+    .pill.cat-cartao{border-color:var(--text-mid);color:var(--text-mid)}
+
     /* Próximo voo (destaque no painel principal) */
     .nextflight{display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;background:var(--white);border:1px solid var(--border);border-left:3px solid var(--gold);padding:22px 28px;margin-bottom:36px;cursor:pointer;transition:background .2s}
     .nextflight:hover{background:var(--cream-deep)}
@@ -346,6 +376,157 @@
     .req .btn-line{margin-top:10px;padding:9px 14px}
     .meet-note{margin-top:16px;padding:18px 20px;background:var(--cream-deep);border-left:2px solid var(--gold);font-size:13px;color:var(--text-mid);line-height:1.6}
 
+    [hidden]{display:none!important}
+    /* ===== v3: gestor, alertas, viagens, documentos, relatórios, convites, boas-vindas ===== */
+    .sb-gestor{margin:18px 0 16px;padding:14px;border:1px solid rgba(201,169,110,.2);display:flex;gap:12px;align-items:center}
+    .sb-gestor[hidden]{display:none}
+    .sb-gestor img,.gst-ph{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(201,169,110,.18);color:var(--gold-warm);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px}
+    .sb-gestor .k{font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(249,246,241,.45);font-weight:600}
+    .sb-gestor .n{font-size:13px;color:var(--white);line-height:1.3}
+    .sb-gestor a{font-size:11px;color:var(--gold-warm)}
+    .sb-install{margin-top:6px;background:none;border:1px dashed rgba(201,169,110,.3);color:rgba(249,246,241,.7);font-family:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:9px;cursor:pointer;width:100%}
+    .sb-install:hover{color:var(--gold-warm);border-color:var(--gold-warm)}
+    .sb-badge{margin-left:auto;background:#9a4a3a;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;font-weight:600}
+
+    .alert-venc{display:flex;gap:18px;align-items:center;background:#fbf3ea;border:1px solid rgba(154,74,58,.25);border-left:3px solid #9a4a3a;padding:18px 24px;margin-bottom:24px;cursor:pointer}
+    .alert-venc svg{width:22px;height:22px;stroke:#9a4a3a;fill:none;stroke-width:1.6;flex-shrink:0}
+    .alert-venc .t{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);line-height:1.25}
+    .alert-venc .t strong{color:#9a4a3a;font-weight:600}
+    .alert-venc .d{font-size:12.5px;color:var(--text-mid);font-weight:300}
+    .alert-venc .go{margin-left:auto;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#9a4a3a;font-weight:600;white-space:nowrap}
+
+    .gestor-card{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;background:var(--white);border:1px solid var(--border);padding:24px 28px;margin-bottom:48px}
+    .gestor-card[hidden]{display:none}
+    .gestor-card img,.gestor-card .gst-ph{width:72px;height:72px;font-size:26px;border:1px solid var(--gold-soft)}
+    .gestor-card .k{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:4px}
+    .gestor-card .n{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--green);line-height:1.15}
+    .gestor-card .c{font-size:12.5px;color:var(--text-muted)}
+    .gestor-card .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-mid)}
+    .gestor-card .acts{display:flex;flex-direction:column;gap:8px}
+
+    .link-more{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);font-weight:600;margin-left:auto}
+    .blk-row{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+    .blk-row .blk-title{margin-bottom:0}
+
+    .trips{display:grid;gap:22px}
+    .trip{background:var(--white);border:1px solid var(--border);overflow:hidden}
+    .trip.past{opacity:.72}
+    .trip-head{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;padding:22px 28px;background:var(--green);color:var(--cream)}
+    .trip.past .trip-head{background:var(--text-muted)}
+    .trip-when{font-family:'Cormorant Garamond',serif;text-align:center;padding-right:22px;border-right:1px solid rgba(201,169,110,.25)}
+    .trip-when .m{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-style:italic;color:var(--gold-warm)}
+    .trip-when .d{font-size:34px;line-height:1}
+    .trip-when .y{font-size:10px;letter-spacing:.18em;color:rgba(249,246,241,.6);font-family:'Jost',sans-serif}
+    .trip-head h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:var(--white);line-height:1.1}
+    .trip-head h3 em{color:var(--gold-warm);font-weight:300}
+    .trip-head .dt{font-size:12.5px;color:rgba(249,246,241,.7);font-weight:300;margin-top:2px}
+    .trip-head .right{text-align:right}
+    .trip-head .cd{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-warm);margin-top:8px;font-weight:500}
+    .trip-head .tr-status{color:var(--gold-warm);border-color:rgba(201,169,110,.5)}
+    .trip-body{padding:8px 28px 22px}
+    .trip-sec{padding:16px 0;border-bottom:1px solid var(--border)}
+    .trip-sec:last-child{border-bottom:none}
+    .trip-lbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px}
+    .trip-empty{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--text-light);font-size:16px}
+    .leg{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:10px 0}
+    .leg+.leg{border-top:1px dashed var(--border)}
+    .leg .when{font-size:12px;color:var(--text-muted);min-width:92px}
+    .leg .when strong{display:block;color:var(--green);font-size:13.5px;font-weight:500}
+    .leg .route{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green)}
+    .leg .route span{color:var(--gold);margin:0 8px;font-size:16px}
+    .leg .info{font-size:12px;color:var(--text-muted);margin-top:2px}
+    .leg .r{text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+    .hotel{display:flex;gap:28px;flex-wrap:wrap;font-size:13.5px;color:var(--text)}
+    .hotel .hn{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green)}
+    .hotel .l{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
+    .doc-chips{display:flex;gap:8px;flex-wrap:wrap}
+    .doc-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--border-strong);background:var(--cream);font-family:inherit;font-size:12px;color:var(--green);cursor:pointer;transition:all .2s}
+    .doc-chip:hover{border-color:var(--gold);background:var(--white)}
+    .doc-chip svg{width:14px;height:14px;stroke:var(--gold);fill:none;stroke-width:1.5}
+
+    .docs{background:var(--white);border:1px solid var(--border)}
+    .doc{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border)}
+    .doc:last-child{border-bottom:none}
+    .doc-ic{width:42px;height:42px;border:1px solid var(--gold-soft);display:flex;align-items:center;justify-content:center;background:var(--cream)}
+    .doc-ic svg{width:18px;height:18px;stroke:var(--gold);fill:none;stroke-width:1.4}
+    .doc .t{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--green);line-height:1.25}
+    .doc .d{font-size:12px;color:var(--text-muted)}
+    .doc .acts{display:flex;gap:8px}
+    .btn-sm{font-family:inherit;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:9px 14px;border:1px solid var(--gold);background:var(--white);color:var(--green);cursor:pointer;font-weight:500;white-space:nowrap}
+    .btn-sm:hover{background:var(--gold-soft)}
+    .btn-sm.solid{background:var(--green);border-color:var(--green);color:var(--white)}
+    .btn-sm.solid:hover{background:var(--green-mid)}
+
+    .reports{background:var(--white);border:1px solid var(--border)}
+    .rep{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:18px 26px;border-bottom:1px solid var(--border)}
+    .rep:last-child{border-bottom:none}
+    .rep .t{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green)}
+    .rep .d{font-size:12px;color:var(--text-muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .rep .pill{font-size:8.5px}
+    .rep-intro{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;background:var(--green);color:var(--cream);padding:28px 32px;margin-bottom:28px}
+    .rep-intro h3{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--white);font-weight:400}
+    .rep-intro h3 em{color:var(--gold-warm);font-weight:300}
+    .rep-intro p{font-size:13.5px;color:rgba(249,246,241,.72);font-weight:300;max-width:560px}
+    .rep-intro select{font-family:inherit;font-size:13px;padding:11px 14px;background:rgba(255,255,255,.06);color:var(--white);border:1px solid rgba(201,169,110,.35)}
+    .rep-intro select option{color:var(--text)}
+    .rep-intro .row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-gold{font-family:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;padding:12px 20px;background:var(--gold-warm);color:var(--green-dark);border:none;cursor:pointer;font-weight:600}
+
+    .club{display:grid;grid-template-columns:1fr 1.1fr;gap:24px;align-items:start}
+    .club-hero{background:var(--green);color:var(--cream);padding:36px;position:relative;overflow:hidden}
+    .club-hero::before{content:'';position:absolute;width:260px;height:260px;border:1px solid rgba(201,169,110,.18);border-radius:50%;top:-90px;right:-90px}
+    .club-hero .k{font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-warm);font-weight:600}
+    .club-hero h3{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--white);font-weight:400;line-height:1.15;margin:10px 0 14px}
+    .club-hero h3 em{color:var(--gold-warm);font-weight:300}
+    .club-hero p{font-size:13.5px;color:rgba(249,246,241,.75);font-weight:300;line-height:1.65}
+    .club-count{display:flex;align-items:baseline;gap:10px;margin-top:26px;padding-top:20px;border-top:1px solid rgba(201,169,110,.2)}
+    .club-count .n{font-family:'Cormorant Garamond',serif;font-size:58px;color:var(--gold-warm);line-height:1}
+    .club-count .l{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,246,241,.65)}
+    .fld input[type=text],.fld input[type=email],.fld input[type=tel],.fld select{width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--cream);border:1px solid var(--border-strong);padding:12px 14px;outline:none}
+    .fld input:focus,.fld select:focus{border-color:var(--gold)}
+    .fld-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+    .cal-box{background:var(--white);border:1px solid var(--border);padding:28px}
+    .cal-box h3{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--green);font-weight:400}
+    .cal-box h3 em{color:var(--gold);font-style:italic;font-weight:300}
+    .scarce{display:flex;gap:10px;align-items:center;margin:8px 0 18px;font-size:12.5px;color:var(--text-mid)}
+    .scarce .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+    #calInline{min-height:560px;width:100%;overflow:auto}
+
+    .modal{position:fixed;inset:0;z-index:1200;background:rgba(20,45,31,.62);display:flex;align-items:center;justify-content:center;padding:24px}
+    .modal[hidden]{display:none}
+    .modal-card{background:var(--white);width:min(1000px,100%);height:min(88vh,900px);display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.25)}
+    .modal-top{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border)}
+    .modal-top .t{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .modal-x{background:none;border:none;font-size:26px;line-height:1;color:var(--text-muted);cursor:pointer;padding:0 4px}
+    .modal iframe{flex:1;border:none;width:100%;background:var(--white)}
+
+    .welcome{position:fixed;inset:0;z-index:1300;background:var(--green);color:var(--cream);display:flex;align-items:center;justify-content:center;padding:32px;overflow:auto}
+    .welcome[hidden]{display:none}
+    .welcome::before{content:'';position:absolute;width:720px;height:720px;border:1px solid rgba(201,169,110,.14);border-radius:50%;top:-260px;right:-240px;pointer-events:none}
+    .wel-card{max-width:620px;width:100%;position:relative;z-index:2}
+    .wel-card img.logo{height:56px;width:auto;margin-bottom:28px}
+    .wel-step[hidden]{display:none}
+    .wel-step .k{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-warm);font-weight:600}
+    .wel-step h2{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,6vw,56px);font-weight:400;color:var(--white);line-height:1.05;margin:14px 0 18px}
+    .wel-step h2 em{color:var(--gold-warm);font-weight:300}
+    .wel-step p{font-size:15.5px;color:rgba(249,246,241,.8);font-weight:300;line-height:1.75}
+    .wel-list{list-style:none;margin-top:18px;display:grid;gap:10px}
+    .wel-list li{display:flex;gap:12px;font-size:14.5px;color:rgba(249,246,241,.85)}
+    .wel-list li::before{content:'✦';color:var(--gold-warm);font-size:12px;margin-top:3px}
+    .wel-gestor{display:flex;gap:16px;align-items:center;margin-top:24px;padding:16px;border:1px solid rgba(201,169,110,.25)}
+    .wel-gestor img,.wel-gestor .gst-ph{width:56px;height:56px}
+    .wel-gestor .n{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--white)}
+    .wel-gestor .c{font-size:12px;color:rgba(249,246,241,.6)}
+    .wel-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:36px;flex-wrap:wrap}
+    .wel-dots{display:flex;gap:8px}
+    .wel-dots span{width:22px;height:2px;background:rgba(201,169,110,.3)}
+    .wel-dots span.on{background:var(--gold-warm)}
+    .wel-btns{display:flex;gap:10px;flex-wrap:wrap}
+    .wel-skip{background:none;border:1px solid rgba(201,169,110,.35);color:rgba(249,246,241,.8);font-family:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;padding:13px 20px;cursor:pointer}
+
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green-dark);color:var(--cream);padding:12px 20px;font-size:13px;z-index:1400;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+    .toast[hidden]{display:none}
     .bar-col:first-child .tip{left:0;transform:none}
     .bar-col:last-child .tip{left:auto;right:0;transform:none}
 
@@ -364,7 +545,36 @@
       .sb-link{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:9px 12px;font-size:12px}
       .sb-link.active{border-bottom-color:var(--gold-warm)}
       .sb-link svg{display:none}
+      .sb-gestor,.sb-install{display:none!important}
+      .gestor-card{grid-template-columns:auto 1fr;gap:16px;padding:18px}
+      .gestor-card .acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+      .gestor-card img,.gestor-card .gst-ph{width:56px;height:56px}
+      .alert-venc{flex-wrap:wrap;padding:16px}
+      .alert-venc .go{margin-left:0}
+      .trip-head{grid-template-columns:auto 1fr;padding:18px}
+      .trip-head .right{grid-column:1/-1;text-align:left;display:flex;gap:12px;align-items:center}
+      .trip-head .cd{margin-top:0}
+      .trip-body{padding:4px 18px 16px}
+      .leg{grid-template-columns:1fr;gap:6px}
+      .leg .r{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+      .doc{grid-template-columns:auto 1fr;padding:14px 16px}
+      .doc .acts{grid-column:1/-1}
+      .rep{grid-template-columns:1fr;padding:16px 18px}
+      .rep-intro{grid-template-columns:1fr;padding:22px}
+      .club{grid-template-columns:1fr}
+      .club-hero{padding:26px}
+      .fld-2{grid-template-columns:1fr}
+      .sav-grid{grid-template-columns:repeat(3,1fr)!important;gap:10px!important}
+      .sav-cell{padding:0 4px}
+      .sav-cell .a{font-size:22px}
+      .cal-box{padding:16px}
+      .modal{padding:0}
+      .modal-card{height:100vh}
       .kpis{grid-template-columns:1fr 1fr}
+      .eco-item{grid-template-columns:1fr auto;gap:6px 14px;padding:16px 18px}
+      .eco-date{grid-column:1/-1}
+      .eco-h{font-size:17px}
+      .eco-v{font-size:24px}
       .kpi{padding:18px}
       .kpi .v{font-size:28px}
       .meet{grid-template-columns:1fr}
@@ -443,9 +653,9 @@
         Painel Principal
       </a></li>
       <li class="sb-section">Minha Gestão</li>
-      <li><a class="sb-link" href="#voos" data-view="voos">
+      <li><a class="sb-link" href="#viagens" data-view="viagens">
         <svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-        Próximos Voos
+        Minhas Viagens
       </a></li>
       <li><a class="sb-link" href="#milhas" data-view="milhas">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
@@ -455,16 +665,32 @@
         <svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Histórico de Economias
       </a></li>
+      <li><a class="sb-link" href="#documentos" data-view="documentos">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+        Meus Documentos
+      </a></li>
+      <li><a class="sb-link" href="#relatorios" data-view="relatorios">
+        <svg viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 17v-3M12 17v-6M16 17v-4"/></svg>
+        Relatórios Mensais
+      </a></li>
       <li><a class="sb-link" href="#reuniao" data-view="reuniao">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
         Agendar Reunião
       </a></li>
+      <li class="sb-section">Clube Maktub</li>
+      <li><a class="sb-link" href="#convites" data-view="convites">
+        <svg viewBox="0 0 24 24"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+        Convites Exclusivos
+      </a></li>
       <li class="sb-section">Atendimento</li>
-      <li><a class="sb-link wa" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Estou%20no%20meu%20painel%20Maktub%20Go%20e%20gostaria%20de%20falar%20com%20a%20equipe." target="_blank" rel="noopener">
+      <li><a class="sb-link wa" id="waLink" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Estou%20no%20meu%20painel%20Maktub%20Go%20e%20gostaria%20de%20falar%20com%20a%20equipe." target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        Falar com a Maktub
+        <span id="waLinkText">Falar com a Maktub</span>
       </a></li>
     </ul>
+
+    <div class="sb-gestor" id="sbGestor" hidden></div>
+    <button type="button" class="sb-install" id="sbInstall" hidden>Instalar app no celular</button>
 
     <div class="sb-foot">
       <div class="sb-avatar" id="avatarUser">··</div>
@@ -494,6 +720,7 @@
 
     <!-- ============= VIEW: PAINEL PRINCIPAL ============= -->
     <div class="view" id="view-inicio">
+    <div id="alertSlot"></div>
     <div id="nextFlightSlot"></div>
     <!-- ============= BLOCO 1: PATRIMÔNIO ============= -->
     <section class="heritage">
@@ -504,15 +731,15 @@
         <div class="h-trend">
           <div class="h-trend-item">
             <div class="l">Evolução Mês</div>
-            <div class="v" id="evolucaoMes">—</div>
+            <div class="v" id="evolucaoMes">·</div>
           </div>
           <div class="h-trend-item">
             <div class="l">Evolução Ano</div>
-            <div class="v" id="evolucaoAno">—</div>
+            <div class="v" id="evolucaoAno">·</div>
           </div>
           <div class="h-trend-item">
             <div class="l">Crescimento</div>
-            <div class="v" id="crescimentoPct">—</div>
+            <div class="v" id="crescimentoPct">·</div>
           </div>
         </div>
       </div>
@@ -525,6 +752,8 @@
       </div>
     </section>
 
+    <section class="gestor-card" id="gestorCard" hidden></section>
+
     <!-- ============= BLOCO 2: ECONOMIA ============= -->
     <section class="savings">
       <div class="savings-card">
@@ -532,23 +761,19 @@
           <div class="sav-headline">
             <div class="blk-title">Economia Gerada</div>
             <h3>O quanto a Maktub Go te <em>economizou.</em></h3>
-            <p>Diferença entre o valor pago em milhas e o valor de mercado em reais.</p>
+            <p>Passagens emitidas com milhas, super acúmulos, cashback e melhorias de cartão.</p>
+          </div>
+          <div class="sav-cell">
+            <div class="p">No mês · <span id="ecoMesLbl"></span></div>
+            <div class="a"><span class="c">R$</span><span id="ecoMes">0</span></div>
+          </div>
+          <div class="sav-cell">
+            <div class="p">No ano · <span id="ecoAnoLbl"></span></div>
+            <div class="a"><span class="c">R$</span><span id="ecoAno">0</span></div>
           </div>
           <div class="sav-cell">
             <div class="p">Desde o início</div>
             <div class="a"><span class="c">R$</span><span id="ecoTotal">0</span></div>
-          </div>
-          <div class="sav-cell">
-            <div class="p">Semana</div>
-            <div class="a"><span class="c">R$</span><span id="ecoSemana">0</span></div>
-          </div>
-          <div class="sav-cell">
-            <div class="p">Mês</div>
-            <div class="a"><span class="c">R$</span><span id="ecoMes">0</span></div>
-          </div>
-          <div class="sav-cell">
-            <div class="p">Ano</div>
-            <div class="a"><span class="c">R$</span><span id="ecoAno">0</span></div>
           </div>
         </div>
       </div>
@@ -564,7 +789,7 @@
 
     <!-- ============= BLOCO 4: VIAGENS ============= -->
     <section class="travels">
-      <div class="blk-title">Calendário de Viagens</div>
+      <div class="blk-row"><div class="blk-title">Calendário de Viagens</div><a class="link-more" href="#viagens">Ver detalhes →</a></div>
       <div class="travels-list" id="travelsList">
         <div class="empty-list">Nenhuma viagem cadastrada ainda</div>
       </div>
@@ -580,21 +805,21 @@
 
     <!-- ============= BLOCO 6: HISTÓRICO ============= -->
     <section class="history">
-      <div class="blk-title">Histórico de Reuniões Mensais</div>
+      <div class="blk-row"><div class="blk-title">Histórico de Reuniões Mensais</div><a class="link-more" href="#relatorios">Relatórios →</a></div>
       <div class="history-list" id="historyList">
         <div class="empty-list">Nenhuma reunião registrada ainda</div>
       </div>
     </section>
     </div>
 
-    <!-- ============= VIEW: PRÓXIMOS VOOS ============= -->
-    <div class="view" id="view-voos" hidden>
+    <!-- ============= VIEW: MINHAS VIAGENS ============= -->
+    <div class="view" id="view-viagens" hidden>
       <section class="sec">
-        <div class="blk-title">Próximos Voos</div>
-        <div class="flights" id="flightsUpcoming"><div class="empty-cards">Carregando voos</div></div>
-        <div id="flightsPastWrap" hidden>
-          <button class="past-toggle" id="pastToggle" type="button">Ver voos realizados</button>
-          <div class="flights" id="flightsPast" hidden style="margin-top:16px"></div>
+        <div class="blk-title">Próximas Viagens</div>
+        <div class="trips" id="tripsUpcoming"><div class="empty-cards">Carregando viagens</div></div>
+        <div id="tripsPastWrap" hidden>
+          <button class="past-toggle" id="pastToggle" type="button">Ver viagens realizadas</button>
+          <div class="trips" id="tripsPast" hidden style="margin-top:16px"></div>
         </div>
       </section>
     </div>
@@ -602,6 +827,10 @@
     <!-- ============= VIEW: HISTÓRICO DE MILHAS ============= -->
     <div class="view" id="view-milhas" hidden>
       <div class="kpis" id="milhasKpis"></div>
+      <section class="sec" id="vencSec" hidden>
+        <div class="blk-title">Vencimentos Monitorados</div>
+        <div class="tbl-wrap" id="vencWrap"></div>
+      </section>
       <section class="sec">
         <div class="chart-card">
           <div class="chart-top">
@@ -627,14 +856,88 @@
         </div>
       </section>
       <section class="sec">
-        <div class="blk-title">Emissões e Economia Gerada</div>
-        <div class="tbl-wrap" id="ecoTableWrap"></div>
+        <div class="eco-head" id="ecoDetalhe">
+          <div class="blk-title" style="margin-bottom:0">Detalhamento dos Ganhos</div>
+          <div class="eco-filters" id="ecoFilters" role="group" aria-label="Filtrar por tipo">
+            <button type="button" data-cat="" class="on">Todos</button>
+            <button type="button" data-cat="emissao">Passagens</button>
+            <button type="button" data-cat="acumulo">Acúmulo e cashback</button>
+            <button type="button" data-cat="cartao">Cartões</button>
+          </div>
+        </div>
+        <div class="eco-list" id="ecoList"></div>
       </section>
+    </div>
+
+    <!-- ============= VIEW: MEUS DOCUMENTOS ============= -->
+    <div class="view" id="view-documentos" hidden>
+      <section class="sec">
+        <div class="eco-head"><div class="blk-title" style="margin-bottom:0">Meus Documentos</div><div class="eco-filters" id="docFilters"></div></div>
+        <div id="docList"><div class="empty-cards">Carregando documentos</div></div>
+      </section>
+    </div>
+
+    <!-- ============= VIEW: RELATÓRIOS MENSAIS ============= -->
+    <div class="view" id="view-relatorios" hidden>
+      <div class="rep-intro">
+        <div><h3>Seu relatório <em>mensal</em></h3>
+          <p>Patrimônio, economias, viagens e os próximos movimentos do mês em um documento pronto para ler, imprimir ou salvar em PDF.</p></div>
+        <div class="row"><select id="repSelect" aria-label="Mês do relatório"></select><button type="button" class="btn-gold" id="repGo">Gerar</button></div>
+      </div>
+      <section class="sec">
+        <div class="blk-title">Todos os meses</div>
+        <div class="reports" id="repList"></div>
+      </section>
+    </div>
+
+    <!-- ============= VIEW: CONVITES EXCLUSIVOS ============= -->
+    <div class="view" id="view-convites" hidden>
+      <div class="club">
+        <div class="club-hero">
+          <div class="k">Clube Maktub</div>
+          <h3>Um círculo <em>por convite.</em></h3>
+          <p>A Gestão de Milhas Concierge atende um número restrito de clientes. Como cliente, você pode indicar pessoas próximas. Cada indicação é tratada pessoalmente pelo seu gestor, com toda a discrição.</p>
+          <div class="club-count"><div class="n" id="convCount">0</div><div class="l" id="convCountLbl">convites disponíveis</div></div>
+        </div>
+        <div>
+          <form class="form-card" id="convForm" novalidate>
+            <h3>Indicar <em>alguém especial</em></h3>
+            <p>Nossa equipe fará o primeiro contato em seu nome.</p>
+            <div class="fld"><label for="cNome">Nome</label><input type="text" id="cNome" maxlength="120" autocomplete="off" /></div>
+            <div class="fld-2">
+              <div class="fld"><label for="cWhats">WhatsApp</label><input type="tel" id="cWhats" maxlength="30" placeholder="(21) 99999-9999" /></div>
+              <div class="fld"><label for="cEmail">E-mail (opcional)</label><input type="email" id="cEmail" maxlength="160" /></div>
+            </div>
+            <div class="fld"><label for="cRel">Relação com você</label>
+              <select id="cRel"><option value="">Selecione</option><option>Família</option><option>Amigo(a)</option><option>Sócio(a)</option><option>Colega de trabalho</option><option>Outro</option></select></div>
+            <div class="fld"><label for="cMsg">Algo que devemos saber? (opcional)</label><textarea id="cMsg" maxlength="600" placeholder="Ex.: viaja muito a trabalho, tem muitos pontos parados"></textarea></div>
+            <button class="btn-main" type="submit" id="convBtn">Enviar indicação</button>
+            <div class="form-msg" id="convMsg" role="status"></div>
+          </form>
+          <div class="form-card" id="convEsgotado" hidden>
+            <h3>Seus convites <em>foram usados</em></h3>
+            <p>Obrigado pela confiança. Se quiser indicar mais alguém, fale com seu gestor: novos convites podem ser liberados.</p>
+          </div>
+          <div class="blk-title" style="margin-top:28px">Suas indicações</div>
+          <div class="req-list" id="convList"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ============= VIEW: AGENDAR REUNIÃO ============= -->
     <div class="view" id="view-reuniao" hidden>
       <div class="meet">
+        <div class="form-card" id="meetDone" hidden>
+          <h3>Sua reunião do mês <em>está reservada</em></h3>
+          <p id="meetDoneTxt"></p>
+          <p>Cada cliente Concierge tem direito a uma reunião mensal com o gestor. Assim que esta for realizada, a agenda do próximo mês é liberada aqui.</p>
+          <a class="btn-line" id="meetDoneWa" target="_blank" rel="noopener" href="#">Precisa remarcar? Fale com seu gestor</a>
+        </div>
+        <div class="cal-box" id="calBox" hidden>
+          <h3>Agenda de <em id="calGestor">seu gestor</em></h3>
+          <div class="scarce"><span class="dot"></span>Agenda restrita a clientes Concierge: poucos horários por dia, uma reunião por mês. Os horários exibidos são os disponíveis neste momento.</div>
+          <div id="calInline"></div>
+        </div>
         <form class="form-card" id="meetForm" novalidate>
           <h3>Sua reunião <em>mensal</em></h3>
           <p>Escolha a data e o período de sua preferência. Nossa equipe confirma o horário exato e envia o link.</p>
@@ -666,7 +969,7 @@
           <div class="form-msg" id="meetMsg" role="status"></div>
         </form>
         <div>
-          <div class="blk-title">Suas Solicitações</div>
+          <div class="blk-title">Suas Reuniões</div>
           <div class="req-list" id="reqList"><div class="empty-list">Nenhuma solicitação ainda</div></div>
           <div class="meet-note">A reunião mensal é o momento de revisar resultados, alinhar os próximos movimentos e planejar suas viagens. As anotações de cada encontro ficam no histórico do Painel Principal.</div>
         </div>
@@ -675,15 +978,64 @@
   </main>
 </div>
 
+<!-- Visualizador de documentos -->
+<div class="modal" id="docModal" hidden role="dialog" aria-modal="true" aria-labelledby="docTitle">
+  <div class="modal-card">
+    <div class="modal-top"><div class="t" id="docTitle"></div><button type="button" class="btn-sm" id="docDownload">Baixar</button><button type="button" class="modal-x" id="docClose" aria-label="Fechar">×</button></div>
+    <iframe id="docFrame" title="Documento" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+  </div>
+</div>
+
+<!-- Boas-vindas (primeiro acesso) -->
+<div class="welcome" id="welcome" hidden role="dialog" aria-modal="true">
+  <div class="wel-card">
+    <img class="logo" src="/ativos/simbolo-creme.png" alt="Maktub Go" />
+    <div class="wel-step">
+      <div class="k">Bem-vindo à Maktub Go</div>
+      <h2>É um prazer ter você, <em id="welNome"></em>.</h2>
+      <p>A partir de agora, suas milhas são tratadas como patrimônio: acompanhadas o ano inteiro, com estratégia e cuidado em cada detalhe.</p>
+      <div class="wel-gestor" id="welGestor" hidden></div>
+    </div>
+    <div class="wel-step" hidden>
+      <div class="k">Seu painel privado</div>
+      <h2>Tudo em <em>um só lugar.</em></h2>
+      <ul class="wel-list">
+        <li>Patrimônio de milhas, com alerta de pontos perto de vencer</li>
+        <li>Suas viagens com voos, hotel e documentos organizados</li>
+        <li>Cada real economizado, detalhado item a item</li>
+        <li>Relatório mensal pronto para ler ou salvar em PDF</li>
+      </ul>
+    </div>
+    <div class="wel-step" hidden>
+      <div class="k">Primeiro passo</div>
+      <h2>Vamos desenhar <em>sua estratégia.</em></h2>
+      <p>Na primeira reunião, seu gestor entende seus objetivos de viagem e define os movimentos dos próximos meses. Escolha o melhor horário na agenda.</p>
+    </div>
+    <div class="wel-foot">
+      <div class="wel-dots"><span class="on"></span><span></span><span></span></div>
+      <div class="wel-btns"><button type="button" class="wel-skip" id="welSkip">Pular</button><button type="button" class="btn-gold" id="welNext">Continuar</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
   const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
 
+  // Precisa ser igual ao valor usado em /acesso/index.html
+  const EXIGIR_CODIGO = true;
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: true, autoRefreshToken: true }
   });
+  const jwtAmr = (token) => {
+    try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); return (p.amr || []).map(a => a.method); }
+    catch (_) { return []; }
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -697,9 +1049,9 @@
     return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
   const fmtDate = (dateStr) => {
-    if (!dateStr) return { m: '—', d: '—', y: '—' };
+    if (!dateStr) return { m: '·', d: '·', y: '·' };
     const d = new Date(dateStr + 'T12:00:00');
-    if (isNaN(d.getTime())) return { m: '—', d: '—', y: '—' };
+    if (isNaN(d.getTime())) return { m: '·', d: '·', y: '·' };
     const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     return {
       m: meses[d.getMonth()],
@@ -723,8 +1075,9 @@
     if (h < 18) return 'Boa tarde';
     return 'Boa noite';
   };
-  const todayLabel = () => {
-    const d = new Date();
+  const updatedLabel = (iso) => {
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d)) return 'Painel Privado';
     return `Painel Privado · Atualizado em ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
   };
   const escapeHtml = (str) => {
@@ -936,7 +1289,7 @@
       const h = Math.max(1, (r.value / max) * 100);
       const last = i === rows.length - 1;
       return `<div class="bar-col ${last ? 'last' : ''}" tabindex="0" aria-label="${escapeHtml(r.label)}: ${escapeHtml(fmt(r.value))}">
-        <div class="tip">${escapeHtml(r.full || r.label)}<br><strong>${escapeHtml(fmt(r.value))}</strong>${tipLabel ? ' ' + escapeHtml(tipLabel) : ''}</div>
+        <div class="tip">${escapeHtml(r.full || r.label)}<br><strong>${escapeHtml(fmt(r.value))}</strong>${tipLabel ? ' ' + escapeHtml(tipLabel) : ''}${(r.lines || []).map(l => '<br>' + escapeHtml(l)).join('')}</div>
         ${last ? `<div class="top" style="bottom:${h*0.89}%">${escapeHtml(fmt(r.value))}</div>` : ''}
         <div class="b" style="height:${h*0.89}%"></div>
       </div>`;
@@ -981,17 +1334,12 @@
       </div>
     </article>`;
   }
-  function renderVoos(voos) {
+  function renderProximoVoo(voos) {
     const up = voos.filter(v => (daysUntil(v.data_voo) ?? -1) >= 0 && v.status !== 'concluido' && v.status !== 'cancelado');
-    const past = voos.filter(v => !up.includes(v)).reverse();
-    $('flightsUpcoming').innerHTML = up.length ? up.map(f => flightCard(f, false)).join('')
-      : '<div class="empty-cards">Nenhum voo emitido no momento. Assim que uma emissão for feita, ela aparece aqui com localizador e horários.</div>';
-    $('flightsPastWrap').hidden = !past.length;
-    $('flightsPast').innerHTML = past.map(f => flightCard(f, true)).join('');
     const nf = up[0];
     if (nf) {
       const n = daysUntil(nf.data_voo);
-      $('nextFlightSlot').innerHTML = `<div class="nextflight" role="link" tabindex="0" data-goto="voos">
+      $('nextFlightSlot').innerHTML = `<div class="nextflight" role="link" tabindex="0" data-goto="viagens">
         <div class="nf-count"><div class="n">${n === 0 ? 'Hoje' : n}</div><div class="t">${n === 0 ? 'embarque' : n === 1 ? 'dia' : 'dias'}</div></div>
         <div class="nf-info"><div class="k">Próximo voo</div>
           <div class="rt">${escapeHtml(nf.origem_cidade || nf.origem_codigo || '')} → ${escapeHtml(nf.destino_cidade || nf.destino_codigo || '')}</div>
@@ -1002,8 +1350,8 @@
     }
   }
   $('pastToggle').addEventListener('click', () => {
-    const el = $('flightsPast'); el.hidden = !el.hidden;
-    $('pastToggle').textContent = el.hidden ? 'Ver voos realizados' : 'Ocultar voos realizados';
+    const el = $('tripsPast'); el.hidden = !el.hidden;
+    $('pastToggle').textContent = el.hidden ? 'Ver viagens realizadas' : 'Ocultar viagens realizadas';
   });
   document.addEventListener('click', async (e) => {
     const c = e.target.closest('[data-copy]');
@@ -1054,34 +1402,99 @@
   }
 
   // ===== Histórico de economias =====
+  // categoria: emissao (passagens) | acumulo (super acúmulo / cashback) | cartao (otimização de cartões) | outro
   let ECO_TOTAL = 0;
+  const ECO_CAT = {
+    emissao: { label: 'Passagens', pill: 'Passagem', sub: 'Emissões com milhas' },
+    acumulo: { label: 'Super acúmulo e cashback', pill: 'Acúmulo / cashback', sub: 'Pontos e cashback extras' },
+    cartao:  { label: 'Cartões', pill: 'Cartão', sub: 'Anuidade, upgrades e benefícios' },
+    outro:   { label: 'Outros ganhos', pill: 'Outro', sub: 'Demais economias' }
+  };
+  const money2 = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const ecoCat = (r) => ECO_CAT[r.categoria] ? r.categoria : 'emissao';
+  const ecoValor = (r) => {
+    if (r.valor_economia_brl !== null && r.valor_economia_brl !== undefined && r.valor_economia_brl !== '') return Number(r.valor_economia_brl) || 0;
+    return (Number(r.valor_mercado_brl) || 0) - (Number(r.valor_pago_brl) || 0);
+  };
+  let ECO_ROWS = [];
+  let ECO_FILTER = '';
+
+  function ecoHeadline(r, v) {
+    const c = ecoCat(r), d = escapeHtml(r.descricao || '');
+    if (c === 'emissao') return `Economia de <strong>${money2(v)}</strong> na passagem ${d}`;
+    if (c === 'acumulo') return `Ganho de <strong>${money2(v)}</strong> em ${d}`;
+    if (c === 'cartao')  return `Economia de <strong>${money2(v)}</strong> com ${d}`;
+    return `Economia de <strong>${money2(v)}</strong> em ${d}`;
+  }
+  function ecoDetail(r) {
+    const c = ecoCat(r), parts = [];
+    if (c === 'emissao') {
+      if (r.valor_mercado_brl) parts.push(`Valor de mercado <span class="strike">${money2(r.valor_mercado_brl)}</span>`);
+      if (r.valor_pago_brl !== null && r.valor_pago_brl !== undefined && r.valor_pago_brl !== '') parts.push(`Você investiu ${money2(r.valor_pago_brl)}`);
+      if (r.milhas_utilizadas) parts.push(`${fmtNum(r.milhas_utilizadas)} milhas${r.programa ? ' ' + escapeHtml(r.programa) : ''}`);
+      const m = Number(r.valor_mercado_brl);
+      if (m > 0) parts.push(`${Math.round(ecoValor(r) / m * 100)}% menos`);
+    } else if (c === 'acumulo') {
+      if (r.pontos_gerados) parts.push(`+ ${fmtNum(r.pontos_gerados)} pontos${r.programa ? ' ' + escapeHtml(r.programa) : ''}`);
+      else if (r.programa) parts.push(escapeHtml(r.programa));
+    } else if (r.programa) parts.push(escapeHtml(r.programa));
+    if (r.observacao) parts.push(escapeHtml(r.observacao));
+    return parts.join(' · ');
+  }
+  function renderEcoList() {
+    const rows = ECO_ROWS.filter(r => !ECO_FILTER || ecoCat(r) === ECO_FILTER).slice().reverse();
+    document.querySelectorAll('#ecoFilters button').forEach(b => b.classList.toggle('on', b.dataset.cat === ECO_FILTER));
+    $('ecoList').innerHTML = rows.length ? rows.map(r => {
+      const v = ecoValor(r), det = ecoDetail(r);
+      return `<div class="eco-item">
+        <div class="eco-date">${brDate(r.data)}</div>
+        <div class="eco-body">
+          <span class="pill cat-${ecoCat(r)}">${ECO_CAT[ecoCat(r)].pill}</span>
+          <div class="eco-h">${ecoHeadline(r, v)}</div>
+          ${det ? `<div class="eco-d">${det}</div>` : ''}
+        </div>
+        <div class="eco-v"><span class="c">R$</span>${fmtMoney(v)}</div>
+      </div>`;
+    }).join('') : '<div class="empty-list">As economias aparecem aqui item a item: passagens, super acúmulos, cashback e melhorias de cartão.</div>';
+  }
+
   function renderEconomias(rows) {
-    const money = (n) => 'R$ ' + fmtMoney(n);
-    const eco = (r) => Number(r.valor_mercado_brl || 0) - Number(r.valor_pago_brl || 0);
-    const total = rows.reduce((s, r) => s + eco(r), 0);
-    const mercado = rows.reduce((s, r) => s + Number(r.valor_mercado_brl || 0), 0);
+    ECO_ROWS = rows;
+    const tot = { emissao: 0, acumulo: 0, cartao: 0, outro: 0 }, qtd = { emissao: 0, acumulo: 0, cartao: 0, outro: 0 };
+    let pontos = 0;
+    rows.forEach(r => { const c = ecoCat(r); tot[c] += ecoValor(r); qtd[c]++; if (c === 'acumulo') pontos += Number(r.pontos_gerados || 0); });
+    const total = tot.emissao + tot.acumulo + tot.cartao + tot.outro;
     ECO_TOTAL = total;
-    const pct = mercado > 0 ? Math.round((total / mercado) * 100) : 0;
+    const plural = (n, s, p) => `${fmtNum(n)} ${n === 1 ? s : p}`;
     $('ecoKpis').innerHTML = [
-      ['Economia acumulada', `<span class="c">R$</span>${fmtMoney(total)}`, 'Desde o início da gestão', true],
-      ['Emissões', fmtNum(rows.length), 'Passagens emitidas com milhas'],
-      ['Economia média', `${pct}%`, 'Em relação ao valor de mercado'],
-      ['Por emissão', `<span class="c">R$</span>${fmtMoney(rows.length ? total / rows.length : 0)}`, 'Economia média por emissão']
-    ].map(([l,v,s,hl]) => `<div class="kpi ${hl ? 'hl' : ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+      ['Economia total', total, `${plural(rows.length, 'ganho registrado', 'ganhos registrados')} desde o início`, true, ''],
+      ['Passagens', tot.emissao, plural(qtd.emissao, 'emissão com milhas', 'emissões com milhas'), false, 'emissao'],
+      ['Super acúmulo e cashback', tot.acumulo, pontos ? `+ ${compact(pontos)} pontos extras` : plural(qtd.acumulo, 'oportunidade aproveitada', 'oportunidades aproveitadas'), false, 'acumulo'],
+      ['Cartões', tot.cartao, plural(qtd.cartao, 'otimização', 'otimizações'), false, 'cartao']
+    ].map(([l, v, s, hl, cat]) => `<div class="kpi ${hl ? 'hl' : 'kpi-link'}" ${cat ? `data-ecocat="${cat}" role="button" tabindex="0" title="Ver detalhes"` : ''}>
+        <div class="l">${l}</div><div class="v"><span class="c">R$</span>${fmtMoney(v)}</div><div class="s">${s}</div></div>`).join('');
 
     const byMonth = {};
-    rows.forEach(r => { const k = monthKey(r.data); byMonth[k] = (byMonth[k] || 0) + eco(r); });
-    barChart($('ecoChart'), Object.keys(byMonth).sort().slice(-12).map(k => ({ label: monthLabel(k), value: byMonth[k] })), { fmt: (v) => 'R$ ' + compact(v) });
+    rows.forEach(r => {
+      const k = monthKey(r.data), c = ecoCat(r);
+      byMonth[k] = byMonth[k] || { total: 0, emissao: 0, acumulo: 0, cartao: 0, outro: 0 };
+      byMonth[k].total += ecoValor(r); byMonth[k][c] += ecoValor(r);
+    });
+    barChart($('ecoChart'), Object.keys(byMonth).sort().slice(-12).map(k => {
+      const m = byMonth[k];
+      return { label: monthLabel(k), value: m.total,
+        lines: ['emissao','acumulo','cartao','outro'].filter(c => m[c]).map(c => `${ECO_CAT[c].label}: R$ ${fmtMoney(m[c])}`) };
+    }), { fmt: (v) => 'R$ ' + compact(v), tipLabel: 'no mês' });
 
-    $('ecoTableWrap').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Emissão</th><th class="r">Valor de mercado</th><th class="r">Você investiu</th><th class="r">Economia</th></tr></thead><tbody>
-      ${[...rows].reverse().map(r => { const e = eco(r), p = Number(r.valor_mercado_brl) > 0 ? Math.round(e / Number(r.valor_mercado_brl) * 100) : 0; return `<tr>
-        <td class="mute">${brDate(r.data)}</td>
-        <td>${escapeHtml(r.descricao || '')}<div class="mute">${[r.milhas_utilizadas ? fmtNum(r.milhas_utilizadas) + ' milhas' : '', r.programa].filter(Boolean).map(escapeHtml).join(' · ')}</div></td>
-        <td class="r strike">${money(r.valor_mercado_brl)}</td>
-        <td class="r">${money(r.valor_pago_brl)}</td>
-        <td class="r"><span class="eco">${money(e)}</span><div class="mute">${p}% menos</div></td></tr>`; }).join('')}
-      </tbody></table>` : '<div class="empty-cards">As economias de cada emissão aparecem aqui, com o valor de mercado e o valor investido.</div>';
+    renderEcoList();
   }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('#ecoFilters button');
+    if (b) { ECO_FILTER = b.dataset.cat; renderEcoList(); }
+    const k = e.target.closest('[data-ecocat]');
+    if (k) { ECO_FILTER = k.dataset.ecocat; renderEcoList(); $('ecoDetalhe').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+  document.addEventListener('keydown', (e) => { const k = e.target.closest && e.target.closest('[data-ecocat]'); if (k && e.key === 'Enter') k.click(); });
 
   // ===== Agendar reunião =====
   const REQ_STATUS = { solicitada:['Aguardando confirmação','st-warn'], confirmada:['Confirmada','st-ok'], realizada:['Realizada','st-done'], cancelada:['Cancelada','st-off'] };
@@ -1128,22 +1541,366 @@
       }
       agendamentos.unshift(novo);
       renderAgendamentos(agendamentos);
+      setTimeout(() => aplicarLimiteReuniao(agendamentos), 5000);
       $('meetForm').reset(); $('mDate').min = iso(t);
       msg.className = 'form-msg ok';
       msg.innerHTML = `Solicitação registrada para <strong>${brDate(data)}</strong>. Vamos confirmar o horário e enviar o link. Se quiser agilizar, avise a equipe:<br><a class="btn-line" target="_blank" rel="noopener" href="${waLink(texto)}">Avisar no WhatsApp</a>`;
     });
   }
 
+  // ===== v3: gestor, vencimentos, viagens, documentos, relatórios, convites, Cal.com, boas-vindas =====
+  const ICONS = {
+    doc: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+    plane: '<svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>',
+    shield: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    map: '<svg viewBox="0 0 24 24"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/></svg>',
+    ticket: '<svg viewBox="0 0 24 24"><path d="M3 7h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4z"/><path d="M13 7v12" stroke-dasharray="2 2"/></svg>',
+    alert: '<svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>'
+  };
+  const DOC_TIPO = {
+    bilhete: ['Bilhete aéreo', ICONS.plane], voucher: ['Voucher', ICONS.ticket], seguro: ['Seguro viagem', ICONS.shield],
+    roteiro: ['Roteiro', ICONS.map], relatorio: ['Relatório', ICONS.doc], contrato: ['Contrato', ICONS.doc], outro: ['Documento', ICONS.doc]
+  };
+  const MESES_LONGOS = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 3200); };
+  const digits = (s) => String(s || '').replace(/\D/g, '');
+  const gestorFoto = (g) => g && g.foto_url && /^https:\/\//.test(g.foto_url)
+    ? `<img src="${escapeHtml(g.foto_url)}" alt="${escapeHtml(g.nome)}" />`
+    : `<div class="gst-ph">${escapeHtml(initialsOf(g ? g.nome : 'Maktub Go'))}</div>`;
+
+  let GESTOR = null, CLIENTE = null, USER = null;
+  let WA_GESTOR = WA_NUM;
+
+  // ----- Gestor dedicado -----
+  function renderGestor(g) {
+    GESTOR = g;
+    if (!g) return;
+    if (digits(g.whatsapp).length >= 10) WA_GESTOR = digits(g.whatsapp);
+    const wa = `https://wa.me/${WA_GESTOR}?text=${encodeURIComponent(`Olá, ${firstName(g.nome)}! Aqui é ${firstName(CLIENTE.nome_completo)}, cliente Maktub Go.`)}`;
+    $('sbGestor').innerHTML = `${gestorFoto(g)}<div><div class="k">Seu gestor</div><div class="n">${escapeHtml(g.nome)}</div><a href="${wa}" target="_blank" rel="noopener">Falar agora</a></div>`;
+    $('sbGestor').hidden = false;
+    $('waLink').href = wa;
+    $('waLinkText').textContent = `Falar com ${firstName(g.nome)}`;
+    const meta = [g.horario_atendimento, g.prazo_resposta].filter(Boolean).map(escapeHtml).map(x => `<span>${x}</span>`).join('');
+    $('gestorCard').innerHTML = `${gestorFoto(g)}
+      <div><div class="k">Seu gestor dedicado</div><div class="n">${escapeHtml(g.nome)}</div>
+        <div class="c">${escapeHtml(g.cargo || 'Gestor de Milhas')}</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div>
+      <div class="acts"><a class="btn-sm solid" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
+        ${g.email ? `<a class="btn-sm" href="mailto:${escapeHtml(g.email)}">E-mail</a>` : ''}
+        <a class="btn-sm" href="#reuniao">Agendar reunião</a></div>`;
+    $('gestorCard').hidden = false;
+  }
+
+  // ----- Vencimento de milhas -----
+  function vencimentos(programas) {
+    return programas.filter(p => p.vencimento_data && Number(p.vencimento_quantidade || 0) > 0)
+      .map(p => ({ ...p, dias: daysUntil(p.vencimento_data) }))
+      .filter(p => p.dias !== null && p.dias >= 0)
+      .sort((a, b) => a.dias - b.dias);
+  }
+  function renderVencimentos(programas) {
+    const list = vencimentos(programas);
+    const urgentes = list.filter(p => p.dias <= 90);
+    if (urgentes.length) {
+      const p = urgentes[0], total = urgentes.reduce((s, x) => s + Number(x.vencimento_quantidade || 0), 0);
+      $('alertSlot').innerHTML = `<div class="alert-venc" role="link" tabindex="0" data-goto="milhas">${ICONS.alert}
+        <div><div class="t"><strong>${fmtNum(p.vencimento_quantidade)} ${escapeHtml(p.unidade || 'milhas')}</strong> ${escapeHtml(p.programa)} vencem em ${brDate(p.vencimento_data)}</div>
+        <div class="d">${p.dias === 0 ? 'Vencem hoje.' : `Faltam ${p.dias} ${p.dias === 1 ? 'dia' : 'dias'}.`}${urgentes.length > 1 ? ` Ao todo, ${fmtNum(total)} pontos vencem nos próximos 90 dias.` : ''} Seu gestor já está acompanhando.</div></div>
+        <div class="go">Ver vencimentos →</div></div>`;
+      const link = document.querySelector('.sb-link[data-view="milhas"]');
+      if (link && !link.querySelector('.sb-badge')) link.insertAdjacentHTML('beforeend', `<span class="sb-badge" title="Milhas perto de vencer">${urgentes.length}</span>`);
+    }
+    $('vencSec').hidden = !list.length;
+    $('vencWrap').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>Programa</th><th class="r">Saldo</th><th class="r">A vencer</th><th>Vencimento</th><th class="r">Prazo</th></tr></thead><tbody>
+      ${list.map(p => `<tr><td>${escapeHtml(p.programa)}</td><td class="r">${fmtNum(p.saldo)}</td>
+        <td class="r ${p.dias <= 90 ? 'neg' : ''}">${fmtNum(p.vencimento_quantidade)}</td><td>${brDate(p.vencimento_data)}</td>
+        <td class="r"><span class="pill ${p.dias <= 30 ? 'st-off' : p.dias <= 90 ? 'st-warn' : ''}">${p.dias === 0 ? 'Hoje' : p.dias + ' dias'}</span></td></tr>`).join('')}
+      </tbody></table>` : '';
+  }
+
+  // ----- Economia do painel principal (mês, ano, desde o início) -----
+  function renderEconomiaResumo(rows) {
+    const now = new Date(), mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, yk = String(now.getFullYear());
+    let mes = 0, ano = 0, total = 0;
+    rows.forEach(r => { const v = ecoValor(r), d = String(r.data || ''); total += v; if (d.startsWith(yk)) ano += v; if (d.startsWith(mk)) mes += v; });
+    $('ecoMes').textContent = fmtMoney(mes);
+    $('ecoAno').textContent = fmtMoney(ano);
+    $('ecoTotal').textContent = fmtMoney(total);
+    $('ecoMesLbl').textContent = MESES_LONGOS[now.getMonth()];
+    $('ecoAnoLbl').textContent = yk;
+  }
+
+  // ----- Viagens (com voos, hotel e documentos) -----
+  let DOCS = [];
+  function legRow(f) {
+    const [stLabel, stCls] = FL_STATUS[f.status] || FL_STATUS.confirmado;
+    const info = [[f.companhia, f.numero_voo].filter(Boolean).join(' '), f.classe, f.passageiros,
+      f.milhas_utilizadas ? `${fmtNum(f.milhas_utilizadas)} milhas${f.programa ? ' ' + f.programa : ''}` : ''].filter(Boolean).map(escapeHtml).join(' · ');
+    return `<div class="leg">
+      <div class="when"><strong>${brDate(f.data_voo)}</strong>${[hhmm(f.hora_partida), hhmm(f.hora_chegada)].filter(Boolean).join(' → ')}</div>
+      <div><div class="route">${escapeHtml(f.origem_codigo || f.origem_cidade || '')}<span>✈</span>${escapeHtml(f.destino_codigo || f.destino_cidade || '')}</div>
+        ${info ? `<div class="info">${info}</div>` : ''}${f.observacoes ? `<div class="info"><em>${escapeHtml(f.observacoes)}</em></div>` : ''}</div>
+      <div class="r"><span class="tr-status ${stCls}">${stLabel}</span>${f.localizador ? `<span class="loc" data-copy="${escapeHtml(f.localizador)}" title="Copiar localizador">${escapeHtml(f.localizador)}</span>` : ''}</div>
+    </div>`;
+  }
+  const docChip = (d) => `<button type="button" class="doc-chip" data-doc="${escapeHtml(d.id)}">${(DOC_TIPO[d.tipo] || DOC_TIPO.outro)[1]}${escapeHtml(d.titulo)}</button>`;
+  function tripCard(v, voos, docs, past) {
+    const d = parseDate(v.data_viagem), n = daysUntil(v.data_viagem);
+    const statusClass = v.status === 'emitida' ? 'st-emit' : (v.status === 'planejamento' ? 'st-plan' : 'st-strat');
+    const statusLabel = past ? 'Realizada' : v.status === 'emitida' ? 'Emitida' : (v.status === 'planejamento' ? 'Planejamento' : 'Estratégia');
+    const periodo = [brDate(v.data_viagem), brDate(v.data_retorno)].filter(Boolean).join(' a ');
+    const hotel = v.hotel ? `<div class="hotel"><div><div class="l">Hotel</div><div class="hn">${escapeHtml(v.hotel)}</div></div>
+        ${v.hotel_checkin ? `<div><div class="l">Check-in</div>${brDate(v.hotel_checkin)}</div>` : ''}
+        ${v.hotel_checkout ? `<div><div class="l">Check-out</div>${brDate(v.hotel_checkout)}</div>` : ''}</div>`
+      : `<div class="trip-empty">${past ? 'Sem hospedagem registrada.' : 'Hospedagem em definição com seu gestor.'}</div>`;
+    return `<article class="trip ${past ? 'past' : ''}">
+      <header class="trip-head">
+        <div class="trip-when"><div class="m">${d ? MESES[d.getMonth()] : ''}</div><div class="d">${d ? String(d.getDate()).padStart(2, '0') : ''}</div><div class="y">${d ? d.getFullYear() : ''}</div></div>
+        <div><h3>${escapeHtml(v.destino || '')}${v.destino_complemento ? ' <em>' + escapeHtml(v.destino_complemento) + '</em>' : ''}</h3>
+          <div class="dt">${[periodo, v.detalhes].filter(Boolean).map(escapeHtml).join(' · ')}</div></div>
+        <div class="right"><span class="tr-status ${statusClass}">${statusLabel}</span>${!past && n !== null && n >= 0 ? `<div class="cd">${countdownLabel(n)}</div>` : ''}</div>
+      </header>
+      <div class="trip-body">
+        <div class="trip-sec"><div class="trip-lbl">Voos</div>${voos.length ? voos.map(legRow).join('') : `<div class="trip-empty">${past ? 'Sem voos registrados nesta viagem.' : 'Emissão em estratégia. Os voos aparecem aqui assim que forem emitidos.'}</div>`}</div>
+        <div class="trip-sec"><div class="trip-lbl">Hospedagem</div>${hotel}</div>
+        ${docs.length ? `<div class="trip-sec"><div class="trip-lbl">Documentos da viagem</div><div class="doc-chips">${docs.map(docChip).join('')}</div></div>` : ''}
+        ${v.observacoes ? `<div class="trip-sec"><div class="trip-lbl">Observações</div><div class="fl-obs" style="margin:0">${escapeHtml(v.observacoes)}</div></div>` : ''}
+      </div>
+    </article>`;
+  }
+  function renderTrips(viagens, voos, docs) {
+    const today = todayMid();
+    const isPast = (v) => { const end = parseDate(v.data_retorno) || parseDate(v.data_viagem); return end && end < today; };
+    const byTrip = (id) => voos.filter(f => f.viagem_id && f.viagem_id === id);
+    const docsTrip = (id) => docs.filter(x => x.viagem_id && x.viagem_id === id);
+    const up = viagens.filter(v => !isPast(v)), past = viagens.filter(isPast).reverse();
+    const tripIds = new Set(viagens.map(v => v.id));
+    const avulsos = voos.filter(f => !f.viagem_id || !tripIds.has(f.viagem_id)).filter(f => (daysUntil(f.data_voo) ?? -1) >= 0 && f.status !== 'cancelado');
+    let html = up.map(v => tripCard(v, byTrip(v.id), docsTrip(v.id), false)).join('');
+    if (avulsos.length) html += `<article class="trip"><header class="trip-head" style="grid-template-columns:1fr"><div><h3>Outros <em>voos emitidos</em></h3></div></header>
+      <div class="trip-body"><div class="trip-sec">${avulsos.map(legRow).join('')}</div></div></article>`;
+    $('tripsUpcoming').innerHTML = html || '<div class="empty-cards">Nenhuma viagem programada no momento. Que tal planejar a próxima na sua reunião mensal?</div>';
+    $('tripsPastWrap').hidden = !past.length;
+    $('tripsPast').innerHTML = past.map(v => tripCard(v, byTrip(v.id), docsTrip(v.id), true)).join('');
+  }
+
+  // ----- Documentos -----
+  let DOC_FILTER = '';
+  function renderDocs() {
+    const tipos = [...new Set(DOCS.map(d => d.tipo))];
+    $('docFilters').innerHTML = DOCS.length ? [['', 'Todos'], ...tipos.map(t => [t, (DOC_TIPO[t] || DOC_TIPO.outro)[0]])]
+      .map(([k, l]) => `<button type="button" data-dtipo="${k}" class="${k === DOC_FILTER ? 'on' : ''}">${escapeHtml(l)}</button>`).join('') : '';
+    const list = DOCS.filter(d => !DOC_FILTER || d.tipo === DOC_FILTER);
+    $('docList').innerHTML = list.length ? `<div class="docs">${list.map(d => {
+      const [lbl, ic] = DOC_TIPO[d.tipo] || DOC_TIPO.outro;
+      const trip = d._viagem ? ` · ${escapeHtml(d._viagem)}` : '';
+      return `<div class="doc"><div class="doc-ic">${ic}</div>
+        <div><div class="t">${escapeHtml(d.titulo)}</div><div class="d">${lbl}${trip} · ${brDate(String(d.created_at).slice(0, 10))}</div></div>
+        <div class="acts"><button type="button" class="btn-sm solid" data-doc="${escapeHtml(d.id)}">Abrir</button><button type="button" class="btn-sm" data-docdl="${escapeHtml(d.id)}">Baixar</button></div></div>`;
+    }).join('')}</div>` : '<div class="empty-cards">Seus bilhetes, vouchers, seguros e roteiros ficam guardados aqui, organizados por viagem.</div>';
+  }
+  const fileName = (p) => String(p || '').split('/').pop();
+  async function abrirDoc(id, baixar) {
+    const d = DOCS.find(x => x.id === id); if (!d) return;
+    try {
+      const isHtml = /\.html?$/i.test(d.arquivo_path);
+      if (isHtml && !baixar) {
+        const { data, error } = await supabase.storage.from('documentos').download(d.arquivo_path);
+        if (error) throw error;
+        $('docFrame').srcdoc = await data.text();
+        $('docTitle').textContent = d.titulo;
+        $('docModal').hidden = false;
+        $('docModal').dataset.id = id;
+        return;
+      }
+      const w = baixar ? null : window.open('', '_blank');
+      const { data, error } = await supabase.storage.from('documentos').createSignedUrl(d.arquivo_path, 300, baixar ? { download: fileName(d.arquivo_path) } : undefined);
+      if (error) throw error;
+      if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+    } catch (e) { console.error(e); toast('Não foi possível abrir o documento agora. Tente novamente.'); }
+  }
+  $('docClose').addEventListener('click', () => { $('docModal').hidden = true; $('docFrame').srcdoc = ''; });
+  $('docDownload').addEventListener('click', () => abrirDoc($('docModal').dataset.id, true));
+  $('docModal').addEventListener('click', (e) => { if (e.target === $('docModal')) $('docClose').click(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('docModal').hidden) $('docClose').click(); });
+
+  // ----- Relatórios mensais -----
+  function renderRelatorios(fontes, publicados) {
+    const now = new Date(), cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const datas = fontes.filter(Boolean).map(x => String(x).slice(0, 7)).filter(x => /^\d{4}-\d{2}$/.test(x) && x <= cur).sort();
+    const start = datas[0] || cur;
+    const meses = [];
+    let [y, m] = start.split('-').map(Number);
+    while (`${y}-${String(m).padStart(2, '0')}` <= cur && meses.length < 36) { meses.push(`${y}-${String(m).padStart(2, '0')}`); m++; if (m > 12) { m = 1; y++; } }
+    meses.reverse();
+    const pub = new Set(publicados.map(r => String(r.mes).slice(0, 7)));
+    const nome = (k) => { const [yy, mm] = k.split('-'); const n = MESES_LONGOS[Number(mm) - 1]; return `${n[0].toUpperCase() + n.slice(1)} de ${yy}`; };
+    $('repSelect').innerHTML = meses.map(k => `<option value="${k}">${nome(k)}${k === cur ? ' (parcial)' : ''}</option>`).join('');
+    const def = meses.find(k => k !== cur) || cur;
+    $('repSelect').value = def;
+    $('repList').innerHTML = meses.map(k => `<div class="rep"><div><div class="t">${nome(k)}</div>
+      <div class="d">${k === cur ? '<span class="pill st-warn">Mês em andamento</span>' : '<span class="pill st-ok">Mês fechado</span>'}
+      ${pub.has(k) ? '<span class="pill">Carta do gestor</span>' : ''}</div></div>
+      <button type="button" class="btn-sm solid" data-rep="${k}">Gerar relatório</button></div>`).join('');
+  }
+  const abrirRelatorio = (k) => window.open(`/painel/relatorio.html?mes=${encodeURIComponent(k)}`, '_blank');
+  $('repGo').addEventListener('click', () => abrirRelatorio($('repSelect').value));
+
+  // ----- Convites -----
+  async function renderConvites(lista) {
+    let rest = null;
+    try { const { data, error } = await supabase.rpc('convites_restantes'); if (!error) rest = data; } catch (_) {}
+    if (rest === null) rest = Math.max(0, Number(CLIENTE.convites_disponiveis ?? 0) - lista.length);
+    $('convCount').textContent = rest;
+    $('convCountLbl').textContent = rest === 1 ? 'convite disponível' : 'convites disponíveis';
+    $('convForm').hidden = rest <= 0;
+    $('convEsgotado').hidden = rest > 0;
+    const ST = { enviado: ['Recebido pela equipe', 'st-warn'], em_contato: ['Em contato', 'st-warn'], convertido: ['Agora é cliente', 'st-ok'], recusado: ['Não seguiu', 'st-done'] };
+    $('convList').innerHTML = lista.length ? lista.map(c => { const [l, k] = ST[c.status] || ST.enviado; return `<div class="req">
+      <div class="req-top"><div class="t">${escapeHtml(c.nome)}</div><span class="tr-status ${k}">${l}</span></div>
+      <div class="d">${[c.relacao, brDate(String(c.created_at).slice(0, 10))].filter(Boolean).map(escapeHtml).join(' · ')}</div></div>`; }).join('')
+      : '<div class="empty-list">Nenhuma indicação ainda</div>';
+  }
+  function setupConvites(lista) {
+    $('convForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('convMsg'), btn = $('convBtn');
+      const nome = $('cNome').value.trim(), whatsapp = $('cWhats').value.trim(), email = $('cEmail').value.trim();
+      msg.className = 'form-msg';
+      if (nome.length < 2) { msg.className = 'form-msg err'; msg.textContent = 'Informe o nome de quem você quer indicar.'; return; }
+      if (digits(whatsapp).length < 10 && !/^\S+@\S+\.\S+$/.test(email)) { msg.className = 'form-msg err'; msg.textContent = 'Informe o WhatsApp ou o e-mail da pessoa.'; return; }
+      btn.disabled = true;
+      const { data, error } = await supabase.from('convites').insert({
+        cliente_id: USER.id, nome, whatsapp: whatsapp || null, email: email || null,
+        relacao: $('cRel').value || null, mensagem: $('cMsg').value.trim().slice(0, 600) || null
+      }).select().single();
+      btn.disabled = false;
+      if (error) { console.error(error); msg.className = 'form-msg err'; msg.textContent = 'Não foi possível registrar a indicação agora. Fale com seu gestor.'; return; }
+      lista.unshift(data);
+      await renderConvites(lista);
+      const link = `${location.origin}/gestao-de-milhas/?convite=${encodeURIComponent(CLIENTE.nome_completo || '')}#convite`;
+      const texto = `${firstName(nome)}, indiquei você para a Gestão de Milhas Concierge da Maktub Go, que é por convite. A equipe vai entrar em contato. Se preferir, solicite por aqui: ${link}`;
+      msg.className = 'form-msg ok';
+      msg.innerHTML = `Indicação registrada. Nossa equipe fará um contato cuidadoso com <strong>${escapeHtml(firstName(nome))}</strong>, em seu nome.` +
+        (digits(whatsapp).length >= 10 ? `<br><a class="btn-line" target="_blank" rel="noopener" href="https://wa.me/${digits(whatsapp).length <= 11 ? '55' : ''}${digits(whatsapp)}?text=${encodeURIComponent(texto)}">Avisar ${escapeHtml(firstName(nome))} pelo WhatsApp</a>` : '');
+      $('convForm').reset();
+    });
+  }
+
+  // ----- Agendamento pelo Cal.com (se o gestor tiver link) -----
+  // Uma reunião por mês: bloqueia a agenda se já houver reunião ativa (futura ou deste mês)
+  function reuniaoDoMes(agendamentos) {
+    const hoje = new Date(), ini = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
+    const dataDe = (a) => a.data_confirmada ? new Date(a.data_confirmada).toISOString().slice(0, 10) : String(a.data_preferida || '');
+    return agendamentos.find(a => {
+      const d = dataDe(a);
+      if (a.status === 'cancelada' || !d) return false;
+      if (a.status === 'realizada') return d >= ini;
+      return d >= ini;
+    }) || null;
+  }
+  function aplicarLimiteReuniao(agendamentos) {
+    const r = reuniaoDoMes(agendamentos);
+    if (!r) return false;
+    const quando = r.status === 'confirmada' && r.data_confirmada ? fmtDateTime(r.data_confirmada)
+      : `${brDate(r.data_preferida)}${r.periodo ? ', período da ' + r.periodo.toLowerCase() : ''}`;
+    const txt = r.status === 'realizada' ? `Sua reunião deste mês foi realizada em ${brDate(r.data_preferida)}.`
+      : r.status === 'confirmada' ? `Sua reunião está confirmada para ${quando}. O link de acesso está em "Suas Reuniões".`
+      : `Sua reunião está agendada para ${quando}. Os detalhes foram enviados para o seu e-mail.`;
+    $('meetDoneTxt').textContent = txt;
+    const nomeG = GESTOR && GESTOR.nome ? firstName(GESTOR.nome) : '';
+    $('meetDoneWa').href = `https://wa.me/${WA_GESTOR}?text=${encodeURIComponent(`Olá${nomeG ? ', ' + nomeG : ''}! Preciso remarcar minha reunião mensal (${quando}).`)}`;
+    $('meetDone').hidden = false; $('meetForm').hidden = true; $('calBox').hidden = true;
+    return true;
+  }
+
+  function setupCal(nome, email, agendamentos) {
+    if (aplicarLimiteReuniao(agendamentos)) return true;
+    const link = GESTOR && GESTOR.cal_link ? String(GESTOR.cal_link).replace(/^https?:\/\/(app\.)?cal\.com\//, '').replace(/^\/+|\/+$/g, '') : '';
+    if (!link || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(link)) return false;
+    $('meetForm').hidden = true;
+    $('calBox').hidden = false;
+    $('calGestor').textContent = GESTOR.nome ? firstName(GESTOR.nome) : 'seu gestor';
+    (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, 'https://app.cal.com/embed/embed.js', 'init');
+    const Cal = window.Cal;
+    Cal('init', 'maktub', { origin: 'https://app.cal.com' });
+    Cal.ns.maktub('inline', { elementOrSelector: '#calInline', calLink: link, config: { layout: 'month_view', name: nome, email, theme: 'light' } });
+    Cal.ns.maktub('ui', { theme: 'light', hideEventTypeDetails: false, layout: 'month_view', cssVarsPerTheme: { light: { 'cal-brand': '#1a3826' } } });
+    Cal.ns.maktub('on', { action: 'bookingSuccessfulV2', callback: async (e) => {
+      try {
+        const d = (e && e.detail && e.detail.data) || {};
+        const ini = new Date(d.startTime || (d.booking && d.booking.startTime) || '');
+        if (isNaN(ini)) return;
+        const h = ini.getHours();
+        const { data } = await supabase.from('agendamentos_reuniao').insert({
+          cliente_id: USER.id, data_preferida: `${ini.getFullYear()}-${String(ini.getMonth() + 1).padStart(2, '0')}-${String(ini.getDate()).padStart(2, '0')}`,
+          periodo: h < 12 ? 'Manhã' : h < 18 ? 'Tarde' : 'Noite', formato: 'Videochamada', pauta: `Agendada pelo calendário para ${String(h).padStart(2, '0')}h${String(ini.getMinutes()).padStart(2, '0')}`
+        }).select().single();
+        if (data) { agendamentos.unshift(data); renderAgendamentos(agendamentos); }
+        toast('Reunião agendada. O convite com o link do Google Meet foi enviado para o seu e-mail.');
+        setTimeout(() => aplicarLimiteReuniao(agendamentos), 4000);
+      } catch (err) { console.warn(err); }
+    } });
+    return true;
+  }
+
+  // ----- Boas-vindas (só no primeiro acesso) -----
+  function setupWelcome() {
+    if (!CLIENTE || CLIENTE.onboarding_concluido_em !== null) return;
+    const steps = [...document.querySelectorAll('.wel-step')];
+    let i = 0;
+    $('welNome').textContent = firstName(CLIENTE.nome_completo);
+    if (GESTOR) { $('welGestor').innerHTML = `${gestorFoto(GESTOR)}<div><div class="c">Seu gestor dedicado</div><div class="n">${escapeHtml(GESTOR.nome)}</div>${GESTOR.prazo_resposta ? `<div class="c">${escapeHtml(GESTOR.prazo_resposta)}</div>` : ''}</div>`; $('welGestor').hidden = false; }
+    const paint = () => {
+      steps.forEach((s, k) => s.hidden = k !== i);
+      document.querySelectorAll('.wel-dots span').forEach((d, k) => d.classList.toggle('on', k === i));
+      $('welNext').textContent = i === steps.length - 1 ? 'Agendar minha reunião' : 'Continuar';
+      $('welSkip').textContent = i === steps.length - 1 ? 'Explorar o painel' : 'Pular';
+    };
+    const fechar = async (goto) => {
+      $('welcome').hidden = true; document.body.style.overflow = '';
+      try { await supabase.rpc('concluir_boas_vindas'); } catch (_) {}
+      if (goto) location.hash = goto;
+    };
+    $('welNext').addEventListener('click', () => { if (i < steps.length - 1) { i++; paint(); } else fechar('reuniao'); });
+    $('welSkip').addEventListener('click', () => fechar(''));
+    paint();
+    $('welcome').hidden = false; document.body.style.overflow = 'hidden';
+  }
+
+  // ----- App na tela do celular -----
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; $('sbInstall').hidden = false; });
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (isIOS && !standalone) $('sbInstall').hidden = false;
+  $('sbInstall').addEventListener('click', async () => {
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('sbInstall').hidden = true; }
+    else toast('No iPhone: toque em Compartilhar e depois em "Adicionar à Tela de Início".');
+  });
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/painel/sw.js', { scope: '/painel/' }).catch(() => {}));
+
+  document.addEventListener('click', (e) => {
+    const d = e.target.closest('[data-doc]'); if (d) abrirDoc(d.dataset.doc, false);
+    const dl = e.target.closest('[data-docdl]'); if (dl) abrirDoc(dl.dataset.docdl, true);
+    const f = e.target.closest('[data-dtipo]'); if (f) { DOC_FILTER = f.dataset.dtipo; renderDocs(); }
+    const r = e.target.closest('[data-rep]'); if (r) abrirRelatorio(r.dataset.rep);
+  });
+
   // ===== Navegação entre áreas =====
   const VIEW_SUB = {
     inicio: 'Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.',
-    voos: 'Seus voos emitidos, com localizador, horários e detalhes da emissão.',
-    milhas: 'A evolução do seu saldo e cada movimentação registrada pela equipe.',
-    economias: 'Quanto cada emissão teria custado em dinheiro e quanto você economizou.',
-    reuniao: 'Solicite sua reunião mensal com a equipe Maktub Go.'
+    viagens: 'Cada viagem com seus voos, hospedagem e documentos, organizados pelo seu gestor.',
+    milhas: 'A evolução do seu saldo, os vencimentos monitorados e cada movimentação registrada.',
+    economias: 'Tudo o que a gestão já gerou para você: passagens, super acúmulos, cashback e cartões.',
+    documentos: 'Bilhetes, vouchers, seguros e roteiros guardados em um só lugar.',
+    relatorios: 'O resumo de cada mês da sua gestão, pronto para ler ou salvar em PDF.',
+    reuniao: 'Sua reunião mensal com o gestor: uma por mês, em horários reservados.',
+    convites: 'Indique pessoas próximas para o círculo Maktub Go.'
   };
   function route() {
-    const v = (location.hash || '#inicio').slice(1);
+    let v = (location.hash || '#inicio').slice(1);
+    if (v === 'voos') v = 'viagens';
     const view = VIEW_SUB[v] ? v : 'inicio';
     document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== 'view-' + view);
     document.querySelectorAll('.sb-link[data-view]').forEach(a => a.classList.toggle('active', a.dataset.view === view));
@@ -1164,7 +1921,20 @@
         window.location.replace('/acesso/');
         return;
       }
+      if (EXIGIR_CODIGO && !jwtAmr(session.access_token).some(m => m === 'otp' || m === 'magiclink')) {
+        await supabase.auth.signOut({ scope: 'local' });
+        window.location.replace('/acesso/');
+        return;
+      }
+      try {
+        if (localStorage.getItem('mg_sessao_temporaria') === '1' && !sessionStorage.getItem('mg_aba_ativa')) {
+          await supabase.auth.signOut({ scope: 'local' });
+          window.location.replace('/acesso/');
+          return;
+        }
+      } catch (_) {}
       const user = session.user;
+      USER = user;
 
       // 2. Buscar dados do cliente
       const { data: cliente, error: cliErr } = await supabase
@@ -1190,7 +1960,8 @@
       $('nameUser').textContent = nome;
       $('avatarUser').textContent = initialsOf(nome);
       $('greeting').innerHTML = `${greetingByHour()}, <em>${escapeHtml(firstName(nome))}.</em>`;
-      $('labelDate').textContent = todayLabel();
+      $('labelDate').textContent = updatedLabel(cliente.ultima_atualizacao);
+      CLIENTE = cliente;
 
       // 4. Buscar todos os dados em paralelo
       const [programasRes, cartoesRes, viagensRes, movimentosRes, reunioesRes, economiaRes] = await Promise.all([
@@ -1231,16 +2002,12 @@
           $('crescimentoPct').textContent = `${Number(economia.crescimento_pct).toLocaleString('pt-BR', {maximumFractionDigits: 1})}%`;
           $('crescimentoPct').classList.add('up');
         } else {
-          $('crescimentoPct').textContent = '—';
+          $('crescimentoPct').textContent = '·';
         }
         if (economia.proxima_reuniao) {
           $('nextMeeting').textContent = economia.proxima_reuniao;
         }
 
-        // Bloco 2: Economia
-        $('ecoSemana').textContent = fmtMoney(economia.economia_semana);
-        $('ecoMes').textContent = fmtMoney(economia.economia_mes);
-        $('ecoAno').textContent = fmtMoney(economia.economia_ano);
       }
 
       renderProgramas(programas);
@@ -1251,20 +2018,39 @@
 
       // 5b. Novas áreas (tabelas opcionais: se ainda não existirem, as áreas ficam vazias)
       const uid = user.id;
-      const [voos, saldos, extrato, economias, agendamentos] = await Promise.all([
+      const [voos, saldos, extrato, economias, agendamentos, documentos, relatorios, convites, gestorArr] = await Promise.all([
         safe(supabase.from('voos').select('*').eq('cliente_id', uid).order('data_voo', { ascending: true }).order('hora_partida', { ascending: true })),
         safe(supabase.from('historico_saldos').select('*').eq('cliente_id', uid).order('mes', { ascending: true })),
         safe(supabase.from('extrato_milhas').select('*').eq('cliente_id', uid).order('data', { ascending: false })),
         safe(supabase.from('historico_economia').select('*').eq('cliente_id', uid).order('data', { ascending: true })),
-        safe(supabase.from('agendamentos_reuniao').select('*').eq('cliente_id', uid).order('created_at', { ascending: false }).limit(12))
+        safe(supabase.from('agendamentos_reuniao').select('*').eq('cliente_id', uid).order('created_at', { ascending: false }).limit(12)),
+        safe(supabase.from('documentos').select('*').eq('cliente_id', uid).order('created_at', { ascending: false })),
+        safe(supabase.from('relatorios_mensais').select('mes,publicado').eq('cliente_id', uid).eq('publicado', true)),
+        safe(supabase.from('convites').select('*').eq('cliente_id', uid).order('created_at', { ascending: false })),
+        cliente.gestor_id ? safe(supabase.from('gestores').select('*').eq('id', cliente.gestor_id)) : Promise.resolve([])
       ]);
-      renderVoos(voos);
+      renderGestor(gestorArr[0] || null);
+      const tripName = Object.fromEntries(viagens.map(v => [v.id, v.destino]));
+      DOCS = documentos.map(d => ({ ...d, _viagem: d.viagem_id ? tripName[d.viagem_id] : '' }));
+      renderProximoVoo(voos);
+      renderTrips(viagens, voos, DOCS);
+      renderVencimentos(programas);
       renderMilhas(saldos, extrato, programas);
       renderEconomias(economias);
-      $('ecoTotal').textContent = economias.length ? fmtMoney(ECO_TOTAL) : '—';
-      renderAgendamentos(agendamentos);
-      setupMeetForm(user, firstName(nome), [...agendamentos]);
+      renderEconomiaResumo(economias);
+      renderDocs();
+      renderRelatorios([
+        ...economias.map(r => r.data), ...extrato.map(r => r.data), ...saldos.map(r => r.mes),
+        ...voos.map(r => r.data_voo), ...reunioes.map(r => r.data_reuniao), ...relatorios.map(r => r.mes)
+      ].filter(x => x && String(x).slice(0, 10) <= new Date().toISOString().slice(0, 10)), relatorios);
+      await renderConvites(convites);
+      setupConvites(convites);
+      const listaAg = [...agendamentos];
+      renderAgendamentos(listaAg);
+      setupMeetForm(user, firstName(nome), listaAg);
+      if (!setupCal(nome, user.email || '', listaAg)) aplicarLimiteReuniao(listaAg);
       route();
+      setupWelcome();
 
       // 6. Mostrar dashboard
       $('loadingScreen').classList.add('hide');

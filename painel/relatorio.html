@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#1a3826" />
+  <title>Relatório Mensal | Maktub Go</title>
+  <link rel="icon" href="/ativos/app-icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{--green:#1a3826;--green-dark:#142d1f;--gold:#8a6520;--gold-warm:#c9a96e;--gold-soft:rgba(138,101,32,.1);--cream:#f9f6f1;--cream-deep:#f5f0e8;--white:#fff;--text:#2c2c2c;--mid:#3d3d3d;--muted:#5c5c5c;--border:rgba(26,56,38,.12);--ok:#4f7d53;--bad:#9a4a3a}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#e9e4da;color:var(--text);font-family:'Jost',sans-serif;font-size:13.5px;line-height:1.6}
+    .bar{position:sticky;top:0;z-index:10;background:var(--green);color:var(--cream);display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 20px;flex-wrap:wrap}
+    .bar a,.bar button,.bar select{font-family:inherit;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream);background:none;border:1px solid rgba(201,169,110,.4);padding:9px 14px;cursor:pointer}
+    .bar select option{color:var(--text)}
+    .bar .pri{background:var(--gold-warm);color:var(--green-dark);border-color:var(--gold-warm);font-weight:600}
+    .bar .grp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .page{max-width:820px;margin:28px auto;background:var(--white);box-shadow:0 20px 60px rgba(0,0,0,.08)}
+    .cover{background:var(--green);color:var(--cream);padding:44px 52px 40px;position:relative;overflow:hidden}
+    .cover::before{content:'';position:absolute;width:420px;height:420px;border:1px solid rgba(201,169,110,.18);border-radius:50%;top:-170px;right:-140px}
+    .cover .top{display:flex;align-items:center;gap:12px;margin-bottom:46px;position:relative}
+    .cover .top img{height:34px}
+    .cover .top .n{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:600}
+    .cover .top .s{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,246,241,.55)}
+    .cover .k{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-warm);font-weight:600}
+    .cover h1{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:52px;line-height:1.02;margin:10px 0 6px;color:var(--white);text-transform:capitalize}
+    .cover h1 em{color:var(--gold-warm);font-weight:300}
+    .cover .who{display:flex;gap:36px;flex-wrap:wrap;margin-top:28px;padding-top:18px;border-top:1px solid rgba(201,169,110,.22);position:relative}
+    .cover .who .l{font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(249,246,241,.5);font-weight:600}
+    .cover .who .v{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--white)}
+    .partial{display:inline-block;margin-top:10px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;border:1px solid rgba(201,169,110,.5);color:var(--gold-warm);padding:4px 10px}
+    .body{padding:36px 52px 44px}
+    section{margin-bottom:34px;break-inside:avoid-page}
+    h2{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:16px}
+    h2::before{content:'';width:18px;height:1px;background:var(--gold)}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border)}
+    .kpi{padding:18px 20px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .kpi:nth-child(3n){border-right:none}
+    .kpi:nth-last-child(-n+3){border-bottom:none}
+    .kpi.hl{background:var(--green);color:var(--cream)}
+    .kpi .l{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+    .kpi.hl .l{color:rgba(249,246,241,.6)}
+    .kpi .v{font-family:'Cormorant Garamond',serif;font-size:30px;line-height:1;color:var(--green)}
+    .kpi.hl .v{color:var(--gold-warm)}
+    .kpi .v small{font-size:13px;color:var(--muted);font-style:italic;margin-right:2px}
+    .kpi.hl .v small{color:rgba(249,246,241,.6)}
+    .kpi .s{font-size:11px;color:var(--muted);margin-top:6px}
+    .kpi.hl .s{color:rgba(249,246,241,.65)}
+    .up{color:var(--ok)!important}.down{color:var(--bad)!important}
+    .letter{background:var(--cream);border-left:2px solid var(--gold);padding:24px 28px}
+    .letter p{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.55;color:var(--mid);margin-bottom:12px;white-space:pre-line}
+    .letter .sign{display:flex;align-items:center;gap:12px;margin-top:14px}
+    .letter .sign img,.letter .sign .ph{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;color:var(--gold)}
+    .letter .sign .n{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green)}
+    .letter .sign .c{font-size:11px;color:var(--muted)}
+    .draft{display:inline-block;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--bad);border:1px solid var(--bad);padding:2px 8px;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--green);background:var(--cream-deep)}
+    td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+    .r{text-align:right;white-space:nowrap}
+    .mute{color:var(--muted);font-size:12px}
+    .strike{text-decoration:line-through;color:var(--muted)}
+    .eco{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:600}
+    .tag{display:inline-block;font-size:8px;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--border);padding:2px 6px;color:var(--mid);margin-right:6px}
+    .chart{display:flex;align-items:flex-end;gap:10px;height:150px;border-bottom:1px solid var(--border);padding-top:22px}
+    .chart .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;position:relative}
+    .chart .b{width:100%;max-width:46px;background:var(--gold-warm);border-radius:3px 3px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .chart .c.cur .b{background:var(--green)}
+    .chart .val{font-size:10px;color:var(--mid);margin-bottom:4px;white-space:nowrap}
+    .chart-x{display:flex;gap:10px;margin-top:6px}
+    .chart-x span{flex:1;text-align:center;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    ul.list{list-style:none;display:grid;gap:8px}
+    ul.list li{display:flex;gap:10px}
+    ul.list li::before{content:'✦';color:var(--gold);font-size:10px;margin-top:4px}
+    .empty{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--muted);font-size:16px}
+    .foot{padding:18px 52px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex-wrap:wrap}
+    .state{max-width:520px;margin:120px auto;text-align:center;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green)}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    @media(max-width:700px){.cover,.body{padding-left:22px;padding-right:22px}.cover h1{font-size:38px}.kpis{grid-template-columns:1fr 1fr}.kpi:nth-child(3n){border-right:1px solid var(--border)}.kpi:nth-child(2n){border-right:none}.kpi{border-bottom:1px solid var(--border)!important}.cols{grid-template-columns:1fr}.page{margin:0}.foot{padding:16px 22px}table{font-size:12px}}
+    @page{size:A4;margin:12mm}
+    @media print{
+      body{background:#fff;font-size:11.5px}
+      .bar{display:none}
+      .page{margin:0;box-shadow:none;max-width:none}
+      .cover,.kpi.hl{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .letter,th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="bar">
+  <div class="grp"><a href="/painel/#relatorios">← Painel</a></div>
+  <div class="grp">
+    <button type="button" id="prev" aria-label="Mês anterior">‹</button>
+    <select id="mesSel" aria-label="Mês"></select>
+    <button type="button" id="next" aria-label="Próximo mês">›</button>
+    <button type="button" class="pri" id="print">Salvar em PDF</button>
+  </div>
+</div>
+<div id="root"><div class="state">Preparando seu relatório...</div></div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+  const EXIGIR_CODIGO = true;
+  const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  const $ = (id) => document.getElementById(id);
+
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const MES_C = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const esc = (s) => s === null || s === undefined ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  const num = (n) => Number(n || 0).toLocaleString('pt-BR');
+  const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const brl2 = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const brDate = (s) => { if (!s) return ''; const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+  const compact = (n) => { const v = Number(n) || 0, a = Math.abs(v); if (a >= 1e6) return (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi'; if (a >= 1e3) return (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0}) + ' mil'; return num(v); };
+  const initials = (n) => { const p = String(n || 'MG').trim().split(/\s+/); return ((p[0] || '')[0] + (p.length > 1 ? p[p.length-1][0] : '')).toUpperCase(); };
+  const lines = (t) => String(t || '').split(/\n+/).map(x => x.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+  const jwtAmr = (token) => { try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.amr || []).map(a => a.method); } catch (_) { return []; } };
+  const safe = async (q) => { try { const r = await q; return r.error ? [] : (r.data || []); } catch (_) { return []; } };
+  const ecoValor = (r) => (r.valor_economia_brl !== null && r.valor_economia_brl !== undefined && r.valor_economia_brl !== '') ? Number(r.valor_economia_brl) || 0 : (Number(r.valor_mercado_brl) || 0) - (Number(r.valor_pago_brl) || 0);
+  const CAT = { emissao: 'Passagem', acumulo: 'Acúmulo / cashback', cartao: 'Cartão', outro: 'Outro' };
+  const TIPO = { acumulo: 'Acúmulo', bonus: 'Bônus', transferencia: 'Transferência', emissao: 'Emissão', expiracao: 'Expiração', ajuste: 'Ajuste' };
+
+  const params = new URLSearchParams(location.search);
+  const now = new Date();
+  const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let mes = /^\d{4}-\d{2}$/.test(params.get('mes') || '') ? params.get('mes') : curKey;
+  if (mes > curKey) mes = curKey;
+  const shift = (k, d) => { let [y, m] = k.split('-').map(Number); m += d; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, '0')}`; };
+  const label = (k) => { const [y, m] = k.split('-'); return `${MESES[Number(m) - 1]} de ${y}`; };
+  const go = (k) => { params.set('mes', k); location.search = params.toString(); };
+
+  const opts = []; for (let k = curKey, i = 0; i < 36; i++, k = shift(k, -1)) opts.push(k);
+  $('mesSel').innerHTML = opts.map(k => `<option value="${k}">${label(k)}</option>`).join('');
+  $('mesSel').value = mes;
+  $('mesSel').onchange = () => go($('mesSel').value);
+  $('prev').onclick = () => go(shift(mes, -1));
+  $('next').onclick = () => { if (mes < curKey) go(shift(mes, 1)); };
+  $('next').disabled = mes >= curKey;
+  $('print').onclick = () => window.print();
+
+  (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || (EXIGIR_CODIGO && !jwtAmr(session.access_token).some(m => m === 'otp' || m === 'magiclink'))) {
+      location.replace('/acesso/?next=' + encodeURIComponent('/painel/#relatorios')); return;
+    }
+    let cid = session.user.id, isEquipe = false;
+    try { const { data } = await supabase.rpc('is_equipe'); isEquipe = !!data; } catch (_) {}
+    if (isEquipe && /^[0-9a-f-]{36}$/i.test(params.get('cliente') || '')) cid = params.get('cliente');
+
+    const ini = `${mes}-01`, fim = `${shift(mes, 1)}-01`, anoIni = `${mes.slice(0, 4)}-01-01`, prevKey = shift(mes, -1);
+    const [cliArr, programas, saldos, extrato, economias, voos, viagens, reunioes, movs, relArr] = await Promise.all([
+      safe(supabase.from('clientes').select('*').eq('id', cid)),
+      safe(supabase.from('programas_milhas').select('*').eq('cliente_id', cid)),
+      safe(supabase.from('historico_saldos').select('*').eq('cliente_id', cid).lt('mes', fim).gte('mes', `${shift(mes, -5)}-01`)),
+      safe(supabase.from('extrato_milhas').select('*').eq('cliente_id', cid).gte('data', ini).lt('data', fim).order('data')),
+      safe(supabase.from('historico_economia').select('*').eq('cliente_id', cid).lt('data', fim).order('data')),
+      safe(supabase.from('voos').select('*').eq('cliente_id', cid).gte('data_voo', ini).lt('data_voo', fim).order('data_voo')),
+      safe(supabase.from('viagens').select('*').eq('cliente_id', cid).gte('data_viagem', fim).order('data_viagem').limit(5)),
+      safe(supabase.from('reunioes').select('*').eq('cliente_id', cid).gte('data_reuniao', ini).lt('data_reuniao', fim)),
+      mes >= prevKey && mes >= shift(curKey, -1) ? safe(supabase.from('movimentos_estrategicos').select('*').eq('cliente_id', cid).order('ordem')) : Promise.resolve([]),
+      safe(supabase.from('relatorios_mensais').select('*').eq('cliente_id', cid).eq('mes', ini))
+    ]);
+    const cli = cliArr[0];
+    if (!cli) { $('root').innerHTML = '<div class="state">Não encontramos os dados deste cliente.</div>'; return; }
+    const gestor = cli.gestor_id ? (await safe(supabase.from('gestores').select('*').eq('id', cli.gestor_id)))[0] : null;
+    const rel = relArr[0] || null;
+
+    // --- números do mês
+    const ecoMes = economias.filter(r => String(r.data) >= ini);
+    const ecoAno = economias.filter(r => String(r.data) >= anoIni);
+    const sum = (a) => a.reduce((s, r) => s + ecoValor(r), 0);
+    const saldoMes = (k) => saldos.filter(r => String(r.mes).slice(0, 7) === k);
+    const totMes = (k) => saldoMes(k).reduce((s, r) => s + Number(r.saldo || 0), 0);
+    let saldoAtual = totMes(mes), fonteSaldo = 'fechamento do mês';
+    if (!saldoMes(mes).length && mes === curKey) { saldoAtual = programas.reduce((s, p) => s + Number(p.saldo || 0), 0); fonteSaldo = 'saldo atual'; }
+    const saldoAnt = totMes(prevKey);
+    const variacao = saldoMes(prevKey).length ? saldoAtual - saldoAnt : null;
+    const entradas = extrato.filter(x => Number(x.quantidade) > 0).reduce((s, x) => s + Number(x.quantidade), 0);
+    const usadas = Math.abs(extrato.filter(x => x.tipo === 'emissao').reduce((s, x) => s + Number(x.quantidade), 0));
+
+    // --- programas: mês x anterior
+    const progs = [...new Set([...saldoMes(mes), ...saldoMes(prevKey)].map(r => r.programa))].sort();
+    const progRows = progs.length ? progs.map(p => {
+      const a = saldoMes(mes).find(r => r.programa === p), b = saldoMes(prevKey).find(r => r.programa === p);
+      const va = a ? Number(a.saldo) : null, vb = b ? Number(b.saldo) : null, dif = va !== null && vb !== null ? va - vb : null;
+      return `<tr><td>${esc(p)}</td><td class="r">${vb === null ? '' : num(vb)}</td><td class="r">${va === null ? '' : num(va)}</td>
+        <td class="r ${dif > 0 ? 'up' : dif < 0 ? 'down' : ''}">${dif === null ? '' : (dif > 0 ? '+' : dif < 0 ? '−' : '') + num(Math.abs(dif))}</td></tr>`;
+    }).join('') : (mes === curKey ? programas.map(p => `<tr><td>${esc(p.programa)}</td><td class="r"></td><td class="r">${num(p.saldo)}</td><td class="r"></td></tr>`).join('') : '');
+
+    // --- gráfico 6 meses
+    const ks = []; for (let i = 5; i >= 0; i--) ks.push(shift(mes, -i));
+    const vals = ks.map(k => totMes(k)); if (mes === curKey && !saldoMes(mes).length) vals[5] = saldoAtual;
+    const max = Math.max(...vals, 1);
+    const chart = vals.some(v => v > 0) ? `<div class="chart">${ks.map((k, i) => `<div class="c ${i === 5 ? 'cur' : ''}"><div class="val">${vals[i] ? compact(vals[i]) : ''}</div><div class="b" style="height:${Math.max(vals[i] ? 2 : 0, vals[i] / max * 82)}%"></div></div>`).join('')}</div>
+      <div class="chart-x">${ks.map(k => `<span>${MES_C[Number(k.slice(5)) - 1]}/${k.slice(2, 4)}</span>`).join('')}</div>` : '';
+
+    // --- vencimentos (próximos 180 dias a partir do fim do mês)
+    const lim = new Date(fim + 'T12:00:00'); lim.setDate(lim.getDate() + 180);
+    const venc = programas.filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0 && p.vencimento_data >= ini && new Date(p.vencimento_data + 'T12:00:00') <= lim)
+      .sort((a, b) => String(a.vencimento_data).localeCompare(String(b.vencimento_data)));
+
+    const nomeGestor = gestor ? gestor.nome : 'Equipe Maktub Go';
+    const foto = gestor && /^https:\/\//.test(gestor.foto_url || '') ? `<img src="${esc(gestor.foto_url)}" alt="" />` : `<div class="ph">${esc(initials(nomeGestor))}</div>`;
+    const cartaVisivel = rel && rel.carta_gestor && (rel.publicado || isEquipe);
+    const destaques = rel && (rel.publicado || isEquipe) ? lines(rel.destaques) : [];
+    const passos = rel && (rel.publicado || isEquipe) ? lines(rel.proximos_passos) : [];
+    const geradoEm = now.toLocaleDateString('pt-BR');
+    document.title = `Relatório ${label(mes)} | ${cli.nome_completo || 'Maktub Go'}`;
+
+    $('root').innerHTML = `<div class="page">
+      <header class="cover">
+        <div class="top"><img src="/ativos/simbolo-creme.png" alt="" /><div><div class="n">Maktub Go</div><div class="s">Gestão de Milhas Concierge</div></div></div>
+        <div class="k">Relatório mensal</div>
+        <h1>${esc(MESES[Number(mes.slice(5)) - 1])} <em>${mes.slice(0, 4)}</em></h1>
+        ${mes === curKey ? '<span class="partial">Mês em andamento · dados parciais</span>' : ''}
+        <div class="who">
+          <div><div class="l">Cliente</div><div class="v">${esc(cli.nome_completo || '')}</div></div>
+          <div><div class="l">Gestor</div><div class="v">${esc(nomeGestor)}</div></div>
+          <div><div class="l">Gerado em</div><div class="v">${geradoEm}</div></div>
+        </div>
+      </header>
+      <div class="body">
+        <section>
+          <h2>Resumo do mês</h2>
+          <div class="kpis">
+            <div class="kpi hl"><div class="l">Economia no mês</div><div class="v"><small>R$</small>${brl(sum(ecoMes))}</div><div class="s">${ecoMes.length} ${ecoMes.length === 1 ? 'ganho registrado' : 'ganhos registrados'}</div></div>
+            <div class="kpi"><div class="l">Economia no ano</div><div class="v"><small>R$</small>${brl(sum(ecoAno))}</div><div class="s">Acumulado em ${mes.slice(0, 4)}</div></div>
+            <div class="kpi"><div class="l">Desde o início</div><div class="v"><small>R$</small>${brl(sum(economias))}</div><div class="s">Economia total da gestão</div></div>
+            <div class="kpi"><div class="l">Patrimônio em milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${fonteSaldo}</div></div>
+            <div class="kpi"><div class="l">Variação no mês</div><div class="v ${variacao > 0 ? 'up' : variacao < 0 ? 'down' : ''}">${variacao === null ? '·' : (variacao > 0 ? '+' : variacao < 0 ? '−' : '') + compact(Math.abs(variacao))}</div><div class="s">${variacao === null ? 'Sem fechamento do mês anterior' : 'Em relação a ' + MESES[Number(prevKey.slice(5)) - 1]}</div></div>
+            <div class="kpi"><div class="l">Entradas / usadas</div><div class="v">${compact(entradas)} <small>/ ${compact(usadas)}</small></div><div class="s">Pontos que entraram e milhas usadas</div></div>
+          </div>
+        </section>
+
+        ${cartaVisivel ? `<section><h2>Carta do gestor</h2><div class="letter">
+          ${!rel.publicado ? '<span class="draft">Rascunho: o cliente ainda não vê esta carta</span>' : ''}
+          <p>${esc(rel.carta_gestor)}</p>
+          <div class="sign">${foto}<div><div class="n">${esc(nomeGestor)}</div><div class="c">${esc(gestor && gestor.cargo || 'Gestor de Milhas')}</div></div></div>
+        </div></section>` : ''}
+
+        ${destaques.length || passos.length ? `<section class="cols">
+          <div><h2>Destaques</h2>${destaques.length ? `<ul class="list">${destaques.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="empty">Sem destaques registrados.</div>'}</div>
+          <div><h2>Próximos passos</h2>${passos.length ? `<ul class="list">${passos.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="empty">A definir na próxima reunião.</div>'}</div>
+        </section>` : ''}
+
+        <section>
+          <h2>Patrimônio em milhas</h2>
+          ${chart}
+          ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th></tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
+        </section>
+
+        <section>
+          <h2>Economias do mês</h2>
+          ${ecoMes.length ? `<table><thead><tr><th>Data</th><th>Ganho</th><th class="r">Detalhe</th><th class="r">Economia</th></tr></thead><tbody>
+            ${ecoMes.map(r => { const v = ecoValor(r); const det = r.categoria === 'acumulo' || r.categoria === 'cartao' || r.categoria === 'outro'
+              ? (r.pontos_gerados ? '+ ' + num(r.pontos_gerados) + ' pts' : esc(r.observacao || ''))
+              : (r.valor_mercado_brl ? `<span class="strike">${brl2(r.valor_mercado_brl)}</span><br><span class="mute">investiu ${brl2(r.valor_pago_brl)}</span>` : '');
+              return `<tr><td class="mute">${brDate(r.data)}</td><td><span class="tag">${CAT[r.categoria] || 'Passagem'}</span>${esc(r.descricao)}${r.programa ? `<div class="mute">${esc(r.programa)}${r.milhas_utilizadas ? ' · ' + num(r.milhas_utilizadas) + ' milhas' : ''}</div>` : ''}</td><td class="r">${det}</td><td class="r"><span class="eco">${brl2(v)}</span></td></tr>`; }).join('')}
+          </tbody></table>` : '<div class="empty">Nenhuma economia registrada neste mês.</div>'}
+        </section>
+
+        <section>
+          <h2>Movimentações de pontos</h2>
+          ${extrato.length ? `<table><thead><tr><th>Data</th><th>Programa</th><th>Tipo</th><th>Descrição</th><th class="r">Pontos</th></tr></thead><tbody>
+            ${extrato.map(x => { const q = Number(x.quantidade || 0); return `<tr><td class="mute">${brDate(x.data)}</td><td>${esc(x.programa)}</td><td><span class="tag">${TIPO[x.tipo] || esc(x.tipo)}</span></td><td>${esc(x.descricao || '')}</td><td class="r ${q >= 0 ? 'up' : 'down'}">${q >= 0 ? '+' : '−'} ${num(Math.abs(q))}</td></tr>`; }).join('')}
+          </tbody></table>` : '<div class="empty">Nenhuma movimentação registrada neste mês.</div>'}
+        </section>
+
+        <section class="cols">
+          <div><h2>Voos do mês</h2>
+            ${voos.length ? `<table><tbody>${voos.map(f => `<tr><td class="mute">${brDate(f.data_voo)}</td><td><strong>${esc(f.origem_codigo || '')} → ${esc(f.destino_codigo || '')}</strong><div class="mute">${esc([f.companhia, f.classe].filter(Boolean).join(' · '))}</div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Sem voos neste mês.</div>'}
+          </div>
+          <div><h2>Próximas viagens</h2>
+            ${viagens.length ? `<table><tbody>${viagens.map(v => `<tr><td class="mute">${brDate(v.data_viagem)}</td><td><strong>${esc(v.destino)}</strong><div class="mute">${esc(v.detalhes || '')}</div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma viagem programada.</div>'}
+          </div>
+        </section>
+
+        ${venc.length ? `<section><h2>Vencimentos monitorados</h2><table><thead><tr><th>Programa</th><th>Vencimento</th><th class="r">Pontos</th></tr></thead><tbody>
+          ${venc.map(p => `<tr><td>${esc(p.programa)}</td><td>${brDate(p.vencimento_data)}</td><td class="r down">${num(p.vencimento_quantidade)}</td></tr>`).join('')}</tbody></table></section>` : ''}
+
+        ${reunioes.length ? `<section><h2>Reunião do mês</h2>${reunioes.map(r => `<p><strong>${esc(r.titulo)}</strong> · ${brDate(r.data_reuniao)}</p><p class="mute">${esc(r.resumo || '')}</p>`).join('')}</section>` : ''}
+
+        ${movs.length ? `<section><h2>Movimentos estratégicos em andamento</h2><ul class="list">${movs.map(m => `<li><div><strong>${esc(String(m.titulo || '').replace(/\*/g, ''))}</strong>${m.descricao ? `<div class="mute">${esc(m.descricao)}</div>` : ''}</div></li>`).join('')}</ul></section>` : ''}
+      </div>
+      <footer class="foot"><span>Maktub Go · Documento confidencial</span><span>maktubgo.com.br</span></footer>
+    </div>`;
+    if (params.get('imprimir') === '1') setTimeout(() => window.print(), 600);
+  })().catch((e) => { console.error(e); $('root').innerHTML = '<div class="state">Não foi possível gerar o relatório agora. Tente novamente.</div>'; });
+</script>
+</body>
+</html>
