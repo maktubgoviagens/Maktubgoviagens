@@ -54,7 +54,7 @@
     .dash>*{min-width:0}
 
     /* === SIDEBAR === */
-    .sidebar{background:var(--green);color:var(--cream);padding:28px 22px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--green-dark)}
+    .sidebar{background:var(--green);color:var(--cream);padding:28px 22px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(201,169,110,.3) transparent;border-right:1px solid var(--green-dark)}
 
     .sb-logo{display:flex;align-items:center;gap:12px;margin-bottom:48px;padding:0 8px}
     .sb-logo-img{width:40px;height:auto;flex-shrink:0}
@@ -499,6 +499,22 @@
     .modal-top{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border)}
     .modal-top .t{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .modal-x{background:none;border:none;font-size:26px;line-height:1;color:var(--text-muted);cursor:pointer;padding:0 4px}
+    .modal-card.sm{width:min(520px,100%);height:auto;max-height:90vh;overflow-y:auto}
+    .cx-body{padding:24px 26px 26px}
+    .cx-body p{font-size:14px;line-height:1.7;color:var(--text-muted);margin-bottom:14px}
+    .cx-body strong{color:var(--green);font-weight:500}
+    .cx-warn{border-left:2px solid #9a4a3a;background:#f7ece8;padding:12px 14px;font-size:13px;line-height:1.6;color:#6d3326;margin-bottom:14px}
+    .cx-body label{display:block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:8px}
+    .cx-body textarea{width:100%;min-height:110px;border:1px solid var(--border);background:var(--cream);padding:12px;font-family:inherit;font-size:14px;resize:vertical;color:var(--text)}
+    .cx-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .btn-cx{font-family:inherit;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;padding:12px 18px;cursor:pointer;font-weight:500;border:1px solid #9a4a3a;background:#9a4a3a;color:#fff}
+    a.btn-cx{text-decoration:none;display:inline-flex;align-items:center}
+    .btn-cx:disabled{opacity:.6;cursor:default}
+    .btn-ghost{font-family:inherit;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;padding:12px 18px;cursor:pointer;font-weight:500;border:1px solid var(--border);background:var(--white);color:var(--green)}
+    .btn-line.cancel{border-color:#9a4a3a;color:#9a4a3a;background:none;font-family:inherit;cursor:pointer}
+    .btn-line.cancel:hover{background:#f7ece8}
+    .link-cx{background:none;border:none;padding:0;margin-top:10px;font-family:inherit;font-size:12px;color:#9a4a3a;text-decoration:underline;cursor:pointer;display:inline-block}
+    .meet-actions{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center}
     .modal iframe{flex:1;border:none;width:100%;background:var(--white)}
 
     .welcome{position:fixed;inset:0;z-index:1300;background:var(--green);color:var(--cream);display:flex;align-items:center;justify-content:center;padding:32px;overflow:auto}
@@ -533,7 +549,7 @@
     /* === MOBILE === */
     @media(max-width:1100px){
       .dash{grid-template-columns:1fr}
-      .sidebar{position:relative;height:auto;flex-direction:row;align-items:center;padding:18px 22px;border-right:none;border-bottom:1px solid var(--green-dark)}
+      .sidebar{position:relative;height:auto;overflow:visible;flex-direction:row;align-items:center;padding:18px 22px;border-right:none;border-bottom:1px solid var(--green-dark)}
       .sb-logo{margin-bottom:0;flex:1;order:1}
       .sb-foot{order:2;max-width:52%;min-width:0}
       .sb-logo{min-width:0}
@@ -928,10 +944,13 @@
     <div class="view" id="view-reuniao" hidden>
       <div class="meet">
         <div class="form-card" id="meetDone" hidden>
-          <h3>Sua reunião do mês <em>está reservada</em></h3>
+          <h3>Sua reunião do mês <em id="meetDoneEst">está reservada</em></h3>
           <p id="meetDoneTxt"></p>
-          <p>Cada cliente Concierge tem direito a uma reunião mensal com o gestor. Assim que esta for realizada, a agenda do próximo mês é liberada aqui.</p>
-          <a class="btn-line" id="meetDoneWa" target="_blank" rel="noopener" href="#">Precisa remarcar? Fale com seu gestor</a>
+          <p id="meetDoneRegra">Cada cliente Concierge tem direito a uma reunião mensal com o gestor. Cancelamentos com 24 horas ou mais de antecedência liberam um novo horário na hora. Com menos de 24 horas, é preciso informar o motivo.</p>
+          <div class="meet-actions">
+            <button type="button" class="btn-line cancel" id="meetDoneCancel" hidden>Preciso remarcar ou cancelar</button>
+            <a class="btn-line" id="meetDoneWa" target="_blank" rel="noopener" href="#">Falar com seu gestor</a>
+          </div>
         </div>
         <div class="cal-box" id="calBox" hidden>
           <h3>Agenda de <em id="calGestor">seu gestor</em></h3>
@@ -979,6 +998,12 @@
 </div>
 
 <!-- Visualizador de documentos -->
+<div class="modal" id="cxModal" hidden role="dialog" aria-modal="true" aria-labelledby="cxTitle">
+  <div class="modal-card sm">
+    <div class="modal-top"><div class="t" id="cxTitle">Remarcar ou cancelar</div><button type="button" class="modal-x" id="cxClose" aria-label="Fechar">×</button></div>
+    <div class="cx-body" id="cxBody"></div>
+  </div>
+</div>
 <div class="modal" id="docModal" hidden role="dialog" aria-modal="true" aria-labelledby="docTitle">
   <div class="modal-card">
     <div class="modal-top"><div class="t" id="docTitle"></div><button type="button" class="btn-sm" id="docDownload">Baixar</button><button type="button" class="modal-x" id="docClose" aria-label="Fechar">×</button></div>
@@ -1500,19 +1525,43 @@
   const REQ_STATUS = { solicitada:['Aguardando confirmação','st-warn'], confirmada:['Confirmada','st-ok'], realizada:['Realizada','st-done'], cancelada:['Cancelada','st-off'] };
   const fmtDateTime = (iso) => { const d = new Date(iso); if (isNaN(d)) return ''; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} às ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`; };
   const waLink = (msg) => `https://wa.me/${WA_NUM}?text=${encodeURIComponent(msg)}`;
+  const inicioDe = (a) => {
+    if (a.data_confirmada) return new Date(a.data_confirmada);
+    if (a.inicio) return new Date(a.inicio);
+    const hc = /calendário para (\d{2})h(\d{2})/.exec(a.pauta || '');
+    const h = hc ? `${hc[1]}:${hc[2]}` : ({ 'Manhã': '09:00', 'Tarde': '14:00' }[a.periodo] || '19:00');
+    return new Date(`${a.data_preferida}T${h}:00-03:00`);
+  };
+  const podeCancelar = (a) => (a.status === 'solicitada' || a.status === 'confirmada') && inicioDe(a) > new Date();
+  const consomeMes = (a) => a.status !== 'cancelada' || (a.cancelamento_tardio && !a.nova_reuniao_liberada);
+  const horaCal = (a) => { const m = /calendário para (\d{2})h(\d{2})/.exec(a.pauta || ''); return m ? `${m[1]}h${m[2]}` : ''; };
   function renderAgendamentos(list) {
     $('reqList').innerHTML = list.length ? list.map(a => {
-      const [lb, cls] = REQ_STATUS[a.status] || REQ_STATUS.solicitada;
-      const quando = a.status === 'confirmada' && a.data_confirmada ? fmtDateTime(a.data_confirmada) : `${brDate(a.data_preferida)} · ${escapeHtml(a.periodo || '')}`;
+      const hc = a.status === 'solicitada' || a.status === 'cancelada' ? horaCal(a) : '';
+      const [lb, cls] = a.status === 'cancelada' ? [a.cancelamento_tardio ? 'Cancelada com menos de 24h' : 'Cancelada', 'st-off']
+        : hc ? ['Agendada','st-ok'] : (REQ_STATUS[a.status] || REQ_STATUS.solicitada);
+      const quando = a.status === 'confirmada' && a.data_confirmada ? fmtDateTime(a.data_confirmada) : hc ? `${brDate(a.data_preferida)} às ${hc}` : `${brDate(a.data_preferida)} · ${escapeHtml(a.periodo || '')}`;
+      const det = a.status === 'cancelada' ? (a.justificativa_cancelamento ? 'Motivo: ' + escapeHtml(a.justificativa_cancelamento) : '')
+        : hc ? 'Link do Google Meet enviado para o seu e-mail' : escapeHtml(a.pauta || '');
       return `<div class="req">
         <div class="req-top"><div class="t">${quando}</div><span class="tr-status ${cls}">${lb}</span></div>
-        <div class="d">${escapeHtml(a.formato || '')}${a.pauta ? ' · ' + escapeHtml(a.pauta) : ''}</div>
+        <div class="d">${escapeHtml(a.formato || '')}${det ? ' · ' + det : ''}</div>
         ${a.status === 'confirmada' && a.link_reuniao && /^https:\/\//.test(a.link_reuniao) ? `<a class="btn-line" href="${escapeHtml(a.link_reuniao)}" target="_blank" rel="noopener">Entrar na reunião</a>` : ''}
+        ${podeCancelar(a) ? `<button type="button" class="link-cx" data-cancel="${escapeHtml(String(a.id))}">Remarcar ou cancelar</button>` : ''}
       </div>`;
     }).join('') : '<div class="empty-list">Nenhuma solicitação ainda</div>';
     const prox = list.filter(a => a.status === 'confirmada' && a.data_confirmada && new Date(a.data_confirmada) > new Date())
       .sort((a,b) => new Date(a.data_confirmada) - new Date(b.data_confirmada))[0];
+    renderAgendamentos.temProxima = true;
     if (prox) $('nextMeeting').textContent = fmtDateTime(prox.data_confirmada);
+    else {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const cal = list.filter(a => a.status === 'solicitada' && horaCal(a) && a.data_preferida >= hoje)
+        .sort((a, b) => a.data_preferida.localeCompare(b.data_preferida))[0];
+      if (cal) { const d = cal.data_preferida.split('-'); $('nextMeeting').textContent = `${d[2]}/${d[1]} às ${horaCal(cal)}`; }
+      else { renderAgendamentos.temProxima = false; $('nextMeeting').textContent = 'A definir'; }
+    }
+    renderAgendamentos.lista = list;
   }
   function setupMeetForm(user, nome, agendamentos) {
     const t = new Date(); t.setDate(t.getDate() + 1);
@@ -1794,7 +1843,7 @@
     const dataDe = (a) => a.data_confirmada ? new Date(a.data_confirmada).toISOString().slice(0, 10) : String(a.data_preferida || '');
     return agendamentos.find(a => {
       const d = dataDe(a);
-      if (a.status === 'cancelada' || !d) return false;
+      if (!consomeMes(a) || !d) return false;
       if (a.status === 'realizada') return d >= ini;
       return d >= ini;
     }) || null;
@@ -1802,20 +1851,32 @@
   function aplicarLimiteReuniao(agendamentos) {
     const r = reuniaoDoMes(agendamentos);
     if (!r) return false;
+    const hc = horaCal(r);
     const quando = r.status === 'confirmada' && r.data_confirmada ? fmtDateTime(r.data_confirmada)
+      : hc ? `${brDate(r.data_preferida)} às ${hc}`
       : `${brDate(r.data_preferida)}${r.periodo ? ', período da ' + r.periodo.toLowerCase() : ''}`;
-    const txt = r.status === 'realizada' ? `Sua reunião deste mês foi realizada em ${brDate(r.data_preferida)}.`
+    const tardia = r.status === 'cancelada';
+    const txt = tardia ? `Sua reunião de ${quando} foi cancelada com menos de 24 horas de antecedência. Seu motivo foi enviado ao gestor, que avalia a liberação de um novo horário neste mês.`
+      : r.status === 'realizada' ? `Sua reunião deste mês foi realizada em ${brDate(r.data_preferida)}.`
       : r.status === 'confirmada' ? `Sua reunião está confirmada para ${quando}. O link de acesso está em "Suas Reuniões".`
-      : `Sua reunião está agendada para ${quando}. Os detalhes foram enviados para o seu e-mail.`;
+      : `Sua reunião está agendada para ${quando}. O convite com o link do Google Meet foi enviado para o seu e-mail.`;
     $('meetDoneTxt').textContent = txt;
     const nomeG = GESTOR && GESTOR.nome ? firstName(GESTOR.nome) : '';
     $('meetDoneWa').href = `https://wa.me/${WA_GESTOR}?text=${encodeURIComponent(`Olá${nomeG ? ', ' + nomeG : ''}! Preciso remarcar minha reunião mensal (${quando}).`)}`;
+    const cancelavel = podeCancelar(r);
+    $('meetDoneCancel').hidden = !cancelavel;
+    $('meetDoneCancel').dataset.cancel = r.id;
+    $('meetDoneWa').hidden = cancelavel;
+    $('meetDoneRegra').hidden = tardia;
+    $('meetDoneEst').textContent = tardia ? 'aguarda liberação' : r.status === 'realizada' ? 'foi realizada' : 'está reservada';
     $('meetDone').hidden = false; $('meetForm').hidden = true; $('calBox').hidden = true;
     return true;
   }
 
   function setupCal(nome, email, agendamentos) {
+    setupCal.args = [nome, email, agendamentos];
     if (aplicarLimiteReuniao(agendamentos)) return true;
+    if (setupCal.pronto) { $('meetForm').hidden = true; $('calBox').hidden = false; return true; }
     const link = GESTOR && GESTOR.cal_link ? String(GESTOR.cal_link).replace(/^https?:\/\/(app\.)?cal\.com\//, '').replace(/^\/+|\/+$/g, '') : '';
     if (!link || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(link)) return false;
     $('meetForm').hidden = true;
@@ -1824,6 +1885,7 @@
     (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, 'https://app.cal.com/embed/embed.js', 'init');
     const Cal = window.Cal;
     Cal('init', 'maktub', { origin: 'https://app.cal.com' });
+    setupCal.pronto = true;
     Cal.ns.maktub('inline', { elementOrSelector: '#calInline', calLink: link, config: { layout: 'month_view', name: nome, email, theme: 'light' } });
     Cal.ns.maktub('ui', { theme: 'light', hideEventTypeDetails: false, layout: 'month_view', cssVarsPerTheme: { light: { 'cal-brand': '#1a3826' } } });
     Cal.ns.maktub('on', { action: 'bookingSuccessfulV2', callback: async (e) => {
@@ -1834,7 +1896,8 @@
         const h = ini.getHours();
         const { data } = await supabase.from('agendamentos_reuniao').insert({
           cliente_id: USER.id, data_preferida: `${ini.getFullYear()}-${String(ini.getMonth() + 1).padStart(2, '0')}-${String(ini.getDate()).padStart(2, '0')}`,
-          periodo: h < 12 ? 'Manhã' : h < 18 ? 'Tarde' : 'Noite', formato: 'Videochamada', pauta: `Agendada pelo calendário para ${String(h).padStart(2, '0')}h${String(ini.getMinutes()).padStart(2, '0')}`
+          periodo: h < 12 ? 'Manhã' : h < 18 ? 'Tarde' : 'Noite', formato: 'Videochamada',
+          inicio: ini.toISOString(), cal_uid: String(d.uid || (d.booking && d.booking.uid) || '').slice(0, 120) || null, pauta: `Agendada pelo calendário para ${String(h).padStart(2, '0')}h${String(ini.getMinutes()).padStart(2, '0')}`
         }).select().single();
         if (data) { agendamentos.unshift(data); renderAgendamentos(agendamentos); }
         toast('Reunião agendada. O convite com o link do Google Meet foi enviado para o seu e-mail.');
@@ -1843,6 +1906,66 @@
     } });
     return true;
   }
+
+  // ----- Cancelamento de reunião -----
+  function reabrirAgenda(lista) {
+    $('meetDone').hidden = true;
+    const [nome, email] = setupCal.args || ['', ''];
+    if (!setupCal(nome, email, lista)) $('meetForm').hidden = false;
+  }
+  function abrirCancelamento(id) {
+    const lista = renderAgendamentos.lista || [];
+    const a = lista.find(x => String(x.id) === String(id));
+    if (!a || !podeCancelar(a)) return;
+    const ini = inicioDe(a);
+    const tardio = ini - new Date() < 24 * 3600 * 1000;
+    const quando = `${String(ini.getDate()).padStart(2,'0')}/${String(ini.getMonth()+1).padStart(2,'0')} às ${String(ini.getHours()).padStart(2,'0')}h${String(ini.getMinutes()).padStart(2,'0')}`;
+    $('cxBody').innerHTML = `
+      <p>Reunião de <strong>${quando}</strong>.</p>
+      ${tardio ? `<div class="cx-warn">Faltam menos de 24 horas para a reunião. Para cancelar, conte o motivo. A reunião deste mês fica suspensa até o gestor avaliar e liberar um novo horário.</div>
+        <label for="cxJust">Motivo do cancelamento</label>
+        <textarea id="cxJust" maxlength="1000" placeholder="Ex.: surgiu um compromisso de trabalho inadiável"></textarea>`
+      : `<p>Como faltam mais de 24 horas, o cancelamento é livre. Assim que confirmar, a agenda do mês reabre aqui mesmo e você escolhe o novo horário.</p>`}
+      <div class="form-msg" id="cxMsg"></div>
+      <div class="cx-actions">
+        <button type="button" class="btn-cx" id="cxOk">Confirmar cancelamento</button>
+        <button type="button" class="btn-ghost" id="cxVoltar">Manter reunião</button>
+      </div>`;
+    $('cxModal').hidden = false;
+    $('cxVoltar').onclick = () => { $('cxModal').hidden = true; };
+    $('cxOk').onclick = async () => {
+      const just = tardio ? $('cxJust').value.trim() : '';
+      if (tardio && just.length < 10) { $('cxMsg').className = 'form-msg err'; $('cxMsg').textContent = 'Escreva o motivo com pelo menos 10 caracteres.'; return; }
+      $('cxOk').disabled = true; $('cxOk').textContent = 'Cancelando...';
+      const { data, error } = await supabase.rpc('cancelar_reuniao', { p_id: a.id, p_justificativa: just || null });
+      if (error) {
+        $('cxOk').disabled = false; $('cxOk').textContent = 'Confirmar cancelamento';
+        $('cxMsg').className = 'form-msg err';
+        $('cxMsg').textContent = /reuni|justificativa|hor[aá]rio/i.test(error.message || '') ? error.message : 'Não foi possível cancelar agora. Fale com seu gestor.';
+        return;
+      }
+      a.status = 'cancelada'; a.cancelamento_tardio = !!(data && data.tardio); a.justificativa_cancelamento = just || null; a.nova_reuniao_liberada = false;
+      renderAgendamentos(lista);
+      const uid = (data && data.cal_uid) || a.cal_uid;
+      const calUrl = uid && /^[\w-]+$/.test(uid) ? `https://app.cal.com/booking/${uid}?cancel=true` : '';
+      $('cxBody').innerHTML = `
+        <p><strong>Reunião cancelada.</strong> ${a.cancelamento_tardio ? 'Seu motivo foi enviado ao gestor.' : 'Você já pode escolher um novo horário.'}</p>
+        ${calUrl ? `<p>Para liberar o horário na agenda e avisar o gestor pelo calendário, confirme também na página de reservas.</p>
+          <div class="cx-actions"><a class="btn-cx" href="${calUrl}" target="_blank" rel="noopener">Confirmar na agenda</a><button type="button" class="btn-ghost" id="cxFim">Fechar</button></div>`
+        : `<p>Nossa equipe retira o horário da agenda e o convite do seu calendário.</p>
+          <div class="cx-actions"><button type="button" class="btn-ghost" id="cxFim">Fechar</button></div>`}`;
+      $('cxFim').onclick = () => { $('cxModal').hidden = true; };
+      if (!aplicarLimiteReuniao(lista)) reabrirAgenda(lista);
+      toast('Reunião cancelada.');
+    };
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cancel]');
+    if (b) abrirCancelamento(b.dataset.cancel);
+  });
+  $('cxClose').addEventListener('click', () => { $('cxModal').hidden = true; });
+  $('cxModal').addEventListener('click', (e) => { if (e.target === $('cxModal')) $('cxModal').hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('cxModal').hidden) $('cxModal').hidden = true; });
 
   // ----- Boas-vindas (só no primeiro acesso) -----
   function setupWelcome() {
@@ -2004,7 +2127,7 @@
         } else {
           $('crescimentoPct').textContent = '·';
         }
-        if (economia.proxima_reuniao) {
+        if (economia.proxima_reuniao && !renderAgendamentos.temProxima) {
           $('nextMeeting').textContent = economia.proxima_reuniao;
         }
 
