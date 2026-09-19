@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
-Disallow: /404
+Disallow: /painel/
+Disallow: /admin/
+Disallow: /acesso/
 
-Sitemap: https://maktubgo.com.br/sitemap.xml
+Sitemap: https://www.maktubgo.com.br/sitemap.xml
