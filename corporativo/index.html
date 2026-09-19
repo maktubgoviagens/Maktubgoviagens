@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-modo="rascunho">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maktub Corporativo | Emissão de passagens para empresas e equipes</title>
+<meta name="description" content="Maktub Corporativo. Emissão de passagens para empresas, produtores, equipes esportivas e agências, com atendimento direto e cotação no mesmo dia.">
+<meta name="theme-color" content="#1a3826">
+<link rel="canonical" href="https://www.maktubgo.com.br/corporativo/">
+<link rel="icon" href="/ativos/simbolo-verde.png">
+<link rel="apple-touch-icon" href="/ativos/simbolo-verde.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:url" content="https://www.maktubgo.com.br/corporativo/">
+<meta property="og:title" content="Maktub Corporativo | Passagens para empresas e equipes">
+<meta property="og:description" content="Quem viaja a trabalho não tem tempo de procurar voo. A gente resolve.">
+<meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!--
+  ============================================================
+  MAKTUB GO · /corporativo/ · v1
+  ============================================================
+  Página de uma porta só: empresa, produtor, equipe e agência.
+  Um único formulário, gravando na tabela "leads_corporativo".
+  Nenhum campo de viagem de lazer, milhas ou candidatura aqui.
+
+  É o destino dos e-mails de prospecção do Matheus.
+  Para medir cada disparo, use link com utm, por exemplo:
+  maktubgo.com.br/corporativo/?utm_source=email&utm_campaign=esportivo
+  O formulário já captura a origem automaticamente.
+
+  PENDENTE: números da faixa de prova e fotos em /ativos/.
+  ============================================================
+-->
+
+<style>
+:root{
+  --verde:#1a3826;
+  --verde-fundo:#14301f;
+  --dourado:#8a6520;
+  --dourado-claro:#c9a96e;
+  --creme:#f9f6f1;
+  --creme-fundo:#f2ece1;
+  --tinta:#2b2b26;
+  --linha:rgba(26,56,38,.14);
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Jost',-apple-system,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--creme);color:var(--tinta);
+  font-family:var(--sans);font-weight:300;font-size:16px;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 32px}
+.secao{padding:104px 0}
+.secao-verde{background:var(--verde);color:rgba(249,246,241,.82)}
+.secao-creme{background:var(--creme-fundo)}
+h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.14;color:var(--verde)}
+.secao-verde h1,.secao-verde h2,.secao-verde h3{color:var(--creme)}
+h2{font-size:clamp(2rem,4.2vw,3.1rem)}
+h2 em{font-style:italic;display:block;color:var(--dourado)}
+.secao-verde h2 em{color:var(--dourado-claro)}
+h3{font-size:1.28rem}
+p{max-width:64ch}
+.olho{
+  font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--dourado);display:block;margin-bottom:24px;
+}
+.secao-verde .olho{color:var(--dourado-claro)}
+.pend{color:var(--dourado);border-bottom:1px dashed var(--dourado-claro)}
+.secao-verde .pend{color:var(--dourado-claro)}
+html[data-modo="publicado"] .so-rascunho{display:none !important}
+.selo-rascunho{position:fixed;left:0;bottom:0;z-index:200;background:var(--dourado);color:var(--creme);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;padding:7px 14px}
+.pular{position:absolute;left:-9999px;top:0;z-index:999;background:var(--verde);color:var(--creme);padding:14px 22px;font-size:.88rem}
+.pular:focus{left:12px;top:12px}
+:focus-visible{outline:2px solid var(--dourado);outline-offset:4px}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;min-height:52px;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;
+  padding:19px 42px;text-decoration:none;cursor:pointer;
+  background:var(--verde);border:1px solid var(--verde);color:var(--creme);
+  transition:background .35s ease,color .35s ease;
+}
+.btn:hover{background:var(--dourado);border-color:var(--dourado)}
+.btn-ouro{background:var(--dourado);border-color:var(--dourado);color:var(--creme)}
+.btn-ouro:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
+.btn-linha{background:transparent;color:var(--verde)}
+.btn-linha:hover{background:var(--verde);color:var(--creme)}
+
+/* cabeçalho */
+header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(249,246,241,.94);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .3s}
+header.rolou{border-bottom-color:var(--linha)}
+.barra{display:flex;align-items:center;justify-content:space-between;height:84px}
+.marca{display:flex;align-items:center;gap:13px;text-decoration:none}
+.marca img{width:33px}
+.marca-nome{font-size:.77rem;letter-spacing:.2em;color:var(--verde);line-height:1.4}
+.marca-nome span{display:block;font-size:.54rem;letter-spacing:.17em;color:var(--dourado)}
+.barra .btn{padding:14px 26px}
+
+/* topo */
+.topo{padding:150px 0 0}
+.topo h1{font-size:clamp(2.6rem,6vw,4.4rem);margin:14px 0 28px}
+.topo h1 em{font-style:italic;display:block;color:var(--dourado)}
+.topo p{font-family:var(--serif);font-size:clamp(1.12rem,2vw,1.38rem);line-height:1.6;max-width:33em}
+.topo .acoes{display:flex;gap:16px;flex-wrap:wrap;margin:42px 0 104px}
+
+/* prova */
+.prova{background:var(--verde);color:var(--creme)}
+.prova-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.prova-item{padding:48px 28px;text-align:center;border-right:1px solid rgba(249,246,241,.13)}
+.prova-item:last-child{border-right:0}
+.prova-num{font-family:var(--serif);font-size:2.7rem;color:var(--dourado-claro);line-height:1;display:block}
+.prova-rot{font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.7);margin-top:13px;display:block}
+
+/* públicos */
+.publicos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--linha);margin-top:56px;border:1px solid var(--linha)}
+.publico{background:var(--creme);padding:40px 36px}
+.secao-creme .publico{background:var(--creme-fundo)}
+.publico h3{margin-bottom:10px}
+.publico p{font-size:.92rem;color:rgba(43,43,38,.76);max-width:none}
+
+/* resolve */
+.lista{margin-top:52px;border-top:1px solid rgba(249,246,241,.16)}
+.linha{
+  display:grid;grid-template-columns:270px 1fr;gap:34px;align-items:baseline;
+  padding:24px 0;border-bottom:1px solid rgba(249,246,241,.16);
+}
+.linha-nome{font-family:var(--serif);font-size:1.4rem;color:var(--creme)}
+.linha p{font-size:.94rem;max-width:58ch;color:rgba(249,246,241,.78)}
+
+/* formulário */
+.form-bloco{display:grid;grid-template-columns:.85fr 1.15fr;gap:76px;align-items:start}
+form{display:grid;gap:20px}
+.campo{display:grid;gap:8px}
+label{font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado-claro)}
+input,select,textarea{
+  font-family:var(--sans);font-size:.95rem;font-weight:300;
+  background:transparent;border:0;border-bottom:1px solid rgba(249,246,241,.3);
+  color:var(--creme);padding:12px 0;resize:vertical;
+}
+input:focus,select:focus,textarea:focus{outline:0;border-bottom-color:var(--dourado-claro)}
+select option{color:var(--tinta)}
+.dupla{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+form .btn{justify-self:start;margin-top:12px}
+.aviso-form{font-size:.8rem;color:rgba(249,246,241,.6)}
+.canais{margin-top:36px;display:grid;gap:13px}
+.canal{font-size:.92rem;color:rgba(249,246,241,.85);text-decoration:none;justify-self:start;border-bottom:1px solid transparent}
+.canal:hover{border-bottom-color:var(--dourado-claro)}
+.outras-portas{
+  margin-top:34px;padding-top:24px;border-top:1px solid rgba(249,246,241,.16);
+  font-size:.87rem;line-height:2;color:rgba(249,246,241,.6);max-width:none;
+}
+.outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.35)}
+
+/* rodapé */
+footer{background:var(--verde);color:rgba(249,246,241,.6);padding:52px 0 32px;border-top:1px solid rgba(249,246,241,.13)}
+.rodape{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.84rem}
+.rodape a{text-decoration:none;color:rgba(249,246,241,.72)}
+.rodape a:hover{color:var(--creme)}
+.rodape nav{display:flex;gap:24px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .secao{padding:74px 0}
+  .wrap{padding:0 22px}
+  .barra .btn{display:none}
+  .topo{padding:120px 0 0}
+  .topo .acoes{margin-bottom:76px}
+  .prova-grid,.publicos,.form-bloco{grid-template-columns:1fr}
+  .prova-item{border-right:0;border-bottom:1px solid rgba(249,246,241,.13)}
+  .linha{grid-template-columns:1fr;gap:8px}
+  .dupla{grid-template-columns:1fr}
+  .form-bloco{gap:48px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header>
+  <div class="wrap barra">
+    <a class="marca" href="/" aria-label="Maktub Go, página inicial">
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go">
+      <span class="marca-nome">MAKTUB CORPORATIVO<span>POR MAKTUB GO</span></span>
+    </a>
+    <a class="btn btn-linha" href="#cadastro">Solicitar cotação</a>
+  </div>
+</header>
+
+<main id="conteudo">
+
+<section class="topo">
+  <div class="wrap">
+    <span class="olho">Maktub Corporativo</span>
+    <h1>Quem viaja a trabalho<em>não tem tempo de procurar voo.</em></h1>
+    <p>Emissão de passagens para empresas, produtores, equipes e agências. Você manda o trecho e as datas, a gente devolve a cotação no mesmo dia, com as opções de horário para escolher.</p>
+    <div class="acoes">
+      <a class="btn" href="#cadastro">Solicitar cotação</a>
+      <a class="btn btn-linha" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20falar%20com%20o%20Maktub%20Corporativo%20sobre%20emiss%C3%A3o%20de%20passagens." target="_blank" rel="noopener">Falar no WhatsApp</a>
+    </div>
+  </div>
+</section>
+
+<!-- PENDENTE: confirmar os três números antes de publicar. -->
+<section class="prova">
+  <div class="wrap">
+    <div class="prova-grid">
+      <div class="prova-item so-rascunho">
+        <span class="prova-num pend">+280</span>
+        <span class="prova-rot">Passageiros embarcados</span>
+      </div>
+      <div class="prova-item so-rascunho">
+        <span class="prova-num pend">00</span>
+        <span class="prova-rot">Grupos e equipes atendidos</span>
+      </div>
+      <div class="prova-item">
+        <span class="prova-num">24h</span>
+        <span class="prova-rot">Suporte durante a viagem</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="secao">
+  <div class="wrap">
+    <span class="olho">Para quem é</span>
+    <h2>Quem emite em volume<em>precisa de gente, não de site.</em></h2>
+
+    <div class="publicos">
+      <article class="publico">
+        <h3>Empresas</h3>
+        <p>Deslocamento de equipe, visita a cliente, obra, feira e evento. Um canal só para todas as emissões, com registro organizado.</p>
+      </article>
+      <article class="publico">
+        <h3>Produtores e agências de conteúdo</h3>
+        <p>Artista, equipe técnica e cobertura. Roteiros que mudam em cima da hora e precisam de alguém que responda na hora.</p>
+      </article>
+      <article class="publico">
+        <h3>Equipes esportivas</h3>
+        <p>Times, comissão e categorias de base. Emissão para adultos e menores, com a documentação conferida antes do embarque.</p>
+      </article>
+      <article class="publico">
+        <h3>Agências de viagem</h3>
+        <p>Emissão para a sua carteira quando a tarifa não fecha, incluindo trechos internacionais e resgates em milhas.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="secao secao-verde">
+  <div class="wrap">
+    <span class="olho">O que resolvemos</span>
+    <h2>O trabalho chato<em>fica com a gente.</em></h2>
+
+    <div class="lista">
+      <div class="linha">
+        <span class="linha-nome">Cotação no mesmo dia</span>
+        <p>Você manda trecho, data e quantidade de pessoas. Devolvemos várias opções de horário na mesma tarifa, para a equipe escolher.</p>
+      </div>
+      <div class="linha">
+        <span class="linha-nome">Emissão e check-in</span>
+        <p>Emitimos, acompanhamos e fazemos o check-in conforme a cortesia da companhia, entregando os cartões de embarque prontos.</p>
+      </div>
+      <div class="linha">
+        <span class="linha-nome">Tarifa em dinheiro ou em milhas</span>
+        <p>Comparamos as duas rotas de compra e apresentamos a que sai melhor para o trecho, inclusive internacional.</p>
+      </div>
+      <div class="linha">
+        <span class="linha-nome">Grupos</span>
+        <p>Reservas de grupo com controle de nomes, bagagem e prazos, para times e equipes que viajam juntos.</p>
+      </div>
+      <div class="linha">
+        <span class="linha-nome">Uma pessoa, sempre</span>
+        <p>Você fala com quem já conhece a sua operação. Sem fila de atendimento e sem recomeçar a explicação a cada pedido.</p>
+      </div>
+      <div class="linha">
+        <span class="linha-nome">Nota fiscal</span>
+        <p>Emissão de nota para a sua empresa sempre que solicitado.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="secao secao-creme">
+  <div class="wrap">
+    <span class="olho">Como começa</span>
+    <h2>Três passos<em>e a primeira cotação.</em></h2>
+    <div class="publicos">
+      <article class="publico">
+        <h3>01. Cadastro</h3>
+        <p>Você preenche o formulário abaixo com o perfil da sua operação. Leva dois minutos.</p>
+      </article>
+      <article class="publico">
+        <h3>02. Conversa rápida</h3>
+        <p>Entendemos o volume, os trechos habituais e como a sua empresa precisa receber as informações.</p>
+      </article>
+      <article class="publico">
+        <h3>03. Primeira cotação</h3>
+        <p>Sai no mesmo dia útil. A partir daí, você pede direto no WhatsApp ou por e-mail.</p>
+      </article>
+      <article class="publico">
+        <h3>Atenção ao prazo</h3>
+        <p>Cotação corporativa vale no dia da emissão. A tarifa aérea muda de um dia para o outro.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="secao secao-verde" id="cadastro">
+  <div class="wrap form-bloco">
+    <div>
+      <span class="olho">Cadastro corporativo</span>
+      <h2>Manda o trecho.<em>A gente cota.</em></h2>
+      <p style="margin-top:24px">Se já tiver uma viagem em mãos, escreva no último campo. Respondemos no mesmo dia útil.</p>
+      <div class="canais">
+        <a class="canal" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20falar%20com%20o%20Maktub%20Corporativo%20sobre%20emiss%C3%A3o%20de%20passagens." target="_blank" rel="noopener">WhatsApp (21) 97627-5225</a>
+        <a class="canal" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
+      </div>
+      <p class="outras-portas">
+        Viagem de férias ou em família? <a href="/">Maktub Go</a>.<br>
+        Acompanhamento de milhas? <a href="/gestao-de-milhas/">Gestão concierge</a>.
+      </p>
+    </div>
+
+    <!-- FORMULÁRIO CORPORATIVO. Só empresa. Nada de lazer, milhas ou vaga. -->
+    <form id="formCorp" novalidate>
+      <div class="dupla">
+        <div class="campo">
+          <label for="empresa">Empresa ou equipe</label>
+          <input id="empresa" name="empresa" type="text" required>
+        </div>
+        <div class="campo">
+          <label for="responsavel">Responsável</label>
+          <input id="responsavel" name="responsavel" type="text" required>
+        </div>
+      </div>
+      <div class="dupla">
+        <div class="campo">
+          <label for="whats">WhatsApp</label>
+          <input id="whats" name="whatsapp" type="tel" required>
+        </div>
+        <div class="campo">
+          <label for="email">E-mail corporativo</label>
+          <input id="email" name="email" type="email" required>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="segmento">Perfil da operação</label>
+        <select id="segmento" name="segmento">
+          <option>Empresa</option>
+          <option>Produtor ou agência de conteúdo</option>
+          <option>Equipe esportiva</option>
+          <option>Agência de viagem</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="dupla">
+        <div class="campo">
+          <label for="volume">Passagens por mês</label>
+          <select id="volume" name="volume">
+            <option>Até 5</option>
+            <option>De 6 a 20</option>
+            <option>De 21 a 50</option>
+            <option>Mais de 50</option>
+            <option>Varia muito</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="tipo">Tipo de trecho</label>
+          <select id="tipo" name="tipo">
+            <option>Nacional</option>
+            <option>Internacional</option>
+            <option>Os dois</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="demanda">Tem uma viagem agora</label>
+        <textarea id="demanda" name="demanda" rows="3" placeholder="Trecho, datas e quantas pessoas."></textarea>
+      </div>
+      <input type="hidden" id="origem" name="origem">
+      <button class="btn btn-ouro" type="submit">Solicitar cotação</button>
+      <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Respondemos no mesmo dia útil.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap rodape">
+    <span>© 2026 Maktub Go. Alfaiataria de Viagens.</span>
+    <nav>
+      <a href="/">Início</a>
+      <a href="/gestao-de-milhas/">Gestão de milhas</a>
+      <a href="/acesso/">Acesso cliente</a>
+      <a href="/trabalheconosco/">Trabalhe conosco</a>
+    </nav>
+  </div>
+</footer>
+
+<span class="selo-rascunho so-rascunho">Modo rascunho</span>
+
+<script>
+/* ============================================================
+   Tabela própria desta página: leads_corporativo
+   Colunas: empresa, responsavel, whatsapp, email, segmento,
+            volume, tipo, demanda, origem, criado_em
+   Enquanto as constantes ficarem vazias, o envio cai no WhatsApp.
+   ============================================================ */
+const SUPABASE_URL = '';
+const SUPABASE_ANON_KEY = '';
+const TABELA_CORP = 'leads_corporativo';
+
+/* guarda de onde veio o contato, para medir os disparos de prospecção */
+const p = new URLSearchParams(location.search);
+document.getElementById('origem').value =
+  p.get('utm_campaign') || p.get('utm_source') || document.referrer || 'direto';
+
+const form = document.getElementById('formCorp');
+const aviso = document.getElementById('avisoForm');
+
+form.addEventListener('submit', async function(e){
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(form).entries());
+
+  if(!d.empresa || !d.responsavel || !d.whatsapp || !d.email){
+    aviso.textContent = 'Preencha empresa, responsável, WhatsApp e e-mail para continuar.';
+    return;
+  }
+
+  if(SUPABASE_URL && SUPABASE_ANON_KEY){
+    aviso.textContent = 'Enviando...';
+    try{
+      const r = await fetch(SUPABASE_URL + '/rest/v1/' + TABELA_CORP, {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey':SUPABASE_ANON_KEY,
+          'Authorization':'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer':'return=minimal'
+        },
+        body: JSON.stringify(d)
+      });
+      if(!r.ok) throw new Error(r.status);
+      form.reset();
+      aviso.textContent = 'Recebemos seu cadastro. Respondemos no mesmo dia útil.';
+      return;
+    }catch(err){
+      aviso.textContent = 'Não foi possível enviar agora. Abrindo o WhatsApp.';
+    }
+  }
+
+  const texto = 'Olá! Quero falar com o Maktub Corporativo.'
+    + '\nEmpresa: ' + d.empresa
+    + '\nResponsável: ' + d.responsavel
+    + '\nPerfil: ' + d.segmento
+    + '\nVolume: ' + d.volume
+    + '\nTrechos: ' + d.tipo
+    + (d.demanda ? '\nViagem: ' + d.demanda : '');
+  window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto), '_blank');
+});
+
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 30);
+}, {passive:true});
+</script>
+</body>
+</html>
