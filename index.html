@@ -1,383 +1,1063 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<!--
+  ============================================================
+  MAKTUB GO · HOME v5
+  ============================================================
+  INTERRUPTOR DE PUBLICAÇÃO
+
+  No atributo data-modo da tag <html> logo abaixo:
+
+    "rascunho"   mostra tudo, inclusive o que está pendente,
+                 marcado em dourado tracejado. É para você revisar.
+
+    "publicado"  esconde automaticamente todo bloco pendente.
+                 Nenhum visitante vê buraco, número zerado ou
+                 texto de espera. O site fica menor e correto.
+
+  Troque uma palavra e o site inteiro se ajusta.
+  Conforme os depoimentos e as fotos chegarem, você troca o
+  conteúdo e o bloco volta a aparecer sozinho.
+  ============================================================
+-->
+<html lang="pt-BR" data-modo="rascunho">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  <meta name="description" content="Maktub Go, Alfaiataria de Viagens. Planejamento premium sob medida e Gestão de Milhas Concierge, com exclusividade e cuidado em cada detalhe." />
-  <meta name="keywords" content="agência de viagens, viagens premium, viagens sob medida, consultoria de viagens, alfaiataria de viagens" />
-  <meta property="og:title" content="Maktub Go | Alfaiataria de Viagens" />
-  <meta property="og:description" content="Seu destino começa aqui. Planejamento premium, sob medida, com exclusividade." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.maktubgo.com.br/" />
-  <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:locale" content="pt_BR" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" href="/ativos/app-icon-192.png" />
-  <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
-  <meta name="theme-color" content="#1a3826" />
-  <title>Maktub Go | Alfaiataria de Viagens</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    :root{--green:#1a3826;--gold:#8a6520;--gold-light:#a07830;--gold-muted:rgba(138,101,32,.10);--cream:#f9f6f1;--white:#fff;--text:#2c2c2c;--text-mid:#3d3d3d;--text-muted:#5c5c5c;--border:rgba(26,56,38,.09);--border-gold:rgba(138,101,32,.45)}
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth}
-    body{background:var(--white);color:var(--text);font-family:'Jost',sans-serif;font-size:17px;font-weight:400;line-height:1.8;overflow-x:hidden}
-    a{color:inherit;text-decoration:none}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
-    .reveal{opacity:0}
-    .reveal.visible{animation:fadeUp .9s cubic-bezier(.16,1,.3,1) forwards}
-    .d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}.d4{animation-delay:.35s}.d5{animation-delay:.45s}.d6{animation-delay:.55s}
-    .container{max-width:900px;margin:0 auto;padding:0 36px}
-    .container--wide{max-width:1140px;margin:0 auto;padding:0 36px}
-    .label{font-family:'Jost',sans-serif;font-size:12px;font-weight:400;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);display:block}
-    h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:400;line-height:1.1;color:var(--green)}
-    .italic-gold{font-style:italic;color:var(--gold)}
-    .divider{width:36px;height:1px;background:var(--gold);opacity:.55;margin:18px 0 36px}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maktub Go | Alfaiataria de Viagens</title>
+<meta name="description" content="Alfaiataria de viagens premium. Rota sob medida, voos, hotelaria e gestão de milhas concierge, com um time inteiro acompanhando cada etapa.">
+<meta name="theme-color" content="#1a3826">
+<link rel="canonical" href="https://www.maktubgo.com.br/">
+<link rel="icon" href="/ativos/simbolo-verde.png">
+<link rel="apple-touch-icon" href="/ativos/simbolo-verde.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Maktub Go">
+<meta property="og:url" content="https://www.maktubgo.com.br/">
+<meta property="og:title" content="Maktub Go | Alfaiataria de Viagens">
+<meta property="og:description" content="Seu destino começa aqui. Planejamento premium, sob medida, com exclusividade.">
+<meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 
-    /* NAV */
-    nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
-    nav.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07)}
-    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1140px;margin:0 auto;padding:0 36px}
-    .nav-logo{display:flex;align-items:center;gap:12px}
-    .nav-logo-img{width:42px;height:32px;object-fit:contain}
-    .nav-links a.nav-gold{color:var(--gold);font-weight:500}
-    .s-link{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:500}
-    .s-link:hover{color:var(--green)}
-    .footer-brand-logo{width:34px;height:auto;opacity:.85}
-    .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
-    .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted)}
-    .nav-links{display:flex;align-items:center;gap:26px;list-style:none}
-    .nav-links a{white-space:nowrap}
-    @media(max-width:1240px){.nav-links{gap:20px}.nav-links a{letter-spacing:.12em!important}.nav-hide{display:none}}
-    @media(max-width:1024px){
-      .nav-links{display:none}
-      .nav-links.open{display:flex;flex-direction:column;align-items:flex-start;position:fixed;top:68px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:24px 36px;gap:18px;z-index:999}
-      .nav-links.open .nav-hide{display:list-item}
-      .nav-burger{display:flex}
-    }
-    .nav-links a{font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
-    .nav-links a:hover{color:var(--green)}
-    .nav-cta{border:1px solid var(--border-gold)!important;padding:9px 20px!important;color:var(--green)!important;transition:background .25s,border-color .25s!important;font-weight:500!important}
-    .nav-cta:hover{background:var(--gold-muted)!important;border-color:var(--gold)!important}
-    .nav-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
-    .nav-burger span{display:block;width:22px;height:1.5px;background:var(--green)}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">
 
-    /* HERO */
-    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:130px 36px 100px;position:relative;overflow:hidden}
-    .hero::before{content:'';position:absolute;top:-30%;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(ellipse,rgba(201,169,110,.06) 0%,transparent 70%);pointer-events:none}
-    .hero .label{margin-bottom:28px}
-    .hero h1{font-size:clamp(52px,9vw,96px);letter-spacing:-.01em}
-    .hero h1 .italic-gold{display:block}
-    .hero-desc{max-width:580px;margin:32px auto 52px;font-family:'Cormorant Garamond',serif;font-style:normal;font-size:clamp(19px,2.5vw,24px);color:#1a1a1a;font-weight:600;line-height:1.75}
-    .hero-cta{display:inline-block;padding:17px 52px;border:1px solid var(--gold);font-size:12px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--green);transition:background .3s,color .3s,border-color .3s}
-    .hero-cta:hover{background:var(--green);color:var(--white);border-color:var(--green)}
-    .hero-scroll{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#6b6b6b;display:flex;flex-direction:column;align-items:center;gap:10px}
-    .hero-scroll::after{content:'';display:block;width:1px;height:40px;background:var(--gold);opacity:.45;animation:line 2s ease-in-out infinite}
-    @keyframes line{0%,100%{opacity:.2;transform:scaleY(.5)}50%{opacity:.6;transform:scaleY(1)}}
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"TravelAgency",
+  "name":"Maktub Go",
+  "alternateName":"Maktub Go Alfaiataria de Viagens",
+  "url":"https://www.maktubgo.com.br/",
+  "logo":"https://www.maktubgo.com.br/ativos/simbolo-verde.png",
+  "image":"https://www.maktubgo.com.br/ativos/og-maktubgo.jpg",
+  "description":"Alfaiataria de viagens premium. Rota sob medida, voos, hotelaria e gestão de milhas concierge.",
+  "telephone":"+55-21-97627-5225",
+  "email":"contato@maktubgo.com.br",
+  "areaServed":"BR",
+  "priceRange":"$$$",
+  "sameAs":["https://www.instagram.com/maktubgo_"],
+  "makesOffer":[
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Planejamento completo de viagem"}},
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Gestão de milhas concierge"}},
+    {"@type":"Offer","itemOffered":{"@type":"Service","name":"Emissão corporativa de passagens"}}
+  ]
+}
+</script>
 
-    section{padding:100px 0}
-    section+section{border-top:1px solid var(--border)}
+<style>
+/* ============================================================
+   1. TOKENS
+   ============================================================ */
+:root{
+  --verde:#1a3826;
+  --verde-fundo:#14301f;
+  --verde-claro:#25503a;
+  --dourado:#8a6520;
+  --dourado-claro:#c9a96e;
+  --creme:#f9f6f1;
+  --creme-fundo:#f2ece1;
+  --tinta:#2b2b26;
+  --tinta-suave:rgba(43,43,38,.74);
+  --linha:rgba(26,56,38,.13);
+  --linha-clara:rgba(249,246,241,.15);
 
-    /* QUEM SOMOS */
-    .quem-somos{background:var(--cream)}
-    .quem-somos h2{font-size:clamp(38px,6vw,64px)}
-    .quem-somos p{font-size:17px;color:#2c2c2c;max-width:640px;margin-top:24px}
-    .quem-somos strong{color:var(--text);font-weight:500}
-    .quote-block{margin-top:52px;padding:36px 44px;border-left:2px solid var(--gold);background:var(--white)}
-    .quote-block p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(20px,2.5vw,26px);color:#3d3d3d;line-height:1.65;margin:0}
-    .quote-block cite{display:block;margin-top:18px;font-size:12px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-style:normal}
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;
 
-    /* SERVIÇOS */
-    .servicos h2{font-size:clamp(38px,5.5vw,60px)}
-    .servicos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:52px;background:var(--border)}
-    .servico-card{background:var(--white);padding:36px 32px;transition:background .3s}
-    .servico-card:hover{background:var(--cream)}
-    .s-icon{width:36px;height:36px;margin-bottom:20px}
-    .s-icon svg{width:100%;height:100%;stroke:var(--gold);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
-    .servico-card h3{font-family:'Jost',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
-    .servico-card p{font-size:16px;color:#2c2c2c;line-height:1.7}
+  /* escala tipográfica */
+  --t-xs:.68rem;
+  --t-sm:.88rem;
+  --t-base:1rem;
+  --t-md:clamp(1.08rem,1.6vw,1.24rem);
+  --t-lg:clamp(1.3rem,2.1vw,1.55rem);
+  --t-xl:clamp(1.95rem,4vw,3rem);
+  --t-2xl:clamp(2.8rem,6.6vw,5rem);
 
-    /* ESSÊNCIA */
-    .essencia{background:var(--green)}
-    .essencia .label{color:var(--gold)}
-    .essencia h2{font-size:clamp(38px,6vw,64px);color:var(--white)}
-    .essencia p{font-size:17px;color:rgba(249,246,241,.88);max-width:640px;margin-top:24px}
-    .essencia strong{color:rgba(249,246,241,.9);font-weight:500}
-    .manifesto-block{margin-top:56px;padding-top:56px;border-top:1px solid rgba(201,169,110,.18);text-align:center}
-    .manifesto-block .label{margin-bottom:32px}
-    .manifesto-block p{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,2.5vw,26px);color:rgba(249,246,241,.85);max-width:680px;margin:0 auto 18px;line-height:1.7}
-    .manifesto-block .gold{color:var(--gold-light);font-style:italic}
-    .manifesto-footer{margin-top:52px;font-size:12px;font-weight:400;letter-spacing:.26em;text-transform:uppercase;color:rgba(160,120,48,.7)}
+  /* ritmo vertical */
+  --e1:8px; --e2:16px; --e3:26px; --e4:42px; --e5:68px; --e6:clamp(78px,9vw,118px);
+  --largura:1180px;
+}
 
-    /* PMV */
-    .pmv{background:var(--cream)}
-    .pmv h2{font-size:clamp(38px,5.5vw,60px)}
-    .pmv-items{margin-top:52px}
-    .pmv-item{padding:36px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 1fr;gap:32px;align-items:start}
-    .pmv-item:first-child{border-top:1px solid var(--border)}
-    .pmv-num{font-size:13px;letter-spacing:.14em;color:var(--gold);margin-bottom:6px}
-    .pmv-cat{font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d}
-    .pmv-content h3{font-size:clamp(22px,3vw,30px);color:var(--green);margin-bottom:10px}
-    .pmv-content p{font-size:17px;color:#2c2c2c;line-height:1.75}
+/* ============================================================
+   2. BASE
+   ============================================================ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--creme);color:var(--tinta);
+  font-family:var(--sans);font-weight:300;
+  font-size:var(--t-base);line-height:1.72;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block;height:auto}
+a{color:inherit}
+button{font:inherit}
+::selection{background:var(--dourado-claro);color:var(--verde)}
 
-    /* VALORES */
-    .valores{background:var(--white)}
-    .valores h2{font-size:clamp(38px,5.5vw,60px)}
-    .valores-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:52px;background:var(--border)}
-    .valor-item{background:var(--white);padding:32px 28px;transition:background .25s}
-    .valor-item:hover{background:var(--cream)}
-    .valor-sym{font-size:22px;color:var(--gold);margin-bottom:14px}
-    .valor-title{font-family:'Jost',sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
-    .valor-item p{font-size:15px;color:#2c2c2c;line-height:1.7}
+.wrap{max-width:var(--largura);margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
+.secao{padding-block:var(--e6)}
+.secao-verde{background:var(--verde);color:rgba(249,246,241,.8)}
+.secao-creme{background:var(--creme-fundo)}
 
-    /* TIME */
-    .time{background:var(--cream)}
-    .time h2{font-size:clamp(38px,5.5vw,60px)}
-    .time-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:52px;background:var(--border)}
-    .time-card{background:var(--white);padding:52px 44px}
-    .time-initials{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold);margin-bottom:24px}
-    .time-name{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,3vw,36px);color:var(--green);margin-bottom:8px}
-    .time-role{font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:24px}
-    .time-bio{font-size:16px;color:#2c2c2c;line-height:1.75}
-    .time-bio+.time-bio{margin-top:12px}
+h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.1;letter-spacing:.004em;color:var(--verde);text-wrap:balance}
+.secao-verde :is(h1,h2,h3){color:var(--creme)}
+h2{font-size:var(--t-xl)}
+h2 em{font-style:italic;display:block;color:var(--dourado)}
+.secao-verde h2 em{color:var(--dourado-claro)}
+h3{font-size:var(--t-lg)}
+p{max-width:62ch;text-wrap:pretty}
+.secao-verde p{color:rgba(249,246,241,.8)}
+.intro{margin-top:var(--e3);font-size:var(--t-md);line-height:1.68}
 
-    /* CONTATO */
-    .contato{background:var(--green);text-align:center;padding:120px 36px}
-    .contato .label{color:var(--gold);margin-bottom:24px}
-    .contato h2{font-size:clamp(44px,7vw,80px);color:var(--white)}
-    .contato-desc{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(20px,2.5vw,25px);color:rgba(249,246,241,.82);max-width:500px;margin:22px auto 48px;line-height:1.65}
-    .contato-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-    .btn-p{display:inline-flex;align-items:center;gap:10px;padding:18px 48px;background:var(--gold);color:var(--green);font-size:13px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;transition:opacity .25s}
-    .btn-p:hover{opacity:.88}
-    .btn-s{display:inline-flex;align-items:center;gap:10px;padding:18px 48px;border:1px solid rgba(201,169,110,.35);color:rgba(249,246,241,.9);font-size:13px;font-weight:400;letter-spacing:.24em;text-transform:uppercase;transition:border-color .25s,color .25s}
-    .btn-s:hover{border-color:var(--gold);color:#fff}
+.olho{
+  display:block;margin-bottom:var(--e3);
+  font-size:var(--t-xs);font-weight:400;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--dourado);
+}
+.secao-verde .olho{color:var(--dourado-claro)}
 
-    /* FOOTER */
-    footer{background:var(--green);border-top:1px solid rgba(201,169,110,.12);padding:48px 36px}
-    .footer-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
-    .footer-brand{display:flex;align-items:center;gap:10px}
-    .footer-brand-icon{width:30px;height:30px;border:1px solid rgba(201,169,110,.25);display:flex;align-items:center;justify-content:center}
-    .footer-brand-text{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.65)}
-    .footer-links{display:flex;gap:14px 24px;list-style:none;flex-wrap:wrap}
-    .footer-links a{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,246,241,.55);transition:color .25s}
-    .footer-links a:hover{color:var(--gold)}
-    .footer-copy{font-size:12px;color:rgba(249,246,241,.4)}
+/* acessibilidade */
+.pular{
+  position:absolute;left:-9999px;top:0;z-index:999;
+  background:var(--verde);color:var(--creme);padding:14px 22px;font-size:var(--t-sm);
+}
+.pular:focus{left:12px;top:12px}
+:focus-visible{outline:2px solid var(--dourado);outline-offset:3px;border-radius:2px}
+.secao-verde :focus-visible{outline-color:var(--dourado-claro)}
+.oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 
-    /* WA */
-    .wa-float{position:fixed;bottom:28px;right:28px;z-index:999;width:52px;height:52px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.35);transition:transform .25s,box-shadow .25s}
-    .wa-float:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(37,211,102,.45)}
-    .wa-float svg{width:26px;height:26px;fill:#fff}
+/* ============================================================
+   3. INTERRUPTOR RASCUNHO / PUBLICADO
+   ============================================================ */
+html[data-modo="publicado"] .so-rascunho{display:none !important}
+.pend{color:var(--dourado);border-bottom:1px dashed var(--dourado-claro)}
+.secao-verde .pend{color:var(--dourado-claro)}
+.selo-rascunho{
+  position:fixed;left:0;bottom:0;z-index:200;
+  background:var(--dourado);color:var(--creme);
+  font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:7px 14px;
+}
 
-    @media(max-width:768px){
-      .nav-links{display:none}
-      .nav-links.open{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:24px 36px;gap:18px;z-index:999}
-      .nav-burger{display:flex}
-      .servicos-grid{grid-template-columns:1fr}
-      .valores-grid{grid-template-columns:1fr 1fr}
-      .time-grid{grid-template-columns:1fr}
-      .pmv-item{grid-template-columns:1fr;gap:6px}
-      .container,.container--wide{padding:0 22px}
-      section{padding:72px 0}
-      .quote-block{padding:28px}
-      .time-card{padding:40px 28px}
-    }
-    @media(max-width:480px){
-      .valores-grid{grid-template-columns:1fr}
-      .hero{padding:120px 22px 80px}
-      .contato{padding:80px 22px}
-      footer{padding:36px 22px}
-      .footer-inner{flex-direction:column;align-items:flex-start;gap:16px}
-    }
-  </style>
+/* ============================================================
+   4. BOTÕES E LINKS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:52px;padding:0 40px;
+  font-size:.71rem;letter-spacing:.19em;text-transform:uppercase;
+  text-decoration:none;cursor:pointer;text-align:center;
+  border:1px solid var(--verde);color:var(--verde);background:transparent;
+  transition:background .3s ease,color .3s ease,border-color .3s ease;
+}
+.btn:hover{background:var(--verde);color:var(--creme)}
+.btn-cheio{background:var(--verde);color:var(--creme)}
+.btn-cheio:hover{background:var(--dourado);border-color:var(--dourado)}
+.btn-claro{border-color:rgba(249,246,241,.55);color:var(--creme)}
+.btn-claro:hover{background:var(--creme);color:var(--verde);border-color:var(--creme)}
+.btn-ouro{background:var(--dourado);border-color:var(--dourado);color:var(--creme)}
+.btn-ouro:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
+.acoes{display:flex;flex-wrap:wrap;gap:14px;margin-top:var(--e4)}
+
+.link-texto{
+  display:inline-block;align-self:flex-start;
+  font-size:var(--t-xs);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dourado);text-decoration:none;padding-block:6px;
+  border-bottom:1px solid rgba(138,101,32,.3);transition:border-color .3s ease;
+}
+.link-texto:hover{border-bottom-color:var(--dourado)}
+
+/* ============================================================
+   5. CABEÇALHO
+   ============================================================ */
+header{
+  position:fixed;inset:0 0 auto;z-index:100;
+  background:rgba(249,246,241,.93);backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid transparent;transition:border-color .3s ease;
+}
+header.rolou{border-bottom-color:var(--linha)}
+.barra{display:flex;align-items:center;justify-content:space-between;gap:20px;height:82px}
+.marca{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
+.marca img{width:32px}
+.marca-nome{font-size:.75rem;letter-spacing:.19em;color:var(--verde);line-height:1.45}
+.marca-nome span{display:block;font-size:.53rem;letter-spacing:.16em;color:var(--dourado)}
+nav ul{display:flex;align-items:center;gap:clamp(16px,2.2vw,30px);list-style:none}
+nav a{
+  display:inline-block;padding-block:10px;
+  font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;
+  text-decoration:none;color:var(--verde);opacity:.76;transition:opacity .25s ease;
+}
+nav a:hover{opacity:1}
+nav a.destaque{
+  opacity:1;border:1px solid var(--verde);padding:12px 22px;
+  transition:background .3s ease,color .3s ease;
+}
+nav a.destaque:hover{background:var(--verde);color:var(--creme)}
+.menu-btn{
+  display:none;width:46px;height:46px;background:none;border:0;
+  color:var(--verde);cursor:pointer;align-items:center;justify-content:center;
+}
+.menu-btn svg{width:22px;height:22px}
+
+/* ============================================================
+   6. HERO
+   ============================================================ */
+.hero{
+  position:relative;display:flex;align-items:center;
+  min-height:clamp(600px,94svh,920px);
+  padding-block:150px var(--e6);overflow:hidden;
+}
+/* a foto entra por cima do gradiente da marca.
+   se o arquivo ainda não existir, o gradiente sustenta a tela sozinho. */
+.hero-fundo{
+  position:absolute;inset:0;
+  background-image:url('/ativos/hero.jpg'),
+    radial-gradient(120% 90% at 78% 18%, rgba(201,169,110,.28) 0%, transparent 58%),
+    linear-gradient(160deg, var(--creme-fundo) 0%, #e8dfcd 52%, #ded2b9 100%);
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+.hero-fundo::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(96deg,rgba(249,246,241,.97) 0%,rgba(249,246,241,.88) 44%,rgba(249,246,241,.3) 100%);
+}
+.hero .wrap{position:relative;z-index:2}
+.hero-texto{max-width:660px}
+.hero h1{font-size:var(--t-2xl);margin:var(--e2) 0 var(--e3)}
+.hero h1 em{font-style:italic;display:block;color:var(--dourado)}
+.hero p{
+  font-family:var(--serif);font-size:clamp(1.16rem,2.1vw,1.44rem);
+  line-height:1.6;max-width:30em;color:var(--tinta);
+}
+.descer{
+  position:absolute;bottom:38px;left:50%;transform:translateX(-50%);z-index:2;
+  width:1px;height:62px;background:linear-gradient(180deg,transparent,rgba(201,169,110,.85));
+}
+.descer::after{
+  content:'';position:absolute;left:-2px;top:0;width:5px;height:5px;border-radius:50%;
+  background:var(--dourado);animation:desce 2.8s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes desce{0%{top:0;opacity:0}22%{opacity:1}72%{opacity:1}100%{top:58px;opacity:0}}
+
+/* ============================================================
+   7. FAIXA DE PROVA
+   ============================================================ */
+.prova{background:var(--verde);color:var(--creme)}
+.prova-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.prova-item{padding:var(--e5) var(--e3);text-align:center;border-right:1px solid var(--linha-clara)}
+.prova-item:last-child{border-right:0}
+.prova-num{display:block;font-family:var(--serif);font-size:clamp(2.3rem,3.6vw,2.9rem);line-height:1;color:var(--dourado-claro)}
+.prova-rot{display:block;margin-top:var(--e2);font-size:.65rem;letter-spacing:.17em;text-transform:uppercase;color:rgba(249,246,241,.7)}
+
+/* ============================================================
+   8. BLOCOS DE IMAGEM COM QUEDA ELEGANTE
+   ============================================================ */
+.figura{
+  position:relative;overflow:hidden;
+  background-color:var(--verde);
+  background-image:radial-gradient(90% 80% at 30% 20%, rgba(201,169,110,.2) 0%, transparent 60%),
+                   linear-gradient(150deg,var(--verde-claro),var(--verde-fundo));
+  background-size:cover;background-position:center;
+}
+.figura::before{
+  content:'';position:absolute;inset:0;
+  background:url('/ativos/simbolo-creme.png') center/76px no-repeat;
+  opacity:.09;
+}
+.figura[style*="ativos"]::before{display:none}
+.figura::after{content:'';position:absolute;inset:14px;border:1px solid rgba(201,169,110,.45);pointer-events:none}
+.figura-retrato{aspect-ratio:4/5}
+.figura-paisagem{aspect-ratio:3/2}
+.figura-pessoa{aspect-ratio:3/4}
+.figura-nota{
+  position:absolute;inset-inline:0;bottom:0;padding:10px;
+  font-size:.6rem;letter-spacing:.1em;text-align:center;
+  color:var(--dourado-claro);background:rgba(20,48,31,.82);
+}
+.monograma{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--serif);font-size:2.6rem;letter-spacing:.06em;color:rgba(201,169,110,.72);
+}
+
+/* ============================================================
+   9. ALFAIATARIA
+   ============================================================ */
+.duas{display:grid;grid-template-columns:1fr .82fr;gap:clamp(40px,6vw,86px);align-items:center}
+.citacao{
+  margin-top:var(--e4);padding-left:26px;max-width:36ch;
+  border-left:1px solid var(--dourado-claro);
+  font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.5;color:var(--verde);
+}
+
+/* ============================================================
+   10. PRATELEIRA
+   ============================================================ */
+.prateleira{margin-top:var(--e5);border-top:1px solid var(--linha)}
+.etapa{
+  display:grid;grid-template-columns:58px 236px 1fr;gap:var(--e3);align-items:baseline;
+  padding-block:var(--e3);border-bottom:1px solid var(--linha);
+}
+.etapa-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
+.etapa-nome{font-family:var(--serif);font-size:1.5rem;color:var(--verde);line-height:1.2}
+.etapa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:54ch}
+.nota-prateleira{
+  margin-top:var(--e4);max-width:58ch;
+  font-family:var(--serif);font-style:italic;font-size:1.14rem;color:var(--verde);
+}
+
+/* ============================================================
+   11. SERVIÇOS
+   ============================================================ */
+.servicos{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:1px;
+  margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
+}
+.servico{background:var(--creme);padding:46px 34px;display:flex;flex-direction:column;gap:var(--e2)}
+.servico svg{width:25px;height:25px;color:var(--dourado);flex-shrink:0}
+.servico p{font-size:var(--t-sm);color:var(--tinta-suave);flex:1;max-width:none}
+.servico-destaque{background:var(--verde);position:relative}
+.servico-destaque :is(h3,svg){color:var(--creme)}
+.servico-destaque p{color:rgba(249,246,241,.8)}
+.servico-destaque .link-texto{color:var(--dourado-claro);border-bottom-color:rgba(201,169,110,.38)}
+.selo{
+  position:absolute;top:0;right:0;padding:7px 13px;
+  background:var(--dourado);color:var(--creme);
+  font-size:.57rem;letter-spacing:.16em;text-transform:uppercase;
+}
+
+/* ============================================================
+   12. COMPARATIVO
+   ============================================================ */
+.comparativo{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:var(--e5);background:var(--linha-clara)}
+.coluna{background:var(--verde);padding:42px 36px}
+.coluna.nossa{background:var(--verde-fundo)}
+.coluna.nossa h3{color:var(--dourado-claro)}
+.coluna ul{list-style:none;margin-top:var(--e3)}
+.coluna li{
+  position:relative;padding:14px 0 14px 26px;font-size:var(--t-sm);
+  color:rgba(249,246,241,.74);border-bottom:1px solid rgba(249,246,241,.08);
+}
+.coluna li:last-child{border-bottom:0}
+.coluna li::before{content:'·';position:absolute;left:8px;top:11px;font-size:1.3rem;color:rgba(249,246,241,.38)}
+.coluna.nossa li{color:var(--creme)}
+.coluna.nossa li::before{content:'✦';left:4px;top:15px;font-size:.66rem;color:var(--dourado-claro)}
+.objecao{
+  margin-top:var(--e5);padding:36px;max-width:72ch;
+  border:1px solid rgba(201,169,110,.38);
+  font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--creme);
+}
+
+/* ============================================================
+   13. CASOS E DEPOIMENTOS
+   ============================================================ */
+.casos{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:30px;margin-top:var(--e5)}
+.caso{background:var(--creme);border:1px solid var(--linha)}
+.caso-corpo{padding:28px}
+.caso-rot{display:block;margin-bottom:12px;font-size:.63rem;letter-spacing:.17em;text-transform:uppercase;color:var(--dourado)}
+.caso h3{font-size:1.26rem;margin-bottom:10px}
+.caso p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
+
+.depoimentos{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1px;
+  margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
+}
+.depo{background:var(--creme);padding:44px 40px}
+.depo blockquote{font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--verde)}
+.depo cite{
+  display:block;margin-top:var(--e3);font-style:normal;
+  font-size:var(--t-xs);letter-spacing:.15em;text-transform:uppercase;color:var(--dourado);
+}
+
+/* ============================================================
+   14. MILHAS
+   ============================================================ */
+.milhas{display:grid;grid-template-columns:1.05fr .9fr;gap:clamp(40px,6vw,78px);align-items:center}
+.painel{border:1px solid rgba(201,169,110,.32);padding:32px;background:rgba(0,0,0,.14)}
+.painel-topo{margin-bottom:var(--e3);font-size:.61rem;letter-spacing:.14em;color:rgba(249,246,241,.48)}
+.painel-linha{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-block:14px;border-bottom:1px solid rgba(249,246,241,.09)}
+.painel-linha:last-child{border-bottom:0}
+.painel-linha span:first-child{font-size:var(--t-sm);color:rgba(249,246,241,.68)}
+.painel-linha span:last-child{font-family:var(--serif);font-size:1.45rem;color:var(--dourado-claro)}
+
+/* ============================================================
+   15. TIME
+   ============================================================ */
+.time{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:30px;margin-top:var(--e5)}
+.pessoa .figura{margin-bottom:var(--e3)}
+.pessoa h3{font-size:1.22rem}
+.pessoa-cargo{display:block;margin:6px 0 12px;font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dourado)}
+.pessoa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
+
+/* ============================================================
+   16. CONTATO
+   ============================================================ */
+.contato{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(40px,6vw,78px);align-items:start}
+form{display:grid;gap:var(--e3)}
+.campo{display:grid;gap:7px}
+label{font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-claro)}
+input,select,textarea{
+  font-family:var(--sans);font-size:.95rem;font-weight:300;color:var(--creme);
+  background:transparent;border:0;border-bottom:1px solid rgba(249,246,241,.28);
+  padding:11px 0;min-height:44px;border-radius:0;
+}
+input::placeholder,textarea::placeholder{color:rgba(249,246,241,.35)}
+input:focus,select:focus,textarea:focus{outline:0;border-bottom-color:var(--dourado-claro)}
+select{appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23c9a96e' stroke-width='1.2'/%3E%3C/svg%3E") right center/11px no-repeat}
+select option{color:var(--tinta);background:var(--creme)}
+.dupla{display:grid;grid-template-columns:1fr 1fr;gap:var(--e3)}
+form .btn{justify-self:start;margin-top:var(--e1)}
+.aviso-form{font-size:.79rem;color:rgba(249,246,241,.58);max-width:44ch}
+.aviso-form[data-estado="erro"]{color:#e8b4a0}
+.aviso-form[data-estado="ok"]{color:var(--dourado-claro)}
+.canais{display:grid;gap:12px;margin-top:var(--e4);justify-items:start}
+.canal{font-size:var(--t-sm);color:rgba(249,246,241,.85);text-decoration:none;border-bottom:1px solid transparent;padding-block:4px}
+.canal:hover{border-bottom-color:var(--dourado-claro)}
+.outras-portas{
+  margin-top:var(--e4);padding-top:var(--e3);max-width:none;
+  border-top:1px solid var(--linha-clara);
+  font-size:var(--t-sm);line-height:2.1;color:rgba(249,246,241,.58);
+}
+.outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.32)}
+.outras-portas a:hover{border-bottom-color:var(--dourado-claro)}
+
+/* ============================================================
+   17. MANIFESTO E RODAPÉ
+   ============================================================ */
+.manifesto{background:var(--creme-fundo);text-align:center;padding-block:var(--e6)}
+.manifesto p{
+  margin:0 auto var(--e3);max-width:22ch;
+  font-family:var(--serif);font-style:italic;font-size:clamp(1.34rem,2.7vw,1.95rem);
+  line-height:1.55;color:var(--verde);
+}
+.manifesto span{font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado)}
+
+footer{background:var(--verde);color:rgba(249,246,241,.66);padding:var(--e5) 0 30px}
+.rodape-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:clamp(34px,5vw,56px)}
+.rodape-marca img{width:40px;margin-bottom:var(--e2)}
+.rodape-marca p{font-size:var(--t-sm);max-width:32ch;color:rgba(249,246,241,.62)}
+footer h2{font-family:var(--sans);font-size:.64rem;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:var(--dourado-claro);margin-bottom:var(--e2)}
+footer ul{list-style:none;display:grid;gap:9px}
+footer a{font-size:var(--t-sm);text-decoration:none;color:rgba(249,246,241,.68);padding-block:3px;display:inline-block}
+footer a:hover{color:var(--creme)}
+.rodape-base{
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  margin-top:var(--e5);padding-top:var(--e3);
+  border-top:1px solid var(--linha-clara);
+  font-size:.75rem;color:rgba(249,246,241,.46);
+}
+
+.zap{
+  position:fixed;right:22px;bottom:22px;z-index:90;
+  width:56px;height:56px;border-radius:50%;background:#25d366;
+  display:grid;place-items:center;box-shadow:0 5px 20px rgba(0,0,0,.22);
+}
+.zap svg{width:27px;height:27px;fill:#fff}
+
+/* ============================================================
+   18. TELAS MENORES
+   ============================================================ */
+@media (max-width:1000px){
+  .menu-btn{display:flex}
+  nav{
+    position:absolute;inset:82px 0 auto;display:none;
+    background:var(--creme);border-bottom:1px solid var(--linha);
+    box-shadow:0 18px 30px rgba(26,56,38,.07);
+  }
+  nav[data-aberto="true"]{display:block}
+  nav ul{flex-direction:column;align-items:stretch;gap:0;padding:6px clamp(22px,5vw,36px) 24px}
+  nav li{border-bottom:1px solid var(--linha)}
+  nav li:last-child{border-bottom:0;padding-top:16px}
+  nav a{display:block;padding-block:17px;font-size:.73rem}
+  nav a.destaque{text-align:center;padding:16px}
+  .duas,.milhas,.contato{grid-template-columns:1fr}
+  .comparativo{grid-template-columns:1fr}
+  .duas .figura{order:-1;max-height:56vh}
+  .hero{min-height:auto;padding-block:130px var(--e6)}
+  .hero-fundo::after{background:linear-gradient(175deg,rgba(249,246,241,.95) 0%,rgba(249,246,241,.84) 70%,rgba(249,246,241,.78) 100%)}
+  .descer{display:none}
+  .etapa{grid-template-columns:40px 1fr;gap:6px var(--e2)}
+  .etapa p{grid-column:2}
+  .rodape-grid{grid-template-columns:1fr 1fr}
+  .rodape-marca{grid-column:1/-1}
+}
+@media (max-width:560px){
+  .dupla{grid-template-columns:1fr}
+  .servico{padding:38px 28px}
+  .depo{padding:36px 28px}
+  .coluna{padding:34px 26px}
+  .objecao{padding:28px}
+  .prova-item{border-right:0;border-bottom:1px solid var(--linha-clara)}
+  .rodape-grid{grid-template-columns:1fr}
+  .zap{right:16px;bottom:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+}
+@media print{
+  header,.zap,.descer,nav,form{display:none}
+  body{background:#fff;color:#000}
+}
+</style>
 </head>
 <body>
 
-<nav id="navbar">
-  <div class="nav-inner">
-    <a class="nav-logo" href="#inicio">
-      <img src="/ativos/simbolo-verde.png" alt="Maktub Go" class="nav-logo-img" />
-      <div class="nav-logo-text">
-        <span class="nav-logo-name">Maktub Go</span>
-        <span class="nav-logo-sub">Alfaiataria de Viagens</span>
-      </div>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header>
+  <div class="wrap barra">
+    <a class="marca" href="/" aria-label="Maktub Go, página inicial">
+      <img src="/ativos/simbolo-verde.png" alt="" width="32" height="32">
+      <span class="marca-nome">MAKTUB GO<span>ALFAIATARIA DE VIAGENS</span></span>
     </a>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="#quem-somos">Quem Somos</a></li>
-      <li><a href="#servicos">Serviços</a></li>
-      <li><a href="/gestao-de-milhas/" class="nav-gold">Gestão de Milhas</a></li>
-      <li class="nav-hide"><a href="#time">O Time</a></li>
-      <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
-      <li><a href="/acesso/" class="nav-cta">Acesso Cliente</a></li>
-    </ul>
-    <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    <button class="menu-btn" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <nav id="menu" aria-label="Principal">
+      <ul>
+        <li><a href="#alfaiataria">Quem somos</a></li>
+        <li><a href="#prateleira">Como trabalhamos</a></li>
+        <li><a href="#viagens">Viagens</a></li>
+        <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+        <li><a href="/corporativo/">Corporativo</a></li>
+        <li><a href="/acesso/" class="destaque">Acesso cliente</a></li>
+      </ul>
+    </nav>
   </div>
-</nav>
+</header>
 
-<section class="hero" id="inicio">
-  <span class="label reveal d1">Alfaiataria de Viagens</span>
-  <h1 class="reveal d2">Seu destino<span class="italic-gold">começa aqui.</span></h1>
-  <p class="hero-desc reveal d3">Na Maktub Go, cada viagem começa com uma conversa. Ouvimos o que você sonha, entendemos como você vive e planejamos tudo sob medida, com exclusividade.</p>
-  <a href="#quem-somos" class="hero-cta reveal d4">Conhecer a Maktub</a>
-  <div class="hero-scroll">Descer</div>
-</section>
+<main id="conteudo">
 
-<section class="quem-somos" id="quem-somos">
-  <div class="container">
-    <span class="label reveal d1">Quem Somos</span>
-    <div class="divider reveal d1"></div>
-    <h2 class="reveal d2">Não vendemos destinos.<br><span class="italic-gold">Criamos memórias.</span></h2>
-    <p class="reveal d3">A <strong>Maktub Go</strong> é uma alfaiataria de viagens premium. Cada experiência é construída sob medida: não existe pacote padrão aqui. Existe escuta, critério e entrega. Criamos memórias com atendimento humanizado e experiências únicas para quem aprecia o exclusivo.</p>
-    <p class="reveal d4">Estamos em crescimento acelerado e buscamos pessoas de <strong>alta performance</strong> para nos acompanhar, com vontade de vencer, autonomia, pensamento estratégico e alinhamento total com nossos valores.</p>
-    <div class="quote-block reveal d5">
-      <p>"Não somos uma agência. Somos uma alfaiataria de viagens: cada experiência é pensada, construída e entregue sob medida. Porque viajar bem começa com ser bem cuidado."</p>
-      <cite>Maktub Go</cite>
-    </div>
-  </div>
-</section>
-
-<section class="servicos" id="servicos">
-  <div class="container--wide">
-    <div class="container" style="padding:0">
-      <span class="label reveal d1">O Que Fazemos</span>
-      <div class="divider reveal d1"></div>
-      <h2 class="reveal d2">Cada viagem,<br><span class="italic-gold">um projeto único.</span></h2>
-    </div>
-    <div class="servicos-grid" style="margin-top:52px">
-      <div class="servico-card reveal d1"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><h3>Planejamento Completo</h3><p>Roteiros personalizados do início ao fim. Voos, hotéis, transfers, restaurantes e experiências exclusivas, tudo pensado para o seu perfil e estilo de vida.</p></div>
-      <div class="servico-card reveal d2"><div class="s-icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div><h3>Hospedagem Premium</h3><p>Curadoria de hotéis e resorts com negociação de tarifas, upgrades e benefícios exclusivos para nossos clientes em destinos nacionais e internacionais.</p></div>
-      <div class="servico-card reveal d3"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.29h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.85a16 16 0 0 0 6.29 6.29l1.12-.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><h3>Suporte Humanizado</h3><p>Uma pessoa real, que ouve, pensa e resolve. Do primeiro contato ao seu retorno, com a tranquilidade de saber que alguém cuida de tudo por você.</p></div>
-      <div class="servico-card reveal d4"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg></div><h3>Transfers &amp; Traslados</h3><p>Transfers privados, locação de veículos e traslados VIP em destinos nacionais e internacionais. Conforto e pontualidade garantidos.</p></div>
-      <div class="servico-card reveal d5"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div><h3>Gestão de Milhas Concierge</h3><p>Compra, transferência e otimização de pontos. Viaje mais, pagando menos, com estratégia, segurança e curadoria especializada.</p><a class="s-link" href="/gestao-de-milhas/">Conhecer o serviço →</a></div>
-      <div class="servico-card reveal d6"><div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10z"/><path d="M12 6v6l4 2"/></svg></div><h3>Seguro Viagem</h3><p>Assessoria completa na escolha do seguro ideal para cada destino e perfil. Proteção real para você viajar com segurança e total tranquilidade.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="essencia" id="essencia">
-  <div class="container">
-    <span class="label reveal d1">Nossa Essência</span>
-    <div class="divider reveal d1" style="background:rgba(201,169,110,.5)"></div>
-    <h2 class="reveal d2">Propósito, fé<br><span class="italic-gold">e resultado.</span></h2>
-    <p class="reveal d3">A Maktub Go nasceu com um propósito: <strong>planejar experiências de vida através de viagens e da conexão com pessoas</strong>. Acreditamos que cultura, gastronomia e novas experiências precisam ser vivenciadas. Há algo de transformador em cada viagem.</p>
-    <p class="reveal d4">Nossos princípios têm <strong>Deus no centro</strong>. A prosperidade que buscamos vem do trabalho bem feito, da integridade e do cuidado genuíno. Valorizamos <strong>família, meritocracia e engajamento genuíno</strong>.</p>
-    <p class="reveal d5">A Maktub Go exige <strong>fé, comprometimento e vontade</strong>. Buscamos pessoas que queiram estar aqui de verdade, que vibrem com os resultados e que tenham mentalidade de dono, não de executor de tarefas.</p>
-    <div class="manifesto-block reveal d6">
-      <span class="label">Manifesto</span>
-      <p>Acreditamos que <span class="gold">viajar é um dos atos mais humanos que existem</span>. É quando saímos do automático, respiramos diferente e voltamos maiores do que éramos.</p>
-      <p>A Maktub Go existe para garantir que essa experiência comece <span class="gold">antes do embarque</span>: na escuta, no planejamento, no cuidado com cada detalhe que você nem sabia que precisava.</p>
-      <p><span class="gold">Maktub: estava escrito</span>. Essa viagem, essa conexão, esse momento. Se era para acontecer, então que aconteça da melhor forma possível.</p>
-      <p class="manifesto-footer">Maktub Go · Alfaiataria de Viagens · Seu Destino Começa Aqui</p>
-    </div>
-  </div>
-</section>
-
-<section class="pmv" id="pmv">
-  <div class="container">
-    <span class="label reveal d1">O Que Nos Move</span>
-    <div class="divider reveal d1"></div>
-    <h2 class="reveal d2">Propósito, Missão<br><span class="italic-gold">e Visão</span></h2>
-    <div class="pmv-items">
-      <div class="pmv-item reveal d3"><div><p class="pmv-num">01</p><p class="pmv-cat">Propósito</p></div><div class="pmv-content"><h3>Planejar experiências que marcam</h3><p>Viajar amplia quem você é. Transforma perspectivas, fortalece relações e marca ciclos. Nosso propósito é retirar toda a fricção do caminho para que você simplesmente chegue e viva.</p></div></div>
-      <div class="pmv-item reveal d4"><div><p class="pmv-num">02</p><p class="pmv-cat">Missão</p></div><div class="pmv-content"><h3>Cuidar de cada etapa com suporte humanizado</h3><p>Planejamos, organizamos e acompanhamos cada viagem com segurança, clareza e atenção. Do primeiro contato ao seu retorno, com a tranquilidade de saber que há alguém real cuidando de tudo por você.</p></div></div>
-      <div class="pmv-item reveal d5"><div><p class="pmv-num">03</p><p class="pmv-cat">Visão</p></div><div class="pmv-content"><h3>Ser referência nacional em experiência premium</h3><p>Crescer com reputação sólida, consistência e indicação espontânea. Construir uma presença que vai além do Brasil, levando o padrão Maktub para onde as pessoas sonham chegar.</p></div></div>
-    </div>
-  </div>
-</section>
-
-<section class="valores" id="valores">
-  <div class="container--wide">
-    <div class="container" style="padding:0">
-      <span class="label reveal d1">O Que Nos Guia</span>
-      <div class="divider reveal d1"></div>
-      <h2 class="reveal d2">Valores que orientam<br><span class="italic-gold">cada decisão.</span></h2>
-    </div>
-    <div class="valores-grid" style="margin-top:52px">
-      <div class="valor-item reveal d1"><p class="valor-sym">✦</p><p class="valor-title">Deus Acima de Tudo</p><p>O alicerce de tudo o que somos e construímos. Com propósito, integridade e trabalho bem feito, o caminho se abre.</p></div>
-      <div class="valor-item reveal d2"><p class="valor-sym">◷</p><p class="valor-title">Pontualidade</p><p>Respeitar o tempo do outro é uma das formas mais concretas de demonstrar cuidado. Pontualidade é compromisso, e compromisso é caráter.</p></div>
-      <div class="valor-item reveal d3"><p class="valor-sym">◈</p><p class="valor-title">Respeito</p><p>Todo ser humano carrega dignidade e valor intrínseco. Na Maktub Go, enxergar o Criador em cada pessoa é nosso sinônimo de respeito.</p></div>
-      <div class="valor-item reveal d4"><p class="valor-sym">♡</p><p class="valor-title">Conexão com Pessoas</p><p>A conexão que move a Maktub vai além do cliente: ela está em cada relação, em cada troca, em cada pessoa que faz parte dessa história.</p></div>
-      <div class="valor-item reveal d5"><p class="valor-sym">◇</p><p class="valor-title">Excelência</p><p>Somos especialistas em experiência. Cada detalhe importa, porque um erro em um nome ou uma data pode comprometer tudo que foi planejado.</p></div>
-      <div class="valor-item reveal d6"><p class="valor-sym">◎</p><p class="valor-title">Transparência</p><p>A verdade sempre vem antes do conforto. Comunicamos com clareza, agimos com precisão e construímos confiança a cada entrega.</p></div>
-      <div class="valor-item reveal d1"><p class="valor-sym">▪</p><p class="valor-title">Disciplina</p><p>Constância, método e comprometimento com o processo. É a disciplina diária que transforma intenção em resultado, e promessa em entrega.</p></div>
-      <div class="valor-item reveal d2"><p class="valor-sym">◉</p><p class="valor-title">Responsabilidade Total</p><p>Todos vestem a mesma camisa. Quando surge um problema, o time se une, porque o que importa é autonomia, qualidade e resultado bem feito.</p></div>
-      <div class="valor-item reveal d3"><p class="valor-sym">△</p><p class="valor-title">Evolução Contínua</p><p>Quem para de crescer começa a regredir. Na Maktub, nos desafiamos todos os dias a ser melhores: no atendimento, no processo, como pessoas.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="time" id="time">
-  <div class="container--wide">
-    <div class="container" style="padding:0">
-      <span class="label reveal d1">Quem Somos</span>
-      <div class="divider reveal d1"></div>
-      <h2 class="reveal d2">Perfis diferentes.<br><span class="italic-gold">Uma convicção.</span></h2>
-    </div>
-    <div class="time-grid">
-      <div class="time-card reveal d3">
-        <div class="time-initials">IL</div>
-        <h3 class="time-name">Isadora Lombardi</h3>
-        <p class="time-role">Co-Fundadora · Operações, Estratégia Comercial &amp; Pessoas</p>
-        <p class="time-bio">Com sete anos de trajetória construída dentro das maiores operações do setor (MaxMilhas, 123milhas e Localiza&amp;Co), Isadora acumulou uma bagagem de alta performance raramente vista no turismo.</p>
-        <p class="time-bio">Fundou e estruturou do zero a GPI Viagens, assumindo a construção e fluxo estratégico da operação. Hoje, como co-fundadora da Maktub Go, traz o que anos de experiência real ensinam: método, presença e cuidado em cada detalhe.</p>
+<!-- ===================== HERO ===================== -->
+<section class="hero" aria-labelledby="t-hero">
+  <div class="hero-fundo" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hero-texto">
+      <span class="olho">Alfaiataria de viagens</span>
+      <h1 id="t-hero">Seu destino<em>começa aqui.</em></h1>
+      <p>Não existe pacote pronto na Maktub. Existe escuta, rota desenhada sob medida e um time inteiro cuidando de cada etapa, do primeiro voo ao seu retorno.</p>
+      <div class="acoes">
+        <a class="btn btn-cheio" href="#contato">Planejar minha viagem</a>
+        <a class="btn" href="/gestao-de-milhas/">Conhecer a gestão de milhas</a>
       </div>
-      <div class="time-card reveal d4">
-        <div class="time-initials">MB</div>
-        <h3 class="time-name">Matheus Braga</h3>
-        <p class="time-role">Co-Fundador · Estratégia, Finanças &amp; Curadoria</p>
-        <p class="time-bio">Engenheiro de produção em formação, Matheus construiu sua trajetória dentro do mercado financeiro, como assessor de investimentos e gerente financeiro, desenvolvendo o olhar analítico de quem aprende a enxergar risco e analisar oportunidades.</p>
-        <p class="time-bio">Curador em milhas e planejamento estratégico de viagens, chegou à Maktub Go com algo raro: a combinação entre estabilidade de perfil e ambição de crescimento. Garante que cada decisão da operação tenha critério, segurança e visão de longo prazo.</p>
+    </div>
+  </div>
+  <div class="descer" aria-hidden="true"></div>
+</section>
+
+<!-- ===================== PROVA =====================
+     Cada número pendente está marcado com so-rascunho.
+     No modo publicado eles somem e a faixa se reequilibra sozinha. -->
+<section class="prova" aria-label="Números da operação">
+  <div class="wrap">
+    <div class="prova-grid">
+      <div class="prova-item so-rascunho">
+        <span class="prova-num pend">+280</span>
+        <span class="prova-rot">Passageiros embarcados</span>
+      </div>
+      <div class="prova-item so-rascunho">
+        <span class="prova-num pend">00</span>
+        <span class="prova-rot">Destinos operados</span>
+      </div>
+      <div class="prova-item so-rascunho">
+        <span class="prova-num pend">00</span>
+        <span class="prova-rot">Grupos e times atendidos</span>
+      </div>
+      <div class="prova-item">
+        <span class="prova-num">24h</span>
+        <span class="prova-rot">Suporte durante a viagem</span>
+      </div>
+      <div class="prova-item">
+        <span class="prova-num">01</span>
+        <span class="prova-rot">Time do início ao retorno</span>
       </div>
     </div>
   </div>
 </section>
 
-<section class="contato" id="contato">
-  <span class="label reveal d1">Fale com a Maktub</span>
-  <h2 class="reveal d2">Então vá.<br><span class="italic-gold">Seu destino espera.</span></h2>
-  <p class="contato-desc reveal d3">"Maktub. Estava escrito, tinha que acontecer."</p>
-  <div class="contato-btns reveal d4">
-    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." class="btn-p" target="_blank" rel="noopener">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
-      Falar no WhatsApp
-    </a>
-    <a href="/trabalheconosco" class="btn-s">Trabalhe Conosco</a>
+<!-- ===================== ALFAIATARIA ===================== -->
+<section class="secao" id="alfaiataria" aria-labelledby="t-quem">
+  <div class="wrap duas">
+    <div>
+      <span class="olho">Quem somos</span>
+      <h2 id="t-quem">Não vendemos destinos.<em>Criamos memórias.</em></h2>
+      <p class="intro">A Maktub Go é uma alfaiataria de viagens premium. Cada experiência é construída sob medida, porque cada família viaja de um jeito. Escutamos antes de cotar, desenhamos a rota antes de vender e acompanhamos a viagem depois que ela começa.</p>
+      <p style="margin-top:var(--e2)">Somos um time pequeno e presente. Você fala com gente que conhece o seu processo, não com um atendimento que recomeça a cada mensagem.</p>
+      <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
+    </div>
+    <!-- Quando a foto existir, troque para style="background-image:url('/ativos/quem-somos.jpg')" -->
+    <div class="figura figura-retrato" role="img" aria-label="Maktub Go">
+      <span class="figura-nota so-rascunho">/ativos/quem-somos.jpg</span>
+    </div>
   </div>
 </section>
+
+<!-- ===================== PRATELEIRA ===================== -->
+<section class="secao secao-creme" id="prateleira" aria-labelledby="t-como">
+  <div class="wrap">
+    <span class="olho">Como trabalhamos</span>
+    <h2 id="t-como">A viagem é montada<em>na ordem certa.</em></h2>
+    <p class="intro">Cada etapa é um serviço próprio e pode ser contratada sozinha. Você entra por onde precisa e para onde quiser.</p>
+
+    <div class="prateleira">
+      <div class="etapa"><span class="etapa-n">01</span><span class="etapa-nome">Rota</span><p>Onde você entra, por onde passa e como se desloca entre os destinos. Se ainda não sabe para onde ir, apresentamos as opções estratégicas antes de qualquer cotação.</p></div>
+      <div class="etapa"><span class="etapa-n">02</span><span class="etapa-nome">Voos</span><p>Cotação em dinheiro ou em milhas, com escolha de horários, conexões e aeroportos conforme o perfil de quem viaja. Emissão e check-in feitos por nós.</p></div>
+      <div class="etapa"><span class="etapa-n">03</span><span class="etapa-nome">Hotelaria</span><p>Curadoria de hotéis e resorts com negociação de tarifas, upgrades e benefícios. Localização avaliada de verdade, não só a diária.</p></div>
+      <div class="etapa"><span class="etapa-n">04</span><span class="etapa-nome">Transporte no destino</span><p>Carro alugado ou transfer privativo, definidos pelo que faz sentido na cidade em que você vai estar.</p></div>
+      <div class="etapa"><span class="etapa-n">05</span><span class="etapa-nome">Deslocamentos entre destinos</span><p>Trechos aéreos internos, trem e rodoviário organizados para que a rota se sustente sem correria.</p></div>
+      <div class="etapa"><span class="etapa-n">06</span><span class="etapa-nome">Ingressos</span><p>Parques, atrações e experiências comprados, conferidos e entregues no seu documento de viagem, prontos para uso.</p></div>
+      <div class="etapa"><span class="etapa-n">07</span><span class="etapa-nome">Seguro viagem</span><p>Assessoria na escolha da cobertura certa para o destino e o perfil, com os limites e condições explicados antes da contratação.</p></div>
+      <div class="etapa"><span class="etapa-n">08</span><span class="etapa-nome">Roteiro</span><p>No fim da montagem, uma conversa sobre gastronomia, passeios e o que você gosta de fazer. Daí nasce o roteiro dia a dia.</p></div>
+    </div>
+
+    <p class="nota-prateleira pend so-rascunho">O desenho da rota tem taxa de planejamento, devolvida integralmente em cashback quando a viagem é fechada com a Maktub.</p>
+  </div>
+</section>
+
+<!-- ===================== SERVIÇOS ===================== -->
+<section class="secao" id="servicos" aria-labelledby="t-serv">
+  <div class="wrap">
+    <span class="olho">O que fazemos</span>
+    <h2 id="t-serv">Cada viagem,<em>um projeto único.</em></h2>
+
+    <div class="servicos">
+      <article class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 16l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h3>Planejamento completo</h3>
+        <p>Rota, voos, hotéis, transfers e experiências pensados para o seu perfil e o seu ritmo de viagem.</p>
+        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20completa%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre planejamento</a>
+      </article>
+
+      <article class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg>
+        <h3>Hotelaria</h3>
+        <p>Curadoria com negociação de tarifas, upgrades e benefícios em destinos nacionais e internacionais.</p>
+        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20hotelaria%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre hotelaria</a>
+      </article>
+
+      <article class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+        <h3>Suporte humanizado</h3>
+        <p>Um time inteiro com você durante a viagem. Do primeiro contato ao retorno, sempre com uma pessoa real.</p>
+        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20entender%20como%20funciona%20o%20atendimento%20da%20Maktub%20Go." target="_blank" rel="noopener">Entender o atendimento</a>
+      </article>
+
+      <article class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M5 17h14l-1.5-6.5a2 2 0 0 0-2-1.5h-7a2 2 0 0 0-2 1.5Z"/><circle cx="7.5" cy="17.5" r="1.7"/><circle cx="16.5" cy="17.5" r="1.7"/></svg>
+        <h3>Transfers e traslados</h3>
+        <p>Transfers privativos, locação de veículos e traslados com conforto e pontualidade no destino.</p>
+        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20transfer%20ou%20carro%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre transfers</a>
+      </article>
+
+      <article class="servico servico-destaque">
+        <span class="selo">Serviço exclusivo</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.4 6.2L12 17l-5.6 3 1.4-6.2L3 9.5l6.4-.7Z"/></svg>
+        <h3>Gestão de milhas concierge</h3>
+        <p>Acompanhamento do seu patrimônio de milhas o ano inteiro, com painel privado e reunião mensal com seu gestor.</p>
+        <a class="link-texto" href="/gestao-de-milhas/">Conhecer a gestão</a>
+      </article>
+
+      <article class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6Z"/></svg>
+        <h3>Seguro viagem</h3>
+        <p>Escolha da cobertura certa para cada destino e perfil, com limites e condições explicados com clareza.</p>
+        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20contratar%20seguro%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre seguro</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== COMPARATIVO ===================== -->
+<section class="secao secao-verde" id="diferenca" aria-labelledby="t-dif">
+  <div class="wrap">
+    <span class="olho">A diferença</span>
+    <h2 id="t-dif">Por que a Maktub<em>não é a mais barata.</em></h2>
+    <p class="intro">Vender passagem é fácil. O que custa é o que acontece antes e depois dela.</p>
+
+    <div class="comparativo">
+      <div class="coluna">
+        <h3>Agência comum</h3>
+        <ul>
+          <li>Responde no horário comercial</li>
+          <li>Manda o pacote que já existe pronto</li>
+          <li>Entrega o localizador e encerra o contato</li>
+          <li>Você descobre o problema no aeroporto</li>
+          <li>Cada mensagem é atendida por uma pessoa diferente</li>
+          <li>O preço é a única conversa</li>
+        </ul>
+      </div>
+      <div class="coluna nossa">
+        <h3>Maktub Go</h3>
+        <ul>
+          <li>Um time inteiro com você durante a viagem</li>
+          <li>Rota desenhada a partir do seu perfil, sem pacote pronto</li>
+          <li>Documento de viagem completo, conferido e disponível sem internet</li>
+          <li>Check-in feito por nós e cartões de embarque entregues prontos</li>
+          <li>As mesmas pessoas do início ao fim do processo</li>
+          <li>A conversa começa no que você quer viver</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="objecao">Quem procura o menor preço acha em qualquer lugar. Quem quer chegar e simplesmente viver a viagem precisa de alguém que já pensou em tudo o que pode dar errado.</p>
+  </div>
+</section>
+
+<!-- ===================== VIAGENS ===================== -->
+<section class="secao so-rascunho" id="viagens" aria-labelledby="t-viagens">
+  <div class="wrap">
+    <span class="olho">Viagens que já entregamos</span>
+    <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
+
+    <div class="casos">
+      <article class="caso">
+        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-1.jpg</span></div>
+        <div class="caso-corpo">
+          <span class="caso-rot pend">Destino</span>
+          <h3 class="pend">Título do caso</h3>
+          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+        </div>
+      </article>
+      <article class="caso">
+        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-2.jpg</span></div>
+        <div class="caso-corpo">
+          <span class="caso-rot pend">Destino</span>
+          <h3 class="pend">Título do caso</h3>
+          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+        </div>
+      </article>
+      <article class="caso">
+        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-3.jpg</span></div>
+        <div class="caso-corpo">
+          <span class="caso-rot pend">Destino</span>
+          <h3 class="pend">Título do caso</h3>
+          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DEPOIMENTOS ===================== -->
+<section class="secao secao-creme so-rascunho" id="depoimentos" aria-labelledby="t-depo">
+  <div class="wrap">
+    <span class="olho">Quem já viajou com a gente</span>
+    <h2 id="t-depo">O que dizem<em>depois do retorno.</em></h2>
+    <div class="depoimentos">
+      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MILHAS ===================== -->
+<section class="secao secao-verde" id="milhas" aria-labelledby="t-milhas">
+  <div class="wrap milhas">
+    <div>
+      <span class="olho">Gestão de milhas concierge</span>
+      <h2 id="t-milhas">Suas milhas merecem<em>um gestor.</em></h2>
+      <p class="intro">Como um assessor financeiro acompanha investimentos, acompanhamos suas milhas o ano inteiro. Antecipamos oportunidades, otimizamos cartões e transformamos consumo cotidiano em viagens.</p>
+      <p style="margin-top:var(--e2)">Cada cliente tem painel privado, relatório mensal e uma reunião por mês com o gestor.</p>
+      <div class="acoes">
+        <a class="btn btn-ouro" href="/gestao-de-milhas/">Conhecer a gestão</a>
+        <a class="btn btn-claro" href="/acesso/">Acessar meu painel</a>
+      </div>
+    </div>
+    <div class="painel" aria-hidden="true">
+      <div class="painel-topo">maktubgo.com.br/painel</div>
+      <div class="painel-linha"><span>Patrimônio consolidado</span><span>970.000</span></div>
+      <div class="painel-linha"><span>Economia gerada no ano</span><span>R$ 47.320</span></div>
+      <div class="painel-linha"><span>Próxima reunião</span><span>21/10</span></div>
+      <div class="painel-linha"><span>Viagens em estratégia</span><span>04</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TIME =====================
+     Sem foto, aparece o monograma em verde e dourado, que é
+     um acabamento de marca e não um buraco. Ao colocar a foto,
+     troque para style="background-image:url('/ativos/time-x.jpg')" -->
+<section class="secao" id="time" aria-labelledby="t-time">
+  <div class="wrap">
+    <span class="olho">O time</span>
+    <h2 id="t-time">Perfis diferentes.<em>Uma convicção.</em></h2>
+
+    <div class="time">
+      <article class="pessoa">
+        <div class="figura figura-pessoa" role="img" aria-label="Isadora Lombardi">
+          <span class="monograma">IL</span>
+          <span class="figura-nota so-rascunho">/ativos/time-isadora.jpg</span>
+        </div>
+        <h3>Isadora Lombardi</h3>
+        <span class="pessoa-cargo">Co-fundadora, operações e estratégia</span>
+        <p>Sete anos construídos dentro das maiores operações do setor, entre MaxMilhas, 123milhas e Localiza&amp;Co. Fundou e estruturou do zero a GPI Viagens.</p>
+      </article>
+
+      <article class="pessoa">
+        <div class="figura figura-pessoa" role="img" aria-label="Matheus Braga">
+          <span class="monograma">MB</span>
+          <span class="figura-nota so-rascunho">/ativos/time-matheus.jpg</span>
+        </div>
+        <h3>Matheus Braga</h3>
+        <span class="pessoa-cargo">Co-fundador, estratégia e curadoria</span>
+        <p>Trajetória no mercado financeiro, como assessor de investimentos e gerente financeiro. Curador de milhas e responsável pela gestão concierge.</p>
+      </article>
+
+      <article class="pessoa so-rascunho">
+        <div class="figura figura-pessoa" role="img" aria-label="Nayara">
+          <span class="monograma">N</span>
+          <span class="figura-nota">/ativos/time-nayara.jpg</span>
+        </div>
+        <h3>Nayara</h3>
+        <span class="pessoa-cargo pend">Cargo a confirmar</span>
+        <p class="pend">Especialista em viagens, baseada na Espanha, responsável pelo passageiro final.</p>
+      </article>
+
+      <article class="pessoa so-rascunho">
+        <div class="figura figura-pessoa" role="img" aria-label="Breno">
+          <span class="monograma">B</span>
+          <span class="figura-nota">/ativos/time-breno.jpg</span>
+        </div>
+        <h3>Breno</h3>
+        <span class="pessoa-cargo pend">Cargo a confirmar</span>
+        <p class="pend">Analista de operações, baseado em Belo Horizonte.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CONTATO ===================== -->
+<section class="secao secao-verde" id="contato" aria-labelledby="t-contato">
+  <div class="wrap contato">
+    <div>
+      <span class="olho">Fale com a Maktub</span>
+      <h2 id="t-contato">Então vá.<em>Seu destino espera.</em></h2>
+      <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Nós começamos daí.</p>
+      <div class="canais">
+        <a class="canal" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">WhatsApp (21) 97627-5225</a>
+        <a class="canal" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
+      </div>
+      <p class="outras-portas">
+        Viaja a trabalho ou emite para uma equipe? <a href="/corporativo/">Maktub Corporativo</a>.<br>
+        Quer acompanhamento de milhas o ano inteiro? <a href="/gestao-de-milhas/">Gestão concierge</a>.<br>
+        Quer trabalhar com a gente? <a href="/trabalheconosco/">Banco de talentos</a>.
+      </p>
+    </div>
+
+    <!-- Formulário de cliente direto de viagem. Tabela leads_viagem. -->
+    <form id="formViagem" novalidate>
+      <div class="dupla">
+        <div class="campo">
+          <label for="nome">Nome</label>
+          <input id="nome" name="nome" type="text" autocomplete="name" required>
+        </div>
+        <div class="campo">
+          <label for="whats">WhatsApp</label>
+          <input id="whats" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(21) 90000-0000" required>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required>
+      </div>
+      <div class="dupla">
+        <div class="campo">
+          <label for="destino">Destino em mente</label>
+          <input id="destino" name="destino" type="text" placeholder="Ainda não sei">
+        </div>
+        <div class="campo">
+          <label for="quando">Quando</label>
+          <select id="quando" name="quando">
+            <option>Nos próximos 3 meses</option>
+            <option>Daqui a 3 a 6 meses</option>
+            <option>Daqui a mais de 6 meses</option>
+            <option>Data ainda aberta</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="viajantes">Quantas pessoas viajam</label>
+        <input id="viajantes" name="viajantes" type="text" placeholder="Ex.: 2 adultos e 1 criança">
+      </div>
+      <input type="hidden" id="origem" name="origem">
+      <button class="btn btn-ouro" type="submit">Quero planejar minha viagem</button>
+      <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Respondemos em até um dia útil.</p>
+    </form>
+  </div>
+</section>
+
+<section class="manifesto">
+  <div class="wrap">
+    <p>Maktub: estava escrito. Se era para acontecer, que aconteça da melhor forma possível.</p>
+    <span>Maktub Go, Alfaiataria de Viagens</span>
+  </div>
+</section>
+
+</main>
 
 <footer>
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <img src="/ativos/simbolo-creme.png" alt="Maktub Go" class="footer-brand-logo" />
-      <span class="footer-brand-text">Maktub Go · Alfaiataria de Viagens</span>
+  <div class="wrap">
+    <div class="rodape-grid">
+      <div class="rodape-marca">
+        <img src="/ativos/simbolo-creme.png" alt="Maktub Go" width="40" height="40" loading="lazy">
+        <p>Alfaiataria de viagens. Planejamento premium sob medida e gestão de milhas concierge.</p>
+      </div>
+      <div>
+        <h2>Navegar</h2>
+        <ul>
+          <li><a href="#alfaiataria">Quem somos</a></li>
+          <li><a href="#prateleira">Como trabalhamos</a></li>
+          <li><a href="#servicos">Serviços</a></li>
+          <li><a href="#diferenca">A diferença</a></li>
+          <li><a href="#time">O time</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Contato</h2>
+        <ul>
+          <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+          <li><a href="/corporativo/">Maktub Corporativo</a></li>
+          <li><a href="/acesso/">Acesso cliente</a></li>
+          <li><a href="/trabalheconosco/">Trabalhe conosco</a></li>
+          <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
+          <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
+        </ul>
+      </div>
     </div>
-    <ul class="footer-links">
-      <li><a href="#quem-somos">Quem Somos</a></li>
-      <li><a href="#servicos">Serviços</a></li>
-      <li><a href="/gestao-de-milhas/">Gestão de Milhas</a></li>
-      <li><a href="#valores">Valores</a></li>
-      <li><a href="/acesso/">Acesso Cliente</a></li>
-    </ul>
-    <span class="footer-copy">© 2026 Maktub Go. Todos os direitos reservados.</span>
+    <div class="rodape-base">
+      <span>© 2026 Maktub Go. Todos os direitos reservados.</span>
+      <span class="so-rascunho pend">CNPJ pendente de confirmação para exibição</span>
+    </div>
   </div>
 </footer>
 
-<a class="wa-float" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="WhatsApp">
-  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
+<a class="zap" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="Falar com a Maktub Go no WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6 1.9.8 2.7.9 3.6.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Z"/></svg>
 </a>
 
+<span class="selo-rascunho so-rascunho">Modo rascunho</span>
+
 <script>
-  const navbar=document.getElementById('navbar');
-  window.addEventListener('scroll',()=>navbar.classList.toggle('scrolled',window.scrollY>20),{passive:true});
-  const burger=document.getElementById('burger'),navLinks=document.getElementById('navLinks');
-  burger.addEventListener('click',()=>navLinks.classList.toggle('open'));
-  navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navLinks.classList.remove('open')));
-  const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:.10});
-  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+/* ============================================================
+   FORMULÁRIO DE VIAGEM (cliente direto)
+   Tabelas separadas por porta de entrada:
+     leads_viagem ......... esta página
+     leads_corporativo .... /corporativo/
+     solicitacoes_acesso .. /gestao-de-milhas/
+     banco_talentos ....... /trabalheconosco/
+   Colunas: nome, whatsapp, email, destino, quando, viajantes, origem, criado_em
+   Enquanto as constantes ficarem vazias, o envio cai no WhatsApp.
+   ============================================================ */
+const SUPABASE_URL = '';
+const SUPABASE_ANON_KEY = '';
+const TABELA = 'leads_viagem';
+
+const q = new URLSearchParams(location.search);
+document.getElementById('origem').value =
+  q.get('utm_campaign') || q.get('utm_source') || document.referrer || 'direto';
+
+const form = document.getElementById('formViagem');
+const aviso = document.getElementById('avisoForm');
+const botao = form.querySelector('button');
+
+function dizer(texto, estado){
+  aviso.textContent = texto;
+  if(estado){ aviso.dataset.estado = estado; } else { delete aviso.dataset.estado; }
+}
+
+form.addEventListener('submit', async function(e){
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(form).entries());
+
+  if(!d.nome || !d.whatsapp || !d.email){
+    dizer('Preencha nome, WhatsApp e e-mail para continuar.','erro');
+    return;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(d.email)){
+    dizer('Confira o e-mail: parece estar incompleto.','erro');
+    document.getElementById('email').focus();
+    return;
+  }
+
+  if(SUPABASE_URL && SUPABASE_ANON_KEY){
+    botao.disabled = true;
+    dizer('Enviando...');
+    try{
+      const r = await fetch(SUPABASE_URL + '/rest/v1/' + TABELA,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey':SUPABASE_ANON_KEY,
+          'Authorization':'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify(d)
+      });
+      if(!r.ok) throw new Error(r.status);
+      form.reset();
+      dizer('Recebemos seu contato. Respondemos em até um dia útil.','ok');
+      return;
+    }catch(err){
+      dizer('Não foi possível enviar agora. Abrindo o WhatsApp.','erro');
+    }finally{
+      botao.disabled = false;
+    }
+  }
+
+  const texto = 'Olá! Quero planejar uma viagem com a Maktub Go.'
+    + '\nNome: ' + d.nome
+    + '\nDestino: ' + (d.destino || 'ainda não sei')
+    + '\nQuando: ' + d.quando
+    + '\nViajantes: ' + (d.viajantes || 'a confirmar');
+  window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto),'_blank','noopener');
+});
+
+/* menu em telas menores */
+const btn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+btn.addEventListener('click', function(){
+  const aberto = menu.dataset.aberto !== 'true';
+  menu.dataset.aberto = aberto;
+  btn.setAttribute('aria-expanded', aberto);
+  btn.setAttribute('aria-label', aberto ? 'Fechar menu' : 'Abrir menu');
+});
+menu.addEventListener('click', function(e){
+  if(e.target.tagName === 'A'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); }
+});
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
+});
+
+/* borda do cabeçalho ao rolar */
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 24);
+},{passive:true});
 </script>
 </body>
 </html>
