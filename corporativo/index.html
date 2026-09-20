@@ -75,6 +75,11 @@ p{max-width:64ch}
 }
 .secao-verde .olho{color:var(--dourado-claro)}
 .pend{color:var(--dourado);border-bottom:1px dashed var(--dourado-claro)}
+.caso-bloco{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(34px,5vw,64px);align-items:center;margin-top:var(--e5, 56px)}
+.caso-foto{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--verde) center/cover}
+.caso-foto::after{content:"";position:absolute;inset:14px;border:1px solid rgba(201,169,110,.45)}
+.caso-rot{display:block;margin-bottom:12px;font-size:.63rem;letter-spacing:.17em;text-transform:uppercase;color:var(--dourado-claro)}
+@media (max-width:900px){.caso-bloco{grid-template-columns:1fr}}
 .secao-verde .pend{color:var(--dourado-claro)}
 html[data-modo="publicado"] .so-rascunho{display:none !important}
 .selo-rascunho{position:fixed;left:0;bottom:0;z-index:200;background:var(--dourado);color:var(--creme);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;padding:7px 14px}
@@ -310,6 +315,22 @@ footer{background:var(--verde);color:rgba(249,246,241,.6);padding:52px 0 32px;bo
         <h3>Atenção ao prazo</h3>
         <p>Cotação corporativa vale no dia da emissão. A tarifa aérea muda de um dia para o outro.</p>
       </article>
+    </div>
+  </div>
+</section>
+
+<section class="secao secao-verde" aria-labelledby="t-caso">
+  <div class="wrap">
+    <span class="olho">Quem já viaja com a gente</span>
+    <h2 id="t-caso">Ele só precisava<em>chegar.</em></h2>
+
+    <div class="caso-bloco">
+      <div class="caso-foto" style="background-image:url('/ativos/caso-corporativo.jpg')" role="img" aria-label="Sr. Amilton Machado em imersão corporativa"></div>
+      <div>
+        <span class="caso-rot">São José do Rio Preto</span>
+        <p>O Sr. Amilton foi para uma imersão de dois dias. Passagem, hotel, horários e toda a logística do evento saíram da mão dele. Quando a viagem é a trabalho, o que a gente entrega é tempo: ele só precisava chegar e estar inteiro para o que foi fazer.</p>
+        <p style="margin-top:18px;font-size:.88rem;color:rgba(249,246,241,.62)">Sr. Amilton Machado, Nacional Pax</p>
+      </div>
     </div>
   </div>
 </section>
