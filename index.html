@@ -19,7 +19,7 @@
   conteúdo e o bloco volta a aparecer sozinho.
   ============================================================
 -->
-<html lang="pt-BR" data-modo="rascunho">
+<html lang="pt-BR" data-modo="publicado">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -291,6 +291,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .figura::after{content:'';position:absolute;inset:14px;border:1px solid rgba(201,169,110,.45);pointer-events:none}
 .figura-retrato{aspect-ratio:4/5}
 .figura-paisagem{aspect-ratio:3/2}
+.figura-caso{aspect-ratio:4/5}
 .figura-pessoa{aspect-ratio:3/4}
 .figura-nota{
   position:absolute;inset-inline:0;bottom:0;padding:10px;
@@ -609,9 +610,7 @@ footer a:hover{color:var(--creme)}
       <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
     </div>
     <!-- Quando a foto existir, troque para style="background-image:url('/ativos/quem-somos.jpg')" -->
-    <div class="figura figura-retrato" role="img" aria-label="Maktub Go">
-      <span class="figura-nota so-rascunho">/ativos/quem-somos.jpg</span>
-    </div>
+    <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.jpg')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
   </div>
 </section>
 
@@ -726,51 +725,73 @@ footer a:hover{color:var(--creme)}
   </div>
 </section>
 
-<!-- ===================== VIAGENS ===================== -->
-<section class="secao so-rascunho" id="viagens" aria-labelledby="t-viagens">
+<!-- ===================== VIAGENS =====================
+     Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
+<section class="secao" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
     <span class="olho">Viagens que já entregamos</span>
     <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
 
     <div class="casos">
       <article class="caso">
-        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-1.jpg</span></div>
+        <div class="figura figura-caso" style="background-image:url('/ativos/caso-gramado.jpg')" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado"></div>
         <div class="caso-corpo">
-          <span class="caso-rot pend">Destino</span>
-          <h3 class="pend">Título do caso</h3>
-          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+          <span class="caso-rot">Gramado</span>
+          <h3>O Wesley chamou a gente para conspirar</h3>
+          <p>A viagem já estava inteira montada, dia a dia. Mas o pedido dele foi outro. Quando a Rhaissa entrou no quarto, tinha flor, chocolate e carta esperando. Combinamos tudo pelas costas dela.</p>
         </div>
       </article>
+
       <article class="caso">
-        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-2.jpg</span></div>
+        <div class="figura figura-caso" style="background-image:url('/ativos/caso-europa.jpg')" role="img" aria-label="Família recebendo a surpresa da viagem para Paris"></div>
         <div class="caso-corpo">
-          <span class="caso-rot pend">Destino</span>
-          <h3 class="pend">Título do caso</h3>
-          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+          <span class="caso-rot">Europa</span>
+          <h3>Ela sempre quis ver a Torre Eiffel</h3>
+          <p>No Dia dos Namorados, o Luan entregou uma folha impressa com a torre para a Andreza. Era o jeito dele de contar que Paris ia sair do sonho. Do outro lado, a gente já estava desenhando a rota.</p>
         </div>
       </article>
-      <article class="caso">
-        <div class="figura figura-paisagem" role="img" aria-label="Caso pendente"><span class="figura-nota">/ativos/caso-3.jpg</span></div>
+
+      <article class="caso so-rascunho">
+        <div class="figura figura-caso" role="img" aria-label="Caso pendente"><span class="figura-nota">caso pendente</span></div>
         <div class="caso-corpo">
           <span class="caso-rot pend">Destino</span>
           <h3 class="pend">Título do caso</h3>
-          <p class="pend">Quem viajou, quantas pessoas, o que foi montado e o que a família resolveu com a Maktub.</p>
+          <p class="pend">Texto do caso.</p>
         </div>
       </article>
     </div>
   </div>
 </section>
 
+<!-- ===================== DESTINOS VIVIDOS ===================== -->
+<section class="secao secao-creme" id="vividos" aria-labelledby="t-vividos">
+  <div class="wrap duas">
+    <div class="figura figura-retrato" style="background-image:url('/ativos/destino-santarem.jpg')" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
+    <div>
+      <span class="olho">A gente vai antes</span>
+      <h2 id="t-vividos">Não indicamos<em>por catálogo.</em></h2>
+      <p class="intro">Esse é o Matheus, um dos nossos sócios, caindo da prancha em Santarém. Ele foi pra isso: ver com o próprio corpo o que vale a pena antes de colocar no roteiro de alguém.</p>
+      <p style="margin-top:var(--e2)">Antes de um destino entrar na nossa prateleira, alguém daqui viveu primeiro. O passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ===================== DEPOIMENTOS ===================== -->
-<section class="secao secao-creme so-rascunho" id="depoimentos" aria-labelledby="t-depo">
+<section class="secao" id="depoimentos" aria-labelledby="t-depo">
   <div class="wrap">
     <span class="olho">Quem já viajou com a gente</span>
     <h2 id="t-depo">O que dizem<em>depois do retorno.</em></h2>
     <div class="depoimentos">
-      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
-      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
-      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
-      <figure class="depo"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo">
+        <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
+        <cite>Maria Teresa, Ouro Preto</cite>
+      </figure>
+      <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo">
+        <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
+        <cite>Maria Teresa, Ouro Preto</cite>
+      </figure>
+      <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
     </div>
   </div>
 </section>
@@ -799,53 +820,41 @@ footer a:hover{color:var(--creme)}
 </section>
 
 <!-- ===================== TIME =====================
-     Sem foto, aparece o monograma em verde e dourado, que é
-     um acabamento de marca e não um buraco. Ao colocar a foto,
-     troque para style="background-image:url('/ativos/time-x.jpg')" -->
-<section class="secao" id="time" aria-labelledby="t-time">
+     Nayara e Breno seguem com monograma até as fotos chegarem.
+     Para colocar a foto, acrescente na div da figura:
+     style="background-image:url('/ativos/time-nayara.jpg')" e apague o span do monograma. -->
+<section class="secao secao-verde" id="time" aria-labelledby="t-time">
   <div class="wrap">
     <span class="olho">O time</span>
-    <h2 id="t-time">Perfis diferentes.<em>Uma convicção.</em></h2>
+    <h2 id="t-time">Quem vai cuidar<em>da sua viagem.</em></h2>
 
     <div class="time">
       <article class="pessoa">
-        <div class="figura figura-pessoa" role="img" aria-label="Isadora Lombardi">
-          <span class="monograma">IL</span>
-          <span class="figura-nota so-rascunho">/ativos/time-isadora.jpg</span>
-        </div>
+        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-isadora.jpg')" role="img" aria-label="Isadora Lombardi"></div>
         <h3>Isadora Lombardi</h3>
-        <span class="pessoa-cargo">Co-fundadora, operações e estratégia</span>
-        <p>Sete anos construídos dentro das maiores operações do setor, entre MaxMilhas, 123milhas e Localiza&amp;Co. Fundou e estruturou do zero a GPI Viagens.</p>
+        <span class="pessoa-cargo">Co-fundadora, operações e experiência</span>
+        <p>São sete anos de turismo, dentro das maiores operações de milhas do país, antes da Maktub existir. A Isadora é quem escuta primeiro. Ela quer saber como a sua família viaja antes de qualquer cotação sair do papel.</p>
       </article>
 
       <article class="pessoa">
-        <div class="figura figura-pessoa" role="img" aria-label="Matheus Braga">
-          <span class="monograma">MB</span>
-          <span class="figura-nota so-rascunho">/ativos/time-matheus.jpg</span>
-        </div>
+        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-matheus.jpg')" role="img" aria-label="Matheus Braga"></div>
         <h3>Matheus Braga</h3>
-        <span class="pessoa-cargo">Co-fundador, estratégia e curadoria</span>
-        <p>Trajetória no mercado financeiro, como assessor de investimentos e gerente financeiro. Curador de milhas e responsável pela gestão concierge.</p>
+        <span class="pessoa-cargo">Co-fundador, estratégia e gestão de milhas</span>
+        <p>Veio do mercado financeiro e trouxe de lá um jeito de olhar: milha é patrimônio e precisa de cuidado o ano inteiro. É ele quem conduz a gestão concierge. E é ele quem vai antes, conhecer o destino que a gente vende.</p>
       </article>
 
-      <article class="pessoa so-rascunho">
-        <div class="figura figura-pessoa" role="img" aria-label="Nayara">
-          <span class="monograma">N</span>
-          <span class="figura-nota">/ativos/time-nayara.jpg</span>
-        </div>
+      <article class="pessoa">
+        <div class="figura figura-pessoa" role="img" aria-label="Nayara"><span class="monograma">N</span></div>
         <h3>Nayara</h3>
-        <span class="pessoa-cargo pend">Cargo a confirmar</span>
-        <p class="pend">Especialista em viagens, baseada na Espanha, responsável pelo passageiro final.</p>
+        <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
+        <p>A Nayara mora há mais de cinco anos na Europa. Ela é a responsável pela sua experiência: vai traçar rotas, construir seu roteiro, buscar as melhores tarifas de passagem e encontrar onde você vai se hospedar.</p>
       </article>
 
-      <article class="pessoa so-rascunho">
-        <div class="figura figura-pessoa" role="img" aria-label="Breno">
-          <span class="monograma">B</span>
-          <span class="figura-nota">/ativos/time-breno.jpg</span>
-        </div>
+      <article class="pessoa">
+        <div class="figura figura-pessoa" role="img" aria-label="Breno"><span class="monograma">B</span></div>
         <h3>Breno</h3>
-        <span class="pessoa-cargo pend">Cargo a confirmar</span>
-        <p class="pend">Analista de operações, baseado em Belo Horizonte.</p>
+        <span class="pessoa-cargo">Responsável pelas emissões aéreas e atendimento corporativo</span>
+        <p>Se você precisa colocar uma equipe inteira no ar, o Breno é quem tira esse peso das suas costas. Ele confere os detalhes e resolve antes de virar um problema. Afinal, a Maktub é a sua solução em viagens.</p>
       </article>
     </div>
   </div>
