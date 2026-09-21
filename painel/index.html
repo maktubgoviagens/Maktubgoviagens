@@ -104,10 +104,14 @@
     .heritage-total::before{content:'';position:absolute;width:240px;height:240px;border:1px solid var(--gold-soft);border-radius:50%;top:-100px;right:-100px;pointer-events:none}
     .heritage-total::after{content:'';position:absolute;top:0;left:0;height:100%;width:3px;background:var(--gold)}
     .h-amount{font-family:'Cormorant Garamond',serif;font-size:78px;line-height:1;color:var(--green);font-weight:400;letter-spacing:-.02em;margin-bottom:8px}
+    .h-amount .cur{font-size:30px;color:var(--gold);font-style:italic;margin-right:8px;font-weight:400;vertical-align:.9em;letter-spacing:0}
+    .h-equiv .mi{color:var(--green);font-weight:500;font-family:'Cormorant Garamond',serif;font-size:22px}
+    .h-note{display:block;font-size:11.5px;color:var(--text-muted);margin-top:4px}
     .h-amount .u{font-size:24px;color:var(--text-muted);font-style:italic;margin-left:6px;font-weight:300}
     .h-equiv{color:var(--text-mid);font-size:14px;margin-bottom:28px;font-weight:300}
     .h-equiv strong{color:var(--gold);font-weight:500;font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic}
-    .h-trend{display:flex;gap:32px;padding-top:22px;border-top:1px solid var(--border)}
+    .h-trend{display:flex;flex-wrap:wrap;gap:18px 32px;padding-top:22px;border-top:1px solid var(--border)}
+    .h-trend-item .v{white-space:nowrap}
     .h-trend-item .l{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;font-weight:600}
     .h-trend-item .v{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500;font-style:italic}
     .h-trend-item .v.up{color:var(--success)}
@@ -120,7 +124,7 @@
     .prog-info .bar{width:100%;height:2px;background:rgba(138,101,32,.12);position:relative;overflow:hidden}
     .prog-info .bar-fill{height:100%;background:var(--gold)}
     .prog-amt{text-align:right}
-    .prog-brl{font-size:12px;color:var(--gold);margin-top:4px;font-weight:500;white-space:nowrap}
+    .prog-mi{font-size:11px;color:var(--text-muted);margin-top:3px;white-space:nowrap}
     .prog-cm{font-size:10.5px;color:var(--text-muted);margin-top:6px;letter-spacing:.02em}
     .prog-amt .v{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500;font-style:italic}
     .prog-amt .l{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-top:2px;font-weight:600}
@@ -745,14 +749,14 @@
       <div class="heritage-total">
         <div class="blk-title">Patrimônio Consolidado</div>
         <div class="h-amount num" id="patrimonioTotal">0<span class="u">milhas</span></div>
-        <div class="h-equiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro</div>
+        <div class="h-equiv" id="patrimonioEquiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro</div>
         <div class="h-trend">
           <div class="h-trend-item">
-            <div class="l">Evolução Mês</div>
+            <div class="l">Milhas no mês</div>
             <div class="v" id="evolucaoMes">·</div>
           </div>
           <div class="h-trend-item">
-            <div class="l">Evolução Ano</div>
+            <div class="l">Milhas no ano</div>
             <div class="v" id="evolucaoAno">·</div>
           </div>
           <div class="h-trend-item">
@@ -1156,9 +1160,9 @@
             ${p.custo_medio_milheiro !== null && p.custo_medio_milheiro !== undefined && Number(p.saldo) > 0 ? `<div class="prog-cm">Custo médio ${money2(p.custo_medio_milheiro)} o milheiro</div>` : ''}
           </div>
           <div class="prog-amt">
-            <div class="v">${fmtNum(p.saldo)}</div>
-            <div class="l">${escapeHtml(p.unidade || 'milhas')}</div>
-            ${p.patrimonio_brl !== null && p.patrimonio_brl !== undefined && Number(p.saldo) > 0 ? `<div class="prog-brl">${money2(p.patrimonio_brl)}</div>` : ''}
+            ${p.patrimonio_brl !== null && p.patrimonio_brl !== undefined && Number(p.saldo) > 0
+              ? `<div class="v">R$ ${fmtMoney(p.patrimonio_brl)}</div><div class="prog-mi">${fmtNum(p.saldo)} ${escapeHtml(p.unidade || 'milhas')}</div>`
+              : `<div class="v">${fmtNum(p.saldo)}</div><div class="l">${escapeHtml(p.unidade || 'milhas')}</div>`}
           </div>
         </div>
       `;
@@ -2132,9 +2136,16 @@
       // 5. Renderizar Bloco 1: Patrimônio
       const totalMilhas = programas.reduce((sum, p) => sum + Number(p.saldo || 0), 0);
       $('patrimonioTotal').innerHTML = `${fmtNum(totalMilhas)}<span class="u">milhas</span>`;
+      const somaBrl = programas.reduce((s, p) => s + (p.patrimonio_brl !== null && p.patrimonio_brl !== undefined ? Number(p.patrimonio_brl) : 0), 0);
+      const patrBrl = somaBrl > 0 ? somaBrl : Number(economia && economia.patrimonio_equivalente_brl || 0);
+      const heroReais = patrBrl > 0;
+      if (heroReais) {
+        $('patrimonioTotal').innerHTML = `<span class="cur">R$</span>${fmtMoney(patrBrl)}`;
+        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira<span class="h-note">Estimativa pelo valor de mercado do milheiro de cada programa</span>`;
+      }
 
       if (economia) {
-        $('patrimonioBrl').textContent = `R$ ${fmtMoney(economia.patrimonio_equivalente_brl)}`;
+        if (!heroReais) $('patrimonioBrl').textContent = `R$ ${fmtMoney(economia.patrimonio_equivalente_brl)}`;
         if (economia.evolucao_mes && Number(economia.evolucao_mes) > 0) {
           $('evolucaoMes').textContent = `+ ${fmtNum(economia.evolucao_mes)}`;
           $('evolucaoMes').classList.add('up');
