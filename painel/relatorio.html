@@ -125,7 +125,7 @@
   const safe = async (q) => { try { const r = await q; return r.error ? [] : (r.data || []); } catch (_) { return []; } };
   const ecoValor = (r) => (r.valor_economia_brl !== null && r.valor_economia_brl !== undefined && r.valor_economia_brl !== '') ? Number(r.valor_economia_brl) || 0 : (Number(r.valor_mercado_brl) || 0) - (Number(r.valor_pago_brl) || 0);
   const CAT = { emissao: 'Passagem', acumulo: 'Acúmulo / cashback', cartao: 'Cartão', outro: 'Outro' };
-  const TIPO = { acumulo: 'Acúmulo', bonus: 'Bônus', transferencia: 'Transferência', emissao: 'Emissão', expiracao: 'Expiração', ajuste: 'Ajuste' };
+  const TIPO = { saldo_inicial: 'Saldo anterior', acumulo: 'Acúmulo', bonus: 'Bônus', compra: 'Compra de pontos', clube: 'Clube de pontos', transf_entrada: 'Transferência recebida', transf_saida: 'Transferência enviada', transferencia: 'Transferência', emissao: 'Emissão', expiracao: 'Expiração', ajuste: 'Ajuste' };
 
   const params = new URLSearchParams(location.search);
   const now = new Date();
@@ -182,17 +182,26 @@
     if (!saldoMes(mes).length && mes === curKey) { saldoAtual = programas.reduce((s, p) => s + Number(p.saldo || 0), 0); fonteSaldo = 'saldo atual'; }
     const saldoAnt = totMes(prevKey);
     const variacao = saldoMes(prevKey).length ? saldoAtual - saldoAnt : null;
-    const entradas = extrato.filter(x => Number(x.quantidade) > 0).reduce((s, x) => s + Number(x.quantidade), 0);
+    const entradas = extrato.reduce((s, x) => s + (x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade)), 0);
     const usadas = Math.abs(extrato.filter(x => x.tipo === 'emissao').reduce((s, x) => s + Number(x.quantidade), 0));
+
+    // --- valor em reais pelo milheiro de referência atual de cada programa
+    const normP = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const refOf = (nome) => { const p = programas.find(x => normP(x.programa) === normP(nome)); return p && p.valor_referencia_milheiro !== null && p.valor_referencia_milheiro !== undefined ? Number(p.valor_referencia_milheiro) : null; };
+    const emReais = (nome, saldo) => { const r = refOf(nome); return r === null || saldo === null ? null : saldo * r / 1000; };
+    const temRef = programas.some(p => p.valor_referencia_milheiro !== null && p.valor_referencia_milheiro !== undefined);
+    const patrMes = saldoMes(mes).length ? saldoMes(mes).reduce((s, r) => s + (emReais(r.programa, Number(r.saldo)) || 0), 0)
+      : programas.reduce((s, p) => s + (emReais(p.programa, Number(p.saldo || 0)) || 0), 0);
 
     // --- programas: mês x anterior
     const progs = [...new Set([...saldoMes(mes), ...saldoMes(prevKey)].map(r => r.programa))].sort();
     const progRows = progs.length ? progs.map(p => {
       const a = saldoMes(mes).find(r => r.programa === p), b = saldoMes(prevKey).find(r => r.programa === p);
       const va = a ? Number(a.saldo) : null, vb = b ? Number(b.saldo) : null, dif = va !== null && vb !== null ? va - vb : null;
+      const rv = emReais(p, va);
       return `<tr><td>${esc(p)}</td><td class="r">${vb === null ? '' : num(vb)}</td><td class="r">${va === null ? '' : num(va)}</td>
-        <td class="r ${dif > 0 ? 'up' : dif < 0 ? 'down' : ''}">${dif === null ? '' : (dif > 0 ? '+' : dif < 0 ? '−' : '') + num(Math.abs(dif))}</td></tr>`;
-    }).join('') : (mes === curKey ? programas.map(p => `<tr><td>${esc(p.programa)}</td><td class="r"></td><td class="r">${num(p.saldo)}</td><td class="r"></td></tr>`).join('') : '');
+        <td class="r ${dif > 0 ? 'up' : dif < 0 ? 'down' : ''}">${dif === null ? '' : (dif > 0 ? '+' : dif < 0 ? '−' : '') + num(Math.abs(dif))}</td>${temRef ? `<td class="r">${rv === null ? '' : brl2(rv)}</td>` : ''}</tr>`;
+    }).join('') : (mes === curKey ? programas.map(p => { const rv = emReais(p.programa, Number(p.saldo || 0)); return `<tr><td>${esc(p.programa)}</td><td class="r"></td><td class="r">${num(p.saldo)}</td><td class="r"></td>${temRef ? `<td class="r">${rv === null ? '' : brl2(rv)}</td>` : ''}</tr>`; }).join('') : '');
 
     // --- gráfico 6 meses
     const ks = []; for (let i = 5; i >= 0; i--) ks.push(shift(mes, -i));
@@ -233,7 +242,7 @@
             <div class="kpi hl"><div class="l">Economia no mês</div><div class="v"><small>R$</small>${brl(sum(ecoMes))}</div><div class="s">${ecoMes.length} ${ecoMes.length === 1 ? 'ganho registrado' : 'ganhos registrados'}</div></div>
             <div class="kpi"><div class="l">Economia no ano</div><div class="v"><small>R$</small>${brl(sum(ecoAno))}</div><div class="s">Acumulado em ${mes.slice(0, 4)}</div></div>
             <div class="kpi"><div class="l">Desde o início</div><div class="v"><small>R$</small>${brl(sum(economias))}</div><div class="s">Economia total da gestão</div></div>
-            <div class="kpi"><div class="l">Patrimônio em milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${fonteSaldo}</div></div>
+            <div class="kpi"><div class="l">Patrimônio em milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${temRef ? 'Equivale a ' + brl2(patrMes) : fonteSaldo}</div></div>
             <div class="kpi"><div class="l">Variação no mês</div><div class="v ${variacao > 0 ? 'up' : variacao < 0 ? 'down' : ''}">${variacao === null ? '·' : (variacao > 0 ? '+' : variacao < 0 ? '−' : '') + compact(Math.abs(variacao))}</div><div class="s">${variacao === null ? 'Sem fechamento do mês anterior' : 'Em relação a ' + MESES[Number(prevKey.slice(5)) - 1]}</div></div>
             <div class="kpi"><div class="l">Entradas / usadas</div><div class="v">${compact(entradas)} <small>/ ${compact(usadas)}</small></div><div class="s">Pontos que entraram e milhas usadas</div></div>
           </div>
@@ -253,7 +262,7 @@
         <section>
           <h2>Patrimônio em milhas</h2>
           ${chart}
-          ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th></tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
+          ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th>${temRef ? '<th class="r">Em reais</th>' : ''}</tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
         </section>
 
         <section>
