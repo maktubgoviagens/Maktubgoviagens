@@ -120,6 +120,8 @@
     .prog-info .bar{width:100%;height:2px;background:rgba(138,101,32,.12);position:relative;overflow:hidden}
     .prog-info .bar-fill{height:100%;background:var(--gold)}
     .prog-amt{text-align:right}
+    .prog-brl{font-size:12px;color:var(--gold);margin-top:4px;font-weight:500;white-space:nowrap}
+    .prog-cm{font-size:10.5px;color:var(--text-muted);margin-top:6px;letter-spacing:.02em}
     .prog-amt .v{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500;font-style:italic}
     .prog-amt .l{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-top:2px;font-weight:600}
 
@@ -743,7 +745,7 @@
       <div class="heritage-total">
         <div class="blk-title">Patrimônio Consolidado</div>
         <div class="h-amount num" id="patrimonioTotal">0<span class="u">milhas</span></div>
-        <div class="h-equiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> em emissões otimizadas</div>
+        <div class="h-equiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro</div>
         <div class="h-trend">
           <div class="h-trend-item">
             <div class="l">Evolução Mês</div>
@@ -846,6 +848,10 @@
       <section class="sec" id="vencSec" hidden>
         <div class="blk-title">Vencimentos Monitorados</div>
         <div class="tbl-wrap" id="vencWrap"></div>
+      </section>
+      <section class="sec" id="compSec" hidden>
+        <div class="blk-title">Composição da Carteira</div>
+        <div class="tbl-wrap" id="compWrap"></div>
       </section>
       <section class="sec">
         <div class="chart-card">
@@ -1147,10 +1153,12 @@
           <div class="prog-info">
             <div class="nm">${escapeHtml(p.programa)}</div>
             <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+            ${p.custo_medio_milheiro !== null && p.custo_medio_milheiro !== undefined && Number(p.saldo) > 0 ? `<div class="prog-cm">Custo médio ${money2(p.custo_medio_milheiro)} o milheiro</div>` : ''}
           </div>
           <div class="prog-amt">
             <div class="v">${fmtNum(p.saldo)}</div>
             <div class="l">${escapeHtml(p.unidade || 'milhas')}</div>
+            ${p.patrimonio_brl !== null && p.patrimonio_brl !== undefined && Number(p.saldo) > 0 ? `<div class="prog-brl">${money2(p.patrimonio_brl)}</div>` : ''}
           </div>
         </div>
       `;
@@ -1406,17 +1414,19 @@
     const ano = String(new Date().getFullYear());
     const doAno = extrato.filter(x => String(x.data).startsWith(ano));
     const soma = (arr) => arr.reduce((s, x) => s + Number(x.quantidade || 0), 0);
-    const entradas = soma(doAno.filter(x => Number(x.quantidade) > 0));
-    const bonus = soma(doAno.filter(x => x.tipo === 'bonus'));
+    const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
+    const entradas = doAno.reduce((s, x) => s + cresce(x), 0);
+    const bonus = soma(doAno.filter(x => x.tipo === 'bonus')) + doAno.filter(x => x.tipo === 'transf_entrada').reduce((s, x) => s + Number(x.milhas_bonus || 0), 0);
     const usadas = Math.abs(soma(doAno.filter(x => x.tipo === 'emissao')));
     $('milhasKpis').innerHTML = [
       ['Saldo atual', compact(atual), 'Somando todos os programas', true],
-      [`Entradas em ${ano}`, compact(entradas), 'Acúmulo, bônus e transferências'],
+      [`Entradas em ${ano}`, compact(entradas), 'Acúmulo, bônus e compras'],
       [`Bônus em ${ano}`, compact(bonus), 'Ganho com promoções e transferências bonificadas'],
       [`Usadas em ${ano}`, compact(usadas), 'Milhas convertidas em viagens']
     ].map(([l,v,s,hl]) => `<div class="kpi ${hl ? 'hl' : ''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
 
-    const TIPOS = { acumulo:'Acúmulo', bonus:'Bônus', transferencia:'Transferência', emissao:'Emissão', expiracao:'Expiração', ajuste:'Ajuste' };
+    const TIPOS = { saldo_inicial:'Saldo anterior', acumulo:'Acúmulo', bonus:'Bônus', compra:'Compra de pontos', clube:'Clube de pontos', transf_entrada:'Transferência recebida', transf_saida:'Transferência enviada', transferencia:'Transferência', emissao:'Emissão', expiracao:'Expiração', ajuste:'Ajuste' };
+    renderComposicao(programasAtuais);
     $('extratoWrap').innerHTML = extrato.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Programa</th><th>Tipo</th><th>Descrição</th><th class="r">Milhas</th></tr></thead><tbody>
       ${extrato.slice(0, 60).map(x => { const q = Number(x.quantidade || 0); return `<tr>
         <td class="mute">${brDate(x.data)}</td><td>${escapeHtml(x.programa || '')}</td>
@@ -1424,6 +1434,22 @@
         <td>${escapeHtml(x.descricao || '')}</td>
         <td class="r ${q >= 0 ? 'pos' : 'neg'}">${q >= 0 ? '+' : '−'} ${fmtNum(Math.abs(q))}</td></tr>`; }).join('')}
       </tbody></table>` : '<div class="empty-cards">Nenhuma movimentação registrada ainda.</div>';
+  }
+
+  function renderComposicao(programas) {
+    const list = programas.filter(p => Number(p.saldo) > 0 && p.calculado_em);
+    $('compSec').hidden = !list.length;
+    if (!list.length) return;
+    const n = (v) => fmtNum(Math.round(Number(v || 0)));
+    const brl = (v) => v === null || v === undefined ? '' : money2(v);
+    const tot = (k) => list.reduce((s, p) => s + Number(p[k] || 0), 0);
+    const saldo = tot('saldo'), custo = tot('custo_total_brl'), temPat = list.some(p => p.patrimonio_brl !== null && p.patrimonio_brl !== undefined);
+    $('compWrap').innerHTML = `<table class="tbl"><thead><tr><th>Programa</th><th class="r">Saldo</th><th class="r">Anterior à gestão</th><th class="r">Orgânico</th><th class="r">Comprado</th><th class="r">Custo médio</th>${temPat ? '<th class="r">Patrimônio</th>' : ''}</tr></thead><tbody>
+      ${list.map(p => `<tr><td>${escapeHtml(p.programa)}</td><td class="r"><strong>${n(p.saldo)}</strong></td><td class="r">${n(p.qtd_herdado)}</td><td class="r">${n(p.qtd_organico)}</td><td class="r">${n(p.qtd_pago)}</td>
+        <td class="r">${brl(p.custo_medio_milheiro)}</td>${temPat ? `<td class="r">${brl(p.patrimonio_brl)}</td>` : ''}</tr>`).join('')}
+      <tr><td><strong>Total</strong></td><td class="r"><strong>${n(saldo)}</strong></td><td class="r">${n(tot('qtd_herdado'))}</td><td class="r">${n(tot('qtd_organico'))}</td><td class="r">${n(tot('qtd_pago'))}</td>
+        <td class="r"><strong>${saldo > 0 ? brl(custo / saldo * 1000) : ''}</strong></td>${temPat ? `<td class="r"><strong>${brl(tot('patrimonio_brl'))}</strong></td>` : ''}</tr>
+      </tbody></table><div class="mute" style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Custo médio por milheiro (1.000 milhas). Orgânico: cartão, parceiros e bônus, sem custo. Comprado: pontos adquiridos, pelo valor pago.</div>`;
   }
 
   // ===== Histórico de economias =====
@@ -1455,7 +1481,7 @@
     const c = ecoCat(r), parts = [];
     if (c === 'emissao') {
       if (r.valor_mercado_brl) parts.push(`Valor de mercado <span class="strike">${money2(r.valor_mercado_brl)}</span>`);
-      if (r.valor_pago_brl !== null && r.valor_pago_brl !== undefined && r.valor_pago_brl !== '') parts.push(`Você investiu ${money2(r.valor_pago_brl)}`);
+      if (r.valor_pago_brl !== null && r.valor_pago_brl !== undefined && r.valor_pago_brl !== '') parts.push(`Você investiu ${money2(r.valor_pago_brl)}` + (r.custo_milhas_brl !== null && r.custo_milhas_brl !== undefined && r.extrato_id ? ` (milhas ${money2(r.custo_milhas_brl)} + taxas ${money2(r.taxas_brl || 0)})` : ''));
       if (r.milhas_utilizadas) parts.push(`${fmtNum(r.milhas_utilizadas)} milhas${r.programa ? ' ' + escapeHtml(r.programa) : ''}`);
       const m = Number(r.valor_mercado_brl);
       if (m > 0) parts.push(`${Math.round(ecoValor(r) / m * 100)}% menos`);
