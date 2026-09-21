@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-modo="rascunho">
+<html lang="pt-BR" data-modo="publicado">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-
+ 
 <!--
   ============================================================
   MAKTUB GO · TRABALHE CONOSCO v2 · BANCO DE TALENTOS
@@ -34,154 +34,182 @@
      Enquanto estiverem vazios, o envio cai no e-mail.
   ============================================================
 -->
-
+ 
 <style>
 :root{
   --verde:#1a3826;
   --verde-fundo:#14301f;
   --dourado:#8a6520;
+  --dourado-texto:#75551a;
   --dourado-claro:#c9a96e;
   --creme:#f9f6f1;
+  --creme-fundo:#f2ece1;
+  --tinta:#2b2b26;
+  --tinta-suave:rgba(43,43,38,.82);
+  --linha:rgba(26,56,38,.14);
   --serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost',-apple-system,'Segoe UI',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  background:var(--verde);color:rgba(249,246,241,.86);
+  background:var(--creme);color:var(--tinta);
   font-family:var(--sans);font-weight:300;font-size:16px;line-height:1.7;
   -webkit-font-smoothing:antialiased;
 }
+img{max-width:100%;display:block}
 a{color:inherit}
 .wrap{max-width:1080px;margin:0 auto;padding:0 32px}
-.secao{padding:110px 0}
-.faixa{background:var(--verde-fundo)}
-h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.14;color:var(--creme)}
+.secao{padding:104px 0}
+.secao-creme{background:var(--creme-fundo)}
+.secao-verde{background:var(--verde);color:rgba(249,246,241,.84)}
+h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.14;color:var(--verde)}
 h2{font-size:clamp(2rem,4.2vw,3.1rem)}
-h2 em{font-style:italic;display:block;color:var(--dourado-claro)}
+h2 em{font-style:italic;display:block;color:var(--dourado-texto)}
 h3{font-size:1.32rem}
 p{max-width:64ch}
 .olho{
-  font-family:var(--sans);font-size:.7rem;letter-spacing:.24em;
-  text-transform:uppercase;color:var(--dourado-claro);
-  display:block;margin-bottom:24px;
+  font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--dourado-texto);display:block;margin-bottom:24px;
 }
+.secao-verde h2,.secao-verde h3{color:var(--creme)}
+.secao-verde h2 em,.secao-verde .olho{color:var(--dourado-claro)}
 ::selection{background:var(--dourado-claro);color:var(--verde)}
-:focus-visible{outline:2px solid var(--dourado-claro);outline-offset:4px;border-radius:2px}
+:focus-visible{outline:2px solid var(--dourado);outline-offset:4px;border-radius:2px}
 html[data-modo="publicado"] .so-rascunho{display:none !important}
-.pular{position:absolute;left:-9999px;top:0;z-index:999;background:var(--creme);color:var(--verde);padding:14px 22px;font-size:.88rem}
+.pular{position:absolute;left:-9999px;top:0;z-index:999;background:var(--verde);color:var(--creme);padding:14px 22px;font-size:.88rem}
 .pular:focus{left:12px;top:12px}
-
-.topo{padding:44px 0 0;text-align:center}
-.topo img{width:46px;margin:0 auto 16px}
-.topo .marca{font-size:.72rem;letter-spacing:.22em;color:rgba(249,246,241,.84);text-decoration:none;display:block}
-.topo .marca span{display:block;font-size:.56rem;letter-spacing:.2em;color:var(--dourado-claro);margin-top:5px}
-.risco{width:56px;height:1px;background:var(--dourado-claro);margin:34px auto 0}
-
-.abertura{text-align:center;padding:64px 0 110px}
-.abertura h1{font-size:clamp(2.6rem,6.4vw,4.6rem);margin-bottom:28px}
-.abertura h1 em{font-style:italic;display:block;color:var(--dourado-claro)}
-.abertura p{max-width:54ch;margin:0 auto;font-family:var(--serif);font-size:1.25rem;line-height:1.62}
-
-.aviso{
-  border:1px solid rgba(201,169,110,.42);padding:36px 40px;
-  max-width:760px;margin:44px auto 0;text-align:left;
-}
-.aviso h3{margin-bottom:12px;color:var(--dourado-claro)}
-.aviso p{max-width:none;font-size:.97rem}
-
-.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(249,246,241,.14);margin-top:58px;border:1px solid rgba(249,246,241,.14)}
-.item{background:var(--verde);padding:40px 34px}
-.faixa .item{background:var(--verde-fundo)}
-.item h3{font-size:1.18rem;margin-bottom:12px}
-.item p{font-size:.92rem;max-width:none}
-.item .simb{color:var(--dourado-claro);font-size:1rem;display:block;margin-bottom:16px}
-
-.areas{margin-top:54px;border-top:1px solid rgba(249,246,241,.14)}
-.area{
-  display:grid;grid-template-columns:280px 1fr;gap:34px;align-items:baseline;
-  padding:24px 0;border-bottom:1px solid rgba(249,246,241,.14);
-}
-.area-nome{font-family:var(--serif);font-size:1.45rem;color:var(--creme)}
-.area p{font-size:.93rem;max-width:58ch}
-
-.processo{counter-reset:p;margin-top:52px;display:grid;gap:2px}
-.passo{background:var(--verde-fundo);padding:28px 34px;display:grid;grid-template-columns:54px 1fr;gap:22px;align-items:baseline}
-.faixa .passo{background:var(--verde)}
-.passo .n{font-family:var(--serif);font-size:1.3rem;color:var(--dourado-claro)}
-.passo p{font-size:.94rem;max-width:62ch;margin-top:6px}
-
-form{display:grid;gap:20px;max-width:680px;margin-top:48px}
-.campo{display:grid;gap:8px}
-label{font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado-claro)}
-input,select,textarea{
-  min-height:44px;border-radius:0;
-  font-family:var(--sans);font-size:.95rem;font-weight:300;
-  background:transparent;border:0;border-bottom:1px solid rgba(249,246,241,.42);
-  color:var(--creme);padding:12px 0;resize:vertical;
-}
-input:focus,select:focus,textarea:focus{outline:0;border-bottom-color:var(--dourado-claro)}
-select option{color:#2b2b26}
-.dupla{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+ 
+/* cabeçalho, igual às outras páginas */
+header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(249,246,241,.94);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .3s}
+header.rolou{border-bottom-color:var(--linha)}
+.barra{display:flex;align-items:center;justify-content:space-between;height:84px}
+.marca{display:flex;align-items:center;gap:13px;text-decoration:none}
+.marca img{width:33px}
+.marca-nome{font-size:.77rem;letter-spacing:.2em;color:var(--verde);line-height:1.4}
+.marca-nome span{display:block;font-size:.54rem;letter-spacing:.17em;color:var(--dourado)}
+ 
 .btn{
   display:inline-flex;align-items:center;justify-content:center;min-height:52px;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;
-  padding:19px 42px;text-decoration:none;cursor:pointer;
-  background:var(--dourado);border:1px solid var(--dourado);color:var(--creme);
-  justify-self:start;transition:background .35s ease,color .35s ease;
+  padding:19px 42px;text-decoration:none;cursor:pointer;font-family:var(--sans);
+  background:var(--verde);border:1px solid var(--verde);color:var(--creme);
+  transition:background .35s ease,color .35s ease,border-color .35s ease;
 }
-.btn:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
-.aviso-form{font-size:.82rem;color:rgba(249,246,241,.74)}
-
-footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top:20px}
-.rodape{display:flex;justify-content:space-between;gap:26px;flex-wrap:wrap;font-size:.84rem}
-.rodape a{text-decoration:none;color:rgba(249,246,241,.84)}
+.btn:hover{background:var(--dourado);border-color:var(--dourado)}
+.btn-linha{background:transparent;color:var(--verde)}
+.btn-linha:hover{background:var(--verde);color:var(--creme);border-color:var(--verde)}
+.barra .btn{padding:14px 26px}
+ 
+/* abertura */
+.abertura{padding:160px 0 104px}
+.abertura h1{font-size:clamp(2.6rem,6.4vw,4.6rem);margin-bottom:28px}
+.abertura h1 em{font-style:italic;display:block;color:var(--dourado-texto)}
+.abertura .wrap > p{max-width:40em;font-family:var(--serif);font-size:clamp(1.15rem,2vw,1.35rem);line-height:1.62;color:var(--tinta)}
+ 
+.aviso{
+  border-left:2px solid var(--dourado);background:var(--creme-fundo);
+  padding:32px 38px;max-width:760px;margin-top:48px;
+}
+.aviso h3{margin-bottom:10px;color:var(--verde)}
+.aviso p{max-width:none;font-size:.98rem;color:var(--tinta-suave)}
+ 
+/* perfil */
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linha);margin-top:58px;border:1px solid var(--linha)}
+.item{background:var(--creme);padding:40px 34px}
+.item h3{font-size:1.2rem;margin-bottom:12px}
+.item p{font-size:.94rem;max-width:none;color:var(--tinta-suave)}
+.item .simb{color:var(--dourado);font-size:1rem;display:block;margin-bottom:16px}
+ 
+/* essência */
+.texto-corrido p{font-size:1.02rem;color:var(--tinta)}
+ 
+/* frentes (única faixa verde, texto curto) */
+.areas{margin-top:54px;border-top:1px solid rgba(249,246,241,.18)}
+.area{
+  display:grid;grid-template-columns:280px 1fr;gap:34px;align-items:baseline;
+  padding:24px 0;border-bottom:1px solid rgba(249,246,241,.18);
+}
+.area-nome{font-family:var(--serif);font-size:1.45rem;color:var(--creme)}
+.area p{font-size:.96rem;max-width:58ch;color:rgba(249,246,241,.9)}
+ 
+/* processo */
+.processo{margin-top:52px;display:grid;gap:2px}
+.passo{background:var(--creme-fundo);padding:28px 34px;display:grid;grid-template-columns:54px 1fr;gap:22px;align-items:baseline}
+.passo .n{font-family:var(--serif);font-size:1.3rem;color:var(--dourado-texto)}
+.passo p{font-size:.95rem;max-width:62ch;margin-top:6px;color:var(--tinta-suave)}
+ 
+/* formulário em fundo claro */
+form{display:grid;gap:22px;max-width:680px;margin-top:48px}
+.campo{display:grid;gap:8px}
+label{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado-texto);font-weight:400}
+input,select,textarea{
+  min-height:48px;border-radius:0;
+  font-family:var(--sans);font-size:1rem;font-weight:300;
+  background:var(--creme);border:1px solid rgba(43,43,38,.22);
+  color:var(--tinta);padding:12px 14px;resize:vertical;
+}
+input::placeholder,textarea::placeholder{color:rgba(43,43,38,.5)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--verde);box-shadow:0 0 0 1px var(--verde)}
+.dupla{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+form .btn{justify-self:start;margin-top:8px}
+.aviso-form{font-size:.86rem;color:var(--tinta-suave)}
+ 
+/* rodapé */
+footer{background:var(--verde);color:rgba(249,246,241,.78);padding:52px 0 32px}
+.rodape{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.84rem}
+.rodape a{text-decoration:none;color:rgba(249,246,241,.78)}
 .rodape a:hover{color:var(--creme)}
-.rodape nav{display:flex;gap:26px;flex-wrap:wrap}
-
+.rodape nav{display:flex;gap:24px;flex-wrap:wrap}
+ 
 @media (max-width:900px){
-  .secao{padding:78px 0}
+  .secao{padding:74px 0}
   .wrap{padding:0 22px}
+  .barra .btn{display:none}
+  .abertura{padding:124px 0 76px}
   .grade{grid-template-columns:1fr}
-  .area{grid-template-columns:1fr;gap:10px}
+  .area{grid-template-columns:1fr;gap:8px}
   .dupla{grid-template-columns:1fr}
-  .aviso{padding:28px 24px}
+  .aviso{padding:26px 24px}
+  .passo{padding:24px 22px;grid-template-columns:40px 1fr;gap:14px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-
+ 
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
-
-<div class="topo">
-  <div class="wrap">
-    <img src="/ativos/simbolo-creme.png" alt="" width="46" height="46">
-    <a class="marca" href="/">MAKTUB GO<span>ALFAIATARIA DE VIAGENS</span></a>
-    <div class="risco"></div>
+ 
+<header>
+  <div class="wrap barra">
+    <a class="marca" href="/" aria-label="Maktub Go, página inicial">
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go">
+      <span class="marca-nome">MAKTUB GO<span>ALFAIATARIA DE VIAGENS</span></span>
+    </a>
+    <a class="btn btn-linha" href="#cadastro">Deixar cadastro</a>
   </div>
-</div>
-
+</header>
+ 
 <main id="conteudo">
-
+ 
 <section class="abertura">
   <div class="wrap">
     <span class="olho">Banco de talentos</span>
     <h1>Venha fazer parte<em>do nosso time.</em></h1>
     <p>Crescemos rápido e com critério. Por isso mantemos este cadastro aberto o ano inteiro, mesmo quando não há vaga anunciada.</p>
-
+ 
     <div class="aviso">
       <h3>No momento não temos vaga aberta</h3>
       <p>E isso não muda nada aqui. A Maktub está sempre atenta a gente que se destaca, e quase todas as nossas contratações saíram deste banco, antes de qualquer anúncio. Quando abre uma posição, olhamos primeiro para quem já está cadastrado.</p>
     </div>
   </div>
 </section>
-
-<section class="secao faixa">
+ 
+<section class="secao secao-creme">
   <div class="wrap">
     <span class="olho">Quem nós procuramos</span>
     <h2>Perfil antes<em>de currículo.</em></h2>
     <p style="margin-top:24px">Experiência em turismo ajuda, mas não é o que decide. O que decide é como a pessoa se comporta quando ninguém está olhando e quando algo dá errado a sete mil quilômetros de distância.</p>
-
+ 
     <div class="grade">
       <article class="item">
         <span class="simb">✦</span>
@@ -216,8 +244,8 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     </div>
   </div>
 </section>
-
-<section class="secao">
+ 
+<section class="secao texto-corrido">
   <div class="wrap">
     <span class="olho">Nossa essência</span>
     <h2>Propósito, fé<em>e resultado.</em></h2>
@@ -225,12 +253,12 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     <p style="margin-top:18px">Valorizamos família, meritocracia e engajamento real. Entrar na Maktub é uma escolha, e a partir dela esperamos pertencimento de verdade. Não é o lugar de quem quer executar tarefa e ir embora. É o lugar de quem quer construir junto.</p>
   </div>
 </section>
-
-<section class="secao faixa">
+ 
+<section class="secao secao-verde">
   <div class="wrap">
     <span class="olho">Onde costumamos abrir posições</span>
     <h2>As frentes<em>que mais crescem.</em></h2>
-
+ 
     <div class="areas">
       <div class="area">
         <span class="area-nome">Operações de viagem</span>
@@ -255,12 +283,12 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     </div>
   </div>
 </section>
-
+ 
 <section class="secao">
   <div class="wrap">
     <span class="olho">Como funciona</span>
     <h2>O caminho<em>até a Maktub.</em></h2>
-
+ 
     <div class="processo">
       <div class="passo">
         <span class="n">01</span>
@@ -300,13 +328,13 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     </div>
   </div>
 </section>
-
-<section class="secao faixa" id="cadastro">
+ 
+<section class="secao secao-creme" id="cadastro">
   <div class="wrap">
     <span class="olho">Cadastro</span>
     <h2>Deixe seu nome<em>com a gente.</em></h2>
     <p style="margin-top:24px">Leva dois minutos. Guardamos seu cadastro e voltamos quando fizer sentido.</p>
-
+ 
     <form id="formTalento" novalidate>
       <div class="dupla">
         <div class="campo">
@@ -352,9 +380,9 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     </form>
   </div>
 </section>
-
+ 
 </main>
-
+ 
 <footer>
   <div class="wrap rodape">
     <span>© 2026 Maktub Go. Alfaiataria de Viagens.</span>
@@ -366,7 +394,7 @@ footer{padding:64px 0 34px;border-top:1px solid rgba(249,246,241,.14);margin-top
     </nav>
   </div>
 </footer>
-
+ 
 <script>
 /* ============================================================
    Preencha as constantes abaixo para gravar no Supabase.
@@ -378,19 +406,19 @@ const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
 const TABELA_TALENTOS = 'banco_talentos';
 const EMAIL_RH = 'contato@maktubgo.com.br';
-
+ 
 const form = document.getElementById('formTalento');
 const aviso = document.getElementById('avisoForm');
-
+ 
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   const d = Object.fromEntries(new FormData(form).entries());
-
+ 
   if(!d.nome || !d.whatsapp || !d.email){
     aviso.textContent = 'Preencha nome, WhatsApp e e-mail para continuar.';
     return;
   }
-
+ 
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     aviso.textContent = 'Enviando...';
     try{
@@ -412,7 +440,7 @@ form.addEventListener('submit', async function(e){
       aviso.textContent = 'Não foi possível enviar agora. Abrindo seu e-mail.';
     }
   }
-
+ 
   const corpo = 'Nome: ' + d.nome
     + '\nWhatsApp: ' + d.whatsapp
     + '\nE-mail: ' + d.email
@@ -424,6 +452,10 @@ form.addEventListener('submit', async function(e){
     + '?subject=' + encodeURIComponent('Banco de talentos: ' + d.nome)
     + '&body=' + encodeURIComponent(corpo);
 });
+ 
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){ cab.classList.toggle('rolou', scrollY > 30); }, {passive:true});
 </script>
 </body>
 </html>
+ 
