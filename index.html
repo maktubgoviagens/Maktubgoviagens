@@ -296,12 +296,11 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   opacity:.09;
 }
 .figura[style*="ativos"]::before{display:none}
-.figura::after{content:'';position:absolute;inset:14px;border:1px solid rgba(201,169,110,.45);pointer-events:none}
+/* sem moldura interna: a linha cortava as fotos */
 .figura-retrato{aspect-ratio:4/5}
 .figura-paisagem{aspect-ratio:3/2}
 .figura-caso{aspect-ratio:4/5}
 .figura-pessoa{aspect-ratio:3/4;background-position:top center}
-.figura-pessoa::after{inset:0;border-color:rgba(201,169,110,.28)}
 .figura-nota{
   position:absolute;inset-inline:0;bottom:0;padding:10px;
   font-size:.6rem;letter-spacing:.1em;text-align:center;
