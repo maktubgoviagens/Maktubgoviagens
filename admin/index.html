@@ -108,6 +108,8 @@
       <button data-v="agendaAll">Reuniões solicitadas <span class="cnt" id="cntAg" hidden></span></button>
       <button data-v="novoCliente">Cadastrar cliente</button>
       <button data-v="gestores">Gestores</button>
+      <button data-v="valores">Valor do milheiro</button>
+      <button data-v="equipe">Equipe</button>
     </div>
     <div class="picker">
       <div class="sec-t" style="margin-bottom:6px">Cliente</div>
@@ -159,8 +161,8 @@
   const COR_CARTAO = opt([['green','Verde Maktub'],['itau','Itaú (grafite)'],['latam','Latam (azul)'],['nubank','Nubank (roxo)'],['santander','Santander (vermelho)'],['bradesco','Bradesco (vinho)']]);
 
   const T = {
-    programas_milhas: { title: 'Programas e vencimentos', order: ['ordem', true], hint: 'O saldo aparece no painel. Preencha a data e a quantidade a vencer para ativar o alerta de vencimento (90 dias antes).',
-      fields: [['programa','Programa','text',1],['saldo','Saldo','number',1],['unidade','Unidade','select',0,opt(['milhas','pontos'])],['ordem','Ordem de exibição','number'],
+    programas_milhas: { title: 'Programas e vencimentos', order: ['ordem', true], hint: 'O saldo é calculado pela Carteira de milhas, não se digita aqui. Use esta tela para nome, unidade e ordem de exibição. O vencimento é preenchido sozinho quando o lançamento tem validade; se não tiver, preencha aqui (alerta 90 dias antes).',
+      fields: [['programa','Programa','text',1],['unidade','Unidade','select',0,opt(['milhas','pontos'])],['ordem','Ordem de exibição','number'],
         ['vencimento_data','Próximo vencimento','date'],['vencimento_quantidade','Quantidade a vencer','number']],
       cols: ['programa','saldo','vencimento_data','vencimento_quantidade'] },
     cartoes: { title: 'Cartões', order: ['ordem', true],
@@ -180,7 +182,7 @@
         ['companhia','Companhia','text'],['numero_voo','Número do voo','text'],['localizador','Localizador','text'],['classe','Classe','text'],['passageiros','Passageiros','text'],
         ['programa','Programa usado','text'],['milhas_utilizadas','Milhas utilizadas','number'],['taxas_brl','Taxas (R$)','number'],['observacoes','Observações','textarea',0,null,'full']],
       cols: ['data_voo','origem_codigo','destino_codigo','companhia','localizador','status'] },
-    historico_saldos: { title: 'Saldos mensais', order: ['mes', false], hint: 'Fechamento de cada mês por programa. Alimenta o gráfico e o relatório mensal. Use o botão "Registrar fechamento" para copiar os saldos atuais.',
+    historico_saldos: { title: 'Saldos mensais', order: ['mes', false], hint: 'Gerado sozinho pela Carteira de milhas a cada lançamento. Só edite aqui meses anteriores ao primeiro lançamento.',
       fields: [['mes','Mês','month',1],['programa','Programa','prog',1],['saldo','Saldo no fechamento','number',1]],
       cols: ['mes','programa','saldo'] },
     extrato_milhas: { title: 'Extrato de pontos', order: ['data', false], hint: 'Quantidade positiva para entradas e negativa para saídas (ex.: -40000 numa emissão).',
@@ -208,8 +210,8 @@
       cols: ['created_at','nome','whatsapp','status'] }
   };
   const CLIENT_VIEWS = [
-    ['cadastro','Cadastro e gestor'],['indicadores','Indicadores do patrimônio'],['programas_milhas','Programas e vencimentos'],['cartoes','Cartões'],
-    ['viagens','Viagens'],['voos','Voos'],['documentos','Documentos'],['historico_saldos','Saldos mensais'],['extrato_milhas','Extrato de pontos'],
+    ['cadastro','Cadastro e gestor'],['carteira','Carteira de milhas'],['indicadores','Indicadores do patrimônio'],['programas_milhas','Programas e vencimentos'],['cartoes','Cartões'],
+    ['viagens','Viagens'],['voos','Voos'],['documentos','Documentos'],['historico_saldos','Saldos mensais'],
     ['historico_economia','Economias'],['movimentos_estrategicos','Movimentos estratégicos'],['reunioes','Histórico de reuniões'],
     ['agendamentos_reuniao','Agendamentos'],['relatorio','Relatório mensal'],['convites','Indicações']
   ];
@@ -247,6 +249,7 @@
       sb.from('gestores').select('*').order('nome')
     ]);
     CLIENTES = c.data || []; GESTORES = g.data || [];
+    try { const eq = await sb.rpc('equipe_listar'); if (!eq.error) EQUIPE = eq.data || []; } catch (_) {}
     fillClientes();
     counters();
   }
@@ -289,6 +292,8 @@
         if (VIEW === 'agendaAll') return viewGlobalList(m, 'agendamentos_reuniao', 'Reuniões solicitadas', ST_AG, ['created_at', 'data_preferida', 'periodo', 'formato', 'pauta', 'status']);
         if (VIEW === 'novoCliente') return viewNovoCliente(m);
         if (VIEW === 'gestores') return viewGestores(m);
+        if (VIEW === 'valores') return viewValores(m);
+        if (VIEW === 'equipe') return viewEquipe(m);
         return viewHome(m);
       }
       const c = cliente();
@@ -299,6 +304,7 @@
       TRIPS = tr.data || []; PROGS = pr.data || [];
       const k = `Cliente · <a href="/painel/relatorio.html?cliente=${CID}" target="_blank" style="color:var(--gold)">ver relatório</a>`;
       if (VIEW === 'cadastro') return viewCadastro(m, c, k);
+      if (VIEW === 'carteira') return viewCarteira(m, c, k);
       if (VIEW === 'indicadores') return viewIndicadores(m, c, k);
       if (VIEW === 'documentos') return viewDocumentos(m, c, k);
       if (VIEW === 'relatorio') return viewRelatorio(m, c, k);
@@ -426,22 +432,27 @@
     const { data, error } = await sb.from('economia_gerada').select('*').eq('cliente_id', c.id).maybeSingle();
     if (error) throw error;
     const r = data || {};
-    m.innerHTML = header(k, 'Indicadores do <em>patrimônio</em>', 'Números do bloco "Patrimônio Consolidado" e a próxima reunião. As economias são calculadas sozinhas pelo histórico.') + `
+    m.innerHTML = header(k, 'Indicadores do <em>patrimônio</em>', 'Calculados sozinhos pela Carteira de milhas e pelo valor do milheiro. Aqui só se edita a próxima reunião.',
+      '<button class="btn" id="recalc">Recalcular agora</button>') + `
+      <div class="cards">
+        <div class="card"><div class="l">Patrimônio em milhas</div><div class="v">${num(r.patrimonio_total ?? 0)}</div></div>
+        <div class="card"><div class="l">Equivalente em R$</div><div class="v">${brl(r.patrimonio_equivalente_brl ?? 0)}</div></div>
+        <div class="card"><div class="l">Evolução no mês</div><div class="v">${num(r.evolucao_mes ?? 0)}</div></div>
+        <div class="card"><div class="l">Evolução no ano</div><div class="v">${num(r.evolucao_ano ?? 0)}</div></div>
+        <div class="card"><div class="l">Crescimento no ano</div><div class="v">${r.crescimento_pct !== null && r.crescimento_pct !== undefined ? Number(r.crescimento_pct).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%' : ''}</div></div>
+      </div>
+      <div class="hint">Evolução conta acúmulo, bônus, compras e bônus de transferência, menos usos e expirações. O saldo herdado não conta como crescimento.</div>
       <div class="card" style="max-width:640px"><form id="fInd"><div class="grid">
-        <div class="f"><label>Equivalente em R$</label><input type="number" step="0.01" name="patrimonio_equivalente_brl" value="${esc(r.patrimonio_equivalente_brl ?? '')}" /></div>
-        <div class="f"><label>Crescimento (%)</label><input type="number" step="0.1" name="crescimento_pct" value="${esc(r.crescimento_pct ?? '')}" /></div>
-        <div class="f"><label>Evolução no mês (milhas)</label><input type="number" name="evolucao_mes" value="${esc(r.evolucao_mes ?? '')}" /></div>
-        <div class="f"><label>Evolução no ano (milhas)</label><input type="number" name="evolucao_ano" value="${esc(r.evolucao_ano ?? '')}" /></div>
         <div class="f full"><label>Próxima reunião (texto livre, ex.: 10 de outubro · 14h)</label><input name="proxima_reuniao" value="${esc(r.proxima_reuniao ?? '')}" />
           <span class="h">Se houver uma reunião confirmada em Agendamentos, o painel mostra ela no lugar deste texto.</span></div>
       </div><div class="pbar" style="position:static"><button class="btn pri">Salvar</button></div><div id="indMsg"></div></form></div>`;
+    $('recalc').onclick = async () => { try { await syncCarteira(c.id); toast('Painel recalculado.'); render(); } catch (e) { toast(errMsg(e)); } };
     $('fInd').onsubmit = async (e) => {
       e.preventDefault();
-      const f = new FormData(e.target), row = {};
-      for (const [key, v] of f.entries()) row[key] = v === '' ? null : (key === 'proxima_reuniao' ? v : Number(v));
+      const row = { proxima_reuniao: new FormData(e.target).get('proxima_reuniao') || null };
       const q = r.id ? sb.from('economia_gerada').update(row).eq('id', r.id) : sb.from('economia_gerada').insert({ ...row, cliente_id: c.id });
       const { error: er } = await q;
-      if (er) { $('indMsg').className = 'msg err'; $('indMsg').textContent = errMsg(er); } else toast('Indicadores salvos.');
+      if (er) { $('indMsg').className = 'msg err'; $('indMsg').textContent = errMsg(er); } else toast('Salvo.');
     };
   }
 
@@ -465,7 +476,7 @@
     if (error) throw error;
     const rows = data || [];
     const label = (key) => (cfg.fields.find(f => f[0] === key) || [key, key === '_economia' ? 'Economia' : key === 'created_at' ? 'Criado em' : key])[1].replace(/ \(.*\)/, '');
-    const extra = t === 'historico_saldos' ? '<button class="btn" id="fechar">Registrar fechamento</button>' : '';
+    const extra = '';
     m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}<button class="btn pri" id="novo">+ Novo</button>`) +
       (cfg.hint ? `<div class="hint">${esc(cfg.hint)}</div>` : '') +
       `<div class="tblw"><table><thead><tr>${cfg.cols.map(x => `<th>${esc(label(x))}</th>`).join('')}<th></th></tr></thead><tbody>
@@ -557,6 +568,442 @@
       const { error } = await sb.from('historico_saldos').upsert(rows, { onConflict: 'cliente_id,mes,programa' });
       if (error) { $('mx').className = 'msg err'; $('mx').textContent = errMsg(error); return; }
       closeDrawer(); toast('Fechamento registrado.'); render();
+    };
+  }
+
+  // ======================= CARTEIRA DE MILHAS (v4) =======================
+  // O saldo de cada programa é a soma dos lançamentos. O custo médio segue o método da média ponderada
+  // (igual a carteira de ações) e separa o que é herdado, orgânico e pago.
+  const normProg = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const round2 = (n) => n === null || n === undefined || !isFinite(n) ? null : Math.round(n * 100) / 100;
+  const cpm = (n) => n === null || n === undefined || !isFinite(n) ? '' : brl(n);
+  const hojeISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+  const PROG_PADRAO = ['Livelo', 'Esfera', 'Smiles', 'LATAM Pass', 'Azul Fidelidade', 'TAP Miles&Go', 'Iberia Plus', 'British Airways Executive Club', 'Qatar Privilege Club', 'AAdvantage', 'Átomos C6', 'Inter Loop', 'Itaú Pontos', 'KMV'];
+  const TIPO_LBL = { saldo_inicial: 'Saldo herdado', acumulo: 'Acúmulo no cartão', bonus: 'Bônus / promoção', compra: 'Compra de pontos', clube: 'Clube de pontos',
+    transf_entrada: 'Transferência recebida', transf_saida: 'Transferência enviada', emissao: 'Uso de milhas', expiracao: 'Expiração', ajuste: 'Ajuste', transferencia: 'Transferência' };
+  const ORIGEM_LBL = { saldo_inicial: 'Herdado', acumulo: 'Orgânico', bonus: 'Orgânico', compra: 'Pago', clube: 'Pago' };
+  const USO = opt([['passagem', 'Passagem aérea'], ['hospedagem', 'Hospedagem'], ['upgrade', 'Upgrade'], ['produto', 'Produtos ou vale-compras'], ['outro', 'Outro']]);
+  let EQUIPE = [];
+
+  function calcCarteira(extrato) {
+    const hoje = hojeISO();
+    const ordem = (x) => x.tipo === 'transf_saida' ? 0 : x.tipo === 'transf_entrada' ? 2 : 1;
+    const rows = [...extrato].sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.created_at || '').localeCompare(String(b.created_at || '')) || ordem(a) - ordem(b));
+    const P = {}, porLinha = {}, pend = {}, meses = {};
+    const prog = (nome) => { const k = normProg(nome); return P[k] || (P[k] = { key: k, programa: String(nome || '').trim(), h: 0, o: 0, p: 0, ch: 0, cp: 0, lotes: [] }); };
+    const saldo = (s) => s.h + s.o + s.p;
+    const retirar = (s, q) => {
+      const tot = saldo(s);
+      if (tot <= 0 || q <= 0) { s.o -= q; return { h: 0, o: q, p: 0, ch: 0, cp: 0, custo: 0 }; }
+      const f = Math.min(1, q / tot), r = { h: s.h * f, o: s.o * f, p: s.p * f, ch: s.ch * f, cp: s.cp * f };
+      s.h -= r.h; s.o -= r.o; s.p -= r.p; s.ch -= r.ch; s.cp -= r.cp;
+      if (q > tot) { s.o -= (q - tot); r.o += (q - tot); }
+      r.custo = r.ch + r.cp; return r;
+    };
+    for (const x of rows) {
+      const s = prog(x.programa), q = Number(x.quantidade || 0), custo = Number(x.custo_brl || 0);
+      const info = { custo_milhas: null, custo_milheiro: null };
+      if (x.tipo === 'saldo_inicial' && q > 0) { s.h += q; s.ch += custo; }
+      else if ((x.tipo === 'compra' || x.tipo === 'clube') && q > 0) { s.p += q; s.cp += custo; info.custo_milheiro = custo / q * 1000; }
+      else if (x.tipo === 'transf_entrada' && q > 0) {
+        const c = x.grupo_id && pend[x.grupo_id];
+        if (c) {
+          const bonus = Math.max(0, Math.min(q, Number(x.milhas_bonus || 0))), base = q - bonus, env = c.h + c.o + c.p, f = env > 0 ? base / env : 0;
+          s.h += c.h * f; s.o += c.o * f + bonus; s.p += c.p * f; s.ch += c.ch; s.cp += c.cp;
+          if (env <= 0) s.o += base;
+          info.custo_milhas = c.custo; info.custo_milheiro = c.custo / q * 1000;
+        } else s.o += q;
+      }
+      else if (q > 0) s.o += q;
+      else if (q < 0) {
+        const r = retirar(s, -q);
+        info.custo_milhas = r.custo; info.custo_milheiro = r.custo / -q * 1000;
+        if (x.tipo === 'transf_saida' && x.grupo_id) pend[x.grupo_id] = r;
+      }
+      if (x.tipo === 'saldo_inicial' && custo && q > 0) info.custo_milheiro = custo / q * 1000;
+      if (x.validade && q > 0) s.lotes.push({ validade: String(x.validade).slice(0, 10), qtd: q });
+      if (x.tipo === 'emissao') info.custo_real = (info.custo_milhas || 0) + Number(x.taxas_brl || 0);
+      porLinha[x.id] = info;
+      const mk = String(x.data).slice(0, 7);
+      meses[mk] = meses[mk] || {}; meses[mk][s.key] = saldo(s);
+    }
+    const fechamentos = [], ks = Object.keys(meses).sort();
+    if (ks.length) {
+      const ult = {}, fim = hoje.slice(0, 7); let [y, m] = ks[0].split('-').map(Number);
+      for (let guard = 0; guard < 600; guard++) {
+        const k = `${y}-${String(m).padStart(2, '0')}`;
+        Object.assign(ult, meses[k] || {});
+        Object.entries(ult).forEach(([pk, v]) => fechamentos.push({ mes: k, key: pk, saldo: Math.round(v) }));
+        if (k >= fim) break;
+        m++; if (m > 12) { m = 1; y++; }
+      }
+    }
+    const ano = hoje.slice(0, 4), mes = hoje.slice(0, 7);
+    const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
+    const evolucao_mes = Math.round(rows.filter(x => String(x.data).startsWith(mes)).reduce((a, x) => a + cresce(x), 0));
+    const evolucao_ano = Math.round(rows.filter(x => String(x.data).startsWith(ano)).reduce((a, x) => a + cresce(x), 0));
+    const programas = Object.values(P).map(s => {
+      const tot = saldo(s), custo = s.ch + s.cp;
+      const lotes = s.lotes.filter(l => l.validade >= hoje).sort((a, b) => a.validade.localeCompare(b.validade));
+      const prox = lotes[0] ? lotes[0].validade : null;
+      return { key: s.key, programa: s.programa, saldo: Math.round(tot), herdado: Math.round(s.h), organico: Math.round(s.o), pago: Math.round(s.p),
+        custo_total: round2(custo), custo_medio: tot > 0 ? custo / tot * 1000 : null, custo_compras: s.p > 0.5 ? s.cp / s.p * 1000 : null,
+        tem_validade: s.lotes.length > 0, venc_data: prox, venc_qtd: prox ? Math.min(Math.round(tot), lotes.filter(l => l.validade === prox).reduce((a, l) => a + l.qtd, 0)) : null };
+    }).sort((a, b) => b.saldo - a.saldo);
+    const total = programas.reduce((a, p) => a + p.saldo, 0);
+    return { programas, porLinha, fechamentos, evolucao_mes, evolucao_ano, total, custo_total: programas.reduce((a, p) => a + (p.custo_total || 0), 0) };
+  }
+
+  async function valoresRef() {
+    const { data } = await sb.from('valores_milheiro').select('*');
+    const map = {}; (data || []).forEach(v => { map[normProg(v.programa)] = Number(v.valor_brl); });
+    return map;
+  }
+
+  // Grava no painel do cliente tudo o que é calculado: saldos, custo médio, vencimentos, fechamentos, indicadores e economias das emissões.
+  async function syncCarteira(cid, refs) {
+    const [ex, pr, ec] = await Promise.all([
+      sb.from('extrato_milhas').select('*').eq('cliente_id', cid),
+      sb.from('programas_milhas').select('*').eq('cliente_id', cid),
+      sb.from('economia_gerada').select('*').eq('cliente_id', cid).maybeSingle()
+    ]);
+    if (ex.error) throw ex.error; if (pr.error) throw pr.error;
+    refs = refs || await valoresRef();
+    const W = calcCarteira(ex.data || []), agora = new Date().toISOString();
+    const exist = {}; (pr.data || []).forEach(p => { exist[normProg(p.programa)] = p; });
+    const nome = (key) => (exist[key] && exist[key].programa) || (W.programas.find(p => p.key === key) || {}).programa || key;
+    const ops = []; let patrimonio = 0, temRef = false;
+    for (const p of W.programas) {
+      const vref = refs[p.key] !== undefined ? refs[p.key] : null;
+      if (vref !== null) { temRef = true; patrimonio += p.saldo * vref / 1000; }
+      const row = { saldo: p.saldo, qtd_herdado: p.herdado, qtd_organico: p.organico, qtd_pago: p.pago, custo_total_brl: p.custo_total,
+        custo_medio_milheiro: round2(p.custo_medio), custo_medio_compras: round2(p.custo_compras), valor_referencia_milheiro: vref,
+        patrimonio_brl: vref !== null ? round2(p.saldo * vref / 1000) : null, calculado_em: agora };
+      if (p.tem_validade) { row.vencimento_data = p.venc_data; row.vencimento_quantidade = p.venc_qtd; }
+      const e = exist[p.key];
+      ops.push(e ? sb.from('programas_milhas').update(row).eq('id', e.id) : sb.from('programas_milhas').insert({ ...row, cliente_id: cid, programa: p.programa, unidade: 'milhas', ordem: 99 }));
+    }
+    Object.entries(exist).forEach(([key, e]) => { if (!W.programas.some(p => p.key === key) && Number(e.saldo || 0) !== 0) ops.push(sb.from('programas_milhas').update({ saldo: 0, qtd_herdado: 0, qtd_organico: 0, qtd_pago: 0, custo_total_brl: 0, custo_medio_milheiro: null, patrimonio_brl: 0, calculado_em: agora }).eq('id', e.id)); });
+    if (W.fechamentos.length) ops.push(sb.from('historico_saldos').upsert(W.fechamentos.map(f => ({ cliente_id: cid, mes: f.mes + '-01', programa: nome(f.key), saldo: f.saldo })), { onConflict: 'cliente_id,mes,programa' }));
+    const base = W.total - W.evolucao_ano;
+    const ind = { patrimonio_total: W.total, evolucao_mes: W.evolucao_mes, evolucao_ano: W.evolucao_ano, crescimento_pct: base > 0 ? round2(W.evolucao_ano / base * 100) : null, atualizado_em: agora };
+    if (temRef) ind.patrimonio_equivalente_brl = round2(patrimonio);
+    ops.push(ec.data ? sb.from('economia_gerada').update(ind).eq('id', ec.data.id) : sb.from('economia_gerada').insert({ ...ind, cliente_id: cid }));
+    const emis = (ex.data || []).filter(x => x.tipo === 'emissao');
+    const comEco = emis.filter(x => Number(x.valor_pagante_brl) > 0), semEco = emis.filter(x => !(Number(x.valor_pagante_brl) > 0));
+    if (comEco.length) ops.push(sb.from('historico_economia').upsert(comEco.map(x => {
+      const i = W.porLinha[x.id] || {};
+      return { cliente_id: cid, extrato_id: x.id, categoria: !x.categoria_uso || x.categoria_uso === 'passagem' ? 'emissao' : 'outro', data: x.data,
+        descricao: x.descricao || 'Uso de milhas', programa: nome(normProg(x.programa)), milhas_utilizadas: Math.abs(Number(x.quantidade || 0)),
+        valor_mercado_brl: Number(x.valor_pagante_brl), valor_pago_brl: round2(i.custo_real || 0), valor_economia_brl: null,
+        custo_milhas_brl: round2(i.custo_milhas || 0), taxas_brl: x.taxas_brl === null || x.taxas_brl === undefined ? null : Number(x.taxas_brl) };
+    }), { onConflict: 'extrato_id' }));
+    if (semEco.length) ops.push(sb.from('historico_economia').delete().in('extrato_id', semEco.map(x => x.id)));
+    const res = await Promise.all(ops);
+    const err = res.find(r => r && r.error);
+    if (err) throw err.error;
+    return W;
+  }
+
+  async function viewCarteira(m, c, k) {
+    const [exR, refs] = await Promise.all([sb.from('extrato_milhas').select('*').eq('cliente_id', c.id), valoresRef()]);
+    if (exR.error) throw exR.error;
+    const ex = exR.data || [], W = calcCarteira(ex);
+    const nomeProg = {}; PROGS.forEach(p => { nomeProg[normProg(p.programa)] = p.programa; });
+    let patr = 0, semRef = [];
+    W.programas.forEach(p => { if (refs[p.key] !== undefined) patr += p.saldo * refs[p.key] / 1000; else if (p.saldo > 0) semRef.push(nomeProg[p.key] || p.programa); });
+    const h = W.programas.reduce((a, p) => a + p.herdado, 0), o = W.programas.reduce((a, p) => a + p.organico, 0), pg = W.programas.reduce((a, p) => a + p.pago, 0);
+    const pct = (v) => W.total > 0 ? Math.round(v / W.total * 100) + '%' : '0%';
+    const quem = (id) => (EQUIPE.find(e => e.user_id === id) || {}).nome || '';
+    const lista = [...ex].sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    m.innerHTML = header(k, 'Carteira de <em>milhas</em>', esc(c.nome_completo) + ' · o saldo é a soma dos lançamentos, nada é digitado duas vezes.',
+      `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button>`) + `
+      <div class="cards">
+        <div class="card"><div class="l">Saldo total</div><div class="v">${num(W.total)}</div><div class="muted">milhas e pontos</div></div>
+        <div class="card"><div class="l">Patrimônio estimado</div><div class="v">${brl(patr)}</div><div class="muted">${semRef.length ? 'Sem valor de referência: ' + esc(semRef.join(', ')) : 'Pelo valor de referência do milheiro'}</div></div>
+        <div class="card"><div class="l">Custo médio da carteira</div><div class="v">${W.total > 0 ? brl(W.custo_total / W.total * 1000) : ''}</div><div class="muted">por milheiro · custo total ${brl(W.custo_total)}</div></div>
+        <div class="card"><div class="l">Composição</div><div class="v" style="font-size:22px">${pct(h)} · ${pct(o)} · ${pct(pg)}</div><div class="muted">herdado · orgânico · pago</div></div>
+      </div>
+      ${semRef.length ? '<div class="hint">Para calcular o patrimônio em reais, cadastre o valor de referência do milheiro desses programas em <strong>Valor do milheiro</strong> (menu Operação).</div>' : ''}
+      <h2>Por programa</h2>
+      <div class="tblw"><table><thead><tr><th>Programa</th><th style="text-align:right">Saldo</th><th style="text-align:right">Herdado</th><th style="text-align:right">Orgânico</th><th style="text-align:right">Pago</th>
+        <th style="text-align:right">Custo total</th><th style="text-align:right">Custo médio</th><th style="text-align:right">Custo das compras</th><th style="text-align:right">Valor ref.</th><th style="text-align:right">Patrimônio</th></tr></thead><tbody>
+      ${W.programas.length ? W.programas.map(p => { const r = refs[p.key]; return `<tr><td><strong>${esc(nomeProg[p.key] || p.programa)}</strong></td><td class="a">${num(p.saldo)}</td><td class="a">${num(p.herdado)}</td><td class="a">${num(p.organico)}</td><td class="a">${num(p.pago)}</td>
+        <td class="a">${brl(p.custo_total)}</td><td class="a"><strong>${cpm(p.custo_medio)}</strong></td><td class="a">${cpm(p.custo_compras)}</td><td class="a">${r !== undefined ? brl(r) : '<span class="muted">sem valor</span>'}</td><td class="a">${r !== undefined ? brl(p.saldo * r / 1000) : ''}</td></tr>`; }).join('')
+        : '<tr><td colspan="10" class="empty">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa (Entrada de pontos, origem "Saldo herdado").</td></tr>'}
+      </tbody></table></div>
+      <div class="muted" style="margin-top:8px">Custo médio e valores por milheiro (1.000 milhas). "Custo das compras" é só das milhas pagas e fica visível apenas para a equipe.</div>
+      <h2>Lançamentos</h2>
+      <div class="tblw"><table><thead><tr><th>Data</th><th>Programa</th><th>Lançamento</th><th style="text-align:right">Milhas</th><th style="text-align:right">Valor</th><th style="text-align:right">R$/milheiro</th><th>Descrição</th><th></th></tr></thead><tbody>
+      ${lista.length ? lista.map(x => {
+        const q = Number(x.quantidade || 0), i = W.porLinha[x.id] || {};
+        let valor = '';
+        if (['saldo_inicial', 'compra', 'clube'].includes(x.tipo) && x.custo_brl !== null && x.custo_brl !== undefined) valor = brl(x.custo_brl);
+        else if (i.custo_milhas !== null && i.custo_milhas !== undefined) valor = `<span class="muted">${brl(i.custo_milhas)}</span>`;
+        let desc = esc(x.descricao || '');
+        if (x.tipo === 'emissao') desc += `<div class="muted">Custo real ${brl(i.custo_real || 0)}${x.taxas_brl ? ' (milhas ' + brl(i.custo_milhas || 0) + ' + taxas ' + brl(x.taxas_brl) + ')' : ''}${Number(x.valor_pagante_brl) > 0 ? ' · em dinheiro ' + brl(x.valor_pagante_brl) + ' · economia <strong>' + brl(Number(x.valor_pagante_brl) - (i.custo_real || 0)) + '</strong>' : ''}</div>`;
+        if (x.validade) desc += `<div class="muted">Validade ${brDate(x.validade)}</div>`;
+        if (quem(x.criado_por)) desc += `<div class="muted">Lançado por ${esc(quem(x.criado_por))}</div>`;
+        const orig = ORIGEM_LBL[x.tipo] ? ` <span class="pill ${x.tipo === 'compra' || x.tipo === 'clube' ? 'p-warn' : x.tipo === 'saldo_inicial' ? '' : 'p-ok'}">${ORIGEM_LBL[x.tipo]}</span>` : '';
+        return `<tr><td>${brDate(x.data)}</td><td>${esc(x.programa)}</td><td>${TIPO_LBL[x.tipo] || esc(x.tipo)}${orig}</td>
+          <td class="a" style="color:${q >= 0 ? 'var(--ok)' : 'var(--bad)'}">${q >= 0 ? '+' : '−'} ${num(Math.abs(q))}</td><td class="a">${valor}</td><td class="a">${cpm(i.custo_milheiro)}</td><td>${desc}</td>
+          <td class="a">${x.grupo_id ? '' : `<button class="btn sm" data-edl="${x.id}">Editar</button> `}<button class="btn sm del" data-rml="${x.id}">Excluir</button></td></tr>`;
+      }).join('') : '<tr><td colspan="8" class="empty">Nenhum lançamento.</td></tr>'}
+      </tbody></table></div>`;
+    const ctx = { c, W, refs, ex };
+    $('lnEntrada').onclick = () => formEntrada(ctx, null);
+    $('lnTransf').onclick = () => formTransf(ctx);
+    $('lnUso').onclick = () => formUso(ctx, null);
+    $('lnAjuste').onclick = () => formAjuste(ctx, null);
+    m.querySelectorAll('[data-edl]').forEach(b => b.onclick = () => {
+      const x = ex.find(r => String(r.id) === b.dataset.edl); if (!x) return;
+      if (x.tipo === 'emissao') formUso(ctx, x);
+      else if (['saldo_inicial', 'acumulo', 'bonus', 'compra', 'clube'].includes(x.tipo)) formEntrada(ctx, x);
+      else formAjuste(ctx, x);
+    });
+    m.querySelectorAll('[data-rml]').forEach(b => b.onclick = async () => {
+      const x = ex.find(r => String(r.id) === b.dataset.rml); if (!x) return;
+      const par = x.grupo_id ? ex.filter(r => r.grupo_id === x.grupo_id) : [x];
+      if (!confirm(par.length > 1 ? 'Excluir a transferência inteira (saída e entrada)? Essa ação não pode ser desfeita.' : 'Excluir este lançamento? Essa ação não pode ser desfeita.')) return;
+      const { error: er } = await sb.from('extrato_milhas').delete().in('id', par.map(r => r.id));
+      if (er) return toast(errMsg(er));
+      try { await syncCarteira(c.id, refs); toast('Lançamento excluído. Painel do cliente atualizado.'); } catch (e2) { toast(errMsg(e2)); }
+      render();
+    });
+  }
+
+  // ---------- formulários da carteira ----------
+  const progDatalist = (ctx) => {
+    const nomes = [...new Set([...PROGS.map(p => p.programa), ...ctx.W.programas.map(p => p.programa), ...PROG_PADRAO])];
+    return `<datalist id="dl_cart">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+  };
+  const progComSaldo = (ctx, cur) => {
+    const list = ctx.W.programas.filter(p => p.saldo > 0 || normProg(p.programa) === normProg(cur));
+    return list.map(p => `<option value="${esc(p.programa)}" ${normProg(p.programa) === normProg(cur) ? 'selected' : ''}>${esc(p.programa)} · ${num(p.saldo)}</option>`).join('');
+  };
+  const stateOf = (ctx, nome) => ctx.W.programas.find(p => p.key === normProg(nome)) || null;
+  function drawer(titulo, sub, corpo, onSave) {
+    $('panel').innerHTML = `<h3>${titulo}</h3><div class="ph">${sub}</div><form id="fl" novalidate>${corpo}
+      <div class="pbar"><button type="button" class="btn" id="cx">Cancelar</button><button class="btn pri" id="sx">Salvar</button></div><div id="mx"></div></form>`;
+    $('drawer').hidden = false; $('cx').onclick = closeDrawer;
+    $('fl').onsubmit = async (e) => {
+      e.preventDefault();
+      const fail = (t) => { $('mx').className = 'msg err'; $('mx').textContent = t; };
+      $('sx').disabled = true;
+      try { const r = await onSave(e.target, fail); if (r !== false) { closeDrawer(); render(); } }
+      catch (er) { fail(errMsg(er)); }
+      finally { if ($('sx')) $('sx').disabled = false; }
+    };
+  }
+  const val = (f, n) => { const el = f.elements[n]; return el ? el.value.trim() : ''; };
+  const numv = (f, n) => { const v = val(f, n); return v === '' ? null : Number(v.replace(',', '.')); };
+  async function salvarLinhas(ctx, row, dados) {
+    const q = row ? sb.from('extrato_milhas').update(dados).eq('id', row.id) : sb.from('extrato_milhas').insert(Array.isArray(dados) ? dados.map(d => ({ ...d, cliente_id: ctx.c.id })) : { ...dados, cliente_id: ctx.c.id });
+    const { error } = await q; if (error) throw error;
+    await syncCarteira(ctx.c.id, ctx.refs);
+    toast('Salvo. O painel do cliente já mostra a atualização.');
+  }
+
+  function formEntrada(ctx, row) {
+    const r = row || { data: hojeISO(), tipo: 'acumulo' };
+    drawer(row ? 'Editar entrada' : 'Entrada de pontos', esc(ctx.c.nome_completo), `
+      <div class="hint">Toda entrada tem uma origem. <strong>Herdado</strong>: o que o cliente já tinha antes da gestão. <strong>Orgânico</strong>: cartão, parceiros, bônus e promoções (custo zero). <strong>Pago</strong>: compra de pontos e clube (informe quanto custou).</div>
+      <div class="grid">
+        <div class="f"><label>Data <b>*</b></label><input type="date" name="data" value="${esc(String(r.data).slice(0, 10))}" /></div>
+        <div class="f"><label>Programa <b>*</b></label><input name="programa" list="dl_cart" value="${esc(r.programa || '')}" autocomplete="off" />${progDatalist(ctx)}</div>
+        <div class="f full"><label>Origem <b>*</b></label><select name="tipo">
+          ${[['saldo_inicial', 'Saldo herdado (já existia antes da gestão)'], ['acumulo', 'Acúmulo no cartão ou parceiros (orgânico)'], ['bonus', 'Bônus ou promoção (orgânico)'], ['compra', 'Compra de pontos (pago)'], ['clube', 'Clube de pontos (pago)']]
+            .map(([v, l]) => `<option value="${v}" ${v === r.tipo ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="f"><label>Quantidade <b>*</b></label><input type="number" min="1" step="1" name="quantidade" value="${esc(row ? Math.abs(row.quantidade) : '')}" /></div>
+        <div class="f" id="wCusto"><label id="lCusto">Valor pago (R$)</label><input type="number" min="0" step="0.01" name="custo_brl" value="${esc(r.custo_brl ?? '')}" /><span class="h" id="hCusto"></span></div>
+        <div class="f"><label>Validade dos pontos</label><input type="date" name="validade" value="${esc(r.validade ? String(r.validade).slice(0, 10) : '')}" /><span class="h">Opcional. Ativa o alerta de vencimento.</span></div>
+        <div class="f full"><label>Descrição</label><input name="descricao" value="${esc(r.descricao || '')}" placeholder="Ex.: Fatura de agosto do Unique; promoção 100% Livelo" /></div>
+      </div><div class="msg ok" id="prev" hidden></div>`,
+    async (f, fail) => {
+      const tipo = val(f, 'tipo'), q = numv(f, 'quantidade'), custo = numv(f, 'custo_brl');
+      if (!val(f, 'data') || !val(f, 'programa') || !(q > 0)) return fail('Preencha data, programa e quantidade.'), false;
+      if ((tipo === 'compra' || tipo === 'clube') && !(custo > 0)) return fail('Compra e clube precisam do valor pago em reais.'), false;
+      await salvarLinhas(ctx, row, { data: val(f, 'data'), programa: val(f, 'programa'), tipo, quantidade: Math.round(q),
+        custo_brl: tipo === 'acumulo' || tipo === 'bonus' ? null : custo, validade: val(f, 'validade') || null, descricao: val(f, 'descricao') || null });
+    });
+    const f = $('fl');
+    const upd = () => {
+      const tipo = val(f, 'tipo'), q = numv(f, 'quantidade'), custo = numv(f, 'custo_brl');
+      const org = tipo === 'acumulo' || tipo === 'bonus';
+      $('wCusto').hidden = org;
+      $('lCusto').innerHTML = tipo === 'saldo_inicial' ? 'Custo conhecido (R$)' : 'Valor pago (R$) <b>*</b>';
+      $('hCusto').textContent = tipo === 'saldo_inicial' ? 'Só se souber quanto o cliente pagou. Em branco, entra com custo zero.' : 'Total pago, com o bônus já incluído na quantidade.';
+      const show = !org && q > 0 && custo > 0;
+      $('prev').hidden = !show;
+      if (show) $('prev').innerHTML = `Custo do milheiro nesta entrada: <strong>${brl(custo / q * 1000)}</strong>`;
+    };
+    f.addEventListener('input', upd); upd();
+  }
+
+  function formTransf(ctx) {
+    if (!ctx.W.programas.some(p => p.saldo > 0)) return toast('Lance primeiro o saldo do programa de origem.');
+    drawer('Transferência entre programas', esc(ctx.c.nome_completo), `
+      <div class="hint">Gera a saída na origem e a entrada no destino. O custo das milhas vai junto, então o bônus barateia o milheiro no destino.</div>
+      <div class="grid">
+        <div class="f"><label>Data <b>*</b></label><input type="date" name="data" value="${hojeISO()}" /></div>
+        <div class="f"><label>De <b>*</b></label><select name="de">${progComSaldo(ctx, '')}</select></div>
+        <div class="f"><label>Para <b>*</b></label><input name="para" list="dl_cart" autocomplete="off" />${progDatalist(ctx)}</div>
+        <div class="f"><label>Pontos enviados <b>*</b></label><input type="number" min="1" step="1" name="enviados" /></div>
+        <div class="f"><label>Paridade</label><select name="paridade"><option value="1">1 ponto = 1 milha</option><option value="2">2 pontos = 1 milha</option><option value="3">3 pontos = 1 milha</option><option value="0.5">1 ponto = 2 milhas</option></select></div>
+        <div class="f"><label>Bônus da promoção (%)</label><input type="number" min="0" step="1" name="bonus" value="0" /></div>
+        <div class="f"><label>Milhas recebidas <b>*</b></label><input type="number" min="1" step="1" name="recebidas" /><span class="h">Calculado sozinho. Ajuste se o programa creditou diferente.</span></div>
+        <div class="f"><label>Validade no destino</label><input type="date" name="validade" /></div>
+        <div class="f full"><label>Descrição</label><input name="descricao" placeholder="Ex.: Promoção 100% Livelo > Smiles" /></div>
+      </div><div class="msg ok" id="prev" hidden></div>`,
+    async (f, fail) => {
+      const de = val(f, 'de'), para = val(f, 'para'), env = numv(f, 'enviados'), rec = numv(f, 'recebidas'), par = Number(val(f, 'paridade') || 1);
+      if (!val(f, 'data') || !de || !para || !(env > 0) || !(rec > 0)) return fail('Preencha data, origem, destino, pontos enviados e milhas recebidas.'), false;
+      if (normProg(de) === normProg(para)) return fail('Origem e destino precisam ser programas diferentes.'), false;
+      const s = stateOf(ctx, de);
+      if (!s || env > s.saldo) return fail(`Saldo insuficiente em ${de}: ${num(s ? s.saldo : 0)}.`), false;
+      const grupo = crypto.randomUUID(), desc = val(f, 'descricao');
+      await salvarLinhas(ctx, null, [
+        { data: val(f, 'data'), programa: de, tipo: 'transf_saida', quantidade: -Math.round(env), grupo_id: grupo, descricao: `Para ${para}${desc ? ' · ' + desc : ''}` },
+        { data: val(f, 'data'), programa: para, tipo: 'transf_entrada', quantidade: Math.round(rec), milhas_bonus: Math.max(0, Math.round(rec - env / par)), grupo_id: grupo, validade: val(f, 'validade') || null, descricao: `De ${de}${desc ? ' · ' + desc : ''}` }
+      ]);
+    });
+    const f = $('fl'); let manual = false;
+    f.elements.recebidas.addEventListener('input', () => { manual = true; });
+    const upd = (e) => {
+      const env = numv(f, 'enviados'), par = Number(val(f, 'paridade') || 1), bon = numv(f, 'bonus') || 0;
+      if (e && e.target && e.target.name !== 'recebidas' && ['enviados', 'paridade', 'bonus'].includes(e.target.name)) manual = false;
+      if (!manual && env > 0) f.elements.recebidas.value = Math.round(env / par * (1 + bon / 100));
+      const rec = numv(f, 'recebidas'), s = stateOf(ctx, val(f, 'de')), d = stateOf(ctx, val(f, 'para'));
+      const show = s && env > 0 && rec > 0 && s.saldo > 0;
+      $('prev').hidden = !show; if (!show) return;
+      const custoVai = (s.custo_total || 0) * Math.min(1, env / s.saldo);
+      const novo = ((d ? d.custo_total || 0 : 0) + custoVai) / ((d ? d.saldo : 0) + rec) * 1000;
+      $('prev').innerHTML = `Custo que vai junto: <strong>${brl(custoVai)}</strong> · milheiro desta transferência: <strong>${brl(custoVai / rec * 1000)}</strong><br>Custo médio de ${esc(val(f, 'para') || 'destino')} depois: <strong>${brl(novo)}</strong>`;
+    };
+    f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
+  }
+
+  function formUso(ctx, row) {
+    const r = row || { data: hojeISO(), categoria_uso: 'passagem' };
+    if (!row && !ctx.W.programas.some(p => p.saldo > 0)) return toast('Não há saldo lançado para usar.');
+    drawer(row ? 'Editar uso de milhas' : 'Uso de milhas', esc(ctx.c.nome_completo), `
+      <div class="hint">O custo das milhas sai pelo custo médio do programa. Somando as taxas, você tem o custo real da emissão. Informando o valor em dinheiro, a economia entra sozinha no Histórico de Economias do cliente.</div>
+      <div class="grid">
+        <div class="f"><label>Data <b>*</b></label><input type="date" name="data" value="${esc(String(r.data).slice(0, 10))}" /></div>
+        <div class="f"><label>Programa <b>*</b></label><select name="programa">${progComSaldo(ctx, r.programa || '')}</select></div>
+        <div class="f"><label>Milhas usadas <b>*</b></label><input type="number" min="1" step="1" name="quantidade" value="${esc(row ? Math.abs(row.quantidade) : '')}" /></div>
+        <div class="f"><label>O que foi emitido</label><select name="categoria_uso">${USO.map(([v, l]) => `<option value="${v}" ${v === r.categoria_uso ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="f"><label>Taxas pagas (R$)</label><input type="number" min="0" step="0.01" name="taxas_brl" value="${esc(r.taxas_brl ?? '')}" /></div>
+        <div class="f"><label>Valor em dinheiro (R$)</label><input type="number" min="0" step="0.01" name="valor_pagante_brl" value="${esc(r.valor_pagante_brl ?? '')}" /><span class="h">Preço da mesma emissão pagando em dinheiro.</span></div>
+        <div class="f"><label>Viagem</label><select name="viagem_id"><option value="">Sem viagem</option>${TRIPS.map(t => `<option value="${t.id}" ${t.id === r.viagem_id ? 'selected' : ''}>${esc(t.destino)} · ${brDate(t.data_viagem)}</option>`).join('')}</select></div>
+        <div class="f full"><label>Descrição <b>*</b></label><input name="descricao" value="${esc(r.descricao || '')}" placeholder="Ex.: GRU > SCL, executiva, 2 passageiros" /></div>
+      </div><div class="msg ok" id="prev" hidden></div>`,
+    async (f, fail) => {
+      const q = numv(f, 'quantidade');
+      if (!val(f, 'data') || !val(f, 'programa') || !(q > 0) || !val(f, 'descricao')) return fail('Preencha data, programa, milhas usadas e descrição.'), false;
+      const s = stateOf(ctx, val(f, 'programa')), jaUsado = row && normProg(row.programa) === normProg(val(f, 'programa')) ? Math.abs(row.quantidade) : 0;
+      if (!s || q > s.saldo + jaUsado) return fail(`Saldo insuficiente em ${val(f, 'programa')}: ${num(s ? s.saldo : 0)}.`), false;
+      await salvarLinhas(ctx, row, { data: val(f, 'data'), programa: val(f, 'programa'), tipo: 'emissao', quantidade: -Math.round(q), categoria_uso: val(f, 'categoria_uso'),
+        taxas_brl: numv(f, 'taxas_brl'), valor_pagante_brl: numv(f, 'valor_pagante_brl'), viagem_id: val(f, 'viagem_id') || null, descricao: val(f, 'descricao') });
+    });
+    const f = $('fl');
+    const upd = () => {
+      const s = stateOf(ctx, val(f, 'programa')), q = numv(f, 'quantidade'), tx = numv(f, 'taxas_brl') || 0, pag = numv(f, 'valor_pagante_brl');
+      const show = s && q > 0 && s.custo_medio !== null;
+      $('prev').hidden = !show; if (!show) return;
+      const cm = s.custo_medio * q / 1000, real = cm + tx;
+      $('prev').innerHTML = `Custo das milhas: <strong>${brl(cm)}</strong> (${brl(s.custo_medio)} por milheiro)<br>Custo real da emissão: <strong>${brl(real)}</strong>` +
+        (pag > 0 ? `<br>Economia: <strong>${brl(pag - real)}</strong> (${Math.round((pag - real) / pag * 100)}% menos que em dinheiro)` : '');
+    };
+    f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
+  }
+
+  function formAjuste(ctx, row) {
+    const r = row || { data: hojeISO(), tipo: 'expiracao' };
+    const sel = r.tipo === 'expiracao' ? 'expiracao' : Number(r.quantidade) < 0 ? 'menos' : row ? 'mais' : 'expiracao';
+    drawer(row ? 'Editar lançamento' : 'Expiração ou ajuste', esc(ctx.c.nome_completo), `
+      <div class="hint">Use ajuste só para acertar o saldo com o que aparece no programa. Ajuste para mais entra como orgânico (custo zero).</div>
+      <div class="grid">
+        <div class="f"><label>Data <b>*</b></label><input type="date" name="data" value="${esc(String(r.data).slice(0, 10))}" /></div>
+        <div class="f"><label>Programa <b>*</b></label><input name="programa" list="dl_cart" value="${esc(r.programa || '')}" autocomplete="off" />${progDatalist(ctx)}</div>
+        <div class="f"><label>Tipo <b>*</b></label><select name="tipo"><option value="expiracao" ${sel === 'expiracao' ? 'selected' : ''}>Expiração (pontos venceram)</option><option value="menos" ${sel === 'menos' ? 'selected' : ''}>Ajuste para menos</option><option value="mais" ${sel === 'mais' ? 'selected' : ''}>Ajuste para mais</option></select></div>
+        <div class="f"><label>Quantidade <b>*</b></label><input type="number" min="1" step="1" name="quantidade" value="${esc(row ? Math.abs(row.quantidade) : '')}" /></div>
+        <div class="f full"><label>Descrição</label><input name="descricao" value="${esc(r.descricao || '')}" /></div>
+      </div>`,
+    async (f, fail) => {
+      const q = numv(f, 'quantidade'), t = val(f, 'tipo');
+      if (!val(f, 'data') || !val(f, 'programa') || !(q > 0)) return fail('Preencha data, programa e quantidade.'), false;
+      await salvarLinhas(ctx, row, { data: val(f, 'data'), programa: val(f, 'programa'), tipo: t === 'expiracao' ? 'expiracao' : 'ajuste', quantidade: t === 'mais' ? Math.round(q) : -Math.round(q), descricao: val(f, 'descricao') || null });
+    });
+  }
+
+  // ======================= VALOR DO MILHEIRO (global) =======================
+  async function viewValores(m) {
+    const { data, error } = await sb.from('valores_milheiro').select('*').order('programa');
+    if (error) throw error;
+    const rows = data || [];
+    m.innerHTML = header('Operação', 'Valor do <em>milheiro</em>', 'Valor de referência por programa, usado para calcular o patrimônio em reais de todos os clientes.',
+      '<button class="btn" id="aplicar">Atualizar todos os painéis</button><button class="btn pri" id="novoV">+ Programa</button>') + `
+      <div class="hint">Atualize uma vez por mês. Use o valor que a milha rende em emissão (referência de mercado), não valor de venda. Ao salvar, os painéis de todos os clientes são recalculados.</div>
+      <div class="tblw"><table><thead><tr><th>Programa</th><th style="text-align:right">Valor por milheiro</th><th>Observação</th><th>Atualizado em</th><th></th></tr></thead><tbody>
+      ${rows.length ? rows.map(v => `<tr><td><strong>${esc(v.programa)}</strong></td><td class="a">${brl(v.valor_brl)}</td><td>${esc(v.observacao || '')}</td><td>${brDT(v.atualizado_em)}</td>
+        <td class="a"><button class="btn sm" data-v="${v.id}">Editar</button> <button class="btn sm del" data-rmv="${v.id}">Excluir</button></td></tr>`).join('') : '<tr><td colspan="5" class="empty">Nenhum valor cadastrado.</td></tr>'}
+      </tbody></table></div>`;
+    const todos = async () => {
+      const refs = await valoresRef(); let ok = 0;
+      for (const c of CLIENTES) { try { await syncCarteira(c.id, refs); ok++; } catch (e) { console.error(e); } }
+      toast(`Painéis atualizados: ${ok} de ${CLIENTES.length}.`);
+    };
+    const open = (v) => {
+      $('panel').innerHTML = `<h3>${v ? 'Editar' : 'Novo'} valor</h3><div class="ph">Vale para todos os clientes.</div>
+        <form id="fv"><div class="grid">
+          <div class="f full"><label>Programa <b>*</b></label><input name="programa" list="dl_pp" value="${esc(v ? v.programa : '')}" /><datalist id="dl_pp">${PROG_PADRAO.map(n => `<option value="${esc(n)}">`).join('')}</datalist><span class="h">Escreva igual ao nome usado nas carteiras.</span></div>
+          <div class="f"><label>Valor por milheiro (R$) <b>*</b></label><input type="number" min="0" step="0.01" name="valor_brl" value="${esc(v ? v.valor_brl : '')}" /></div>
+          <div class="f"><label>Observação</label><input name="observacao" value="${esc(v ? v.observacao || '' : '')}" placeholder="Ex.: média de emissões de setembro" /></div>
+        </div><div class="pbar"><button type="button" class="btn" id="cx">Cancelar</button><button class="btn pri" id="sx">Salvar</button></div><div id="mx"></div></form>`;
+      $('drawer').hidden = false; $('cx').onclick = closeDrawer;
+      $('fv').onsubmit = async (e) => {
+        e.preventDefault();
+        const f = e.target, row = { programa: val(f, 'programa'), valor_brl: numv(f, 'valor_brl'), observacao: val(f, 'observacao') || null, atualizado_em: new Date().toISOString() };
+        if (!row.programa || !(row.valor_brl >= 0) || row.valor_brl === null) { $('mx').className = 'msg err'; $('mx').textContent = 'Informe programa e valor.'; return; }
+        const dup = rows.find(x => normProg(x.programa) === normProg(row.programa) && (!v || x.id !== v.id));
+        const { error: er } = v || dup ? await sb.from('valores_milheiro').update(row).eq('id', (v || dup).id) : await sb.from('valores_milheiro').insert(row);
+        if (er) { $('mx').className = 'msg err'; $('mx').textContent = errMsg(er); return; }
+        closeDrawer(); toast('Valor salvo. Recalculando os painéis...'); await todos(); render();
+      };
+    };
+    $('novoV').onclick = () => open(null);
+    $('aplicar').onclick = async () => { $('aplicar').disabled = true; await todos(); $('aplicar').disabled = false; };
+    m.querySelectorAll('[data-v]').forEach(b => b.onclick = () => open(rows.find(x => x.id === b.dataset.v)));
+    m.querySelectorAll('[data-rmv]').forEach(b => b.onclick = async () => {
+      if (!confirm('Excluir este valor de referência?')) return;
+      const { error: er } = await sb.from('valores_milheiro').delete().eq('id', b.dataset.rmv);
+      if (er) toast(errMsg(er)); else { await todos(); render(); }
+    });
+  }
+
+  // ======================= EQUIPE (global) =======================
+  async function viewEquipe(m) {
+    const { data, error } = await sb.rpc('equipe_listar');
+    if (error) throw error;
+    EQUIPE = data || [];
+    m.innerHTML = header('Operação', 'Equipe', 'Quem acessa esta administração e lança nas carteiras.') + `
+      <div class="hint"><strong>Passo 1.</strong> No Supabase, abra Authentication, Users, Add user, Create new user. Informe o e-mail da pessoa e uma senha provisória e marque "Auto Confirm User".<br>
+      <strong>Passo 2.</strong> Adicione abaixo com o mesmo e-mail. Ela entra por maktubgo.com.br/acesso com senha e código, e já cai aqui.<br>
+      <strong>Passo 3.</strong> Se ela também atende clientes, cadastre em <strong>Gestores</strong> (foto, WhatsApp e Cal.com) e vincule os clientes dela.</div>
+      <div class="card" style="max-width:620px;margin-bottom:22px"><form id="fEq"><div class="grid">
+        <div class="f"><label>Nome <b>*</b></label><input name="nome" required /></div>
+        <div class="f"><label>E-mail de login <b>*</b></label><input type="email" name="email" required /></div>
+      </div><div class="pbar" style="position:static"><button class="btn pri">Adicionar à equipe</button></div><div id="eqMsg"></div></form></div>
+      <div class="tblw"><table style="min-width:0"><thead><tr><th>Nome</th><th>E-mail</th></tr></thead><tbody>
+      ${EQUIPE.map(e => `<tr><td>${esc(e.nome)}</td><td>${esc(e.email || '')}</td></tr>`).join('') || '<tr><td colspan="2" class="empty">Ninguém ainda.</td></tr>'}
+      </tbody></table></div>`;
+    $('fEq').onsubmit = async (e) => {
+      e.preventDefault();
+      const f = e.target, msg = $('eqMsg');
+      const { data: r, error: er } = await sb.rpc('equipe_adicionar', { p_email: val(f, 'email'), p_nome: val(f, 'nome') });
+      if (er) { msg.className = 'msg err'; msg.textContent = errMsg(er); return; }
+      toast(r === 'ja_existe' ? 'Essa pessoa já está na equipe.' : 'Adicionada à equipe.'); render();
     };
   }
 
