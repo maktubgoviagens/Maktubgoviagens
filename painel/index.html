@@ -393,6 +393,19 @@
     .sb-gestor a{font-size:11px;color:var(--gold-warm)}
     .sb-install{margin-top:6px;background:none;border:1px dashed rgba(201,169,110,.3);color:rgba(249,246,241,.7);font-family:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:9px;cursor:pointer;width:100%}
     .sb-install:hover{color:var(--gold-warm);border-color:var(--gold-warm)}
+    .inst-ov{position:fixed;inset:0;background:rgba(20,45,31,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .inst-ov[hidden]{display:none}
+    .inst-box{background:var(--white,#fff);max-width:460px;width:100%;padding:30px 28px;max-height:88vh;overflow:auto}
+    .inst-kicker{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold,#8a6520);margin-bottom:8px}
+    .inst-box h3{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:30px;color:var(--green,#1a3826);margin:0 0 10px}
+    .inst-box h3 em{color:var(--gold,#8a6520)}
+    .inst-sub{font-size:13.5px;line-height:1.6;color:var(--text-mid,#3d3d3d);margin:0 0 18px}
+    .inst-steps{list-style:none;margin:0 0 22px;padding:0}
+    .inst-steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.55;color:var(--text-mid,#3d3d3d);padding:9px 0;border-top:1px solid rgba(0,0,0,.06)}
+    .inst-steps li:first-child{border-top:none}
+    .inst-steps .n{flex:0 0 22px;height:22px;border:1px solid var(--gold,#8a6520);color:var(--gold,#8a6520);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px}
+    .inst-btn{width:100%;background:var(--green,#1a3826);color:#f9f6f1;border:none;padding:13px;font-family:inherit;font-size:11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}
+    .inst-btn:hover{background:var(--green-dark,#142d1f)}
     .sb-badge{margin-left:auto;background:#9a4a3a;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;font-weight:600}
  
     .alert-venc{display:flex;gap:18px;align-items:center;background:#fbf3ea;border:1px solid rgba(154,74,58,.25);border-left:3px solid #9a4a3a;padding:18px 24px;margin-bottom:24px;cursor:pointer}
@@ -568,7 +581,8 @@
       .sb-link{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:9px 12px;font-size:12px}
       .sb-link.active{border-bottom-color:var(--gold-warm)}
       .sb-link svg{display:none}
-      .sb-gestor,.sb-install{display:none!important}
+      .sb-gestor{display:none!important}
+      .sb-install{order:4;flex:0 0 100%;width:100%;margin-top:12px;padding:11px;font-size:11px}
       .gestor-card{grid-template-columns:auto 1fr;gap:16px;padding:18px}
       .gestor-card .acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
       .gestor-card img,.gestor-card .gst-ph{width:56px;height:56px}
@@ -714,6 +728,15 @@
  
     <div class="sb-gestor" id="sbGestor" hidden></div>
     <button type="button" class="sb-install" id="sbInstall" hidden>Instalar app no celular</button>
+    <div class="inst-ov" id="instalarModal" hidden>
+      <div class="inst-box">
+        <div class="inst-kicker">Painel na tela do celular</div>
+        <h3>Instalar o <em>app.</em></h3>
+        <p class="inst-sub">Em poucos toques o painel vira um ícone no seu celular, abre em tela cheia e continua com a mesma segurança de sempre.</p>
+        <ol class="inst-steps" id="instalarPassos"></ol>
+        <button type="button" class="inst-btn" id="instalarFechar">Entendi</button>
+      </div>
+    </div>
  
     <div class="sb-foot">
       <div class="sb-avatar" id="avatarUser">··</div>
@@ -2025,13 +2048,45 @@
  
   // ----- App na tela do celular -----
   let installEvt = null;
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; $('sbInstall').hidden = false; });
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
+  const isAndroid = /android/i.test(ua);
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  if (isIOS && !standalone) $('sbInstall').hidden = false;
+  // O botão fica sempre visível para quem ainda não instalou: o convite automático do
+  // navegador não é confiável, então as instruções aparecem na tela quando ele não vem.
+  if (!standalone) $('sbInstall').hidden = false;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (!standalone) $('sbInstall').hidden = false; });
+  window.addEventListener('appinstalled', () => { installEvt = null; $('sbInstall').hidden = true; });
+  function comoInstalar() {
+    const passos = isIOS
+      ? ['Abra este painel no <strong>Safari</strong>. No Chrome do iPhone o atalho pode não funcionar.',
+         'Toque no botão <strong>Compartilhar</strong>, o quadrado com a seta para cima, embaixo da tela.',
+         'Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.',
+         'Confirme em <strong>Adicionar</strong>. O ícone da Maktub Go aparece junto com seus apps.']
+      : isAndroid
+      ? ['Abra este painel no <strong>Chrome</strong>.',
+         'Toque nos <strong>três pontinhos</strong> no canto superior direito.',
+         'Toque em <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.',
+         'Confirme em <strong>Instalar</strong>. O ícone da Maktub Go aparece junto com seus apps.']
+      : ['Abra este painel no <strong>Chrome</strong> ou no <strong>Edge</strong>.',
+         'Clique no ícone de <strong>instalar</strong> na barra de endereço, ao lado da estrela de favoritos.',
+         'Confirme em <strong>Instalar</strong>.',
+         'No celular, abra o painel pelo navegador e repita o processo por lá.'];
+    $('instalarPassos').innerHTML = passos.map((t, i) => `<li><span class="n">${i + 1}</span><div>${t}</div></li>`).join('');
+    $('instalarModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function fecharInstalar() { $('instalarModal').hidden = true; document.body.style.overflow = ''; }
+  $('instalarFechar').addEventListener('click', fecharInstalar);
+  $('instalarModal').addEventListener('click', (e) => { if (e.target === $('instalarModal')) fecharInstalar(); });
   $('sbInstall').addEventListener('click', async () => {
-    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('sbInstall').hidden = true; }
-    else toast('No iPhone: toque em Compartilhar e depois em "Adicionar à Tela de Início".');
+    if (installEvt) {
+      installEvt.prompt();
+      const r = await installEvt.userChoice;
+      installEvt = null;
+      if (r && r.outcome === 'accepted') { $('sbInstall').hidden = true; return; }
+    }
+    comoInstalar();
   });
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/painel/sw.js', { scope: '/painel/' }).catch(() => {}));
  
@@ -2250,3 +2305,4 @@
  
 </body>
 </html>
+ 
