@@ -906,7 +906,7 @@
     const quem = (id) => (EQUIPE.find(e => e.user_id === id) || {}).nome || '';
     const lista = [...ex].sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || '')));
     m.innerHTML = header(k, 'Carteira de <em>milhas</em>', esc(c.nome_completo) + ' · o saldo é a soma dos lançamentos, nada é digitado duas vezes.',
-      `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button><button class="btn" id="lnExp">Exportar planilha</button><button class="btn" id="lnImp">Importar planilha</button>`) + `
+      `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button><button class="btn" id="lnRecalc">Recalcular painel</button><button class="btn" id="lnExp">Exportar planilha</button><button class="btn" id="lnImp">Importar planilha</button>`) + `
       <div class="cards">
         <div class="card"><div class="l">Saldo total</div><div class="v">${num(W.total)}</div><div class="muted">milhas e pontos</div></div>
         <div class="card"><div class="l">Patrimônio estimado</div><div class="v">${brl(patr)}</div><div class="muted">${semRef.length ? 'Sem valor de referência: ' + esc(semRef.join(', ')) : 'Pelo valor de referência do milheiro'}</div></div>
@@ -945,6 +945,11 @@
     $('lnUso').onclick = () => formUso(ctx, null);
     $('lnAjuste').onclick = () => formAjuste(ctx, null);
     $('lnImp').onclick = () => importarCarteira(ctx);
+    $('lnRecalc').onclick = async () => {
+      $('lnRecalc').disabled = true;
+      try { await syncCarteira(c.id, await valoresRef()); toast('Painel do cliente recalculado: saldos, custo médio, vencimentos e patrimônio.'); render(); }
+      catch (err) { toast(errMsg(err)); $('lnRecalc').disabled = false; }
+    };
     $('lnExp').onclick = () => {
       if (!lista.length) return toast('Não há lançamentos para exportar.');
       baixarCsv(nomeArq(c, 'carteira-de-milhas'), [CAR_COLS, ...lista.map(x => [brDate(x.data), CAR_TIPO_SAIDA[x.tipo] || x.tipo, x.programa || '',
@@ -1458,3 +1463,4 @@
 </script>
 </body>
 </html>
+ 
