@@ -2199,6 +2199,26 @@
       renderVencimentos(programas);
       renderMilhas(saldos, extrato, programas);
       renderEconomias(economias);
+ 
+      // Cashback entra no patrimônio consolidado e ganha linha em "Por programa"
+      const cashbackBrl = (economias || []).filter(r => r.categoria === 'cashback').reduce((s, r) => s + (Number(r.valor_economia_brl) || 0), 0);
+      if (cashbackBrl > 0) {
+        $('patrimonioTotal').innerHTML = `<span class="cur">R$</span>${fmtMoney(patrBrl + cashbackBrl)}`;
+        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira e <span class="mi">R$ ${fmtMoney(cashbackBrl)}</span> em cashback<span class="h-note">Milhas estimadas pelo valor de mercado do milheiro de cada programa</span>`;
+        const cont = $('programasList');
+        if (cont.querySelector('.empty-progs')) cont.innerHTML = '';
+        cont.insertAdjacentHTML('beforeend', `
+          <div class="prog">
+            <div class="prog-info">
+              <div class="nm">Cashback</div>
+              <div class="bar"><div class="bar-fill" style="width:8%"></div></div>
+              <div class="prog-cm">Dinheiro de volta nos cartões</div>
+            </div>
+            <div class="prog-amt">
+              <div class="v">R$ ${fmtMoney(cashbackBrl)}</div><div class="prog-mi">recebido em dinheiro</div>
+            </div>
+          </div>`);
+      }
       renderEconomiaResumo(economias);
       renderDocs();
       renderRelatorios([
@@ -2230,4 +2250,3 @@
  
 </body>
 </html>
- 
