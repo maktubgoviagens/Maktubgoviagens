@@ -71,6 +71,12 @@
     .drawer{position:fixed;inset:0;background:rgba(20,45,31,.5);z-index:50;display:flex;justify-content:flex-end}
     .panel{background:var(--white);width:min(560px,100%);height:100%;overflow:auto;padding:26px 28px 40px}
     .panel h3{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:28px;color:var(--green);margin-bottom:4px}
+    .panel.wide{width:min(1000px,100%)}
+    .imp-drop{border:1px dashed var(--gold);padding:22px;text-align:center;background:var(--cream-deep);font-size:13px;color:var(--mid)}
+    .imp-drop input{margin-top:10px}
+    .imp-tbl td,.imp-tbl th{font-size:12px;padding:7px 8px;vertical-align:top}
+    .imp-tbl tr.bad td{background:rgba(154,74,58,.05)}
+    .imp-tbl tr.dup td{background:rgba(180,140,40,.06)}
     .panel .ph{color:var(--muted);font-size:12.5px;margin-bottom:18px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
     .f{display:flex;flex-direction:column;gap:5px}
@@ -477,7 +483,8 @@
     const rows = data || [];
     const label = (key) => (cfg.fields.find(f => f[0] === key) || [key, key === '_economia' ? 'Economia' : key === 'created_at' ? 'Criado em' : key])[1].replace(/ \(.*\)/, '');
     const extra = '';
-    m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}<button class="btn pri" id="novo">+ Novo</button>`) +
+    const impBtn = t === 'historico_economia' ? '<button class="btn" id="impEco">Importar planilha</button> ' : '';
+    m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}${impBtn}<button class="btn pri" id="novo">+ Novo</button>`) +
       (cfg.hint ? `<div class="hint">${esc(cfg.hint)}</div>` : '') +
       `<div class="tblw"><table><thead><tr>${cfg.cols.map(x => `<th>${esc(label(x))}</th>`).join('')}<th></th></tr></thead><tbody>
       ${rows.length ? rows.map(r => `<tr>${cfg.cols.map(x => `<td>${fmtCell(x, r[x], r)}</td>`).join('')}
@@ -491,7 +498,160 @@
       const { error: er } = await sb.from(t).delete().eq('id', b.dataset.rm);
       if (er) toast(errMsg(er)); else { toast('Registro excluído.'); render(); }
     });
-    if (extra) $('fechar').onclick = () => fecharMes(c);
+    if (extra && $('fechar')) $('fechar').onclick = () => fecharMes(c);
+    if (impBtn) $('impEco').onclick = () => importarEconomias(c, rows);
+  }
+ 
+  // ===== Importar economias por planilha (Excel ou CSV) =====
+  // Colunas: data | tipo | descricao | programa | pontos | valor_rs | observacao
+  // Tipos: pontos (cartões e super acúmulo), cashback, outro. Passagens entram pela Carteira de milhas.
+  const IMP_COLS = ['data', 'tipo', 'descricao', 'programa', 'pontos', 'valor_rs', 'observacao'];
+  const impNorm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const IMP_ALIAS = { data: 'data', dia: 'data', tipo: 'tipo', 'tipo de ganho': 'tipo', categoria: 'tipo', descricao: 'descricao', 'descricao do ganho': 'descricao',
+    programa: 'programa', pontos: 'pontos', 'pontos gerados': 'pontos', valor_rs: 'valor_rs', 'valor rs': 'valor_rs', 'valor r$': 'valor_rs', valor: 'valor_rs',
+    'valor (r$)': 'valor_rs', 'valor da economia': 'valor_rs', 'valor_economia_brl': 'valor_rs', observacao: 'observacao', obs: 'observacao' };
+  const impTipo = (v) => {
+    const t = impNorm(v);
+    if (!t) return null;
+    if (/^(pontos?|acumulo|super ?acumulo|cartao|cartoes|cartoes e super acumulo)/.test(t)) return 'acumulo';
+    if (/^cash ?back/.test(t)) return 'cashback';
+    if (/^outro/.test(t)) return 'outro';
+    if (/^(passagem|passagens|emissao)/.test(t)) return 'passagem';
+    return '?';
+  };
+  const impData = (v) => {
+    if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+    if (typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return d.toISOString().slice(0, 10); }
+    const s = String(v || '').trim();
+    let m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; const iso = `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, d = new Date(iso + 'T12:00:00'); return !isNaN(d) && d.toISOString().slice(0, 10) === iso ? iso : null; }
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+  };
+  const impValor = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return v;
+    let s = String(v).replace(/r\$|\s/gi, '');
+    if (!s) return null;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    const n = Number(s); return isNaN(n) ? NaN : n;
+  };
+  const impPontos = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return Math.round(v);
+    const s = String(v).replace(/[^\d-]/g, ''); if (!s) return NaN;
+    return Number(s);
+  };
+  function impCsv(text) {
+    text = text.replace(/^\uFEFF/, '');
+    const first = text.split(/\r?\n/)[0] || '';
+    const sep = (first.match(/;/g) || []).length >= (first.match(/,/g) || []).length ? ';' : (first.includes('\t') ? '\t' : ',');
+    const rows = []; let row = [], cur = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; continue; }
+      if (ch === '"') q = true;
+      else if (ch === sep) { row.push(cur); cur = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += ch;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+  async function impLerArquivo(file) {
+    if (/\.(csv|txt)$/i.test(file.name)) return impCsv(await file.text());
+    const XLSX = await import('https://esm.sh/xlsx@0.18.5');
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+  }
+  function impModeloCsv() {
+    const linhas = [IMP_COLS.join(';'),
+      '05/09/2026;pontos;Super acúmulo Magalu 10 pts por real;Esfera;45000;;',
+      '12/09/2026;cashback;Cashback cartão Inter;;;320,50;',
+      '18/09/2026;pontos;Pontuação da fatura Black;Livelo;28000;;valor calculado pelo milheiro'];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\uFEFF' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'modelo-importar-economias.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+ 
+  function importarEconomias(c, existentes) {
+    $('panel').classList.add('wide');
+    $('panel').innerHTML = `<h3>Importar economias</h3><div class="ph">${esc(c.nome_completo)} · os ganhos entram só neste cliente</div>
+      <div class="hint">Planilha com as colunas <strong>data, tipo, descricao, programa, pontos, valor_rs</strong> (observacao é opcional). Tipos: <strong>pontos</strong> (cartões e super acúmulo), <strong>cashback</strong> ou <strong>outro</strong>. Nos pontos, se valor_rs ficar vazio, o valor é calculado pelo Valor do milheiro. Passagens não entram aqui: elas vêm da Carteira de milhas.</div>
+      <div style="margin-bottom:14px"><button type="button" class="btn sm" id="impModelo">Baixar planilha modelo</button></div>
+      <div class="imp-drop">Escolha o arquivo (.xlsx ou .csv)<br><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt" /></div>
+      <div id="impOut"></div>
+      <div class="pbar"><button type="button" class="btn" id="impCx">Cancelar</button><button type="button" class="btn pri" id="impOk" disabled>Importar</button></div><div id="impMsg"></div>`;
+    $('drawer').hidden = false;
+    $('impCx').onclick = closeDrawer;
+    $('impModelo').onclick = impModeloCsv;
+    let validas = [];
+    $('impFile').onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      $('impOut').innerHTML = '<div class="msg">Lendo a planilha...</div>'; $('impOk').disabled = true; $('impMsg').innerHTML = ''; validas = [];
+      let grid;
+      try { grid = await impLerArquivo(file); } catch (err) { console.error(err); $('impOut').innerHTML = '<div class="msg err">Não consegui ler o arquivo. Salve como .xlsx ou .csv e tente de novo.</div>'; return; }
+      grid = (grid || []).filter(r => r.some(x => String(x).trim() !== ''));
+      if (grid.length < 2) { $('impOut').innerHTML = '<div class="msg err">A planilha está vazia ou só tem o cabeçalho.</div>'; return; }
+      const head = grid[0].map(h => IMP_ALIAS[impNorm(h)] || null);
+      const faltam = ['data', 'tipo', 'descricao'].filter(k => !head.includes(k));
+      if (faltam.length) { $('impOut').innerHTML = `<div class="msg err">Faltam as colunas: ${esc(faltam.join(', '))}. Use a planilha modelo como base.</div>`; return; }
+      const refs = await valoresRef();
+      const nomesProg = {}; [...PROG_PADRAO, ...PROGS.map(p => p.programa)].forEach(n => { nomesProg[normProg(n)] = n; });
+      const chave = (r) => [r.data, r.categoria === 'cartao' ? 'acumulo' : r.categoria, impNorm(r.descricao), Number(r.pontos_gerados || 0), Math.round(Number(r.valor_economia_brl || 0) * 100)].join('|');
+      const jaTem = new Set((existentes || []).map(chave));
+      const vistos = new Set();
+      const linhas = grid.slice(1).map((cells, i) => {
+        const o = {}; head.forEach((k, j) => { if (k) o[k] = cells[j]; });
+        const erros = [];
+        const data = impData(o.data); if (!data) erros.push('data inválida');
+        const tipo = impTipo(o.tipo);
+        if (!tipo) erros.push('tipo vazio');
+        else if (tipo === 'passagem') erros.push('passagem entra pela Carteira de milhas');
+        else if (tipo === '?') erros.push('tipo desconhecido (use pontos, cashback ou outro)');
+        const descricao = String(o.descricao || '').trim(); if (!descricao) erros.push('descrição vazia');
+        const progTxt = String(o.programa || '').trim();
+        const programa = progTxt ? (nomesProg[normProg(progTxt)] || progTxt) : null;
+        const pontos = impPontos(o.pontos); if (Number.isNaN(pontos)) erros.push('pontos inválidos');
+        let valor = impValor(o.valor_rs); if (Number.isNaN(valor)) { erros.push('valor inválido'); valor = null; }
+        let calc = false;
+        if (tipo === 'acumulo') {
+          if (!programa) erros.push('informe o programa');
+          if (!(pontos > 0)) erros.push('informe os pontos');
+          if (valor === null && programa && pontos > 0) {
+            const ref = refs[normProg(programa)];
+            if (ref) { valor = Math.round(pontos / 1000 * ref * 100) / 100; calc = true; }
+            else erros.push(`sem Valor do milheiro para ${programa}`);
+          }
+        } else if ((tipo === 'cashback' || tipo === 'outro') && !(valor > 0)) erros.push('informe o valor em R$');
+        const row = erros.length ? null : { cliente_id: c.id, categoria: tipo, data, descricao, programa, pontos_gerados: tipo === 'acumulo' ? pontos : (pontos || null),
+          valor_economia_brl: valor, observacao: String(o.observacao || '').trim() || null };
+        let dup = false;
+        if (row) { const k = chave(row); dup = jaTem.has(k) || vistos.has(k); vistos.add(k); }
+        return { n: i + 2, data, tipo, descricao, programa, pontos, valor, calc, erros, row, dup };
+      });
+      validas = linhas.filter(l => l.row && !l.dup).map(l => l.row);
+      const nErr = linhas.filter(l => l.erros.length).length, nDup = linhas.filter(l => l.dup).length;
+      const TL = { acumulo: 'Pontos', cashback: 'Cashback', outro: 'Outro', passagem: 'Passagem' };
+      $('impOut').innerHTML = `<div class="msg ${validas.length ? 'ok' : 'err'}" style="margin:16px 0 10px">${validas.length} ${validas.length === 1 ? 'linha pronta' : 'linhas prontas'} para importar${nErr ? ` · ${nErr} com erro (não entram)` : ''}${nDup ? ` · ${nDup} já ${nDup === 1 ? 'lançada' : 'lançadas'} (não entram)` : ''}</div>
+        <div class="tblw"><table class="imp-tbl" style="min-width:0"><thead><tr><th>Linha</th><th>Situação</th><th>Data</th><th>Tipo</th><th>Descrição</th><th>Programa</th><th style="text-align:right">Pontos</th><th style="text-align:right">Valor</th></tr></thead><tbody>
+        ${linhas.map(l => `<tr class="${l.erros.length ? 'bad' : l.dup ? 'dup' : ''}"><td>${l.n}</td>
+          <td>${l.erros.length ? `<span class="pill p-bad">Erro</span><div style="color:var(--bad);margin-top:4px">${esc(l.erros.join('; '))}</div>` : l.dup ? '<span class="pill p-warn">Já lançada</span>' : '<span class="pill p-ok">Ok</span>'}</td>
+          <td>${l.data ? brDate(l.data) : ''}</td><td>${esc(TL[l.tipo] || '')}</td><td>${esc(l.descricao)}</td><td>${esc(l.programa || '')}</td>
+          <td style="text-align:right">${l.pontos > 0 ? num(l.pontos) : ''}</td><td style="text-align:right">${l.valor !== null && l.valor !== undefined ? brl(l.valor) : ''}${l.calc ? '<div style="color:var(--muted);font-size:10.5px">pelo milheiro</div>' : ''}</td></tr>`).join('')}
+        </tbody></table></div>`;
+      $('impOk').disabled = !validas.length;
+      $('impOk').textContent = validas.length ? `Importar ${validas.length} ${validas.length === 1 ? 'linha' : 'linhas'}` : 'Importar';
+    };
+    $('impOk').onclick = async () => {
+      if (!validas.length) return;
+      $('impOk').disabled = true; $('impMsg').className = 'msg'; $('impMsg').textContent = 'Gravando...';
+      const { error } = await sb.from('historico_economia').insert(validas);
+      if (error) { $('impOk').disabled = false; $('impMsg').className = 'msg err'; $('impMsg').textContent = errMsg(error); return; }
+      const n = validas.length;
+      closeDrawer(); toast(`${n} ${n === 1 ? 'economia importada' : 'economias importadas'}. O painel do cliente já mostra.`); counters(); render();
+    };
   }
  
   function inputFor([key, lbl, type, req, opts, wide], val) {
@@ -555,7 +715,7 @@
       closeDrawer(); toast('Salvo. O painel do cliente já mostra a atualização.'); counters(); render();
     };
   }
-  function closeDrawer() { $('drawer').hidden = true; $('panel').innerHTML = ''; }
+  function closeDrawer() { $('drawer').hidden = true; $('panel').innerHTML = ''; $('panel').classList.remove('wide'); }
   $('drawer').addEventListener('click', (e) => { if (e.target === $('drawer')) closeDrawer(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('drawer').hidden) closeDrawer(); });
  
@@ -1139,4 +1299,3 @@
 </script>
 </body>
 </html>
- 
