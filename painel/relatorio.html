@@ -102,7 +102,7 @@
   </div>
 </div>
 <div id="root"><div class="state">Preparando seu relatório...</div></div>
-
+ 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
   const EXIGIR_CODIGO = true;
@@ -110,7 +110,7 @@
   const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   const $ = (id) => document.getElementById(id);
-
+ 
   const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const MES_C = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const esc = (s) => s === null || s === undefined ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -124,9 +124,9 @@
   const jwtAmr = (token) => { try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.amr || []).map(a => a.method); } catch (_) { return []; } };
   const safe = async (q) => { try { const r = await q; return r.error ? [] : (r.data || []); } catch (_) { return []; } };
   const ecoValor = (r) => (r.valor_economia_brl !== null && r.valor_economia_brl !== undefined && r.valor_economia_brl !== '') ? Number(r.valor_economia_brl) || 0 : (Number(r.valor_mercado_brl) || 0) - (Number(r.valor_pago_brl) || 0);
-  const CAT = { emissao: 'Passagem', acumulo: 'Acúmulo / cashback', cartao: 'Cartão', outro: 'Outro' };
+  const CAT = { emissao: 'Passagem', acumulo: 'Cartões e super acúmulo', cartao: 'Cartões e super acúmulo', cashback: 'Cashback', outro: 'Outro' };
   const TIPO = { saldo_inicial: 'Saldo anterior', acumulo: 'Acúmulo', bonus: 'Bônus', compra: 'Compra de pontos', clube: 'Clube de pontos', transf_entrada: 'Transferência recebida', transf_saida: 'Transferência enviada', transferencia: 'Transferência', emissao: 'Emissão', expiracao: 'Expiração', ajuste: 'Ajuste' };
-
+ 
   const params = new URLSearchParams(location.search);
   const now = new Date();
   const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -135,7 +135,7 @@
   const shift = (k, d) => { let [y, m] = k.split('-').map(Number); m += d; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, '0')}`; };
   const label = (k) => { const [y, m] = k.split('-'); return `${MESES[Number(m) - 1]} de ${y}`; };
   const go = (k) => { params.set('mes', k); location.search = params.toString(); };
-
+ 
   const opts = []; for (let k = curKey, i = 0; i < 36; i++, k = shift(k, -1)) opts.push(k);
   $('mesSel').innerHTML = opts.map(k => `<option value="${k}">${label(k)}</option>`).join('');
   $('mesSel').value = mes;
@@ -144,7 +144,7 @@
   $('next').onclick = () => { if (mes < curKey) go(shift(mes, 1)); };
   $('next').disabled = mes >= curKey;
   $('print').onclick = () => window.print();
-
+ 
   (async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || (EXIGIR_CODIGO && !jwtAmr(session.access_token).some(m => m === 'otp' || m === 'magiclink'))) {
@@ -153,7 +153,7 @@
     let cid = session.user.id, isEquipe = false;
     try { const { data } = await supabase.rpc('is_equipe'); isEquipe = !!data; } catch (_) {}
     if (isEquipe && /^[0-9a-f-]{36}$/i.test(params.get('cliente') || '')) cid = params.get('cliente');
-
+ 
     const ini = `${mes}-01`, fim = `${shift(mes, 1)}-01`, anoIni = `${mes.slice(0, 4)}-01-01`, prevKey = shift(mes, -1);
     const [cliArr, programas, saldos, extrato, economias, voos, viagens, reunioes, movs, relArr] = await Promise.all([
       safe(supabase.from('clientes').select('*').eq('id', cid)),
@@ -171,7 +171,7 @@
     if (!cli) { $('root').innerHTML = '<div class="state">Não encontramos os dados deste cliente.</div>'; return; }
     const gestor = cli.gestor_id ? (await safe(supabase.from('gestores').select('*').eq('id', cli.gestor_id)))[0] : null;
     const rel = relArr[0] || null;
-
+ 
     // --- números do mês
     const ecoMes = economias.filter(r => String(r.data) >= ini);
     const ecoAno = economias.filter(r => String(r.data) >= anoIni);
@@ -184,7 +184,7 @@
     const variacao = saldoMes(prevKey).length ? saldoAtual - saldoAnt : null;
     const entradas = extrato.reduce((s, x) => s + (x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade)), 0);
     const usadas = Math.abs(extrato.filter(x => x.tipo === 'emissao').reduce((s, x) => s + Number(x.quantidade), 0));
-
+ 
     // --- valor em reais pelo milheiro de referência atual de cada programa
     const normP = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const refOf = (nome) => { const p = programas.find(x => normP(x.programa) === normP(nome)); return p && p.valor_referencia_milheiro !== null && p.valor_referencia_milheiro !== undefined ? Number(p.valor_referencia_milheiro) : null; };
@@ -192,7 +192,7 @@
     const temRef = programas.some(p => p.valor_referencia_milheiro !== null && p.valor_referencia_milheiro !== undefined);
     const patrMes = saldoMes(mes).length ? saldoMes(mes).reduce((s, r) => s + (emReais(r.programa, Number(r.saldo)) || 0), 0)
       : programas.reduce((s, p) => s + (emReais(p.programa, Number(p.saldo || 0)) || 0), 0);
-
+ 
     // --- programas: mês x anterior
     const progs = [...new Set([...saldoMes(mes), ...saldoMes(prevKey)].map(r => r.programa))].sort();
     const progRows = progs.length ? progs.map(p => {
@@ -202,19 +202,19 @@
       return `<tr><td>${esc(p)}</td><td class="r">${vb === null ? '' : num(vb)}</td><td class="r">${va === null ? '' : num(va)}</td>
         <td class="r ${dif > 0 ? 'up' : dif < 0 ? 'down' : ''}">${dif === null ? '' : (dif > 0 ? '+' : dif < 0 ? '−' : '') + num(Math.abs(dif))}</td>${temRef ? `<td class="r">${rv === null ? '' : brl2(rv)}</td>` : ''}</tr>`;
     }).join('') : (mes === curKey ? programas.map(p => { const rv = emReais(p.programa, Number(p.saldo || 0)); return `<tr><td>${esc(p.programa)}</td><td class="r"></td><td class="r">${num(p.saldo)}</td><td class="r"></td>${temRef ? `<td class="r">${rv === null ? '' : brl2(rv)}</td>` : ''}</tr>`; }).join('') : '');
-
+ 
     // --- gráfico 6 meses
     const ks = []; for (let i = 5; i >= 0; i--) ks.push(shift(mes, -i));
     const vals = ks.map(k => totMes(k)); if (mes === curKey && !saldoMes(mes).length) vals[5] = saldoAtual;
     const max = Math.max(...vals, 1);
     const chart = vals.some(v => v > 0) ? `<div class="chart">${ks.map((k, i) => `<div class="c ${i === 5 ? 'cur' : ''}"><div class="val">${vals[i] ? compact(vals[i]) : ''}</div><div class="b" style="height:${Math.max(vals[i] ? 2 : 0, vals[i] / max * 82)}%"></div></div>`).join('')}</div>
       <div class="chart-x">${ks.map(k => `<span>${MES_C[Number(k.slice(5)) - 1]}/${k.slice(2, 4)}</span>`).join('')}</div>` : '';
-
+ 
     // --- vencimentos (próximos 180 dias a partir do fim do mês)
     const lim = new Date(fim + 'T12:00:00'); lim.setDate(lim.getDate() + 180);
     const venc = programas.filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0 && p.vencimento_data >= ini && new Date(p.vencimento_data + 'T12:00:00') <= lim)
       .sort((a, b) => String(a.vencimento_data).localeCompare(String(b.vencimento_data)));
-
+ 
     const nomeGestor = gestor ? gestor.nome : 'Equipe Maktub Go';
     const foto = gestor && /^https:\/\//.test(gestor.foto_url || '') ? `<img src="${esc(gestor.foto_url)}" alt="" />` : `<div class="ph">${esc(initials(nomeGestor))}</div>`;
     const cartaVisivel = rel && rel.carta_gestor && (rel.publicado || isEquipe);
@@ -222,7 +222,7 @@
     const passos = rel && (rel.publicado || isEquipe) ? lines(rel.proximos_passos) : [];
     const geradoEm = now.toLocaleDateString('pt-BR');
     document.title = `Relatório ${label(mes)} | ${cli.nome_completo || 'Maktub Go'}`;
-
+ 
     $('root').innerHTML = `<div class="page">
       <header class="cover">
         <div class="top"><img src="/ativos/simbolo-creme.png" alt="" /><div><div class="n">Maktub Go</div><div class="s">Gestão de Milhas Concierge</div></div></div>
@@ -247,41 +247,41 @@
             <div class="kpi"><div class="l">Entradas / usadas</div><div class="v">${compact(entradas)} <small>/ ${compact(usadas)}</small></div><div class="s">Pontos que entraram e milhas usadas</div></div>
           </div>
         </section>
-
+ 
         ${cartaVisivel ? `<section><h2>Carta do gestor</h2><div class="letter">
           ${!rel.publicado ? '<span class="draft">Rascunho: o cliente ainda não vê esta carta</span>' : ''}
           <p>${esc(rel.carta_gestor)}</p>
           <div class="sign">${foto}<div><div class="n">${esc(nomeGestor)}</div><div class="c">${esc(gestor && gestor.cargo || 'Gestor de Milhas')}</div></div></div>
         </div></section>` : ''}
-
+ 
         ${destaques.length || passos.length ? `<section class="cols">
           <div><h2>Destaques</h2>${destaques.length ? `<ul class="list">${destaques.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="empty">Sem destaques registrados.</div>'}</div>
           <div><h2>Próximos passos</h2>${passos.length ? `<ul class="list">${passos.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="empty">A definir na próxima reunião.</div>'}</div>
         </section>` : ''}
-
+ 
         <section>
           <h2>Patrimônio em milhas</h2>
           ${chart}
           ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th>${temRef ? '<th class="r">Em reais</th>' : ''}</tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
         </section>
-
+ 
         <section>
           <h2>Economias do mês</h2>
           ${ecoMes.length ? `<table><thead><tr><th>Data</th><th>Ganho</th><th class="r">Detalhe</th><th class="r">Economia</th></tr></thead><tbody>
-            ${ecoMes.map(r => { const v = ecoValor(r); const det = r.categoria === 'acumulo' || r.categoria === 'cartao' || r.categoria === 'outro'
+            ${ecoMes.map(r => { const v = ecoValor(r); const det = r.categoria === 'acumulo' || r.categoria === 'cartao' || r.categoria === 'cashback' || r.categoria === 'outro'
               ? (r.pontos_gerados ? '+ ' + num(r.pontos_gerados) + ' pts' : esc(r.observacao || ''))
               : (r.valor_mercado_brl ? `<span class="strike">${brl2(r.valor_mercado_brl)}</span><br><span class="mute">investiu ${brl2(r.valor_pago_brl)}</span>` : '');
               return `<tr><td class="mute">${brDate(r.data)}</td><td><span class="tag">${CAT[r.categoria] || 'Passagem'}</span>${esc(r.descricao)}${r.programa ? `<div class="mute">${esc(r.programa)}${r.milhas_utilizadas ? ' · ' + num(r.milhas_utilizadas) + ' milhas' : ''}</div>` : ''}</td><td class="r">${det}</td><td class="r"><span class="eco">${brl2(v)}</span></td></tr>`; }).join('')}
           </tbody></table>` : '<div class="empty">Nenhuma economia registrada neste mês.</div>'}
         </section>
-
+ 
         <section>
           <h2>Movimentações de pontos</h2>
           ${extrato.length ? `<table><thead><tr><th>Data</th><th>Programa</th><th>Tipo</th><th>Descrição</th><th class="r">Pontos</th></tr></thead><tbody>
             ${extrato.map(x => { const q = Number(x.quantidade || 0); return `<tr><td class="mute">${brDate(x.data)}</td><td>${esc(x.programa)}</td><td><span class="tag">${TIPO[x.tipo] || esc(x.tipo)}</span></td><td>${esc(x.descricao || '')}</td><td class="r ${q >= 0 ? 'up' : 'down'}">${q >= 0 ? '+' : '−'} ${num(Math.abs(q))}</td></tr>`; }).join('')}
           </tbody></table>` : '<div class="empty">Nenhuma movimentação registrada neste mês.</div>'}
         </section>
-
+ 
         <section class="cols">
           <div><h2>Voos do mês</h2>
             ${voos.length ? `<table><tbody>${voos.map(f => `<tr><td class="mute">${brDate(f.data_voo)}</td><td><strong>${esc(f.origem_codigo || '')} → ${esc(f.destino_codigo || '')}</strong><div class="mute">${esc([f.companhia, f.classe].filter(Boolean).join(' · '))}</div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Sem voos neste mês.</div>'}
@@ -290,12 +290,12 @@
             ${viagens.length ? `<table><tbody>${viagens.map(v => `<tr><td class="mute">${brDate(v.data_viagem)}</td><td><strong>${esc(v.destino)}</strong><div class="mute">${esc(v.detalhes || '')}</div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma viagem programada.</div>'}
           </div>
         </section>
-
+ 
         ${venc.length ? `<section><h2>Vencimentos monitorados</h2><table><thead><tr><th>Programa</th><th>Vencimento</th><th class="r">Pontos</th></tr></thead><tbody>
           ${venc.map(p => `<tr><td>${esc(p.programa)}</td><td>${brDate(p.vencimento_data)}</td><td class="r down">${num(p.vencimento_quantidade)}</td></tr>`).join('')}</tbody></table></section>` : ''}
-
+ 
         ${reunioes.length ? `<section><h2>Reunião do mês</h2>${reunioes.map(r => `<p><strong>${esc(r.titulo)}</strong> · ${brDate(r.data_reuniao)}</p><p class="mute">${esc(r.resumo || '')}</p>`).join('')}</section>` : ''}
-
+ 
         ${movs.length ? `<section><h2>Movimentos estratégicos em andamento</h2><ul class="list">${movs.map(m => `<li><div><strong>${esc(String(m.titulo || '').replace(/\*/g, ''))}</strong>${m.descricao ? `<div class="mute">${esc(m.descricao)}</div>` : ''}</div></li>`).join('')}</ul></section>` : ''}
       </div>
       <footer class="foot"><span>Maktub Go · Documento confidencial</span><span>maktubgo.com.br</span></footer>
@@ -305,3 +305,4 @@
 </script>
 </body>
 </html>
+ 
