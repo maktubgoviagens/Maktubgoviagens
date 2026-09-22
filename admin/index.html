@@ -483,7 +483,7 @@
     const rows = data || [];
     const label = (key) => (cfg.fields.find(f => f[0] === key) || [key, key === '_economia' ? 'Economia' : key === 'created_at' ? 'Criado em' : key])[1].replace(/ \(.*\)/, '');
     const extra = '';
-    const impBtn = t === 'historico_economia' ? '<button class="btn" id="impEco">Importar planilha</button> ' : '';
+    const impBtn = t === 'historico_economia' ? '<button class="btn" id="ptsCart">Levar pontos para a carteira</button> <button class="btn" id="impEco">Importar planilha</button> ' : '';
     const expBtn = '<button class="btn" id="expTbl">Exportar planilha</button> ';
     m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}${expBtn}${impBtn}<button class="btn pri" id="novo">+ Novo</button>`) +
       (cfg.hint ? `<div class="hint">${esc(cfg.hint)}</div>` : '') +
@@ -500,7 +500,17 @@
       if (er) toast(errMsg(er)); else { toast('Registro excluído.'); render(); }
     });
     if (extra && $('fechar')) $('fechar').onclick = () => fecharMes(c);
-    if (impBtn) $('impEco').onclick = () => importarEconomias(c, rows);
+    if (impBtn) {
+      $('impEco').onclick = () => importarEconomias(c, rows);
+      $('ptsCart').onclick = async () => {
+        $('ptsCart').disabled = true;
+        try {
+          const n = await pontosParaCarteira(c.id, rows);
+          toast(n ? `${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e patrimônio atualizados.` : 'Todos os acúmulos já estavam na carteira.');
+          render();
+        } catch (err) { toast(errMsg(err)); $('ptsCart').disabled = false; }
+      };
+    }
     $('expTbl').onclick = () => {
       if (!rows.length) return toast('Não há nada para exportar nesta tela.');
       if (t === 'historico_economia') {
@@ -516,6 +526,29 @@
           if (/^\d{4}-\d{2}-\d{2}/.test(String(v))) return brDate(v);
           return v; }))]);
     };
+  }
+ 
+  // Leva os pontos lançados em Economias para a Carteira de milhas (acúmulo orgânico, custo zero).
+  // Se o programa já existe na carteira, o saldo soma; se não existe, ele passa a existir.
+  async function pontosParaCarteira(cid, ecos) {
+    const alvo = (ecos || []).filter(r => (r.categoria === 'acumulo' || r.categoria === 'cartao') && r.programa && Number(r.pontos_gerados) > 0);
+    if (!alvo.length) return 0;
+    const ex = await sb.from('extrato_milhas').select('*').eq('cliente_id', cid);
+    if (ex.error) throw ex.error;
+    const tem = new Set((ex.data || []).map(x => [String(x.data).slice(0, 10), normProg(x.programa), Math.abs(Number(x.quantidade || 0))].join('|')));
+    const novas = [];
+    alvo.forEach(r => {
+      const q = Math.round(Number(r.pontos_gerados)), d = String(r.data).slice(0, 10);
+      const k = [d, normProg(r.programa), q].join('|');
+      if (tem.has(k)) return;
+      tem.add(k);
+      novas.push({ cliente_id: cid, data: d, programa: r.programa, tipo: 'acumulo', quantidade: q, custo_brl: null, descricao: r.descricao || 'Super acúmulo' });
+    });
+    if (!novas.length) return 0;
+    const ins = await sb.from('extrato_milhas').insert(novas);
+    if (ins.error) throw ins.error;
+    await syncCarteira(cid);
+    return novas.length;
   }
  
   // ===== Importar economias por planilha (Excel ou CSV) =====
@@ -600,7 +633,7 @@
   function importarEconomias(c, existentes) {
     $('panel').classList.add('wide');
     $('panel').innerHTML = `<h3>Importar economias</h3><div class="ph">${esc(c.nome_completo)} · os ganhos entram só neste cliente</div>
-      <div class="hint">Planilha com as colunas <strong>data, tipo, descricao, programa, pontos, valor_rs</strong> (observacao é opcional). Tipos: <strong>pontos</strong> (cartões e super acúmulo), <strong>cashback</strong> ou <strong>outro</strong>. Nos pontos, se valor_rs ficar vazio, o valor é calculado pelo Valor do milheiro. Passagens não entram aqui: elas vêm da Carteira de milhas.</div>
+      <div class="hint">Planilha com as colunas <strong>data, tipo, descricao, programa, pontos, valor_rs</strong> (observacao é opcional). Tipos: <strong>pontos</strong> (cartões e super acúmulo), <strong>cashback</strong> ou <strong>outro</strong>. Nos pontos, se valor_rs ficar vazio, o valor é calculado pelo Valor do milheiro, e os pontos entram sozinhos na Carteira de milhas como acúmulo orgânico. Passagens não entram aqui: elas vêm da Carteira de milhas.</div>
       <div style="margin-bottom:14px"><button type="button" class="btn sm" id="impModelo">Baixar planilha modelo</button></div>
       <div class="imp-drop">Escolha o arquivo (.xlsx ou .csv)<br><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt" /></div>
       <div id="impOut"></div>
@@ -672,7 +705,9 @@
       const { error } = await sb.from('historico_economia').insert(validas);
       if (error) { $('impOk').disabled = false; $('impMsg').className = 'msg err'; $('impMsg').textContent = errMsg(error); return; }
       const n = validas.length;
-      closeDrawer(); toast(`${n} ${n === 1 ? 'economia importada' : 'economias importadas'}. O painel do cliente já mostra.`); counters(); render();
+      let pts = 0;
+      try { pts = await pontosParaCarteira(c.id, validas); } catch (err) { console.error(err); }
+      closeDrawer(); toast(`${n} ${n === 1 ? 'economia importada' : 'economias importadas'}${pts ? ` · ${pts} ${pts === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira` : ''}. O painel do cliente já mostra.`); counters(); render();
     };
   }
  
@@ -734,6 +769,9 @@
       const { error } = await q;
       $('sx').disabled = false;
       if (error) { $('mx').className = 'msg err'; $('mx').textContent = errMsg(error); return; }
+      if (t === 'historico_economia' && data.categoria === 'acumulo') {
+        try { await pontosParaCarteira(c.id, [data]); } catch (err) { toast('Economia salva, mas os pontos não foram para a carteira: ' + errMsg(err)); }
+      }
       closeDrawer(); toast('Salvo. O painel do cliente já mostra a atualização.'); counters(); render();
     };
   }
@@ -1463,4 +1501,3 @@
 </script>
 </body>
 </html>
- 
