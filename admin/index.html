@@ -96,7 +96,7 @@
 </head>
 <body>
 <div class="gate" id="gate"><div><img src="/ativos/simbolo-verde.png" alt="Maktub Go" height="48" /><h1 id="gateT">Verificando acesso...</h1><p id="gateP"></p><div id="gateA"></div></div></div>
-
+ 
 <div class="app" id="app" hidden>
   <aside>
     <div class="brand"><img src="/ativos/simbolo-creme.png" alt="" /><div><div class="n">Maktub Go</div><div class="s">Administração</div></div></div>
@@ -121,10 +121,10 @@
   </aside>
   <main id="main"></main>
 </div>
-
+ 
 <div class="drawer" id="drawer" hidden><div class="panel" id="panel"></div></div>
 <div class="toast" id="toast" hidden></div>
-
+ 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
   const EXIGIR_CODIGO = true;
@@ -147,19 +147,19 @@
     if (/relation .* does not exist/i.test(m)) return 'Tabela ainda não criada. Rode os scripts SQL. Detalhe: ' + m;
     return m;
   };
-
+ 
   // ======================= CONFIGURAÇÃO DAS TABELAS =======================
   const opt = (arr) => arr.map(x => Array.isArray(x) ? x : [x, x]);
   const STATUS_VIAGEM = opt([['estrategia','Estratégia'],['planejamento','Planejamento'],['emitida','Emitida']]);
   const STATUS_VOO = opt([['confirmado','Confirmado'],['checkin_aberto','Check-in aberto'],['alterado','Alterado pela cia.'],['concluido','Realizado'],['cancelado','Cancelado']]);
-  const CAT_ECO = opt([['emissao','Passagem (mercado x investido)'],['acumulo','Super acúmulo / cashback'],['cartao','Melhoria de cartão'],['outro','Outro ganho']]);
+  const CAT_ECO = opt([['emissao','Passagem (mercado x investido)'],['acumulo','Cartões e super acúmulo (pontos)'],['cashback','Cashback (R$)'],['outro','Outro ganho']]);
   const TIPO_EXT = opt([['acumulo','Acúmulo'],['bonus','Bônus'],['transferencia','Transferência'],['emissao','Emissão'],['expiracao','Expiração'],['ajuste','Ajuste']]);
   const TIPO_DOC = opt([['bilhete','Bilhete aéreo'],['voucher','Voucher'],['seguro','Seguro viagem'],['roteiro','Roteiro'],['relatorio','Relatório'],['contrato','Contrato'],['outro','Outro']]);
   const ST_AG = opt([['solicitada','Solicitada'],['confirmada','Confirmada'],['realizada','Realizada'],['cancelada','Cancelada']]);
   const ST_CONV = opt([['enviado','Recebido'],['em_contato','Em contato'],['convertido','Virou cliente'],['recusado','Não seguiu']]);
   const ST_SOL = opt([['nova','Nova'],['em_analise','Em análise'],['diagnostico_agendado','Diagnóstico agendado'],['aprovada','Aprovada'],['recusada','Recusada']]);
   const COR_CARTAO = opt([['green','Verde Maktub'],['itau','Itaú (grafite)'],['latam','Latam (azul)'],['nubank','Nubank (roxo)'],['santander','Santander (vermelho)'],['bradesco','Bradesco (vinho)']]);
-
+ 
   const T = {
     programas_milhas: { title: 'Programas e vencimentos', order: ['ordem', true], hint: 'O saldo é calculado pela Carteira de milhas, não se digita aqui. Use esta tela para nome, unidade e ordem de exibição. O vencimento é preenchido sozinho quando o lançamento tem validade; se não tiver, preencha aqui (alerta 90 dias antes).',
       fields: [['programa','Programa','text',1],['unidade','Unidade','select',0,opt(['milhas','pontos'])],['ordem','Ordem de exibição','number'],
@@ -188,7 +188,7 @@
     extrato_milhas: { title: 'Extrato de pontos', order: ['data', false], hint: 'Quantidade positiva para entradas e negativa para saídas (ex.: -40000 numa emissão).',
       fields: [['data','Data','date',1],['programa','Programa','prog',1],['tipo','Tipo','select',1,TIPO_EXT],['quantidade','Quantidade','number',1],['descricao','Descrição','text',0,null,'full']],
       cols: ['data','programa','tipo','quantidade','descricao'] },
-    historico_economia: { title: 'Economias', order: ['data', false], hint: 'Passagem: preencha valor de mercado e valor investido. Acúmulo, cashback ou cartão: preencha o valor da economia.',
+    historico_economia: { title: 'Economias', order: ['data', false], hint: 'Passagem: preencha valor de mercado e valor investido. Cartões e super acúmulo: preencha programa e pontos gerados (o valor em reais é calculado pelo Valor do milheiro, se ficar em branco). Cashback: preencha o valor recebido em reais.',
       fields: [['categoria','Tipo de ganho','select',1,CAT_ECO],['data','Data','date',1],['descricao','Descrição (ex.: GRU > SCL, executiva)','text',1,null,'full'],['programa','Programa','prog'],
         ['milhas_utilizadas','Milhas utilizadas','number'],['valor_mercado_brl','Valor de mercado (R$)','number'],['valor_pago_brl','Valor investido (R$)','number'],
         ['valor_economia_brl','Valor da economia (R$)','number'],['pontos_gerados','Pontos gerados','number'],['observacao','Observação','text',0,null,'full']],
@@ -215,11 +215,11 @@
     ['historico_economia','Economias'],['movimentos_estrategicos','Movimentos estratégicos'],['reunioes','Histórico de reuniões'],
     ['agendamentos_reuniao','Agendamentos'],['relatorio','Relatório mensal'],['convites','Indicações']
   ];
-
+ 
   // ======================= ESTADO =======================
   let ME = null, CLIENTES = [], GESTORES = [], CID = '', VIEW = 'home', TRIPS = [], PROGS = [];
   const cliente = () => CLIENTES.find(c => c.id === CID);
-
+ 
   // ======================= ACESSO =======================
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
@@ -240,9 +240,9 @@
     await loadBase();
     render();
   })().catch(e => { console.error(e); $('gateT').textContent = 'Não foi possível abrir a administração.'; $('gateP').textContent = errMsg(e); });
-
+ 
   $('logout').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
-
+ 
   async function loadBase() {
     const [c, g] = await Promise.all([
       sb.from('clientes').select('*').order('nome_completo'),
@@ -266,7 +266,7 @@
   }
   $('cliSearch').oninput = fillClientes;
   $('cliSel').onchange = () => { CID = $('cliSel').value; VIEW = CID ? 'cadastro' : 'home'; render(); };
-
+ 
   function navs() {
     document.querySelectorAll('#navGlobal button').forEach(b => b.classList.toggle('on', b.dataset.v === VIEW && !CLIENT_VIEWS.some(v => v[0] === VIEW)));
     $('navCliente').innerHTML = CID ? '<div class="sec-t">Dados do cliente</div>' + CLIENT_VIEWS.map(([k, l]) => `<button data-v="${k}" class="${k === VIEW ? 'on' : ''}">${l}</button>`).join('') : '';
@@ -278,9 +278,9 @@
     if (b.closest('#navGlobal')) { CID = ''; fillClientes(); }
     render();
   });
-
+ 
   const header = (k, h, sub, acts = '') => `<div class="top"><div><div class="k">${k}</div><h1>${h}</h1>${sub ? `<div class="sub">${sub}</div>` : ''}</div><div class="acts">${acts}</div></div>`;
-
+ 
   async function render() {
     navs();
     const m = $('main');
@@ -311,7 +311,7 @@
       if (T[VIEW]) return viewTable(m, c, k, VIEW);
     } catch (e) { console.error(e); m.innerHTML = `<div class="msg err">${esc(errMsg(e))}</div>`; }
   }
-
+ 
   // ======================= VISÃO GERAL =======================
   async function viewHome(m) {
     const { a, b, d } = await counters();
@@ -338,7 +338,7 @@
       </tbody></table></div>`;
     m.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { CID = b.dataset.open; VIEW = 'cadastro'; fillClientes(); render(); });
   }
-
+ 
   async function viewSolicitacoes(m) {
     const { data, error } = await sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false });
     if (error) throw error;
@@ -371,7 +371,7 @@
     bindStatus(m);
     m.querySelectorAll('[data-cli]').forEach(a => a.onclick = (e) => { e.preventDefault(); CID = a.dataset.cli; VIEW = a.dataset.view; fillClientes(); render(); });
   }
-
+ 
   // ======================= CADASTRO =======================
   function viewNovoCliente(m) {
     m.innerHTML = header('Operação', 'Cadastrar <em>cliente</em>') + `
@@ -405,7 +405,7 @@
     };
   }
   const gestorOpts = (cur) => '<option value="">Sem gestor</option>' + GESTORES.map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.nome)}</option>`).join('');
-
+ 
   function viewCadastro(m, c, k) {
     m.innerHTML = header(k, esc(c.nome_completo || ''), `Última atualização do painel: ${c.ultima_atualizacao ? brDT(c.ultima_atualizacao) : 'nunca'}`,
       `<a class="btn" href="/painel/relatorio.html?cliente=${c.id}" target="_blank">Relatório do mês</a>`) + `
@@ -427,7 +427,7 @@
     const rw = $('resetWel');
     if (rw) rw.onclick = async () => { const { error } = await sb.from('clientes').update({ onboarding_concluido_em: null }).eq('id', c.id); if (error) toast(errMsg(error)); else { c.onboarding_concluido_em = null; toast('A tela de boas-vindas aparecerá no próximo acesso.'); render(); } };
   }
-
+ 
   async function viewIndicadores(m, c, k) {
     const { data, error } = await sb.from('economia_gerada').select('*').eq('cliente_id', c.id).maybeSingle();
     if (error) throw error;
@@ -455,7 +455,7 @@
       if (er) { $('indMsg').className = 'msg err'; $('indMsg').textContent = errMsg(er); } else toast('Salvo.');
     };
   }
-
+ 
   // ======================= TABELA GENÉRICA =======================
   function fmtCell(k, v, row) {
     if (k === '_economia') { const val = row.valor_economia_brl !== null && row.valor_economia_brl !== undefined ? Number(row.valor_economia_brl) : Number(row.valor_mercado_brl || 0) - Number(row.valor_pago_brl || 0); return `<strong>${brl(val)}</strong>`; }
@@ -467,7 +467,7 @@
     if (/brl|gasto/.test(k)) return brl(v);
     if (/saldo|quantidade|milhas_utilizadas|pontos/.test(k)) return num(v);
     if (k === 'viagem_id') return esc((TRIPS.find(t => t.id === v) || {}).destino || '');
-    if (k === 'categoria') return esc((CAT_ECO.find(x => x[0] === v) || [0, v])[1]);
+    if (k === 'categoria') return esc((CAT_ECO.find(x => x[0] === (v === 'cartao' ? 'acumulo' : v)) || [0, v])[1]);
     const s = String(v); return esc(s.length > 90 ? s.slice(0, 90) + '…' : s);
   }
   async function viewTable(m, c, k, t) {
@@ -493,7 +493,7 @@
     });
     if (extra) $('fechar').onclick = () => fecharMes(c);
   }
-
+ 
   function inputFor([key, lbl, type, req, opts, wide], val) {
     const r = req ? ' required' : '', v = val === null || val === undefined ? '' : val;
     let el;
@@ -537,7 +537,14 @@
       if (miss.length) { $('mx').className = 'msg err'; $('mx').textContent = 'Preencha: ' + miss.join(', '); return; }
       if (t === 'historico_economia') {
         if (data.categoria === 'emissao' && data.valor_economia_brl === null && (data.valor_mercado_brl === null || data.valor_pago_brl === null)) { $('mx').className = 'msg err'; $('mx').textContent = 'Para passagem, informe o valor de mercado e o valor investido.'; return; }
-        if (data.categoria !== 'emissao' && data.valor_economia_brl === null) { $('mx').className = 'msg err'; $('mx').textContent = 'Informe o valor da economia em reais.'; return; }
+        if (data.categoria === 'acumulo') {
+          if (!data.programa || !data.pontos_gerados) { $('mx').className = 'msg err'; $('mx').textContent = 'Para cartões e super acúmulo, informe o programa e os pontos gerados.'; return; }
+          if (data.valor_economia_brl === null) {
+            const refs = await valoresRef(), ref = refs[normProg(data.programa)];
+            if (!ref) { $('mx').className = 'msg err'; $('mx').textContent = 'Sem valor do milheiro para ' + data.programa + '. Cadastre em Valor do milheiro (menu Operação) ou informe o valor da economia em reais.'; return; }
+            data.valor_economia_brl = Math.round(data.pontos_gerados / 1000 * ref * 100) / 100;
+          }
+        } else if (data.categoria !== 'emissao' && data.valor_economia_brl === null) { $('mx').className = 'msg err'; $('mx').textContent = data.categoria === 'cashback' ? 'Informe o valor do cashback em reais.' : 'Informe o valor da economia em reais.'; return; }
       }
       if (t === 'agendamentos_reuniao' && data.link_reuniao && !/^https:\/\//.test(data.link_reuniao)) { $('mx').className = 'msg err'; $('mx').textContent = 'O link precisa começar com https://'; return; }
       $('sx').disabled = true;
@@ -551,7 +558,7 @@
   function closeDrawer() { $('drawer').hidden = true; $('panel').innerHTML = ''; }
   $('drawer').addEventListener('click', (e) => { if (e.target === $('drawer')) closeDrawer(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('drawer').hidden) closeDrawer(); });
-
+ 
   function fecharMes(c) {
     const now = new Date(), def = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     $('panel').innerHTML = `<h3>Registrar fechamento</h3><div class="ph">${esc(c.nome_completo)}</div>
@@ -570,7 +577,7 @@
       closeDrawer(); toast('Fechamento registrado.'); render();
     };
   }
-
+ 
   // ======================= CARTEIRA DE MILHAS (v4) =======================
   // O saldo de cada programa é a soma dos lançamentos. O custo médio segue o método da média ponderada
   // (igual a carteira de ações) e separa o que é herdado, orgânico e pago.
@@ -584,7 +591,7 @@
   const ORIGEM_LBL = { saldo_inicial: 'Herdado', acumulo: 'Orgânico', bonus: 'Orgânico', compra: 'Pago', clube: 'Pago' };
   const USO = opt([['passagem', 'Passagem aérea'], ['hospedagem', 'Hospedagem'], ['upgrade', 'Upgrade'], ['produto', 'Produtos ou vale-compras'], ['outro', 'Outro']]);
   let EQUIPE = [];
-
+ 
   function calcCarteira(extrato) {
     const hoje = hojeISO();
     const ordem = (x) => x.tipo === 'transf_saida' ? 0 : x.tipo === 'transf_entrada' ? 2 : 1;
@@ -653,13 +660,13 @@
     const total = programas.reduce((a, p) => a + p.saldo, 0);
     return { programas, porLinha, fechamentos, evolucao_mes, evolucao_ano, total, custo_total: programas.reduce((a, p) => a + (p.custo_total || 0), 0) };
   }
-
+ 
   async function valoresRef() {
     const { data } = await sb.from('valores_milheiro').select('*');
     const map = {}; (data || []).forEach(v => { map[normProg(v.programa)] = Number(v.valor_brl); });
     return map;
   }
-
+ 
   // Grava no painel do cliente tudo o que é calculado: saldos, custo médio, vencimentos, fechamentos, indicadores e economias das emissões.
   async function syncCarteira(cid, refs) {
     const [ex, pr, ec] = await Promise.all([
@@ -704,7 +711,7 @@
     if (err) throw err.error;
     return W;
   }
-
+ 
   async function viewCarteira(m, c, k) {
     const [exR, refs] = await Promise.all([sb.from('extrato_milhas').select('*').eq('cliente_id', c.id), valoresRef()]);
     if (exR.error) throw exR.error;
@@ -771,7 +778,7 @@
       render();
     });
   }
-
+ 
   // ---------- formulários da carteira ----------
   const progDatalist = (ctx) => {
     const nomes = [...new Set([...PROGS.map(p => p.programa), ...ctx.W.programas.map(p => p.programa), ...PROG_PADRAO])];
@@ -803,7 +810,7 @@
     await syncCarteira(ctx.c.id, ctx.refs);
     toast('Salvo. O painel do cliente já mostra a atualização.');
   }
-
+ 
   function formEntrada(ctx, row) {
     const r = row || { data: hojeISO(), tipo: 'acumulo' };
     drawer(row ? 'Editar entrada' : 'Entrada de pontos', esc(ctx.c.nome_completo), `
@@ -839,7 +846,7 @@
     };
     f.addEventListener('input', upd); upd();
   }
-
+ 
   function formTransf(ctx) {
     if (!ctx.W.programas.some(p => p.saldo > 0)) return toast('Lance primeiro o saldo do programa de origem.');
     drawer('Transferência entre programas', esc(ctx.c.nome_completo), `
@@ -882,7 +889,7 @@
     };
     f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
   }
-
+ 
   function formUso(ctx, row) {
     const r = row || { data: hojeISO(), categoria_uso: 'passagem' };
     if (!row && !ctx.W.programas.some(p => p.saldo > 0)) return toast('Não há saldo lançado para usar.');
@@ -917,7 +924,7 @@
     };
     f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
   }
-
+ 
   function formAjuste(ctx, row) {
     const r = row || { data: hojeISO(), tipo: 'expiracao' };
     const sel = r.tipo === 'expiracao' ? 'expiracao' : Number(r.quantidade) < 0 ? 'menos' : row ? 'mais' : 'expiracao';
@@ -936,7 +943,7 @@
       await salvarLinhas(ctx, row, { data: val(f, 'data'), programa: val(f, 'programa'), tipo: t === 'expiracao' ? 'expiracao' : 'ajuste', quantidade: t === 'mais' ? Math.round(q) : -Math.round(q), descricao: val(f, 'descricao') || null });
     });
   }
-
+ 
   // ======================= VALOR DO MILHEIRO (global) =======================
   async function viewValores(m) {
     const { data, error } = await sb.from('valores_milheiro').select('*').order('programa');
@@ -981,7 +988,7 @@
       if (er) toast(errMsg(er)); else { await todos(); render(); }
     });
   }
-
+ 
   // ======================= EQUIPE (global) =======================
   async function viewEquipe(m) {
     const { data, error } = await sb.rpc('equipe_listar');
@@ -1006,7 +1013,7 @@
       toast(r === 'ja_existe' ? 'Essa pessoa já está na equipe.' : 'Adicionada à equipe.'); render();
     };
   }
-
+ 
   // ======================= DOCUMENTOS =======================
   async function viewDocumentos(m, c, k) {
     const { data, error } = await sb.from('documentos').select('*').eq('cliente_id', c.id).order('created_at', { ascending: false });
@@ -1056,7 +1063,7 @@
       if (er) toast(errMsg(er)); else { toast('Documento excluído.'); render(); }
     });
   }
-
+ 
   // ======================= RELATÓRIO MENSAL =======================
   async function viewRelatorio(m, c, k) {
     const now = new Date();
@@ -1095,7 +1102,7 @@
       m.dataset.mes = $('relMes').value; toast(pub ? 'Carta publicada para o cliente.' : 'Rascunho salvo.'); render();
     };
   }
-
+ 
   // ======================= GESTORES =======================
   async function viewGestores(m) {
     const { data, error } = await sb.from('gestores').select('*').order('nome');
@@ -1132,3 +1139,4 @@
 </script>
 </body>
 </html>
+ 
