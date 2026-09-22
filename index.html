@@ -4,16 +4,16 @@
   MAKTUB GO · HOME v5
   ============================================================
   INTERRUPTOR DE PUBLICAÇÃO
-
+ 
   No atributo data-modo da tag <html> logo abaixo:
-
+ 
     "rascunho"   mostra tudo, inclusive o que está pendente,
                  marcado em dourado tracejado. É para você revisar.
-
+ 
     "publicado"  esconde automaticamente todo bloco pendente.
                  Nenhum visitante vê buraco, número zerado ou
                  texto de espera. O site fica menor e correto.
-
+ 
   Troque uma palavra e o site inteiro se ajusta.
   Conforme os depoimentos e as fotos chegarem, você troca o
   conteúdo e o bloco volta a aparecer sozinho.
@@ -39,11 +39,11 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-
+ 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">
-
+ 
 <script type="application/ld+json">
 {
   "@context":"https://schema.org",
@@ -66,7 +66,7 @@
   ]
 }
 </script>
-
+ 
 <style>
 /* ============================================================
    1. TOKENS
@@ -84,10 +84,10 @@
   --tinta-suave:rgba(43,43,38,.82);
   --linha:rgba(26,56,38,.13);
   --linha-clara:rgba(249,246,241,.15);
-
+ 
   --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
   --sans:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;
-
+ 
   /* escala tipográfica */
   --t-xs:.68rem;
   --t-sm:.88rem;
@@ -96,12 +96,12 @@
   --t-lg:clamp(1.3rem,2.1vw,1.55rem);
   --t-xl:clamp(1.95rem,4vw,3rem);
   --t-2xl:clamp(2.8rem,6.6vw,5rem);
-
+ 
   /* ritmo vertical */
   --e1:8px; --e2:16px; --e3:26px; --e4:42px; --e5:68px; --e6:clamp(78px,9vw,118px);
   --largura:1180px;
 }
-
+ 
 /* ============================================================
    2. BASE
    ============================================================ */
@@ -118,12 +118,12 @@ img{max-width:100%;display:block;height:auto}
 a{color:inherit}
 button{font:inherit}
 ::selection{background:var(--dourado-claro);color:var(--verde)}
-
+ 
 .wrap{max-width:var(--largura);margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
 .secao{padding-block:var(--e6)}
 .secao-verde{background:var(--verde);color:rgba(249,246,241,.8)}
 .secao-creme{background:var(--creme-fundo)}
-
+ 
 h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.1;letter-spacing:.004em;color:var(--verde);text-wrap:balance}
 .secao-verde :is(h1,h2,h3){color:var(--creme)}
 h2{font-size:var(--t-xl)}
@@ -133,14 +133,14 @@ h3{font-size:var(--t-lg)}
 p{max-width:62ch;text-wrap:pretty}
 .secao-verde p{color:rgba(249,246,241,.84)}
 .intro{margin-top:var(--e3);font-size:var(--t-md);line-height:1.68}
-
+ 
 .olho{
   display:block;margin-bottom:var(--e3);
   font-size:var(--t-xs);font-weight:400;letter-spacing:.2em;
   text-transform:uppercase;color:var(--dourado-texto);
 }
 .secao-verde .olho{color:var(--dourado-claro)}
-
+ 
 /* acessibilidade */
 .pular{
   position:absolute;left:-9999px;top:0;z-index:999;
@@ -150,12 +150,12 @@ p{max-width:62ch;text-wrap:pretty}
 :focus-visible{outline:2px solid var(--dourado);outline-offset:3px;border-radius:2px}
 .secao-verde :focus-visible{outline-color:var(--dourado-claro)}
 .oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-
+ 
 /* ============================================================
    3. INTERRUPTOR RASCUNHO / PUBLICADO
    ============================================================ */
 html[data-modo="publicado"] .so-rascunho{display:none !important}
-
+ 
 /* blindagem de contraste: qualquer texto dentro de bloco verde fica claro,
    independente da regra de componente que venha depois */
 .secao-verde :is(p,li,blockquote,.intro,.caso p,.pessoa p,.servico p,.etapa p,.depo blockquote){color:rgba(249,246,241,.84)}
@@ -170,7 +170,7 @@ html[data-modo="publicado"] .so-rascunho{display:none !important}
   font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
   padding:7px 14px;
 }
-
+ 
 /* ============================================================
    4. BOTÕES E LINKS
    ============================================================ */
@@ -190,7 +190,7 @@ html[data-modo="publicado"] .so-rascunho{display:none !important}
 .btn-ouro{background:var(--dourado);border-color:var(--dourado);color:var(--creme)}
 .btn-ouro:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
 .acoes{display:flex;flex-wrap:wrap;gap:14px;margin-top:var(--e4)}
-
+ 
 .link-texto{
   display:inline-block;align-self:flex-start;
   font-size:var(--t-xs);letter-spacing:.16em;text-transform:uppercase;
@@ -198,7 +198,7 @@ html[data-modo="publicado"] .so-rascunho{display:none !important}
   border-bottom:1px solid rgba(117,85,26,.38);transition:border-color .3s ease;
 }
 .link-texto:hover{border-bottom-color:var(--dourado)}
-
+ 
 /* ============================================================
    5. CABEÇALHO
    ============================================================ */
@@ -230,7 +230,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   color:var(--verde);cursor:pointer;align-items:center;justify-content:center;
 }
 .menu-btn svg{width:22px;height:22px}
-
+ 
 /* ============================================================
    6. HERO
    ============================================================ */
@@ -269,7 +269,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   background:var(--dourado);animation:desce 2.8s cubic-bezier(.4,0,.2,1) infinite;
 }
 @keyframes desce{0%{top:0;opacity:0}22%{opacity:1}72%{opacity:1}100%{top:58px;opacity:0}}
-
+ 
 /* ============================================================
    7. FAIXA DE PROVA
    ============================================================ */
@@ -279,7 +279,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .prova-item:last-child{border-right:0}
 .prova-num{display:block;font-family:var(--serif);font-size:clamp(2.3rem,3.6vw,2.9rem);line-height:1;color:var(--dourado-claro)}
 .prova-rot{display:block;margin-top:var(--e2);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(249,246,241,.8)}
-
+ 
 /* ============================================================
    8. BLOCOS DE IMAGEM COM QUEDA ELEGANTE
    ============================================================ */
@@ -310,7 +310,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   position:absolute;inset:0;display:grid;place-items:center;
   font-family:var(--serif);font-size:2.6rem;letter-spacing:.06em;color:rgba(201,169,110,.72);
 }
-
+ 
 /* ============================================================
    9. ALFAIATARIA
    ============================================================ */
@@ -320,7 +320,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   border-left:1px solid var(--dourado-claro);
   font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.5;color:var(--verde);
 }
-
+ 
 /* ============================================================
    10. PRATELEIRA
    ============================================================ */
@@ -336,7 +336,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   margin-top:var(--e4);max-width:58ch;
   font-family:var(--serif);font-style:italic;font-size:1.14rem;color:var(--verde);
 }
-
+ 
 /* ============================================================
    11. SERVIÇOS
    ============================================================ */
@@ -356,7 +356,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   background:var(--dourado);color:var(--creme);
   font-size:.57rem;letter-spacing:.16em;text-transform:uppercase;
 }
-
+ 
 /* ============================================================
    12. COMPARATIVO
    ============================================================ */
@@ -378,7 +378,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   border:1px solid rgba(201,169,110,.38);
   font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--creme);
 }
-
+ 
 /* ============================================================
    13. CASOS E DEPOIMENTOS
    ============================================================ */
@@ -388,7 +388,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .caso-rot{display:block;margin-bottom:12px;font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-texto)}
 .caso h3{font-size:1.26rem;margin-bottom:10px}
 .caso p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
-
+ 
 .depoimentos{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1px;
   margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
@@ -399,7 +399,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   display:block;margin-top:var(--e3);font-style:normal;
   font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--dourado-texto);
 }
-
+ 
 /* ============================================================
    14. MILHAS
    ============================================================ */
@@ -410,7 +410,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .painel-linha:last-child{border-bottom:0}
 .painel-linha span:first-child{font-size:var(--t-sm);color:rgba(249,246,241,.8)}
 .painel-linha span:last-child{font-family:var(--serif);font-size:1.45rem;color:var(--dourado-claro)}
-
+ 
 /* ============================================================
    15. TIME
    ============================================================ */
@@ -419,7 +419,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .pessoa h3{font-size:1.22rem}
 .pessoa-cargo{display:block;margin:8px 0 14px;font-size:.66rem;letter-spacing:.12em;line-height:1.5;text-transform:uppercase;color:var(--dourado-texto)}
 .pessoa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
-
+ 
 /* ============================================================
    16. CONTATO
    ============================================================ */
@@ -451,7 +451,7 @@ form .btn{justify-self:start;margin-top:var(--e1)}
 }
 .outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.32)}
 .outras-portas a:hover{border-bottom-color:var(--dourado-claro)}
-
+ 
 /* ============================================================
    17. MANIFESTO E RODAPÉ
    ============================================================ */
@@ -462,7 +462,7 @@ form .btn{justify-self:start;margin-top:var(--e1)}
   line-height:1.55;color:var(--verde);
 }
 .manifesto span{font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-texto)}
-
+ 
 footer{background:var(--verde);color:rgba(249,246,241,.78);padding:var(--e5) 0 30px}
 .rodape-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:clamp(34px,5vw,56px)}
 .rodape-marca img{width:40px;margin-bottom:var(--e2)}
@@ -477,14 +477,14 @@ footer a:hover{color:var(--creme)}
   border-top:1px solid var(--linha-clara);
   font-size:.78rem;color:rgba(249,246,241,.62);
 }
-
+ 
 .zap{
   position:fixed;right:22px;bottom:22px;z-index:90;
   width:56px;height:56px;border-radius:50%;background:#25d366;
   display:grid;place-items:center;box-shadow:0 5px 20px rgba(0,0,0,.22);
 }
 .zap svg{width:27px;height:27px;fill:#fff}
-
+ 
 /* ============================================================
    18. TELAS MENORES
    ============================================================ */
@@ -533,9 +533,9 @@ footer a:hover{color:var(--creme)}
 </style>
 </head>
 <body>
-
+ 
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
-
+ 
 <header>
   <div class="wrap barra">
     <a class="marca" href="/" aria-label="Maktub Go, página inicial">
@@ -557,9 +557,9 @@ footer a:hover{color:var(--creme)}
     </nav>
   </div>
 </header>
-
+ 
 <main id="conteudo">
-
+ 
 <!-- ===================== HERO ===================== -->
 <section class="hero" aria-labelledby="t-hero">
   <div class="hero-fundo" aria-hidden="true"></div>
@@ -576,7 +576,7 @@ footer a:hover{color:var(--creme)}
   </div>
   <div class="descer" aria-hidden="true"></div>
 </section>
-
+ 
 <!-- ===================== PROVA =====================
      Cada número pendente está marcado com so-rascunho.
      No modo publicado eles somem e a faixa se reequilibra sozinha. -->
@@ -606,7 +606,7 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== ALFAIATARIA ===================== -->
 <section class="secao" id="alfaiataria" aria-labelledby="t-quem">
   <div class="wrap duas">
@@ -621,14 +621,14 @@ footer a:hover{color:var(--creme)}
     <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.jpg')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
   </div>
 </section>
-
+ 
 <!-- ===================== PRATELEIRA ===================== -->
 <section class="secao secao-creme" id="prateleira" aria-labelledby="t-como">
   <div class="wrap">
     <span class="olho">Como trabalhamos</span>
     <h2 id="t-como">A viagem é montada<em>na ordem certa.</em></h2>
     <p class="intro">Cada etapa é um serviço próprio e pode ser contratada sozinha. Você entra por onde precisa e para onde quiser.</p>
-
+ 
     <div class="prateleira">
       <div class="etapa"><span class="etapa-n">01</span><span class="etapa-nome">Rota</span><p>Onde você entra, por onde passa e como se desloca entre os destinos. Se ainda não sabe para onde ir, apresentamos as opções estratégicas antes de qualquer cotação.</p></div>
       <div class="etapa"><span class="etapa-n">02</span><span class="etapa-nome">Voos</span><p>Cotação em dinheiro ou em milhas, com escolha de horários, conexões e aeroportos conforme o perfil de quem viaja. Emissão e check-in feitos por nós.</p></div>
@@ -639,17 +639,17 @@ footer a:hover{color:var(--creme)}
       <div class="etapa"><span class="etapa-n">07</span><span class="etapa-nome">Seguro viagem</span><p>Assessoria na escolha da cobertura certa para o destino e o perfil, com os limites e condições explicados antes da contratação.</p></div>
       <div class="etapa"><span class="etapa-n">08</span><span class="etapa-nome">Roteiro</span><p>No fim da montagem, uma conversa sobre gastronomia, passeios e o que você gosta de fazer. Daí nasce o roteiro dia a dia.</p></div>
     </div>
-
+ 
     <p class="nota-prateleira pend so-rascunho">O desenho da rota tem taxa de planejamento, devolvida integralmente em cashback quando a viagem é fechada com a Maktub.</p>
   </div>
 </section>
-
+ 
 <!-- ===================== SERVIÇOS ===================== -->
 <section class="secao" id="servicos" aria-labelledby="t-serv">
   <div class="wrap">
     <span class="olho">O que fazemos</span>
     <h2 id="t-serv">Cada viagem,<em>um projeto único.</em></h2>
-
+ 
     <div class="servicos">
       <article class="servico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 16l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
@@ -657,28 +657,28 @@ footer a:hover{color:var(--creme)}
         <p>Rota, voos, hotéis, transfers e experiências pensados para o seu perfil e o seu ritmo de viagem.</p>
         <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20completa%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre planejamento</a>
       </article>
-
+ 
       <article class="servico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg>
         <h3>Hotelaria</h3>
         <p>Curadoria com negociação de tarifas, upgrades e benefícios em destinos nacionais e internacionais.</p>
         <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20hotelaria%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre hotelaria</a>
       </article>
-
+ 
       <article class="servico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
         <h3>Suporte humanizado</h3>
         <p>Um time inteiro com você durante a viagem. Do primeiro contato ao retorno, sempre com uma pessoa real.</p>
         <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20entender%20como%20funciona%20o%20atendimento%20da%20Maktub%20Go." target="_blank" rel="noopener">Entender o atendimento</a>
       </article>
-
+ 
       <article class="servico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M5 17h14l-1.5-6.5a2 2 0 0 0-2-1.5h-7a2 2 0 0 0-2 1.5Z"/><circle cx="7.5" cy="17.5" r="1.7"/><circle cx="16.5" cy="17.5" r="1.7"/></svg>
         <h3>Transfers e traslados</h3>
         <p>Transfers privativos, locação de veículos e traslados com conforto e pontualidade no destino.</p>
         <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20transfer%20ou%20carro%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre transfers</a>
       </article>
-
+ 
       <article class="servico servico-destaque">
         <span class="selo">Serviço exclusivo</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.4 6.2L12 17l-5.6 3 1.4-6.2L3 9.5l6.4-.7Z"/></svg>
@@ -686,7 +686,7 @@ footer a:hover{color:var(--creme)}
         <p>Acompanhamento do seu patrimônio de milhas o ano inteiro, com painel privado e reunião mensal com seu gestor.</p>
         <a class="link-texto" href="/gestao-de-milhas/">Conhecer a gestão</a>
       </article>
-
+ 
       <article class="servico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6Z"/></svg>
         <h3>Seguro viagem</h3>
@@ -696,14 +696,14 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== COMPARATIVO ===================== -->
 <section class="secao secao-verde" id="diferenca" aria-labelledby="t-dif">
   <div class="wrap">
     <span class="olho">A diferença</span>
     <h2 id="t-dif">Por que a Maktub<em>não é a mais barata.</em></h2>
     <p class="intro">Vender passagem é fácil. O que custa é o que acontece antes e depois dela.</p>
-
+ 
     <div class="comparativo">
       <div class="coluna">
         <h3>Agência comum</h3>
@@ -728,18 +728,18 @@ footer a:hover{color:var(--creme)}
         </ul>
       </div>
     </div>
-
+ 
     <p class="objecao">Quem procura o menor preço acha em qualquer lugar. Quem quer chegar e simplesmente viver a viagem precisa de alguém que já pensou em tudo o que pode dar errado.</p>
   </div>
 </section>
-
+ 
 <!-- ===================== VIAGENS =====================
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
 <section class="secao" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
     <span class="olho">Viagens que já entregamos</span>
     <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
-
+ 
     <div class="casos">
       <article class="caso">
         <div class="figura figura-caso" style="background-image:url('/ativos/caso-gramado.jpg')" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado"></div>
@@ -749,7 +749,7 @@ footer a:hover{color:var(--creme)}
           <p>A viagem já estava inteira montada, dia a dia. Mas o pedido dele foi outro. Quando a Rhaissa entrou no quarto, tinha flor, chocolate e carta esperando. Combinamos tudo pelas costas dela.</p>
         </div>
       </article>
-
+ 
       <article class="caso">
         <div class="figura figura-caso" style="background-image:url('/ativos/caso-europa.jpg')" role="img" aria-label="Família recebendo a surpresa da viagem para Paris"></div>
         <div class="caso-corpo">
@@ -758,7 +758,25 @@ footer a:hover{color:var(--creme)}
           <p>No Dia dos Namorados, o Luan entregou uma folha impressa com a torre para a Andreza. Era o jeito dele de contar que Paris ia sair do sonho. Do outro lado, a gente já estava desenhando a rota.</p>
         </div>
       </article>
-
+ 
+      <article class="caso">
+        <div class="figura figura-caso" style="background-image:url('/ativos/caso-jordana-orlando-1.jpg');background-position:center 60%" role="img" aria-label="Jordana em frente ao globo da Universal, em Orlando"></div>
+        <div class="caso-corpo">
+          <span class="caso-rot">Orlando</span>
+          <h3>Uma viagem inteira guardada em segredo</h3>
+          <p>A Jordana queria surpreender o filho com Orlando. A gente montou tudo do lado de cá, e o único trabalho dela foi guardar o segredo até a hora de contar.</p>
+        </div>
+      </article>
+ 
+      <article class="caso">
+        <div class="figura figura-caso" style="background-image:url('/ativos/caso-lu-saint-gervais.jpg');background-position:center 90%" role="img" aria-label="Lu e Laura com mountain bikes nos Alpes Franceses, em Saint-Gervais"></div>
+        <div class="caso-corpo">
+          <span class="caso-rot">Alpes Franceses</span>
+          <h3>Os Alpes no ritmo do pedal</h3>
+          <p>A Lu e a amiga Laura subiram as encostas de Saint-Gervais de mountain bike, com a imensidão dos Alpes em volta. Passeio que não cabe em pacote pronto: desenhamos para as duas viverem a montanha de perto.</p>
+        </div>
+      </article>
+ 
       <article class="caso so-rascunho">
         <div class="figura figura-caso" role="img" aria-label="Caso pendente"><span class="figura-nota">caso pendente</span></div>
         <div class="caso-corpo">
@@ -770,7 +788,7 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== DESTINOS VIVIDOS ===================== -->
 <section class="secao secao-creme" id="vividos" aria-labelledby="t-vividos">
   <div class="wrap duas">
@@ -783,7 +801,7 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== DEPOIMENTOS ===================== -->
 <section class="secao" id="depoimentos" aria-labelledby="t-depo">
   <div class="wrap">
@@ -803,7 +821,7 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== MILHAS ===================== -->
 <section class="secao secao-verde" id="milhas" aria-labelledby="t-milhas">
   <div class="wrap milhas">
@@ -826,16 +844,16 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== TIME =====================
-     Nayara e Breno seguem com monograma até as fotos chegarem.
+     Nayara segue com monograma até a foto chegar.
      Para colocar a foto, acrescente na div da figura:
      style="background-image:url('/ativos/time-nayara.jpg')" e apague o span do monograma. -->
 <section class="secao secao-creme" id="time" aria-labelledby="t-time">
   <div class="wrap">
     <span class="olho">O time</span>
     <h2 id="t-time">Quem vai cuidar<em>da sua viagem.</em></h2>
-
+ 
     <div class="time">
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-isadora.jpg')" role="img" aria-label="Isadora Lombardi"></div>
@@ -843,23 +861,23 @@ footer a:hover{color:var(--creme)}
         <span class="pessoa-cargo">Co-fundadora, operações e experiência</span>
         <p>São sete anos de turismo, dentro das maiores operações de milhas do país, antes da Maktub existir. A Isadora é quem escuta primeiro. Ela quer saber como a sua família viaja antes de qualquer cotação sair do papel.</p>
       </article>
-
+ 
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-matheus.jpg')" role="img" aria-label="Matheus Braga"></div>
         <h3>Matheus Braga</h3>
         <span class="pessoa-cargo">Co-fundador, estratégia e gestão de milhas</span>
         <p>Veio do mercado financeiro e trouxe de lá um jeito de olhar: milha é patrimônio e precisa de cuidado o ano inteiro. É ele quem conduz a gestão concierge. E é ele quem vai antes, conhecer o destino que a gente vende.</p>
       </article>
-
+ 
       <article class="pessoa">
         <div class="figura figura-pessoa" role="img" aria-label="Nayara"><span class="monograma">N</span></div>
         <h3>Nayara</h3>
         <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
         <p>A Nayara mora há mais de cinco anos na Europa. Ela é a responsável pela sua experiência: vai traçar rotas, construir seu roteiro, buscar as melhores tarifas de passagem e encontrar onde você vai se hospedar.</p>
       </article>
-
+ 
       <article class="pessoa">
-        <div class="figura figura-pessoa" role="img" aria-label="Breno"><span class="monograma">B</span></div>
+        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-breno.jpg')" role="img" aria-label="Breno"></div>
         <h3>Breno</h3>
         <span class="pessoa-cargo">Responsável pelas emissões aéreas e atendimento corporativo</span>
         <p>Se você precisa colocar uma equipe inteira no ar, o Breno é quem tira esse peso das suas costas. Ele confere os detalhes e resolve antes de virar um problema. Afinal, a Maktub é a sua solução em viagens.</p>
@@ -867,7 +885,7 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </section>
-
+ 
 <!-- ===================== CONTATO ===================== -->
 <section class="secao secao-verde" id="contato" aria-labelledby="t-contato">
   <div class="wrap contato">
@@ -885,7 +903,7 @@ footer a:hover{color:var(--creme)}
         Quer trabalhar com a gente? <a href="/trabalheconosco/">Banco de talentos</a>.
       </p>
     </div>
-
+ 
     <!-- Formulário de cliente direto de viagem. Tabela leads_viagem. -->
     <form id="formViagem" novalidate>
       <div class="dupla">
@@ -927,16 +945,16 @@ footer a:hover{color:var(--creme)}
     </form>
   </div>
 </section>
-
+ 
 <section class="manifesto">
   <div class="wrap">
     <p>Maktub: estava escrito. Se era para acontecer, que aconteça da melhor forma possível.</p>
     <span>Maktub Go, Alfaiataria de Viagens</span>
   </div>
 </section>
-
+ 
 </main>
-
+ 
 <footer>
   <div class="wrap">
     <div class="rodape-grid">
@@ -972,13 +990,13 @@ footer a:hover{color:var(--creme)}
     </div>
   </div>
 </footer>
-
+ 
 <a class="zap" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="Falar com a Maktub Go no WhatsApp">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6 1.9.8 2.7.9 3.6.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Z"/></svg>
 </a>
-
+ 
 <span class="selo-rascunho so-rascunho">Modo rascunho</span>
-
+ 
 <script>
 /* ============================================================
    FORMULÁRIO DE VIAGEM (cliente direto)
@@ -993,24 +1011,24 @@ footer a:hover{color:var(--creme)}
 const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
 const TABELA = 'leads_viagem';
-
+ 
 const q = new URLSearchParams(location.search);
 document.getElementById('origem').value =
   q.get('utm_campaign') || q.get('utm_source') || document.referrer || 'direto';
-
+ 
 const form = document.getElementById('formViagem');
 const aviso = document.getElementById('avisoForm');
 const botao = form.querySelector('button');
-
+ 
 function dizer(texto, estado){
   aviso.textContent = texto;
   if(estado){ aviso.dataset.estado = estado; } else { delete aviso.dataset.estado; }
 }
-
+ 
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   const d = Object.fromEntries(new FormData(form).entries());
-
+ 
   if(!d.nome || !d.whatsapp || !d.email){
     dizer('Preencha nome, WhatsApp e e-mail para continuar.','erro');
     return;
@@ -1020,7 +1038,7 @@ form.addEventListener('submit', async function(e){
     document.getElementById('email').focus();
     return;
   }
-
+ 
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     botao.disabled = true;
     dizer('Enviando...');
@@ -1045,7 +1063,7 @@ form.addEventListener('submit', async function(e){
       botao.disabled = false;
     }
   }
-
+ 
   const texto = 'Olá! Quero planejar uma viagem com a Maktub Go.'
     + '\nNome: ' + d.nome
     + '\nDestino: ' + (d.destino || 'ainda não sei')
@@ -1053,7 +1071,7 @@ form.addEventListener('submit', async function(e){
     + '\nViajantes: ' + (d.viajantes || 'a confirmar');
   window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto),'_blank','noopener');
 });
-
+ 
 /* menu em telas menores */
 const btn = document.getElementById('menuBtn');
 const menu = document.getElementById('menu');
@@ -1069,7 +1087,7 @@ menu.addEventListener('click', function(e){
 addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
-
+ 
 /* borda do cabeçalho ao rolar */
 const cab = document.querySelector('header');
 addEventListener('scroll', function(){
