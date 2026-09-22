@@ -16,84 +16,84 @@
     html,body{height:100%}
     body{background:var(--cream);color:var(--text);font-family:'Jost',sans-serif;font-size:16px;font-weight:400;line-height:1.7;overflow-x:hidden}
     a{color:inherit;text-decoration:none}
-
+ 
     .login-page{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
-
+ 
     /* LADO ESQUERDO - filosofia */
     .login-side{background:var(--green);color:var(--cream);padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
     .login-side::before{content:'';position:absolute;width:600px;height:600px;border:1px solid rgba(201,169,110,.18);border-radius:50%;top:-200px;right:-220px;pointer-events:none}
     .login-side::after{content:'';position:absolute;width:400px;height:400px;border:1px solid rgba(201,169,110,.10);border-radius:50%;bottom:-100px;left:-100px;pointer-events:none}
-
+ 
     .side-top{position:relative;z-index:2;display:flex;align-items:center;gap:12px}
     .side-top-logo{width:42px;height:auto}
     .side-top .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
     .side-top .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--white)}
     .side-top .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:rgba(249,246,241,.55)}
-
+ 
     .side-quote{position:relative;z-index:2;max-width:480px}
     .quote-mark{font-family:'Cormorant Garamond',serif;font-size:80px;color:var(--gold-warm);line-height:1;margin-bottom:16px}
     .side-quote p{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(24px,2.6vw,32px);line-height:1.4;color:var(--white);margin-bottom:32px;font-weight:400}
     .side-quote p em{color:var(--gold-warm);font-style:italic}
     .quote-line{width:48px;height:1px;background:var(--gold-warm);margin-bottom:16px;opacity:.7}
     .quote-author{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:rgba(249,246,241,.6);font-weight:500}
-
+ 
     .side-bottom{position:relative;z-index:2;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:rgba(249,246,241,.4)}
-
+ 
     /* LADO DIREITO - formulário */
     .login-form-area{padding:56px 80px;display:flex;flex-direction:column;justify-content:center;background:var(--cream)}
     .form-wrapper{max-width:420px;width:100%;margin:0 auto}
-
+ 
     .form-mark{margin-bottom:32px}
     .form-mark img{width:auto;height:54px;display:block}
-
+ 
     .form-label{font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:18px;font-weight:500}
-
+ 
     .form-wrapper h1{font-family:'Cormorant Garamond',serif;font-size:clamp(40px,5vw,52px);line-height:1.05;font-weight:400;color:var(--green);margin-bottom:14px;letter-spacing:-.01em}
     .form-wrapper h1 em{color:var(--gold);font-style:italic;font-weight:300}
-
+ 
     .form-wrapper .intro{color:var(--text-mid);margin-bottom:48px;font-size:15px;font-weight:300;line-height:1.7}
-
+ 
     .field{margin-bottom:24px}
     .field label{display:block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;font-weight:600}
     .field input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border-strong);color:var(--text);padding:12px 0;font-size:16px;font-family:inherit;transition:border-color .3s;font-weight:400}
     .field input:focus{outline:none;border-bottom-color:var(--gold)}
     .field input::placeholder{color:var(--text-muted);opacity:.6}
     .field input:disabled{opacity:.5;cursor:not-allowed}
-
+ 
     .field-row{display:flex;justify-content:space-between;align-items:center;margin-top:-8px;margin-bottom:32px}
     .check-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mid);cursor:pointer}
     .check-row input{width:14px;height:14px;accent-color:var(--green)}
     .forgot{font-size:12px;color:var(--gold);letter-spacing:.05em;transition:color .25s}
     .forgot:hover{color:var(--green)}
-
+ 
     .btn-submit{width:100%;background:var(--green);color:var(--white);border:none;padding:18px;font-size:12px;letter-spacing:.28em;text-transform:uppercase;cursor:pointer;font-family:inherit;font-weight:500;transition:background .3s;position:relative}
     .btn-submit:hover{background:var(--green-mid)}
     .btn-submit:disabled{opacity:.7;cursor:wait}
     .btn-submit.loading{color:transparent}
     .btn-submit.loading::after{content:'';position:absolute;top:50%;left:50%;width:18px;height:18px;margin-top:-9px;margin-left:-9px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin 0.7s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-
+ 
     .form-footer{margin-top:32px;padding-top:32px;border-top:1px solid var(--border);text-align:center}
     .form-footer p{font-size:13px;color:var(--text-muted);margin-bottom:8px}
     .form-footer a{color:var(--gold);font-size:13px;font-weight:500;transition:color .25s}
     .form-footer a:hover{color:var(--green)}
-
+ 
     .back-link{position:absolute;top:32px;right:48px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);transition:color .25s;z-index:10}
     .back-link:hover{color:var(--green)}
-
+ 
     /* Mensagens */
     .alert{padding:14px 16px;border-radius:2px;margin-bottom:24px;font-size:13.5px;line-height:1.5;display:none}
     .alert.show{display:block;animation:slideDown .25s ease-out}
     .alert-error{background:rgba(201,123,107,.08);border-left:3px solid var(--danger);color:#8a3e2e}
     .alert-success{background:rgba(122,162,107,.1);border-left:3px solid #7aa26b;color:#3d5e2e}
     @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-
+ 
     /* Estado de carregamento inicial */
     .checking-auth{position:fixed;inset:0;background:var(--cream);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:20px}
     .checking-auth img{width:54px;height:auto;opacity:.8}
     .checking-auth .spinner{width:24px;height:24px;border:2px solid rgba(26,56,38,.15);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite}
     .checking-auth p{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);font-weight:500}
-
+ 
     @media(max-width:900px){
       .login-page{grid-template-columns:1fr}
       .login-side{display:none}
@@ -117,15 +117,15 @@
   <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
 </head>
 <body>
-
+ 
 <div class="checking-auth" id="checkingAuth">
   <img src="/ativos/simbolo-verde.png" alt="Maktub Go" />
   <div class="spinner"></div>
   <p>Verificando acesso</p>
 </div>
-
+ 
 <a href="/" class="back-link">← Voltar ao site</a>
-
+ 
 <div class="login-page">
   <aside class="login-side">
     <div class="side-top">
@@ -143,14 +143,14 @@
     </div>
     <div class="side-bottom">Acesso Cliente · Gestão de Milhas Concierge</div>
   </aside>
-
+ 
   <main class="login-form-area">
     <div class="form-wrapper">
       <div class="form-mark"><img src="/ativos/simbolo-verde.png" alt="Maktub Go" /></div>
-
+ 
       <div class="alert alert-error" id="alertError" role="alert"></div>
       <div class="alert alert-success" id="alertSuccess" role="status"></div>
-
+ 
       <!-- ETAPA 1: e-mail e senha -->
       <section class="step" id="stepLogin">
         <span class="form-label">Acesso Privado</span>
@@ -180,7 +180,7 @@
           <a href="/gestao-de-milhas/#convite">Solicite seu convite →</a>
         </div>
       </section>
-
+ 
       <!-- ETAPA 2: código por e-mail -->
       <section class="step" id="stepCode" hidden>
         <span class="form-label">Verificação em duas etapas</span>
@@ -203,7 +203,7 @@
         </div>
         <p class="secure-note" style="margin-top:22px">Não recebeu? Confira a caixa de spam. O código vale por poucos minutos.</p>
       </section>
-
+ 
       <!-- ESQUECI A SENHA -->
       <section class="step" id="stepForgot" hidden>
         <span class="form-label">Recuperar acesso</span>
@@ -218,7 +218,7 @@
         </form>
         <div class="step-actions"><button type="button" class="link-btn" id="forgotBack">← Voltar ao login</button></div>
       </section>
-
+ 
       <!-- NOVA SENHA (chegou pelo link do e-mail) -->
       <section class="step" id="stepReset" hidden>
         <span class="form-label">Nova senha</span>
@@ -239,31 +239,31 @@
     </div>
   </main>
 </div>
-
+ 
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-
+ 
   // ===== CONFIGURAÇÃO =====
   // true = depois da senha, pede um código enviado por e-mail.
   // Só funciona depois de configurar o SMTP próprio no Supabase (ver guia).
   const EXIGIR_CODIGO = true;
   const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
-
+ 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   const $ = (id) => document.getElementById(id);
   const isRecovery = /type=recovery/.test(location.hash) || new URLSearchParams(location.search).has('redefinir');
   const nextParam = new URLSearchParams(location.search).get('next') || '';
   const destino = /^\/(painel|admin)\/?[\w\-\/.#]*$/.test(nextParam) ? nextParam : '/painel/';
-
+ 
   if (!EXIGIR_CODIGO) $('secureText').textContent = 'Conexão protegida. Seus dados ficam visíveis apenas para você e seu gestor.';
-
+ 
   const jwtAmr = (token) => {
     try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.amr || []).map(a => a.method); }
     catch (_) { return []; }
   };
   const sessaoValida = (s) => !!s && (!EXIGIR_CODIGO || jwtAmr(s.access_token).some(m => m === 'otp' || m === 'magiclink'));
-
+ 
   function show(step) {
     ['stepLogin','stepCode','stepForgot','stepReset'].forEach(id => $(id).hidden = id !== step);
     clearAlerts();
@@ -272,7 +272,7 @@
   function showSuccess(msg) { $('alertError').classList.remove('show'); $('alertSuccess').textContent = msg; $('alertSuccess').classList.add('show'); }
   function clearAlerts() { $('alertError').classList.remove('show'); $('alertSuccess').classList.remove('show'); }
   function busy(btn, on) { btn.disabled = on; btn.classList.toggle('loading', on); }
-
+ 
   function translateError(message) {
     const m = (message || '').toLowerCase();
     if (m.includes('invalid login') || m.includes('invalid credentials')) return 'E-mail ou senha incorretos. Verifique e tente novamente.';
@@ -284,7 +284,7 @@
     if (m.includes('network') || m.includes('fetch')) return 'Falha de conexão. Verifique sua internet e tente novamente.';
     return 'Não foi possível concluir agora. Tente novamente em instantes.';
   }
-
+ 
   function entrar() {
     try {
       if ($('keepConnected').checked) localStorage.removeItem('mg_sessao_temporaria');
@@ -293,7 +293,7 @@
     showSuccess('Acesso confirmado. Abrindo seu painel...');
     setTimeout(() => location.replace(destino), 600);
   }
-
+ 
   // ===== Estado inicial =====
   let recoveryHandled = false;
   supabase.auth.onAuthStateChange((event) => {
@@ -310,7 +310,7 @@
     } catch (err) { console.error(err); }
     $('checkingAuth').style.display = 'none';
   })();
-
+ 
   // ===== Etapa 1: senha =====
   let emailAtual = '';
   $('loginForm').addEventListener('submit', async (e) => {
@@ -328,7 +328,7 @@
     } catch (err) { showError(translateError(err.message)); }
     finally { busy($('btnLogin'), false); }
   });
-
+ 
   let timer = null;
   async function enviarCodigo() {
     const { error } = await supabase.auth.signInWithOtp({ email: emailAtual, options: { shouldCreateUser: false } });
@@ -348,7 +348,7 @@
     try { await enviarCodigo(); showSuccess('Enviamos um novo código.'); } catch (err) { showError(translateError(err.message)); }
   });
   $('backToLogin').addEventListener('click', () => { clearInterval(timer); show('stepLogin'); $('passwordInput').value = ''; });
-
+ 
   // ===== Etapa 2: código =====
   const codeInputs = [...document.querySelectorAll('#codeInputs input')];
   codeInputs.forEach((inp, i) => {
@@ -378,7 +378,7 @@
     } catch (err) { showError(translateError(err.message)); codeInputs.forEach(i => i.value = ''); codeInputs[0].focus(); }
     finally { busy($('btnCode'), false); }
   });
-
+ 
   // ===== Esqueci a senha =====
   $('goForgot').addEventListener('click', () => { $('forgotEmail').value = $('emailInput').value; show('stepForgot'); });
   $('forgotBack').addEventListener('click', () => show('stepLogin'));
@@ -388,13 +388,17 @@
     if (!/^\S+@\S+\.\S+$/.test(email)) return showError('Informe um e-mail válido.');
     busy($('btnForgot'), true);
     try {
+      const { data: existe, error: rpcError } = await supabase.rpc('email_tem_acesso', { p_email: email });
+      if (!rpcError && existe === false) {
+        return showError('Este e-mail não está cadastrado no painel. Confira o endereço digitado ou fale com seu gestor Maktub Go.');
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/acesso/?redefinir=1' });
-      if (error && !/not found/i.test(error.message)) throw error;
-      showSuccess('Se este e-mail tiver acesso ao painel, você receberá um link em instantes. Confira também a caixa de spam.');
+      if (error) throw error;
+      showSuccess(`Enviamos um link de redefinição para ${email}. Confira também a caixa de spam.`);
     } catch (err) { showError(translateError(err.message)); }
     finally { busy($('btnForgot'), false); }
   });
-
+ 
   // ===== Nova senha =====
   $('resetForm').addEventListener('submit', async (e) => {
     e.preventDefault(); clearAlerts();
@@ -413,6 +417,7 @@
     finally { busy($('btnReset'), false); }
   });
 </script>
-
+ 
 </body>
 </html>
+ 
