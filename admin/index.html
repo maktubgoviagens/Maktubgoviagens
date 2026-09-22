@@ -501,6 +501,13 @@
     });
     if (extra && $('fechar')) $('fechar').onclick = () => fecharMes(c);
     if (impBtn) {
+      // Confere sozinho se algum acúmulo ainda não está na carteira e leva
+      (async () => {
+        try {
+          const n = await pontosParaCarteira(c.id, rows);
+          if (n) { toast(`${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e patrimônio atualizados.`); render(); }
+        } catch (err) { console.error(err); }
+      })();
       $('impEco').onclick = () => importarEconomias(c, rows);
       $('ptsCart').onclick = async () => {
         $('ptsCart').disabled = true;
