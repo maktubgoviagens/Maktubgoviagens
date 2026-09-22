@@ -484,7 +484,8 @@
     const label = (key) => (cfg.fields.find(f => f[0] === key) || [key, key === '_economia' ? 'Economia' : key === 'created_at' ? 'Criado em' : key])[1].replace(/ \(.*\)/, '');
     const extra = '';
     const impBtn = t === 'historico_economia' ? '<button class="btn" id="impEco">Importar planilha</button> ' : '';
-    m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}${impBtn}<button class="btn pri" id="novo">+ Novo</button>`) +
+    const expBtn = '<button class="btn" id="expTbl">Exportar planilha</button> ';
+    m.innerHTML = header(k, esc(cfg.title), esc(c.nome_completo), `${extra}${expBtn}${impBtn}<button class="btn pri" id="novo">+ Novo</button>`) +
       (cfg.hint ? `<div class="hint">${esc(cfg.hint)}</div>` : '') +
       `<div class="tblw"><table><thead><tr>${cfg.cols.map(x => `<th>${esc(label(x))}</th>`).join('')}<th></th></tr></thead><tbody>
       ${rows.length ? rows.map(r => `<tr>${cfg.cols.map(x => `<td>${fmtCell(x, r[x], r)}</td>`).join('')}
@@ -500,6 +501,21 @@
     });
     if (extra && $('fechar')) $('fechar').onclick = () => fecharMes(c);
     if (impBtn) $('impEco').onclick = () => importarEconomias(c, rows);
+    $('expTbl').onclick = () => {
+      if (!rows.length) return toast('Não há nada para exportar nesta tela.');
+      if (t === 'historico_economia') {
+        return baixarCsv(nomeArq(c, 'economias'), [IMP_COLS, ...rows.map(r => [brDate(r.data),
+          r.categoria === 'acumulo' || r.categoria === 'cartao' ? 'pontos' : r.categoria === 'cashback' ? 'cashback' : r.categoria === 'emissao' ? 'passagem' : 'outro',
+          r.descricao || '', r.programa || '', r.pontos_gerados || '', csvNum(r.valor_economia_brl), r.observacao || ''])]);
+      }
+      const keys = cfg.fields.map(f => f[0]);
+      baixarCsv(nomeArq(c, cfg.title.toLowerCase().replace(/[^\w]+/g, '-')), [keys.map(label),
+        ...rows.map(r => keys.map(x => { const v = r[x];
+          if (v === null || v === undefined) return '';
+          if (typeof v === 'number') return csvNum(v);
+          if (/^\d{4}-\d{2}-\d{2}/.test(String(v))) return brDate(v);
+          return v; }))]);
+    };
   }
  
   // ===== Importar economias por planilha (Excel ou CSV) =====
@@ -565,14 +581,20 @@
     const ws = wb.Sheets[wb.SheetNames[0]];
     return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
   }
-  function impModeloCsv() {
-    const linhas = [IMP_COLS.join(';'),
-      '05/09/2026;pontos;Super acúmulo Magalu 10 pts por real;Esfera;45000;;',
-      '12/09/2026;cashback;Cashback cartão Inter;;;320,50;',
-      '18/09/2026;pontos;Pontuação da fatura Black;Livelo;28000;;valor calculado pelo milheiro'];
+  function baixarCsv(nome, linhas) {
+    const cel = (v) => { const t = v === null || v === undefined ? '' : String(v); return /[";\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const txt = linhas.map(l => l.map(cel).join(';')).join('\r\n');
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['\uFEFF' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'modelo-importar-economias.csv'; document.body.appendChild(a); a.click(); a.remove();
+    a.href = URL.createObjectURL(new Blob(['\uFEFF' + txt], { type: 'text/csv;charset=utf-8' }));
+    a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  }
+  const csvNum = (n) => n === null || n === undefined || n === '' ? '' : String(n).replace('.', ',');
+  const nomeArq = (c, base) => `${base}-${(c.nome_completo || 'cliente').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').toLowerCase().slice(0, 30)}.csv`;
+  function impModeloCsv() {
+    baixarCsv('modelo-importar-economias.csv', [IMP_COLS,
+      ['05/09/2026', 'pontos', 'Super acúmulo Magalu 10 pts por real', 'Esfera', 45000, '', ''],
+      ['12/09/2026', 'cashback', 'Cashback cartão Inter', '', '', '320,50', ''],
+      ['18/09/2026', 'pontos', 'Pontuação da fatura Black', 'Livelo', 28000, '', 'valor calculado pelo milheiro']]);
   }
  
   function importarEconomias(c, existentes) {
@@ -884,7 +906,7 @@
     const quem = (id) => (EQUIPE.find(e => e.user_id === id) || {}).nome || '';
     const lista = [...ex].sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || '')));
     m.innerHTML = header(k, 'Carteira de <em>milhas</em>', esc(c.nome_completo) + ' · o saldo é a soma dos lançamentos, nada é digitado duas vezes.',
-      `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button>`) + `
+      `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button><button class="btn" id="lnExp">Exportar planilha</button><button class="btn" id="lnImp">Importar planilha</button>`) + `
       <div class="cards">
         <div class="card"><div class="l">Saldo total</div><div class="v">${num(W.total)}</div><div class="muted">milhas e pontos</div></div>
         <div class="card"><div class="l">Patrimônio estimado</div><div class="v">${brl(patr)}</div><div class="muted">${semRef.length ? 'Sem valor de referência: ' + esc(semRef.join(', ')) : 'Pelo valor de referência do milheiro'}</div></div>
@@ -922,6 +944,13 @@
     $('lnTransf').onclick = () => formTransf(ctx);
     $('lnUso').onclick = () => formUso(ctx, null);
     $('lnAjuste').onclick = () => formAjuste(ctx, null);
+    $('lnImp').onclick = () => importarCarteira(ctx);
+    $('lnExp').onclick = () => {
+      if (!lista.length) return toast('Não há lançamentos para exportar.');
+      baixarCsv(nomeArq(c, 'carteira-de-milhas'), [CAR_COLS, ...lista.map(x => [brDate(x.data), CAR_TIPO_SAIDA[x.tipo] || x.tipo, x.programa || '',
+        Math.abs(Number(x.quantidade || 0)), csvNum(x.custo_brl), x.validade ? brDate(x.validade) : '', x.tipo === 'emissao' ? (x.categoria_uso || 'passagem') : '',
+        csvNum(x.taxas_brl), csvNum(x.valor_pagante_brl), x.descricao || ''])]);
+    };
     m.querySelectorAll('[data-edl]').forEach(b => b.onclick = () => {
       const x = ex.find(r => String(r.id) === b.dataset.edl); if (!x) return;
       if (x.tipo === 'emissao') formUso(ctx, x);
@@ -937,6 +966,136 @@
       try { await syncCarteira(c.id, refs); toast('Lançamento excluído. Painel do cliente atualizado.'); } catch (e2) { toast(errMsg(e2)); }
       render();
     });
+  }
+ 
+  // ===== Importar carteira de milhas por planilha =====
+  // Colunas: data | tipo | programa | quantidade | custo_rs | validade | uso | taxas_rs | valor_dinheiro_rs | descricao
+  const CAR_COLS = ['data', 'tipo', 'programa', 'quantidade', 'custo_rs', 'validade', 'uso', 'taxas_rs', 'valor_dinheiro_rs', 'descricao'];
+  const CAR_TIPO_SAIDA = { saldo_inicial: 'saldo herdado', acumulo: 'acumulo', bonus: 'bonus', compra: 'compra', clube: 'clube', emissao: 'emissao', expiracao: 'expiracao', ajuste: 'ajuste', transf_entrada: 'transferencia', transf_saida: 'transferencia', transferencia: 'transferencia' };
+  const CAR_ALIAS = { data: 'data', dia: 'data', tipo: 'tipo', lancamento: 'tipo', origem: 'tipo', programa: 'programa', quantidade: 'quantidade', milhas: 'quantidade',
+    pontos: 'quantidade', 'milhas usadas': 'quantidade', custo_rs: 'custo_rs', custo: 'custo_rs', 'valor pago': 'custo_rs', 'valor pago (r$)': 'custo_rs',
+    validade: 'validade', uso: 'uso', 'o que foi emitido': 'uso', taxas_rs: 'taxas_rs', taxas: 'taxas_rs', 'taxas pagas': 'taxas_rs',
+    valor_dinheiro_rs: 'valor_dinheiro_rs', 'valor em dinheiro': 'valor_dinheiro_rs', 'valor pagante': 'valor_dinheiro_rs', 'valor tarifado': 'valor_dinheiro_rs', descricao: 'descricao' };
+  const carTipo = (v) => {
+    const t = impNorm(v);
+    if (!t) return null;
+    if (/^(saldo|herdad)/.test(t)) return 'saldo_inicial';
+    if (/^(acumulo|cartao|parceir)/.test(t)) return 'acumulo';
+    if (/^(bonus|promo)/.test(t)) return 'bonus';
+    if (/^compra/.test(t)) return 'compra';
+    if (/^clube/.test(t)) return 'clube';
+    if (/^(emissao|uso|passagem|emitid)/.test(t)) return 'emissao';
+    if (/^transf/.test(t)) return 'transferencia';
+    if (/^(expira|ajuste)/.test(t)) return 'ajuste';
+    return '?';
+  };
+  const carUso = (v) => { const t = impNorm(v); if (!t) return 'passagem';
+    if (/^passagem|^aere/.test(t)) return 'passagem'; if (/^hosped|^hotel/.test(t)) return 'hospedagem';
+    if (/^upgrade/.test(t)) return 'upgrade'; if (/^produto|^vale/.test(t)) return 'produto'; if (/^outro/.test(t)) return 'outro'; return null; };
+  function carModeloCsv() {
+    baixarCsv('modelo-importar-carteira.csv', [CAR_COLS,
+      ['01/08/2026', 'saldo herdado', 'Livelo', 120000, '', '', '', '', '', 'Saldo que já existia antes da gestão'],
+      ['05/09/2026', 'acumulo', 'Esfera', 45000, '', '31/12/2027', '', '', '', 'Fatura de agosto do Unique'],
+      ['10/09/2026', 'compra', 'Smiles', 50000, '750,00', '', '', '', '', 'Promoção de compra de pontos'],
+      ['20/09/2026', 'emissao', 'Livelo', 90000, '', '', 'passagem', '184,60', '4200,00', 'GRU > SCL, executiva, 2 passageiros']]);
+  }
+  function importarCarteira(ctx) {
+    const c = ctx.c;
+    $('panel').classList.add('wide');
+    $('panel').innerHTML = `<h3>Importar carteira de milhas</h3><div class="ph">${esc(c.nome_completo)} · os lançamentos entram só neste cliente</div>
+      <div class="hint">Colunas: <strong>data, tipo, programa, quantidade</strong> e, conforme o tipo, <strong>custo_rs, validade, uso, taxas_rs, valor_dinheiro_rs, descricao</strong>.
+      Tipos: <strong>saldo herdado, acumulo, bonus, compra, clube</strong> (entradas) e <strong>emissao</strong> (uso de milhas). Compra e clube pedem o custo_rs. Na emissão, o <strong>valor_dinheiro_rs</strong> é o preço da mesma emissão em dinheiro: é ele que gera a economia da passagem. Transferências, expirações e ajustes continuam manuais.</div>
+      <div style="margin-bottom:14px"><button type="button" class="btn sm" id="carModelo">Baixar planilha modelo</button></div>
+      <div class="imp-drop">Escolha o arquivo (.xlsx ou .csv)<br><input type="file" id="carFile" accept=".xlsx,.xls,.csv,.txt" /></div>
+      <div id="carOut"></div>
+      <div class="pbar"><button type="button" class="btn" id="carCx">Cancelar</button><button type="button" class="btn pri" id="carOk" disabled>Importar</button></div><div id="carMsg"></div>`;
+    $('drawer').hidden = false;
+    $('carCx').onclick = closeDrawer;
+    $('carModelo').onclick = carModeloCsv;
+    let validas = [];
+    $('carFile').onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      $('carOut').innerHTML = '<div class="msg">Lendo a planilha...</div>'; $('carOk').disabled = true; $('carMsg').innerHTML = ''; validas = [];
+      let grid;
+      try { grid = await impLerArquivo(file); } catch (err) { console.error(err); $('carOut').innerHTML = '<div class="msg err">Não consegui ler o arquivo. Salve como .xlsx ou .csv e tente de novo.</div>'; return; }
+      grid = (grid || []).filter(r => r.some(x => String(x).trim() !== ''));
+      if (grid.length < 2) { $('carOut').innerHTML = '<div class="msg err">A planilha está vazia ou só tem o cabeçalho.</div>'; return; }
+      const head = grid[0].map(h => CAR_ALIAS[impNorm(h)] || null);
+      const faltam = ['data', 'tipo', 'programa', 'quantidade'].filter(k => !head.includes(k));
+      if (faltam.length) { $('carOut').innerHTML = `<div class="msg err">Faltam as colunas: ${esc(faltam.join(', '))}. Use a planilha modelo como base.</div>`; return; }
+      const nomesProg = {}; [...PROG_PADRAO, ...PROGS.map(p => p.programa), ...ctx.W.programas.map(p => p.programa)].forEach(n => { nomesProg[normProg(n)] = n; });
+      const saldo = {}; ctx.W.programas.forEach(p => { saldo[p.key] = p.saldo; });
+      const chave = (r) => [r.data, r.tipo, normProg(r.programa), Math.abs(r.quantidade), impNorm(r.descricao)].join('|');
+      const jaTem = new Set((ctx.ex || []).map(x => [String(x.data).slice(0, 10), x.tipo, normProg(x.programa), Math.abs(Number(x.quantidade || 0)), impNorm(x.descricao)].join('|')));
+      const vistos = new Set();
+      const brutas = grid.slice(1).map((cells, i) => { const o = {}; head.forEach((k, j) => { if (k) o[k] = cells[j]; }); return { n: i + 2, o, data: impData(o.data) }; });
+      const ordem = brutas.slice().sort((a, b) => String(a.data || '9999').localeCompare(String(b.data || '9999')) || a.n - b.n);
+      const res = {};
+      ordem.forEach(({ n, o, data }) => {
+        const erros = [];
+        if (!data) erros.push('data inválida');
+        const tipo = carTipo(o.tipo);
+        if (!tipo) erros.push('tipo vazio');
+        else if (tipo === '?') erros.push('tipo desconhecido');
+        else if (tipo === 'transferencia') erros.push('transferência continua manual');
+        else if (tipo === 'ajuste') erros.push('expiração e ajuste continuam manuais');
+        const progTxt = String(o.programa || '').trim();
+        const programa = progTxt ? (nomesProg[normProg(progTxt)] || progTxt) : null;
+        if (!programa) erros.push('informe o programa');
+        const qtd = impPontos(o.quantidade);
+        if (Number.isNaN(qtd) || !(qtd > 0)) erros.push('quantidade inválida');
+        let custo = impValor(o.custo_rs); if (Number.isNaN(custo)) { erros.push('custo inválido'); custo = null; }
+        let taxas = impValor(o.taxas_rs); if (Number.isNaN(taxas)) { erros.push('taxas inválidas'); taxas = null; }
+        let pagante = impValor(o.valor_dinheiro_rs); if (Number.isNaN(pagante)) { erros.push('valor em dinheiro inválido'); pagante = null; }
+        const descricao = String(o.descricao || '').trim();
+        let validade = null;
+        if (String(o.validade || '').trim()) { validade = impData(o.validade); if (!validade) erros.push('validade inválida'); }
+        let uso = null;
+        if (tipo === 'emissao') {
+          uso = carUso(o.uso); if (!uso) erros.push('uso desconhecido (passagem, hospedagem, upgrade, produto ou outro)');
+          if (!descricao) erros.push('descrição obrigatória na emissão');
+          const k = normProg(programa || '');
+          if (!erros.length && (saldo[k] || 0) < qtd) erros.push(`saldo insuficiente em ${programa}: ${num(saldo[k] || 0)}`);
+        }
+        if ((tipo === 'compra' || tipo === 'clube') && !(custo > 0)) erros.push('compra e clube precisam do custo_rs');
+        let row = null, dup = false;
+        if (!erros.length) {
+          row = { cliente_id: c.id, data, programa, tipo, quantidade: tipo === 'emissao' ? -qtd : qtd,
+            custo_brl: tipo === 'acumulo' || tipo === 'bonus' || tipo === 'emissao' ? null : (custo === null ? null : custo),
+            validade: tipo === 'emissao' ? null : validade, descricao: descricao || null,
+            categoria_uso: tipo === 'emissao' ? uso : null, taxas_brl: tipo === 'emissao' ? taxas : null, valor_pagante_brl: tipo === 'emissao' ? pagante : null };
+          const k2 = chave(row); dup = jaTem.has(k2) || vistos.has(k2); vistos.add(k2);
+          const kp = normProg(programa);
+          if (!dup) saldo[kp] = (saldo[kp] || 0) + (tipo === 'emissao' ? -qtd : qtd);
+        }
+        res[n] = { n, data, tipo, programa, qtd, custo, taxas, pagante, uso, descricao, erros, row, dup };
+      });
+      const linhas = brutas.map(b => res[b.n]);
+      validas = linhas.filter(l => l.row && !l.dup).map(l => l.row);
+      const nErr = linhas.filter(l => l.erros.length).length, nDup = linhas.filter(l => l.dup).length;
+      const TL = { saldo_inicial: 'Saldo herdado', acumulo: 'Acúmulo', bonus: 'Bônus', compra: 'Compra', clube: 'Clube', emissao: 'Emissão', transferencia: 'Transferência', ajuste: 'Ajuste' };
+      $('carOut').innerHTML = `<div class="msg ${validas.length ? 'ok' : 'err'}" style="margin:16px 0 10px">${validas.length} ${validas.length === 1 ? 'linha pronta' : 'linhas prontas'} para importar${nErr ? ` · ${nErr} com erro (não entram)` : ''}${nDup ? ` · ${nDup} já ${nDup === 1 ? 'lançada' : 'lançadas'} (não entram)` : ''}</div>
+        <div class="tblw"><table class="imp-tbl" style="min-width:0"><thead><tr><th>Linha</th><th>Situação</th><th>Data</th><th>Lançamento</th><th>Programa</th><th style="text-align:right">Milhas</th><th style="text-align:right">Custo</th><th style="text-align:right">Em dinheiro</th><th>Descrição</th></tr></thead><tbody>
+        ${linhas.map(l => `<tr class="${l.erros.length ? 'bad' : l.dup ? 'dup' : ''}"><td>${l.n}</td>
+          <td>${l.erros.length ? `<span class="pill p-bad">Erro</span><div style="color:var(--bad);margin-top:4px">${esc(l.erros.join('; '))}</div>` : l.dup ? '<span class="pill p-warn">Já lançada</span>' : '<span class="pill p-ok">Ok</span>'}</td>
+          <td>${l.data ? brDate(l.data) : ''}</td><td>${esc(TL[l.tipo] || '')}${l.tipo === 'emissao' && l.uso ? `<div class="muted">${esc(l.uso)}</div>` : ''}</td><td>${esc(l.programa || '')}</td>
+          <td style="text-align:right">${l.qtd > 0 ? (l.tipo === 'emissao' ? '− ' : '+ ') + num(l.qtd) : ''}</td>
+          <td style="text-align:right">${l.custo !== null && l.custo !== undefined ? brl(l.custo) : ''}</td>
+          <td style="text-align:right">${l.pagante ? brl(l.pagante) : ''}${l.taxas ? `<div class="muted">taxas ${brl(l.taxas)}</div>` : ''}</td>
+          <td>${esc(l.descricao || '')}</td></tr>`).join('')}
+        </tbody></table></div>`;
+      $('carOk').disabled = !validas.length;
+      $('carOk').textContent = validas.length ? `Importar ${validas.length} ${validas.length === 1 ? 'linha' : 'linhas'}` : 'Importar';
+    };
+    $('carOk').onclick = async () => {
+      if (!validas.length) return;
+      $('carOk').disabled = true; $('carMsg').className = 'msg'; $('carMsg').textContent = 'Gravando...';
+      const { error } = await sb.from('extrato_milhas').insert(validas);
+      if (error) { $('carOk').disabled = false; $('carMsg').className = 'msg err'; $('carMsg').textContent = errMsg(error); return; }
+      const n = validas.length;
+      try { await syncCarteira(c.id, ctx.refs); } catch (err) { $('carMsg').className = 'msg err'; $('carMsg').textContent = errMsg(err); }
+      closeDrawer(); toast(`${n} ${n === 1 ? 'lançamento importado' : 'lançamentos importados'}. Painel do cliente atualizado.`); render();
+    };
   }
  
   // ---------- formulários da carteira ----------
