@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-
+ 
 <!--
   ============================================================
   MAKTUB GO · /corporativo/ · v1
@@ -26,16 +26,16 @@
   Página de uma porta só: empresa, produtor, equipe e agência.
   Um único formulário, gravando na tabela "leads_corporativo".
   Nenhum campo de viagem de lazer, milhas ou candidatura aqui.
-
+ 
   É o destino dos e-mails de prospecção do Matheus.
   Para medir cada disparo, use link com utm, por exemplo:
   maktubgo.com.br/corporativo/?utm_source=email&utm_campaign=esportivo
   O formulário já captura a origem automaticamente.
-
+ 
   PENDENTE: números da faixa de prova e fotos em /ativos/.
   ============================================================
 -->
-
+ 
 <style>
 :root{
   --verde:#1a3826;
@@ -78,9 +78,15 @@ p{max-width:64ch}
 .pend{color:var(--dourado);border-bottom:1px dashed var(--dourado-claro)}
 .caso-bloco{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(34px,5vw,64px);align-items:center;margin-top:var(--e5, 56px)}
 .caso-foto{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--verde) center/cover}
-
+ 
 .caso-rot{display:block;margin-bottom:12px;font-size:.63rem;letter-spacing:.17em;text-transform:uppercase;color:var(--dourado-claro)}
-@media (max-width:900px){.caso-bloco{grid-template-columns:1fr}}
+.caso-bloco.inv{grid-template-columns:1.2fr .8fr}
+.caso-bloco.inv .caso-foto{order:2}
+.caso-alterna .camada{position:absolute;inset:0;background-size:cover;background-position:center;animation:alterna 12s ease-in-out infinite}
+.caso-alterna .camada:nth-child(2){animation-delay:-6s}
+@keyframes alterna{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.caso-alterna .camada{animation:none}.caso-alterna .camada:nth-child(2){opacity:0}}
+@media (max-width:900px){.caso-bloco{grid-template-columns:1fr}.caso-bloco.inv .caso-foto{order:0}}
 .secao-verde .pend{color:var(--dourado-claro)}
 html[data-modo="publicado"] .so-rascunho{display:none !important}
 .secao-verde :is(p,li,.publico p,.linha p){color:rgba(249,246,241,.84)}
@@ -90,7 +96,7 @@ html[data-modo="publicado"] .so-rascunho{display:none !important}
 .pular{position:absolute;left:-9999px;top:0;z-index:999;background:var(--verde);color:var(--creme);padding:14px 22px;font-size:.88rem}
 .pular:focus{left:12px;top:12px}
 :focus-visible{outline:2px solid var(--dourado);outline-offset:4px}
-
+ 
 .btn{
   display:inline-flex;align-items:center;justify-content:center;min-height:52px;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;
   padding:19px 42px;text-decoration:none;cursor:pointer;
@@ -102,7 +108,7 @@ html[data-modo="publicado"] .so-rascunho{display:none !important}
 .btn-ouro:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
 .btn-linha{background:transparent;color:var(--verde)}
 .btn-linha:hover{background:var(--verde);color:var(--creme)}
-
+ 
 /* cabeçalho */
 header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(249,246,241,.94);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .3s}
 header.rolou{border-bottom-color:var(--linha)}
@@ -112,14 +118,14 @@ header.rolou{border-bottom-color:var(--linha)}
 .marca-nome{font-size:.77rem;letter-spacing:.2em;color:var(--verde);line-height:1.4}
 .marca-nome span{display:block;font-size:.54rem;letter-spacing:.17em;color:var(--dourado)}
 .barra .btn{padding:14px 26px}
-
+ 
 /* topo */
 .topo{padding:150px 0 0}
 .topo h1{font-size:clamp(2.6rem,6vw,4.4rem);margin:14px 0 28px}
 .topo h1 em{font-style:italic;display:block;color:var(--dourado-texto)}
 .topo p{font-family:var(--serif);font-size:clamp(1.12rem,2vw,1.38rem);line-height:1.6;max-width:33em}
 .topo .acoes{display:flex;gap:16px;flex-wrap:wrap;margin:42px 0 104px}
-
+ 
 /* prova */
 .prova{background:var(--verde);color:var(--creme)}
 .prova-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
@@ -127,14 +133,14 @@ header.rolou{border-bottom-color:var(--linha)}
 .prova-item:last-child{border-right:0}
 .prova-num{font-family:var(--serif);font-size:2.7rem;color:var(--dourado-claro);line-height:1;display:block}
 .prova-rot{font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(249,246,241,.7);margin-top:13px;display:block}
-
+ 
 /* públicos */
 .publicos{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--linha);margin-top:56px;border:1px solid var(--linha)}
 .publico{background:var(--creme);padding:40px 36px}
 .secao-creme .publico{background:var(--creme-fundo)}
 .publico h3{margin-bottom:10px}
 .publico p{font-size:.94rem;color:rgba(43,43,38,.82);max-width:none}
-
+ 
 /* resolve */
 .lista{margin-top:52px;border-top:1px solid rgba(249,246,241,.16)}
 .linha{
@@ -143,7 +149,7 @@ header.rolou{border-bottom-color:var(--linha)}
 }
 .linha-nome{font-family:var(--serif);font-size:1.4rem;color:var(--creme)}
 .linha p{font-size:.94rem;max-width:58ch;color:rgba(249,246,241,.84)}
-
+ 
 /* formulário */
 .form-bloco{display:grid;grid-template-columns:.85fr 1.15fr;gap:76px;align-items:start}
 form{display:grid;gap:20px}
@@ -167,14 +173,14 @@ form .btn{justify-self:start;margin-top:12px}
   font-size:.88rem;line-height:2;color:rgba(249,246,241,.74);max-width:none;
 }
 .outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.35)}
-
+ 
 /* rodapé */
 footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;border-top:1px solid rgba(249,246,241,.13)}
 .rodape{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-size:.84rem}
 .rodape a{text-decoration:none;color:rgba(249,246,241,.72)}
 .rodape a:hover{color:var(--creme)}
 .rodape nav{display:flex;gap:24px;flex-wrap:wrap}
-
+ 
 @media (max-width:900px){
   .secao{padding:74px 0}
   .wrap{padding:0 22px}
@@ -191,9 +197,9 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
 </style>
 </head>
 <body>
-
+ 
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
-
+ 
 <header>
   <div class="wrap barra">
     <a class="marca" href="/" aria-label="Maktub Go, página inicial">
@@ -203,9 +209,9 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     <a class="btn btn-linha" href="#cadastro">Solicitar cotação</a>
   </div>
 </header>
-
+ 
 <main id="conteudo">
-
+ 
 <section class="topo">
   <div class="wrap">
     <span class="olho">Maktub Corporativo</span>
@@ -217,7 +223,7 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </div>
   </div>
 </section>
-
+ 
 <!-- PENDENTE: confirmar os três números antes de publicar. -->
 <section class="prova">
   <div class="wrap">
@@ -237,12 +243,12 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </div>
   </div>
 </section>
-
+ 
 <section class="secao">
   <div class="wrap">
     <span class="olho">Para quem é</span>
     <h2>Quem emite em volume<em>precisa de gente, não de site.</em></h2>
-
+ 
     <div class="publicos">
       <article class="publico">
         <h3>Empresas</h3>
@@ -263,12 +269,12 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </div>
   </div>
 </section>
-
+ 
 <section class="secao secao-verde">
   <div class="wrap">
     <span class="olho">O que resolvemos</span>
     <h2>O trabalho chato<em>fica com a gente.</em></h2>
-
+ 
     <div class="lista">
       <div class="linha">
         <span class="linha-nome">Cotação no mesmo dia</span>
@@ -297,7 +303,7 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </div>
   </div>
 </section>
-
+ 
 <section class="secao secao-creme">
   <div class="wrap">
     <span class="olho">Como começa</span>
@@ -322,12 +328,12 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </div>
   </div>
 </section>
-
+ 
 <section class="secao secao-verde" aria-labelledby="t-caso">
   <div class="wrap">
     <span class="olho">Quem já viaja com a gente</span>
     <h2 id="t-caso">Ele só precisava<em>chegar.</em></h2>
-
+ 
     <div class="caso-bloco">
       <div class="caso-foto" style="background-image:url('/ativos/caso-corporativo.jpg')" role="img" aria-label="Sr. Amilton Machado em imersão corporativa"></div>
       <div>
@@ -336,9 +342,21 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
         <p style="margin-top:18px;font-size:.88rem;color:rgba(249,246,241,.62)">Sr. Amilton Machado, Nacional Pax</p>
       </div>
     </div>
+ 
+    <div class="caso-bloco inv">
+      <div class="caso-foto caso-alterna" style="background-image:url('/ativos/caso-fluminense-sub14.jpg')" role="img" aria-label="Equipes de vôlei do Fluminense sub-14 e do Vasco sub-17 no aeroporto, antes do embarque">
+        <div class="camada" style="background-image:url('/ativos/caso-fluminense-sub14.jpg')"></div>
+        <div class="camada" style="background-image:url('/ativos/caso-vasco-sub17.jpg')"></div>
+      </div>
+      <div>
+        <span class="caso-rot">Vôlei de base</span>
+        <p>Primeiro voou o vôlei do Fluminense sub-14. Depois, as mães das meninas indicaram a Maktub às famílias do Vasco sub-17, e o segundo time também voou com a gente. Foram reservas de grupo para atletas e comissão, em dias diferentes, e nos dois embarques a gente foi ao aeroporto encontrar as meninas. Indicação de mãe para mãe só acontece quando a viagem das filhas correu bem.</p>
+        <p style="margin-top:18px;font-size:.88rem;color:rgba(249,246,241,.62)">Vôlei Fluminense sub-14 e Vôlei Vasco sub-17</p>
+      </div>
+    </div>
   </div>
 </section>
-
+ 
 <section class="secao secao-verde" id="cadastro">
   <div class="wrap form-bloco">
     <div>
@@ -354,7 +372,7 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
         Acompanhamento de milhas? <a href="/gestao-de-milhas/">Gestão concierge</a>.
       </p>
     </div>
-
+ 
     <!-- FORMULÁRIO CORPORATIVO. Só empresa. Nada de lazer, milhas ou vaga. -->
     <form id="formCorp" novalidate>
       <div class="dupla">
@@ -417,9 +435,9 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </form>
   </div>
 </section>
-
+ 
 </main>
-
+ 
 <footer>
   <div class="wrap rodape">
     <span>© 2026 Maktub Go. Alfaiataria de Viagens.</span>
@@ -431,9 +449,9 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
     </nav>
   </div>
 </footer>
-
+ 
 <span class="selo-rascunho so-rascunho">Modo rascunho</span>
-
+ 
 <script>
 /* ============================================================
    Tabela própria desta página: leads_corporativo
@@ -444,24 +462,24 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
 const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
 const TABELA_CORP = 'leads_corporativo';
-
+ 
 /* guarda de onde veio o contato, para medir os disparos de prospecção */
 const p = new URLSearchParams(location.search);
 document.getElementById('origem').value =
   p.get('utm_campaign') || p.get('utm_source') || document.referrer || 'direto';
-
+ 
 const form = document.getElementById('formCorp');
 const aviso = document.getElementById('avisoForm');
-
+ 
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   const d = Object.fromEntries(new FormData(form).entries());
-
+ 
   if(!d.empresa || !d.responsavel || !d.whatsapp || !d.email){
     aviso.textContent = 'Preencha empresa, responsável, WhatsApp e e-mail para continuar.';
     return;
   }
-
+ 
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     aviso.textContent = 'Enviando...';
     try{
@@ -483,7 +501,7 @@ form.addEventListener('submit', async function(e){
       aviso.textContent = 'Não foi possível enviar agora. Abrindo o WhatsApp.';
     }
   }
-
+ 
   const texto = 'Olá! Quero falar com o Maktub Corporativo.'
     + '\nEmpresa: ' + d.empresa
     + '\nResponsável: ' + d.responsavel
@@ -493,7 +511,7 @@ form.addEventListener('submit', async function(e){
     + (d.demanda ? '\nViagem: ' + d.demanda : '');
   window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto), '_blank');
 });
-
+ 
 const cab = document.querySelector('header');
 addEventListener('scroll', function(){
   cab.classList.toggle('rolou', scrollY > 30);
