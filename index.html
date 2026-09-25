@@ -315,6 +315,12 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
    9. ALFAIATARIA
    ============================================================ */
 .duas{display:grid;grid-template-columns:1fr .82fr;gap:clamp(40px,6vw,86px);align-items:center}
+.duas-inv{grid-template-columns:.82fr 1fr;margin-top:var(--e6)}
+/* duas fotos do mesmo destino se alternando no mesmo quadro */
+.figura-alterna .camada{position:absolute;inset:0;background-size:cover;background-position:center;animation:alterna 12s ease-in-out infinite}
+.figura-alterna .camada:nth-child(2){animation-delay:-6s}
+@keyframes alterna{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.figura-alterna .camada{animation:none}.figura-alterna .camada:nth-child(2){opacity:0}}
 .citacao{
   margin-top:var(--e4);padding-left:26px;max-width:36ch;
   border-left:1px solid var(--dourado-claro);
@@ -800,6 +806,17 @@ footer a:hover{color:var(--creme)}
       <p style="margin-top:var(--e2)">Antes de um destino entrar na nossa prateleira, alguém daqui viveu primeiro. O passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
     </div>
   </div>
+  <div class="wrap duas duas-inv">
+    <div>
+      <span class="olho">Do Tapajós à Sierra Nevada</span>
+      <p class="intro">E essa é a Nayara na Sierra Nevada, na Andaluzia, aproveitando um feriado. Neve no alto da montanha e céu aberto no mesmo dia.</p>
+      <p style="margin-top:var(--e2)">A Europa ela conhece de andar, não de mapa. O feriado dela vira dica para o seu roteiro: o que levar na mala, quando vale subir e como chegar sem perder o dia na estrada.</p>
+    </div>
+    <div class="figura figura-retrato figura-alterna" style="background-image:url('/ativos/destino-serra-nevada.jpg')" role="img" aria-label="Nayara na Sierra Nevada, Andaluzia">
+      <div class="camada" style="background-image:url('/ativos/destino-serra-nevada.jpg')"></div>
+      <div class="camada" style="background-image:url('/ativos/destino-serra-nevada-2.jpg')"></div>
+    </div>
+  </div>
 </section>
  
 <!-- ===================== DEPOIMENTOS ===================== -->
@@ -845,10 +862,7 @@ footer a:hover{color:var(--creme)}
   </div>
 </section>
  
-<!-- ===================== TIME =====================
-     Nayara segue com monograma até a foto chegar.
-     Para colocar a foto, acrescente na div da figura:
-     style="background-image:url('/ativos/time-nayara.jpg')" e apague o span do monograma. -->
+<!-- ===================== TIME ===================== -->
 <section class="secao secao-creme" id="time" aria-labelledby="t-time">
   <div class="wrap">
     <span class="olho">O time</span>
@@ -870,7 +884,7 @@ footer a:hover{color:var(--creme)}
       </article>
  
       <article class="pessoa">
-        <div class="figura figura-pessoa" role="img" aria-label="Nayara"><span class="monograma">N</span></div>
+        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-nayara.jpg')" role="img" aria-label="Nayara"></div>
         <h3>Nayara</h3>
         <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
         <p>A Nayara mora há mais de cinco anos na Europa. Ela é a responsável pela sua experiência: vai traçar rotas, construir seu roteiro, buscar as melhores tarifas de passagem e encontrar onde você vai se hospedar.</p>
@@ -1096,3 +1110,4 @@ addEventListener('scroll', function(){
 </script>
 </body>
 </html>
+ 
