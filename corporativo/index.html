@@ -194,6 +194,29 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
   .form-bloco{gap:48px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+/* menu principal, igual ao da home */
+header .wrap{max-width:1180px;padding-inline:clamp(22px,5vw,36px)}
+header .barra{gap:20px}
+header .marca{flex-shrink:0}
+header nav a{white-space:nowrap}
+header nav ul{display:flex;align-items:center;gap:clamp(16px,2.2vw,30px);list-style:none;margin:0;padding:0}
+header nav a{display:inline-block;padding-block:10px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;text-decoration:none;color:var(--verde);opacity:.76;transition:opacity .25s ease}
+header nav a:hover,header nav a[aria-current="page"]{opacity:1}
+header nav a[aria-current="page"]{color:var(--dourado)}
+header nav a.destaque{opacity:1;border:1px solid var(--verde);padding:12px 22px;transition:background .3s ease,color .3s ease}
+header nav a.destaque:hover{background:var(--verde);color:var(--creme)}
+.menu-btn{display:none;width:46px;height:46px;background:none;border:0;color:var(--verde);cursor:pointer;align-items:center;justify-content:center}
+.menu-btn svg{width:22px;height:22px}
+@media (max-width:1000px){
+  .menu-btn{display:flex}
+  header nav{position:absolute;inset:84px 0 auto;display:none;background:var(--creme);border-bottom:1px solid rgba(26,56,38,.12);box-shadow:0 18px 30px rgba(26,56,38,.07)}
+  header nav[data-aberto="true"]{display:block}
+  header nav ul{flex-direction:column;align-items:stretch;gap:0;padding:6px clamp(22px,5vw,36px) 24px}
+  header nav li{border-bottom:1px solid rgba(26,56,38,.12)}
+  header nav li:last-child{border-bottom:0;padding-top:16px}
+  header nav a{display:block;padding-block:17px;font-size:.73rem}
+  header nav a.destaque{text-align:center;padding:16px}
+}
 </style>
 </head>
 <body>
@@ -206,7 +229,19 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
       <img src="/ativos/simbolo-verde.png" alt="Maktub Go">
       <span class="marca-nome">MAKTUB CORPORATIVO<span>POR MAKTUB GO</span></span>
     </a>
-    <a class="btn btn-linha" href="#cadastro">Solicitar cotação</a>
+    <button class="menu-btn" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <nav id="menu" aria-label="Principal">
+      <ul>
+        <li><a href="/#alfaiataria">Quem somos</a></li>
+        <li><a href="/#prateleira">Como trabalhamos</a></li>
+        <li><a href="/#viagens">Viagens</a></li>
+        <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+        <li><a href="/corporativo/" aria-current="page">Corporativo</a></li>
+        <li><a href="/acesso/" class="destaque">Acesso cliente</a></li>
+      </ul>
+    </nav>
   </div>
 </header>
  
@@ -228,9 +263,9 @@ footer{background:var(--verde);color:rgba(249,246,241,.76);padding:52px 0 32px;b
 <section class="prova">
   <div class="wrap">
     <div class="prova-grid">
-      <div class="prova-item so-rascunho">
-        <span class="prova-num pend">+280</span>
-        <span class="prova-rot">Passageiros embarcados</span>
+      <div class="prova-item">
+        <span class="prova-num">+1.000</span>
+        <span class="prova-rot">Voos emitidos</span>
       </div>
       <div class="prova-item so-rascunho">
         <span class="prova-num pend">00</span>
@@ -516,6 +551,16 @@ const cab = document.querySelector('header');
 addEventListener('scroll', function(){
   cab.classList.toggle('rolou', scrollY > 30);
 }, {passive:true});
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('menuBtn'), menu=document.getElementById('menu');
+  if(!btn||!menu) return;
+  function fecha(){menu.dataset.aberto='false';btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Abrir menu');}
+  btn.addEventListener('click',function(){var a=menu.dataset.aberto!=='true';menu.dataset.aberto=a;btn.setAttribute('aria-expanded',a);btn.setAttribute('aria-label',a?'Fechar menu':'Abrir menu');});
+  menu.addEventListener('click',function(e){if(e.target.tagName==='A')fecha();});
+  addEventListener('keydown',function(e){if(e.key==='Escape'&&menu.dataset.aberto==='true'){fecha();btn.focus();}});
+})();
 </script>
 </body>
 </html>
