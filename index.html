@@ -320,7 +320,16 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .figura-alterna .camada{position:absolute;inset:0;background-size:cover;background-position:center;animation:alterna 12s ease-in-out infinite}
 .figura-alterna .camada:nth-child(2){animation-delay:-6s}
 @keyframes alterna{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.figura-alterna .camada{animation:none}.figura-alterna .camada:nth-child(2){opacity:0}}
+.figura-alterna.tres .camada{animation:alterna3 18s ease-in-out infinite}
+.figura-alterna.tres .camada:nth-child(2){animation-delay:-12s}
+.figura-alterna.tres .camada:nth-child(3){animation-delay:-6s}
+@keyframes alterna3{0%,28%{opacity:1}33%,94%{opacity:0}100%{opacity:1}}
+.figura-alterna.quatro .camada{animation:alterna4 20s ease-in-out infinite}
+.figura-alterna.quatro .camada:nth-child(2){animation-delay:-15s}
+.figura-alterna.quatro .camada:nth-child(3){animation-delay:-10s}
+.figura-alterna.quatro .camada:nth-child(4){animation-delay:-5s}
+@keyframes alterna4{0%,22%{opacity:1}25%,97%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.figura-alterna .camada{animation:none}.figura-alterna .camada:nth-child(n+2){opacity:0}}
 .citacao{
   margin-top:var(--e4);padding-left:26px;max-width:36ch;
   border-left:1px solid var(--dourado-claro);
@@ -589,9 +598,9 @@ footer a:hover{color:var(--creme)}
 <section class="prova" aria-label="Números da operação">
   <div class="wrap">
     <div class="prova-grid">
-      <div class="prova-item so-rascunho">
-        <span class="prova-num pend">+280</span>
-        <span class="prova-rot">Passageiros embarcados</span>
+      <div class="prova-item">
+        <span class="prova-num">+1.000</span>
+        <span class="prova-rot">Voos emitidos</span>
       </div>
       <div class="prova-item so-rascunho">
         <span class="prova-num pend">00</span>
@@ -748,7 +757,11 @@ footer a:hover{color:var(--creme)}
  
     <div class="casos">
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-gramado.jpg')" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado"></div>
+        <div class="figura figura-caso figura-alterna tres" style="background-image:url('/ativos/caso-gramado.jpg')" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado e Rhaissa e Wesley passeando pela cidade">
+          <div class="camada" style="background-image:url('/ativos/caso-gramado.jpg')"></div>
+          <div class="camada" style="background-image:url('/ativos/caso-gramado-snowland.jpg')"></div>
+          <div class="camada" style="background-image:url('/ativos/caso-gramado-rhaissa.jpg')"></div>
+        </div>
         <div class="caso-corpo">
           <span class="caso-rot">Gramado</span>
           <h3>O Wesley chamou a gente para conspirar</h3>
@@ -829,6 +842,19 @@ footer a:hover{color:var(--creme)}
       <div class="camada" style="background-image:url('/ativos/destino-serra-nevada-2.jpg')"></div>
     </div>
   </div>
+  <div class="wrap duas" style="margin-top:var(--e6)">
+    <div class="figura figura-retrato figura-alterna tres" style="background-image:url('/ativos/destino-templo-budista.jpg')" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas, na Igreja São Pedro, em Gramado, e na Catedral de Pedra, em Canela">
+      <div class="camada" style="background-image:url('/ativos/destino-templo-budista.jpg')"></div>
+      <div class="camada" style="background-image:url('/ativos/destino-gramado.jpg')"></div>
+      <div class="camada" style="background-image:url('/ativos/destino-canela.jpg')"></div>
+    </div>
+    <div>
+      <span class="olho">Serra Gaúcha</span>
+      <p class="intro">Isadora e Matheus decidiram fazer uma trip pela Serra Gaúcha. Voo cedinho do Rio para Porto Alegre, com o nascer do sol do Sul pela janela. No aeroporto, o carro já estava esperando, com a reserva feita e paga. Era só pegar a chave e começar.</p>
+      <p style="margin-top:var(--e2)">Gramado fica a cerca de 120 km do aeroporto, umas duas horas de carro, e a estrada também fez parte da viagem. No meio do caminho, uma placa: templo budista. Não estava nos planos, mas a Isadora queria muito conhecer um, e o Matheus nem pensou duas vezes. Foram três horas no Chagdud Gonpa Khadro Ling, em Três Coroas, conhecendo o espaço e a cultura e renovando as energias. Depois, almoço num rodízio gaúcho e direto para Gramado. Hoje, quando o cliente tem esse perfil, o templo já entra no roteiro.</p>
+      <p style="margin-top:var(--e2)">Na serra, a Igreja São Pedro, em Gramado, e a Catedral de Pedra, em Canela. Foi incrível. É isso que um roteiro da Maktub proporciona: você só vive a viagem, porque o resto já está resolvido.</p>
+    </div>
+  </div>
 </section>
  
 <!-- ===================== DEPOIMENTOS ===================== -->
@@ -842,10 +868,6 @@ footer a:hover{color:var(--creme)}
         <cite>Maria Teresa, Ouro Preto</cite>
       </figure>
       <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
-      <figure class="depo">
-        <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
-        <cite>Maria Teresa, Ouro Preto</cite>
-      </figure>
       <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
     </div>
   </div>
@@ -922,6 +944,7 @@ footer a:hover{color:var(--creme)}
       <div class="canais">
         <a class="canal" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">WhatsApp (21) 97627-5225</a>
         <a class="canal" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
+        <a class="canal" href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a>
       </div>
       <p class="outras-portas">
         Viaja a trabalho ou emite para uma equipe? <a href="/corporativo/">Maktub Corporativo</a>.<br>
@@ -1007,12 +1030,13 @@ footer a:hover{color:var(--creme)}
           <li><a href="/trabalheconosco/">Trabalhe conosco</a></li>
           <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
           <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
+          <li><a href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a></li>
         </ul>
       </div>
     </div>
     <div class="rodape-base">
       <span>© 2026 Maktub Go. Todos os direitos reservados.</span>
-      <span class="so-rascunho pend">CNPJ pendente de confirmação para exibição</span>
+      <span>Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="https://cadastur.turismo.gov.br" target="_blank" rel="noopener" style="font-size:inherit;color:inherit;text-decoration:underline">Verificar no Cadastur</a></span>
     </div>
   </div>
 </footer>
