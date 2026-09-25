@@ -202,7 +202,8 @@ header nav a{white-space:nowrap}
 header nav ul{display:flex;align-items:center;gap:clamp(16px,2.2vw,30px);list-style:none;margin:0;padding:0}
 header nav a{display:inline-block;padding-block:10px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;text-decoration:none;color:var(--verde);opacity:.76;transition:opacity .25s ease}
 header nav a:hover,header nav a[aria-current="page"]{opacity:1}
-header nav a[aria-current="page"]{color:var(--dourado)}
+header nav a[aria-current="page"]{text-decoration:underline;text-decoration-color:var(--dourado);text-underline-offset:6px}
+header nav a.foco{color:var(--dourado);opacity:1}
 header nav a.destaque{opacity:1;border:1px solid var(--verde);padding:12px 22px;transition:background .3s ease,color .3s ease}
 header nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .menu-btn{display:none;width:46px;height:46px;background:none;border:0;color:var(--verde);cursor:pointer;align-items:center;justify-content:center}
@@ -237,7 +238,7 @@ header nav a.destaque:hover{background:var(--verde);color:var(--creme)}
         <li><a href="/#alfaiataria">Quem somos</a></li>
         <li><a href="/#prateleira">Como trabalhamos</a></li>
         <li><a href="/#viagens">Viagens</a></li>
-        <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+        <li><a href="/gestao-de-milhas/" class="foco">Gestão de milhas</a></li>
         <li><a href="/corporativo/" aria-current="page">Corporativo</a></li>
         <li><a href="/acesso/" class="destaque">Acesso cliente</a></li>
       </ul>
