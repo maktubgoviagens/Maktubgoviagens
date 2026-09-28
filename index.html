@@ -331,6 +331,18 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .figura-alterna.quatro .camada:nth-child(4){animation-delay:-5s}
 @keyframes alterna4{0%,22%{opacity:1}25%,97%{opacity:0}100%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.figura-alterna .camada{animation:none}.figura-alterna .camada:nth-child(n+2){opacity:0}}
+/* galeria: fotos passam sozinhas e também pelas setas, pontos ou deslizando o dedo */
+.galeria .camada{animation:none!important;opacity:0;transition:opacity .9s ease}
+.galeria .camada.ativa{opacity:1}
+.galeria-seta{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:42px;height:42px;border-radius:50%;border:1px solid rgba(249,246,241,.55);background:rgba(26,56,38,.55);color:#f9f6f1;display:grid;place-items:center;cursor:pointer;font-size:1.5rem;line-height:1;padding:0 0 3px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:.85;transition:opacity .3s,background .3s}
+.galeria-seta:hover{opacity:1;background:rgba(26,56,38,.85)}
+.galeria-seta:focus-visible{outline:2px solid #c9a96e;outline-offset:2px}
+.galeria-seta.ant{left:12px}
+.galeria-seta.prox{right:12px}
+.galeria-pontos{position:absolute;left:0;right:0;bottom:12px;z-index:3;display:flex;justify-content:center;gap:4px}
+.galeria-pontos button{width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+.galeria-pontos button::before{content:'';width:8px;height:8px;border-radius:4px;background:rgba(249,246,241,.7);box-shadow:0 0 4px rgba(0,0,0,.35);transition:width .3s,background .3s}
+.galeria-pontos button[aria-current="true"]::before{width:20px;background:#c9a96e}
 .citacao{
   margin-top:var(--e4);padding-left:26px;max-width:36ch;
   border-left:1px solid var(--dourado-claro);
@@ -348,6 +360,14 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .etapa-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
 .etapa-nome{font-family:var(--serif);font-size:1.5rem;color:var(--verde);line-height:1.2}
 .etapa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:54ch}
+.jornada{margin-top:var(--e5);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--e4)}
+.passo{border-top:1px solid rgba(201,169,110,.35);padding-top:var(--e3);display:grid;gap:10px;align-content:start}
+.passo-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
+.passo h3{font-size:1.5rem;line-height:1.2}
+.passo p{font-size:var(--t-sm);max-width:40ch}
+.passo-seguro{border-top:2px solid var(--dourado-claro)}
+@media (max-width:1000px){.jornada{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.jornada{grid-template-columns:1fr;gap:var(--e3)}}
 .nota-prateleira{
   margin-top:var(--e4);max-width:58ch;
   font-family:var(--serif);font-style:italic;font-size:1.14rem;color:var(--verde);
@@ -625,8 +645,8 @@ footer a:hover{color:var(--creme)}
         <span class="prova-rot">Suporte durante a viagem</span>
       </div>
       <div class="prova-item">
-        <span class="prova-num">01</span>
-        <span class="prova-rot">Time do início ao retorno</span>
+        <span class="prova-num">100%</span>
+        <span class="prova-rot">Viagens sob medida</span>
       </div>
     </div>
   </div>
@@ -665,7 +685,24 @@ footer a:hover{color:var(--creme)}
       <div class="etapa"><span class="etapa-n">08</span><span class="etapa-nome">Roteiro</span><p>No fim da montagem, uma conversa sobre gastronomia, passeios e o que você gosta de fazer. Daí nasce o roteiro dia a dia.</p></div>
     </div>
  
-    <p class="nota-prateleira pend so-rascunho">O desenho da rota tem taxa de planejamento, devolvida integralmente em cashback quando a viagem é fechada com a Maktub.</p>
+  </div>
+</section>
+ 
+<!-- ===================== CONTRATAÇÃO ===================== -->
+<section class="secao secao-verde" id="contratacao" aria-labelledby="t-contratacao">
+  <div class="wrap">
+    <span class="olho">Como funciona a contratação</span>
+    <h2 id="t-contratacao">Do primeiro oi<em>até a sua volta.</em></h2>
+    <p class="intro">Sem letra miúda e sem surpresa no meio do caminho. É assim que a sua viagem sai do papel com a gente.</p>
+ 
+    <div class="jornada">
+      <div class="passo"><span class="passo-n">01</span><h3>A conversa</h3><p>Você conta como gosta de viajar, o que não pode faltar e o que prefere evitar. A gente escuta antes de cotar qualquer coisa.</p></div>
+      <div class="passo"><span class="passo-n">02</span><h3>O desenho da rota</h3><p>Montamos a proposta sob medida para o seu perfil. O planejamento tem um investimento próprio, devolvido integralmente em cashback quando a viagem é fechada com a Maktub.</p></div>
+      <div class="passo"><span class="passo-n">03</span><h3>Ajustes até ficar do seu jeito</h3><p>Você revisa, troca o que quiser, e a gente refina até a viagem ter a sua cara.</p></div>
+      <div class="passo passo-seguro"><span class="passo-n">04</span><h3>Contrato e pagamento</h3><p>Com tudo aprovado, você assina o contrato e faz o pagamento sempre direto para a Maktub Go Agência de Viagens Ltda, no Pix ou parcelado. As condições de parcelamento são combinadas com você no atendimento.</p></div>
+      <div class="passo"><span class="passo-n">05</span><h3>Seu documento de viagem</h3><p>Reservas, emissões e check-in feitos por nós. Você recebe tudo conferido em um único documento, disponível até sem internet.</p></div>
+      <div class="passo"><span class="passo-n">06</span><h3>Com você até a volta</h3><p>Durante a viagem, o time acompanha cada etapa com suporte 24h. Se algo mudar no caminho, quem corre atrás somos nós.</p></div>
+    </div>
   </div>
 </section>
  
@@ -1037,6 +1074,7 @@ footer a:hover{color:var(--creme)}
         <ul>
           <li><a href="#alfaiataria">Quem somos</a></li>
           <li><a href="#prateleira">Como trabalhamos</a></li>
+          <li><a href="#contratacao">Como contratar</a></li>
           <li><a href="#servicos">Serviços</a></li>
           <li><a href="#diferenca">A diferença</a></li>
           <li><a href="#time">O time</a></li>
@@ -1166,6 +1204,43 @@ const cab = document.querySelector('header');
 addEventListener('scroll', function(){
   cab.classList.toggle('rolou', scrollY > 24);
 },{passive:true});
+</script>
+<script>
+/* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
+(function(){
+  var reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var figs = document.querySelectorAll('.figura-alterna, .caso-alterna');
+  Array.prototype.forEach.call(figs, function(fig, idx){
+    var cams = Array.prototype.filter.call(fig.children, function(c){ return c.classList.contains('camada'); });
+    if(cams.length < 2) return;
+    var i = 0, timer = null;
+    fig.classList.add('galeria');
+    fig.setAttribute('role','group');
+    fig.setAttribute('aria-roledescription','galeria de fotos');
+    function botao(cls, html, rotulo){ var b=document.createElement('button'); b.type='button'; if(cls) b.className=cls; if(html) b.innerHTML=html; b.setAttribute('aria-label', rotulo); return b; }
+    var pontos = document.createElement('div'); pontos.className = 'galeria-pontos';
+    var bts = cams.map(function(c, k){ var b = botao('', '', 'Foto ' + (k+1) + ' de ' + cams.length); b.addEventListener('click', function(){ ir(k); reinicia(); }); pontos.appendChild(b); return b; });
+    var ant = botao('galeria-seta ant', '&#8249;', 'Foto anterior');
+    var prox = botao('galeria-seta prox', '&#8250;', 'Próxima foto');
+    ant.addEventListener('click', function(){ ir(i-1); reinicia(); });
+    prox.addEventListener('click', function(){ ir(i+1); reinicia(); });
+    fig.appendChild(ant); fig.appendChild(prox); fig.appendChild(pontos);
+    function ir(n){
+      i = (n + cams.length) % cams.length;
+      cams.forEach(function(c, k){ c.classList.toggle('ativa', k === i); });
+      bts.forEach(function(b, k){ b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    }
+    function para(){ if(timer){ clearInterval(timer); timer = null; } }
+    function reinicia(){ para(); if(!reduz) timer = setInterval(function(){ ir(i+1); }, 6000); }
+    var x0 = null;
+    fig.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+    fig.addEventListener('touchend', function(e){ if(x0 === null) return; var dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx) > 40){ ir(i + (dx < 0 ? 1 : -1)); reinicia(); } x0 = null; });
+    fig.addEventListener('mouseenter', para);
+    fig.addEventListener('mouseleave', reinicia);
+    ir(0);
+    setTimeout(reinicia, idx * 1500);
+  });
+})();
 </script>
 </body>
 </html>
