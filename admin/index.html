@@ -615,7 +615,15 @@
     return rows;
   }
   async function impLerArquivo(file) {
-    if (/\.(csv|txt)$/i.test(file.name)) return impCsv(await file.text());
+    if (/\.(csv|txt)$/i.test(file.name)) {
+      // CSV salvo pelo Excel no Windows costuma vir em ANSI (windows-1252), não em UTF-8.
+      // Tenta UTF-8 primeiro e, se os bytes não forem UTF-8 válido, lê como windows-1252 para manter os acentos.
+      const bytes = await file.arrayBuffer();
+      let txt;
+      try { txt = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+      catch (e) { txt = new TextDecoder('windows-1252').decode(bytes); }
+      return impCsv(txt.replace(/^\uFEFF/, ''));
+    }
     const XLSX = await import('https://esm.sh/xlsx@0.18.5');
     const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
     const ws = wb.Sheets[wb.SheetNames[0]];
