@@ -426,10 +426,16 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .caso p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
  
 .depoimentos{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1px;
+  display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
   margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
 }
 .depo{background:var(--creme);padding:44px 40px}
+@media (max-width:760px){.depoimentos{grid-template-columns:1fr}}
+.nota-google{margin-top:var(--e4);display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+.nota-google strong{font-family:var(--serif);font-weight:300;font-size:1.9rem;color:var(--verde);line-height:1}
+.nota-google .estrelas{color:var(--dourado-claro);letter-spacing:.12em}
+.nota-google span{font-size:var(--t-sm);color:var(--tinta-suave)}
+.nota-google a{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dourado-texto);text-decoration:none;border-bottom:1px solid var(--dourado-claro);padding-block:4px}
 .depo blockquote{font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--verde)}
 .depo cite{
   display:block;margin-top:var(--e3);font-style:normal;
@@ -490,6 +496,7 @@ form .btn{justify-self:start;margin-top:var(--e1)}
 .outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.32)}
 .outras-portas a:hover{border-bottom-color:var(--dourado-claro)}
 .selo-cadastur{margin-top:var(--e4);border:1px solid rgba(201,169,110,.45);padding:22px 24px;display:grid;gap:10px;max-width:440px}
+.selo-cadastur+.selo-cadastur{margin-top:var(--e2)}
 .selo-rotulo{font-size:.63rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-claro)}
 .selo-cadastur p{font-size:var(--t-sm);line-height:1.7;color:rgba(249,246,241,.86)}
 .selo-cadastur strong{font-weight:400;color:var(--creme)}
@@ -918,9 +925,20 @@ footer a:hover{color:var(--creme)}
         <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
         <cite>Maria Teresa, Ouro Preto</cite>
       </figure>
-      <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
-      <figure class="depo so-rascunho"><blockquote class="pend">Depoimento pendente.</blockquote><cite class="pend">Nome, destino</cite></figure>
+      <figure class="depo">
+        <blockquote>Tornaram meu sonho em realidade. Escolhi Gramado para comemorar meu aniversário e foi incrível a experiência. (...) Amei ainda mais a surpresa que ajudaram meu esposo a fazer para mim no quarto. (...) Passamos zero stress na viagem, e ele nos acompanhou do início ao fim, até chegarmos em casa literalmente.</blockquote>
+        <cite>Rhaissa Siqueira, Gramado</cite>
+      </figure>
+      <figure class="depo">
+        <blockquote>Atendimento nota 1000! A equipe é incrível e super prestativa. Podem ir sem medo, recomendo demais!</blockquote>
+        <cite>Luara Gusmão, avaliação no Google</cite>
+      </figure>
+      <figure class="depo">
+        <blockquote>Excelente, profissional, amorosa, dedicada, resumindo: só primores. Só me resta é agradecer por tudo que recebi.</blockquote>
+        <cite>Maria Eugenia, avaliação no Google</cite>
+      </figure>
     </div>
+    <p class="nota-google"><strong>5,0</strong><span class="estrelas" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span>Nota dos nossos clientes no Google</span><a href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">Ver avaliações</a></p>
   </div>
 </section>
  
@@ -1002,6 +1020,11 @@ footer a:hover{color:var(--creme)}
         <p><strong>Cadastur, Ministério do Turismo</strong><br>Maktub Go Agência de Viagens Ltda<br>Cadastro 64.284.471/0001-51, válido até 07/01/2028</p>
         <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener">Ver certificado oficial</a>
         <small>O certificado traz o QR Code do Ministério do Turismo para você conferir a autenticidade.</small>
+      </div>
+      <div class="selo-cadastur">
+        <span class="selo-rotulo">Avaliada pelos clientes</span>
+        <p><strong>Nota 5,0 no Google</strong><br>Opiniões de quem já viajou com a Maktub Go, publicadas no nosso perfil oficial.</p>
+        <a href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">Ver avaliações no Google</a>
       </div>
       <p class="outras-portas">
         Viaja a trabalho ou emite para uma equipe? <a href="/corporativo/">Maktub Corporativo</a>.<br>
