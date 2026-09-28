@@ -422,6 +422,8 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .milhas{display:grid;grid-template-columns:1.05fr .9fr;gap:clamp(40px,6vw,78px);align-items:center}
 .painel{border:1px solid rgba(201,169,110,.32);padding:32px;background:rgba(0,0,0,.14)}
 .painel-topo{margin-bottom:var(--e3);font-size:.64rem;letter-spacing:.12em;color:rgba(249,246,241,.62)}
+.painel-topo{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 16px}
+.painel-selo{text-transform:uppercase;letter-spacing:.2em;color:var(--dourado-claro)}
 .painel-linha{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-block:14px;border-bottom:1px solid rgba(249,246,241,.09)}
 .painel-linha:last-child{border-bottom:0}
 .painel-linha span:first-child{font-size:var(--t-sm);color:rgba(249,246,241,.8)}
@@ -892,7 +894,7 @@ footer a:hover{color:var(--creme)}
       </div>
     </div>
     <div class="painel" aria-hidden="true">
-      <div class="painel-topo">maktubgo.com.br/painel</div>
+      <div class="painel-topo"><span>maktubgo.com.br/painel</span><span class="painel-selo">Exemplo ilustrativo</span></div>
       <div class="painel-linha"><span>Patrimônio consolidado</span><span>970.000</span></div>
       <div class="painel-linha"><span>Economia gerada no ano</span><span>R$ 47.320</span></div>
       <div class="painel-linha"><span>Próxima reunião</span><span>21/10</span></div>
