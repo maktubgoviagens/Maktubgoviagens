@@ -86,6 +86,18 @@ p{max-width:64ch}
 .caso-alterna .camada:nth-child(2){animation-delay:-6s}
 @keyframes alterna{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.caso-alterna .camada{animation:none}.caso-alterna .camada:nth-child(2){opacity:0}}
+/* galeria: fotos passam sozinhas e também pelas setas, pontos ou deslizando o dedo */
+.galeria .camada{animation:none!important;opacity:0;transition:opacity .9s ease}
+.galeria .camada.ativa{opacity:1}
+.galeria-seta{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:42px;height:42px;border-radius:50%;border:1px solid rgba(249,246,241,.55);background:rgba(26,56,38,.55);color:#f9f6f1;display:grid;place-items:center;cursor:pointer;font-size:1.5rem;line-height:1;padding:0 0 3px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:.85;transition:opacity .3s,background .3s}
+.galeria-seta:hover{opacity:1;background:rgba(26,56,38,.85)}
+.galeria-seta:focus-visible{outline:2px solid #c9a96e;outline-offset:2px}
+.galeria-seta.ant{left:12px}
+.galeria-seta.prox{right:12px}
+.galeria-pontos{position:absolute;left:0;right:0;bottom:12px;z-index:3;display:flex;justify-content:center;gap:4px}
+.galeria-pontos button{width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+.galeria-pontos button::before{content:'';width:8px;height:8px;border-radius:4px;background:rgba(249,246,241,.7);box-shadow:0 0 4px rgba(0,0,0,.35);transition:width .3s,background .3s}
+.galeria-pontos button[aria-current="true"]::before{width:20px;background:#c9a96e}
 @media (max-width:900px){.caso-bloco,.caso-bloco.inv{grid-template-columns:1fr}.caso-bloco.inv .caso-foto{order:0}}
 .secao-verde .pend{color:var(--dourado-claro)}
 html[data-modo="publicado"] .so-rascunho{display:none !important}
@@ -563,6 +575,42 @@ addEventListener('scroll', function(){
   addEventListener('keydown',function(e){if(e.key==='Escape'&&menu.dataset.aberto==='true'){fecha();btn.focus();}});
 })();
 </script>
+<script>
+/* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
+(function(){
+  var reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var figs = document.querySelectorAll('.figura-alterna, .caso-alterna');
+  Array.prototype.forEach.call(figs, function(fig, idx){
+    var cams = Array.prototype.filter.call(fig.children, function(c){ return c.classList.contains('camada'); });
+    if(cams.length < 2) return;
+    var i = 0, timer = null;
+    fig.classList.add('galeria');
+    fig.setAttribute('role','group');
+    fig.setAttribute('aria-roledescription','galeria de fotos');
+    function botao(cls, html, rotulo){ var b=document.createElement('button'); b.type='button'; if(cls) b.className=cls; if(html) b.innerHTML=html; b.setAttribute('aria-label', rotulo); return b; }
+    var pontos = document.createElement('div'); pontos.className = 'galeria-pontos';
+    var bts = cams.map(function(c, k){ var b = botao('', '', 'Foto ' + (k+1) + ' de ' + cams.length); b.addEventListener('click', function(){ ir(k); reinicia(); }); pontos.appendChild(b); return b; });
+    var ant = botao('galeria-seta ant', '&#8249;', 'Foto anterior');
+    var prox = botao('galeria-seta prox', '&#8250;', 'Próxima foto');
+    ant.addEventListener('click', function(){ ir(i-1); reinicia(); });
+    prox.addEventListener('click', function(){ ir(i+1); reinicia(); });
+    fig.appendChild(ant); fig.appendChild(prox); fig.appendChild(pontos);
+    function ir(n){
+      i = (n + cams.length) % cams.length;
+      cams.forEach(function(c, k){ c.classList.toggle('ativa', k === i); });
+      bts.forEach(function(b, k){ b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    }
+    function para(){ if(timer){ clearInterval(timer); timer = null; } }
+    function reinicia(){ para(); if(!reduz) timer = setInterval(function(){ ir(i+1); }, 6000); }
+    var x0 = null;
+    fig.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+    fig.addEventListener('touchend', function(e){ if(x0 === null) return; var dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx) > 40){ ir(i + (dx < 0 ? 1 : -1)); reinicia(); } x0 = null; });
+    fig.addEventListener('mouseenter', para);
+    fig.addEventListener('mouseleave', reinicia);
+    ir(0);
+    setTimeout(reinicia, idx * 1500);
+  });
+})();
+</script>
 </body>
 </html>
- 
