@@ -469,6 +469,13 @@ form .btn{justify-self:start;margin-top:var(--e1)}
 }
 .outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.32)}
 .outras-portas a:hover{border-bottom-color:var(--dourado-claro)}
+.selo-cadastur{margin-top:var(--e4);border:1px solid rgba(201,169,110,.45);padding:22px 24px;display:grid;gap:10px;max-width:440px}
+.selo-rotulo{font-size:.63rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-claro)}
+.selo-cadastur p{font-size:var(--t-sm);line-height:1.7;color:rgba(249,246,241,.86)}
+.selo-cadastur strong{font-weight:400;color:var(--creme)}
+.selo-cadastur a{justify-self:start;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.5);padding-block:4px}
+.selo-cadastur a:hover{border-bottom-color:var(--dourado-claro)}
+.selo-cadastur small{font-size:.76rem;color:rgba(249,246,241,.6);line-height:1.6}
  
 /* ============================================================
    17. MANIFESTO E RODAPÉ
@@ -953,6 +960,12 @@ footer a:hover{color:var(--creme)}
         <a class="canal" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
         <a class="canal" href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a>
       </div>
+      <div class="selo-cadastur">
+        <span class="selo-rotulo">Agência regularizada</span>
+        <p><strong>Cadastur, Ministério do Turismo</strong><br>Maktub Go Agência de Viagens Ltda<br>Cadastro 64.284.471/0001-51, válido até 07/01/2028</p>
+        <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener">Ver certificado oficial</a>
+        <small>O certificado traz o QR Code do Ministério do Turismo para você conferir a autenticidade.</small>
+      </div>
       <p class="outras-portas">
         Viaja a trabalho ou emite para uma equipe? <a href="/corporativo/">Maktub Corporativo</a>.<br>
         Quer acompanhamento de milhas o ano inteiro? <a href="/gestao-de-milhas/">Gestão concierge</a>.<br>
@@ -997,7 +1010,8 @@ footer a:hover{color:var(--creme)}
       </div>
       <input type="hidden" id="origem" name="origem">
       <button class="btn btn-ouro" type="submit">Quero planejar minha viagem</button>
-      <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Respondemos em até um dia útil.</p>
+      <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Ao enviar, abrimos o WhatsApp com os seus dados para você falar direto com a gente.</p>
+      <p class="aviso-form" style="margin-top:6px;opacity:.75">Ao enviar, você concorda com a nossa <a href="/privacidade/" style="color:inherit;text-decoration:underline">Política de Privacidade</a>.</p>
     </form>
   </div>
 </section>
@@ -1035,6 +1049,7 @@ footer a:hover{color:var(--creme)}
           <li><a href="/corporativo/">Maktub Corporativo</a></li>
           <li><a href="/acesso/">Acesso cliente</a></li>
           <li><a href="/trabalheconosco/">Trabalhe conosco</a></li>
+          <li><a href="/privacidade/">Política de Privacidade</a></li>
           <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
           <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
           <li><a href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a></li>
@@ -1043,7 +1058,7 @@ footer a:hover{color:var(--creme)}
     </div>
     <div class="rodape-base">
       <span>© 2026 Maktub Go. Todos os direitos reservados.</span>
-      <span>Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="https://cadastur.turismo.gov.br" target="_blank" rel="noopener" style="font-size:inherit;color:inherit;text-decoration:underline">Verificar no Cadastur</a></span>
+      <span>Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener" style="font-size:inherit;color:inherit;text-decoration:underline">Ver certificado Cadastur</a></span>
     </div>
   </div>
 </footer>
@@ -1123,6 +1138,7 @@ form.addEventListener('submit', async function(e){
  
   const texto = 'Olá! Quero planejar uma viagem com a Maktub Go.'
     + '\nNome: ' + d.nome
+    + '\nE-mail: ' + d.email
     + '\nDestino: ' + (d.destino || 'ainda não sei')
     + '\nQuando: ' + d.quando
     + '\nViajantes: ' + (d.viajantes || 'a confirmar');
