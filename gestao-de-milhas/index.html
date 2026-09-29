@@ -305,6 +305,13 @@
       .preview-grid{grid-template-columns:1fr!important}
     }
   </style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
 </head>
 <body>
  
@@ -695,6 +702,7 @@
     if (!row.nome || row.nome.length < 2) { msg.textContent = 'Informe seu nome.'; return; }
     if (String(row.whatsapp || '').replace(/\D/g, '').length < 10) { msg.textContent = 'Informe um WhatsApp com DDD.'; return; }
     if (row.email && !/^\S+@\S+\.\S+$/.test(row.email)) { msg.textContent = 'Confira o e-mail informado.'; return; }
+    if(window.gtag)gtag('event','envio_formulario',{formulario:'convite_milhas'});
     btn.disabled = true; btn.textContent = 'Enviando...';
     const texto = `Olá! Sou ${row.nome} e acabei de solicitar meu convite para a Gestão de Milhas Concierge.` + (row.objetivo ? ` Viagem dos sonhos: ${row.objetivo}` : '');
     const wa = 'https://wa.me/5521976275225?text=' + encodeURIComponent(texto);
