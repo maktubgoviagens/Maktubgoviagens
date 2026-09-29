@@ -360,6 +360,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .etapa-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
 .etapa-nome{font-family:var(--serif);font-size:1.5rem;color:var(--verde);line-height:1.2}
 .etapa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:54ch}
+.hero-nota{margin-top:var(--e2);font-size:.82rem;color:var(--tinta-suave);max-width:44ch}
 .jornada{margin-top:var(--e5);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--e4)}
 .passo{border-top:1px solid rgba(201,169,110,.35);padding-top:var(--e3);display:grid;gap:10px;align-content:start}
 .passo-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
@@ -583,6 +584,13 @@ footer a:hover{color:var(--creme)}
   body{background:#fff;color:#000}
 }
 </style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
 </head>
 <body>
  
@@ -624,6 +632,7 @@ footer a:hover{color:var(--creme)}
         <a class="btn btn-cheio" href="#contato">Planejar minha viagem</a>
         <a class="btn" href="/gestao-de-milhas/">Conhecer a gestão de milhas</a>
       </div>
+      <p class="hero-nota">Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
     </div>
   </div>
   <div class="descer" aria-hidden="true"></div>
@@ -762,7 +771,7 @@ footer a:hover{color:var(--creme)}
  
     <div class="comparativo">
       <div class="coluna">
-        <h3>Agência comum</h3>
+        <h3>Só a reserva</h3>
         <ul>
           <li>Responde no horário comercial</li>
           <li>Manda o pacote que já existe pronto</li>
@@ -1165,6 +1174,7 @@ form.addEventListener('submit', async function(e){
     return;
   }
  
+  if(window.gtag)gtag('event','envio_formulario',{formulario:'viagem'});
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     botao.disabled = true;
     dizer('Enviando...');
