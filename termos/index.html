@@ -38,6 +38,13 @@ li+li{margin-top:6px}
 footer{background:#1a3826;color:rgba(249,246,241,.7);text-align:center;padding:36px 24px;font-size:.78rem;line-height:1.9}
 footer a{color:inherit}
 </style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
 </head>
 <body>
 <header class="topo">
