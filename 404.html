@@ -35,6 +35,13 @@ a.cheio{background:#8a6520;border-color:#8a6520}
 a.cheio:hover{background:transparent;color:#c9a96e;border-color:#c9a96e}
 :focus-visible{outline:2px solid #c9a96e;outline-offset:3px}
 </style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
 </head>
 <body>
 <main id="conteudo">
