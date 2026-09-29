@@ -231,6 +231,13 @@ header nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   header nav a.destaque{text-align:center;padding:16px}
 }
 </style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
 </head>
 <body>
  
@@ -522,6 +529,7 @@ form.addEventListener('submit', async function(e){
     return;
   }
  
+  if(window.gtag)gtag('event','envio_formulario',{formulario:'corporativo'});
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     aviso.textContent = 'Enviando...';
     try{
