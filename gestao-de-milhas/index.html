@@ -43,19 +43,20 @@
     /* NAV - igual ao site principal */
     nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
     nav.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07)}
-    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1140px;margin:0 auto;padding:0 36px}
-    .nav-logo{display:flex;align-items:center;gap:12px}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1320px;margin:0 auto;padding:0 32px}
+    .nav-logo{display:flex;align-items:center;gap:12px;margin-right:48px;flex-shrink:0}
     .nav-logo-img{width:42px;height:32px;object-fit:contain}
     .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
     .nav-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
     .nav-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted)}
     .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
-    .nav-links a{font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
+    .nav-links a{white-space:nowrap;font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
     .nav-links a:hover{color:var(--green)}
     .nav-cta{border:1px solid var(--border-gold)!important;padding:9px 20px!important;color:var(--green)!important;transition:background .25s,border-color .25s!important;font-weight:500!important}
     .nav-cta:hover{background:var(--gold-muted)!important;border-color:var(--gold)!important}
     .nav-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
     .nav-burger span{display:block;width:22px;height:1.5px;background:var(--green)}
+    @media(max-width:1240px){.nav-links{display:none}.nav-links.open{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:var(--white);border-bottom:1px solid var(--border);padding:24px 36px;gap:18px;z-index:999}.nav-burger{display:flex}}
  
     /* HERO */
     .hero{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:130px 36px 90px;position:relative;overflow:hidden;background:var(--cream)}
