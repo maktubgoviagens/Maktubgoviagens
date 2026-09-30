@@ -972,9 +972,9 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
    Colunas: nome, whatsapp, email, destino, quando, viajantes, origem, criado_em
    Enquanto as constantes ficarem vazias, o envio cai no WhatsApp.
    ============================================================ */
-const SUPABASE_URL = '';
-const SUPABASE_ANON_KEY = '';
-const TABELA = 'leads_viagem';
+const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+const TABELA = 'leads';
  
 const q = new URLSearchParams(location.search);
 document.getElementById('origem').value =
@@ -1004,31 +1004,18 @@ form.addEventListener('submit', async function(e){
   }
  
   if(window.gtag)gtag('event','envio_formulario',{formulario:'viagem'});
+  /* grava o lead na base (tabela leads) sem segurar o WhatsApp */
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
-    botao.disabled = true;
-    dizer('Enviando...');
     try{
-      const r = await fetch(SUPABASE_URL + '/rest/v1/' + TABELA,{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'apikey':SUPABASE_ANON_KEY,
-          'Authorization':'Bearer ' + SUPABASE_ANON_KEY,
-          'Prefer':'return=minimal'
-        },
-        body:JSON.stringify(d)
-      });
-      if(!r.ok) throw new Error(r.status);
-      form.reset();
-      dizer('Recebemos seu contato. Respondemos em até um dia útil.','ok');
-      return;
-    }catch(err){
-      dizer('Não foi possível enviar agora. Abrindo o WhatsApp.','erro');
-    }finally{
-      botao.disabled = false;
-    }
+      fetch(SUPABASE_URL + '/rest/v1/' + TABELA,{
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({tipo:'viagem', nome:d.nome, whatsapp:d.whatsapp, email:d.email, destino:d.destino||null, quando:d.quando||null, viajantes:d.viajantes||null, origem:d.origem||null, pagina:location.pathname})
+      }).catch(function(){});
+    }catch(err){}
   }
  
+  dizer('Recebemos seu contato. Abrindo o WhatsApp para você falar com a gente.','ok');
   const texto = 'Olá! Quero planejar uma viagem com a Maktub Go.'
     + '\nNome: ' + d.nome
     + '\nE-mail: ' + d.email
