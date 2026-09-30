@@ -7,6 +7,8 @@
   <meta name="theme-color" content="#1a3826" />
   <title>Administração | Maktub Go</title>
   <link rel="icon" href="/ativos/app-icon-192.png" />
+  <link rel="manifest" href="/admin/app/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -97,7 +99,20 @@
     .rowflex{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
     .rowflex .f{min-width:180px}
     .muted{color:var(--muted);font-size:12px}
-    @media(max-width:900px){.app{grid-template-columns:1fr}aside{position:relative;height:auto}main{padding:20px 16px}.grid{grid-template-columns:1fr}}
+    .menu-mob{display:none;margin-left:auto;background:none;border:1px solid rgba(201,169,110,.4);color:var(--cream);width:40px;height:40px;cursor:pointer;font-size:20px;line-height:1}
+    @media(max-width:900px){
+      .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+      aside{position:sticky;top:0;z-index:40;height:auto;max-height:100vh;padding:12px 14px;gap:10px}
+      aside:not(.open)>*:not(.brand){display:none}
+      .menu-mob{display:grid;place-items:center}
+      main{padding:18px 14px 70px}
+      .top h1{font-size:28px}
+      .grid{grid-template-columns:1fr}
+      .cards{grid-template-columns:1fr 1fr}
+      .panel{padding:18px 16px 40px}
+      .f input,.f select,.f textarea{font-size:16px}
+      .pbar{bottom:-40px}
+    }
   </style>
 </head>
 <body>
@@ -105,7 +120,7 @@
  
 <div class="app" id="app" hidden>
   <aside>
-    <div class="brand"><img src="/ativos/simbolo-creme.png" alt="" /><div><div class="n">Maktub Go</div><div class="s">Administração</div></div></div>
+    <div class="brand"><img src="/ativos/simbolo-creme.png" alt="" /><div><div class="n">Maktub Go</div><div class="s">Administração</div></div><a class="menu-mob" href="/admin/app/" aria-label="Voltar ao app" style="text-decoration:none">&#8962;</a><button class="menu-mob" id="menuMob" aria-label="Abrir menu" style="margin-left:6px">&#9776;</button></div>
     <div class="nav" id="navGlobal">
       <div class="sec-t">Operação</div>
       <button data-v="home" class="on">Visão geral</button>
@@ -123,7 +138,7 @@
       <select id="cliSel" size="1"></select>
     </div>
     <div class="nav" id="navCliente"></div>
-    <div class="who"><div id="whoName"></div><button id="logout">Sair</button> · <a href="/painel/" style="color:var(--gold-warm);font-size:12px">Ver meu painel</a></div>
+    <div class="who"><div id="whoName"></div><button id="logout">Sair</button> · <a href="/painel/" style="color:var(--gold-warm);font-size:12px">Ver meu painel</a> · <a href="/admin/app/" style="color:var(--gold-warm);font-size:12px">App no celular</a></div>
   </aside>
   <main id="main"></main>
 </div>
@@ -244,6 +259,9 @@
     $('whoName').textContent = (eq.data && eq.data.nome) || ME.email;
     $('gate').hidden = true; $('app').hidden = false;
     await loadBase();
+    const qs = new URLSearchParams(location.search);
+    if (qs.get('cliente') && CLIENTES.some(c => c.id === qs.get('cliente'))) { CID = qs.get('cliente'); VIEW = qs.get('view') || 'cadastro'; fillClientes(); }
+    else if (qs.get('view')) VIEW = qs.get('view');
     render();
   })().catch(e => { console.error(e); $('gateT').textContent = 'Não foi possível abrir a administração.'; $('gateP').textContent = errMsg(e); });
  
@@ -271,15 +289,17 @@
     $('cliSel').innerHTML = '<option value="">Selecione um cliente</option>' + list.map(c => `<option value="${c.id}" ${c.id === CID ? 'selected' : ''}>${esc(c.nome_completo || c.id)}</option>`).join('');
   }
   $('cliSearch').oninput = fillClientes;
-  $('cliSel').onchange = () => { CID = $('cliSel').value; VIEW = CID ? 'cadastro' : 'home'; render(); };
+  $('cliSel').onchange = () => { CID = $('cliSel').value; VIEW = CID ? 'cadastro' : 'home'; document.querySelector('aside').classList.remove('open'); render(); };
  
   function navs() {
     document.querySelectorAll('#navGlobal button').forEach(b => b.classList.toggle('on', b.dataset.v === VIEW && !CLIENT_VIEWS.some(v => v[0] === VIEW)));
     $('navCliente').innerHTML = CID ? '<div class="sec-t">Dados do cliente</div>' + CLIENT_VIEWS.map(([k, l]) => `<button data-v="${k}" class="${k === VIEW ? 'on' : ''}">${l}</button>`).join('') : '';
   }
+  $('menuMob').onclick = () => document.querySelector('aside').classList.toggle('open');
   document.addEventListener('click', (e) => {
     const b = e.target.closest('.nav button[data-v]');
     if (!b) return;
+    document.querySelector('aside').classList.remove('open');
     VIEW = b.dataset.v;
     if (b.closest('#navGlobal')) { CID = ''; fillClientes(); }
     render();

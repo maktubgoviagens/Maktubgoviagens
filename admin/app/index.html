@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1a3826">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Maktub Op">
+<title>Operação | Maktub Go</title>
+<link rel="manifest" href="/admin/app/manifest.webmanifest">
+<link rel="icon" href="/ativos/app-icon-192.png">
+<link rel="apple-touch-icon" href="/ativos/app-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1a3826;--verde-2:#234832;--dourado:#8a6520;--dourado-claro:#c9a96e;
+  --creme:#f9f6f1;--creme-2:#f2ece1;--branco:#fff;
+  --tinta:#2b2b26;--tinta-2:#5c5c55;--tinta-3:#86867c;
+  --linha:rgba(26,56,38,.12);
+  --alerta:#a0561f;--ok:#2f6b4a;
+  --barra-h:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--creme);color:var(--tinta);font-family:'Jost',-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.5}
+a{color:inherit}
+button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
+
+/* topo */
+.topo{position:sticky;top:0;z-index:30;background:var(--verde);color:var(--creme);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px}
+.topo img{width:26px}
+.topo .n{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;line-height:1.2}
+.topo .s{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado-claro)}
+.topo .acoes{margin-left:auto;display:flex;gap:6px}
+.icone{background:none;border:1px solid rgba(201,169,110,.35);color:var(--creme);width:38px;height:38px;display:grid;place-items:center;cursor:pointer;text-decoration:none}
+.icone svg{width:18px;height:18px}
+
+/* barra inferior */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--branco);border-top:1px solid var(--linha);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1;background:none;border:0;height:var(--barra-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;letter-spacing:.06em;color:var(--tinta-3);cursor:pointer;position:relative}
+.nav svg{width:22px;height:22px}
+.nav button.on{color:var(--verde);font-weight:600}
+.nav button.on::before{content:'';position:absolute;top:0;left:28%;right:28%;height:2px;background:var(--dourado)}
+.nav .bola{position:absolute;top:9px;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:var(--alerta);color:#fff;font-size:10px;line-height:17px;text-align:center;padding:0 4px;font-weight:600}
+
+.pagina{max-width:760px;margin:0 auto;padding:18px 16px calc(var(--barra-h) + 36px + env(safe-area-inset-bottom))}
+.titulo{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:30px;color:var(--verde);line-height:1.1}
+.titulo em{color:var(--dourado)}
+.sub{font-size:12.5px;color:var(--tinta-3);margin-top:4px}
+.secao{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.secao a,.secao button{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--tinta-2);background:none;border:0;cursor:pointer;font-weight:400}
+
+/* números */
+.numeros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.num{background:var(--branco);border:1px solid var(--linha);padding:14px 14px 12px}
+.num .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:500}
+.num .v{white-space:nowrap;font-family:'Cormorant Garamond',serif;font-size:clamp(25px,7.2vw,32px);color:var(--verde);line-height:1.05;margin-top:4px;font-variant-numeric:lining-nums}
+.num .d{font-size:12px;color:var(--tinta-3)}
+.num.destaque{border-left:3px solid var(--dourado)}
+.num.alerta .v{color:var(--alerta)}
+
+/* lista de pendências */
+.pend{background:var(--branco);border:1px solid var(--linha)}
+.pend button{display:flex;width:100%;justify-content:space-between;align-items:center;text-align:left;background:none;border:0;border-top:1px solid var(--linha);padding:13px 14px;cursor:pointer;font-size:14.5px}
+.pend button:first-child{border-top:0}
+.pend b{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:var(--tinta-3);line-height:1;min-width:24px;text-align:right}
+.pend b.tem{color:var(--alerta)}
+.pend .seta{color:var(--tinta-3);margin-left:10px}
+
+/* blocos */
+.bloco{background:var(--branco);border:1px solid var(--linha);padding:16px;margin-top:10px}
+.bloco h2{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin-bottom:12px}
+.barra{display:grid;grid-template-columns:118px 1fr 34px;align-items:center;gap:10px;padding:5px 0}
+.barra .r{font-size:13px;color:var(--tinta-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra .t{height:14px;background:var(--creme-2);position:relative}
+.barra .t i{position:absolute;inset:0 auto 0 0;background:var(--verde);border-radius:0 4px 4px 0;min-width:2px}
+.barra .t i.ouro{background:var(--dourado)}
+.barra .q{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.vazio{color:var(--tinta-3);font-size:13.5px;padding:10px 0}
+
+/* chips / abas internas */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{white-space:nowrap;background:var(--branco);border:1px solid var(--linha);padding:8px 13px;font-size:12.5px;cursor:pointer;color:var(--tinta-2);border-radius:20px}
+.chips button.on{border-color:var(--verde);background:var(--verde);color:var(--creme)}
+.seg{display:flex;border:1px solid var(--linha);background:var(--branco);margin:14px 0 4px}
+.seg button{flex:1;background:none;border:0;padding:10px 4px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
+.seg button.on{background:var(--verde);color:var(--creme)}
+.busca{width:100%;padding:12px 14px;border:1px solid var(--linha);background:var(--branco);font-size:16px;margin-top:14px}
+
+/* cartões */
+.lista{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.card{background:var(--branco);border:1px solid var(--linha);padding:14px}
+.card.novo{border-left:3px solid var(--alerta)}
+.card .cab{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.card .nome{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--verde);line-height:1.15}
+.card .quando{font-size:12px;color:var(--tinta-3);white-space:nowrap}
+.tag{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--linha);color:var(--tinta-2);margin-top:4px}
+.tag.ouro{border-color:rgba(138,101,32,.4);color:var(--dourado)}
+.tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
+.info{margin-top:10px;display:grid;gap:3px;font-size:14px}
+.info span{color:var(--tinta-3)}
+.card .acoes{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.zap{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--verde);color:var(--creme);text-decoration:none;padding:11px 12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;border:0;cursor:pointer}
+.zap svg{width:16px;height:16px;fill:currentColor}
+.sec{display:flex;align-items:center;justify-content:center;border:1px solid var(--linha);background:var(--branco);padding:10px 14px;text-decoration:none;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);cursor:pointer}
+.card select{flex:1;min-width:150px;padding:10px;border:1px solid var(--linha);background:var(--creme);border-radius:0}
+.obs{margin-top:10px}
+.obs summary{font-size:12.5px;color:var(--dourado);cursor:pointer}
+.obs textarea{width:100%;margin-top:8px;min-height:76px;border:1px solid var(--linha);padding:10px;background:var(--creme);resize:vertical;font-size:16px}
+.obs button{margin-top:6px;background:var(--verde);color:var(--creme);border:0;padding:9px 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.obs .salvo{font-size:12px;color:var(--tinta-3);margin-left:8px}
+
+/* clientes */
+.cli{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);padding:14px;cursor:pointer}
+.cli .nome{font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--verde);line-height:1.15}
+.cli .meta{font-size:12.5px;color:var(--tinta-3);margin-top:2px}
+.cli .val{text-align:right;flex-shrink:0}
+.cli .val b{display:block;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--verde)}
+.cli .val span{font-size:11.5px;color:var(--tinta-3)}
+.prog{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-top:1px solid var(--linha)}
+.prog:first-of-type{border-top:0}
+.prog .p{font-size:15px;color:var(--verde)}
+.prog .s{font-size:12.5px;color:var(--tinta-3)}
+.prog .v{text-align:right;font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde)}
+.prog .venc{grid-column:1/-1;font-size:12px;color:var(--alerta)}
+.voltar{background:none;border:0;color:var(--tinta-2);font-size:13px;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:6px}
+
+/* agenda */
+.dia{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:600;margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+.dia::after{content:'';flex:1;height:1px;background:var(--linha)}
+.ev{display:grid;grid-template-columns:52px 1fr;gap:10px;background:var(--branco);border:1px solid var(--linha);padding:12px 12px 12px 10px;margin-bottom:6px;text-decoration:none}
+.ev .h{font-variant-numeric:tabular-nums;font-size:13px;color:var(--tinta-2);text-align:center;padding-top:2px}
+.ev .h svg{width:18px;height:18px;display:block;margin:0 auto 3px;color:var(--dourado)}
+.ev .t{font-size:15px;color:var(--verde);line-height:1.3}
+.ev .d{font-size:12.5px;color:var(--tinta-3);margin-top:2px}
+.ev.alerta{border-left:3px solid var(--alerta)}
+
+/* site */
+.lin{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--linha);font-size:14px}
+.lin:first-of-type{border-top:0}
+.lin span:last-child{color:var(--tinta-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.config{background:var(--creme-2);border-left:3px solid var(--dourado);padding:14px;font-size:14px;color:var(--tinta-2)}
+.config b{color:var(--verde)}
+
+/* portão, aviso */
+.portao{min-height:80vh;display:grid;place-items:center;text-align:center;padding:24px}
+.portao h1{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:30px;color:var(--verde);margin:12px 0 8px}
+.portao p{color:var(--tinta-2);margin-bottom:16px}
+.btn{display:inline-block;background:var(--verde);color:var(--creme);text-decoration:none;padding:12px 18px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.aviso{position:fixed;left:50%;bottom:calc(var(--barra-h) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--verde);color:var(--creme);padding:11px 18px;font-size:13px;z-index:50;max-width:90vw;text-align:center}
+.carregando{opacity:.55;pointer-events:none}
+
+@media (min-width:640px){
+  .numeros{grid-template-columns:repeat(4,1fr)}
+  .duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="portao" id="portao">
+  <div>
+    <img src="/ativos/simbolo-verde.png" alt="" width="44">
+    <h1 id="portaoT">Carregando...</h1>
+    <p id="portaoP"></p>
+    <div id="portaoA"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topo">
+    <img src="/ativos/simbolo-creme.png" alt="Maktub Go">
+    <div><div class="n">Maktub Go</div><div class="s" id="topoS">Operação</div></div>
+    <div class="acoes">
+      <button class="icone" id="recarregar" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
+      <a class="icone" href="/admin/" aria-label="Administração completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg></a>
+      <button class="icone" id="sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
+    </div>
+  </header>
+  <main class="pagina" id="pagina"></main>
+  <nav class="nav" id="nav">
+    <button data-t="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11 12 4l9 7M5 10v10h14V10"/></svg>Início</button>
+    <button data-t="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H8l-4 4Z"/></svg>Leads<span class="bola" id="bLeads" hidden></span></button>
+    <button data-t="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>Clientes</button>
+    <button data-t="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda<span class="bola" id="bAgenda" hidden></span></button>
+    <button data-t="site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Site</button>
+  </nav>
+</div>
+
+<div class="aviso" id="aviso" hidden></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+const EXIGIR_CODIGO = true;
+const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
+
+/* ================= utilidades ================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s === null || s === undefined ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+const jwtAmr = (t) => { try { return (JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).amr || []).map(a => a.method); } catch (_) { return []; } };
+const aviso = (m) => { $('aviso').textContent = m; $('aviso').hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => $('aviso').hidden = true, 2600); };
+const num = (n) => Number(n || 0).toLocaleString('pt-BR');
+const brl = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+const brlC = (n) => { n = Number(n || 0); if (Math.abs(n) >= 1e6) return 'R$ ' + (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi'; if (Math.abs(n) >= 1e4) return 'R$ ' + (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil'; return brl(n); };
+const milC = (n) => { n = Number(n || 0); if (n >= 1e6) return (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi'; if (n >= 1e4) return Math.round(n / 1e3).toLocaleString('pt-BR') + ' mil'; return num(n); };
+const dia = (s) => { if (!s) return null; const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+const HOJE = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const difDias = (d) => Math.round((d - HOJE()) / 864e5);
+const dataCurta = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+const quando = (s) => {
+  const d = new Date(s); if (isNaN(d)) return '';
+  const h = (Date.now() - d) / 36e5;
+  if (h < 1) return 'agora há pouco';
+  if (h < 24) return `há ${Math.floor(h)} h`;
+  if (h < 48) return 'ontem';
+  return dataCurta(d);
+};
+const nomeDia = (d) => { const k = difDias(d); if (k === 0) return 'Hoje'; if (k === 1) return 'Amanhã'; if (k === -1) return 'Ontem'; return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }); };
+const zapNum = (w) => { let n = String(w || '').replace(/\D/g, ''); if (!n) return ''; if (n.length <= 11) n = '55' + n; return n; };
+const zapLink = (w, nome, texto) => { const n = zapNum(w); if (!n) return ''; const t = texto || `Olá, ${String(nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos o seu contato pelo site e quero te ajudar.`; return `https://wa.me/${n}?text=${encodeURIComponent(t)}`; };
+const ZAP = '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>';
+const IC = {
+  voo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/></svg>',
+  viagem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12v13H6zM9 7V4h6v3M9 20v1M15 20v1"/></svg>',
+  reuniao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="13" height="12"/><path d="m16 10 5-3v10l-5-3"/></svg>',
+  milhas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>'
+};
+const adminLink = (cid, view) => `/admin/?cliente=${encodeURIComponent(cid)}&view=${encodeURIComponent(view || 'cadastro')}`;
+
+const ST_LEAD = [['novo','Novo'],['em conversa','Em conversa'],['proposta enviada','Proposta enviada'],['fechado','Fechado'],['perdido','Perdido']];
+const ST_SOL = [['nova','Nova'],['em_analise','Em análise'],['diagnostico_agendado','Diagnóstico agendado'],['aprovada','Aprovada'],['recusada','Recusada']];
+
+/* ================= estado ================= */
+const D = { leads: [], sols: [], tal: [], talErro: null, clientes: [], gestores: [], progs: [], eco: [], voos: [], viagens: [], ags: [], convPend: 0 };
+let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
+
+/* ================= acesso ================= */
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  const login = () => location.replace('/acesso/?next=' + encodeURIComponent('/admin/app/'));
+  if (!session) return login();
+  if (EXIGIR_CODIGO && !jwtAmr(session.access_token).some(m => m === 'otp' || m === 'magiclink')) { await sb.auth.signOut({ scope: 'local' }); return login(); }
+  const { data: ok, error } = await sb.rpc('is_equipe');
+  if (error || !ok) {
+    $('portaoT').textContent = 'Acesso restrito à equipe';
+    $('portaoP').textContent = 'Este app é só para a equipe Maktub Go.';
+    $('portaoA').innerHTML = '<a class="btn" href="/painel/">Ir para o meu painel</a>';
+    return;
+  }
+  const eq = await sb.from('equipe').select('nome').eq('user_id', session.user.id).maybeSingle();
+  D.eu = ((eq.data && eq.data.nome) || '').split(' ')[0];
+  $('portao').hidden = true; $('app').hidden = false;
+  const h = location.hash.replace('#', ''); if (['inicio','leads','clientes','agenda','site'].includes(h)) ABA = h;
+  marcarNav();
+  carregar();
+})();
+
+$('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
+$('recarregar').onclick = () => { SITE = null; carregar(); };
+$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
+window.addEventListener('popstate', () => { const h = location.hash.replace('#', '') || 'inicio'; ABA = h.split('/')[0]; CLI = h.startsWith('clientes/') ? h.split('/')[1] : null; marcarNav(); tela(); });
+
+function ir(aba, extra) {
+  ABA = aba; CLI = null; FILTRO = 'todos';
+  if (extra) extra();
+  history.pushState(null, '', '#' + aba);
+  marcarNav(); tela(); scrollTo(0, 0);
+}
+function marcarNav() { [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === ABA)); $('topoS').textContent = { inicio: 'Operação', leads: 'Leads do site', clientes: 'Clientes', agenda: 'Agenda', site: 'Números do site' }[ABA]; }
+
+/* ================= dados ================= */
+async function carregar(silencioso) {
+  if (!silencioso) $('pagina').classList.add('carregando');
+  const hoje = HOJE(), iso = (d) => d.toISOString().slice(0, 10);
+  const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
+  const inicioAno = `${hoje.getFullYear()}-01-01`;
+  const q = await Promise.all([
+    sb.from('leads').select('*').order('created_at', { ascending: false }).limit(1000),
+    sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false }).limit(500),
+    sb.from('banco_talentos').select('*').order('created_at', { ascending: false }).limit(300),
+    sb.from('clientes').select('*').order('nome_completo'),
+    sb.from('gestores').select('*'),
+    sb.from('programas_milhas').select('*'),
+    sb.from('historico_economia').select('*').gte('data', inicioAno),
+    sb.from('voos').select('*').gte('data_voo', iso(ontem)).lte('data_voo', iso(em120)).order('data_voo').order('hora_partida'),
+    sb.from('viagens').select('*').gte('data_viagem', iso(ontem)).lte('data_viagem', iso(em120)).order('data_viagem'),
+    sb.from('agendamentos_reuniao').select('*').in('status', ['solicitada', 'confirmada']).order('created_at', { ascending: false }).limit(200),
+    sb.from('convites').select('id', { count: 'exact', head: true }).eq('status', 'enviado')
+  ]);
+  $('pagina').classList.remove('carregando');
+  const erro = q.slice(0, 10).find(r => r.error && r !== q[2]);
+  if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
+  [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => r.data || []);
+  D.talErro = q[2].error; D.convPend = q[10].count || 0;
+  D.atual = new Date();
+  tela();
+}
+
+/* ================= cálculos ================= */
+const nomeCli = (id) => (D.clientes.find(c => c.id === id) || {}).nome_completo || 'Cliente';
+const ecoValor = (r) => (r.valor_economia_brl !== null && r.valor_economia_brl !== undefined && r.valor_economia_brl !== '') ? Number(r.valor_economia_brl) || 0 : (Number(r.valor_mercado_brl) || 0) - (Number(r.valor_pago_brl) || 0);
+const progsDe = (id) => D.progs.filter(p => p.cliente_id === id);
+const patrimonio = (id) => progsDe(id).reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
+const milhas = (id) => progsDe(id).reduce((s, p) => s + (Number(p.saldo) || 0), 0);
+const economiaAno = (id) => D.eco.filter(r => !id || r.cliente_id === id).reduce((s, r) => s + ecoValor(r), 0);
+const vencimentos = (dias) => D.progs.filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => ({ p, d: dia(p.vencimento_data) })).filter(x => difDias(x.d) >= 0 && difDias(x.d) <= dias).sort((a, b) => a.d - b.d);
+const checkins = () => D.voos.filter(v => ['confirmado', 'checkin_aberto'].includes(v.status)).filter(v => { const d = dia(v.data_voo); if (v.hora_partida) { const [h, m] = v.hora_partida.split(':'); d.setHours(+h, +m); } const hrs = (d - Date.now()) / 36e5; return hrs >= 0 && hrs <= 48; });
+const reunioesAConfirmar = () => D.ags.filter(a => a.status === 'solicitada');
+const leadsSemResposta = () => D.leads.filter(r => r.status === 'novo');
+const convitesNovos = () => D.sols.filter(r => r.status === 'nova');
+const semAtualizacao = () => D.clientes.filter(c => !c.ultima_atualizacao || (Date.now() - new Date(c.ultima_atualizacao)) / 864e5 > 30);
+
+function eventos() {
+  const E = [];
+  D.voos.forEach(v => {
+    const d = dia(v.data_voo);
+    const ck = checkins().includes(v);
+    E.push({ cid: v.cliente_id, d, hora: v.hora_partida ? v.hora_partida.slice(0, 5) : '', ic: 'voo', alerta: ck,
+      t: `${v.origem_codigo || v.origem_cidade || '?'} → ${v.destino_codigo || v.destino_cidade || '?'}${v.companhia ? ' · ' + v.companhia : ''}${v.numero_voo ? ' ' + v.numero_voo : ''}`,
+      s: `${nomeCli(v.cliente_id)}${v.localizador ? ' · loc. ' + v.localizador : ''}${ck ? ' · fazer check-in' : v.status === 'alterado' ? ' · alterado pela cia.' : ''}`,
+      href: adminLink(v.cliente_id, 'voos') });
+  });
+  D.viagens.forEach(v => E.push({ cid: v.cliente_id, d: dia(v.data_viagem), hora: '', ic: 'viagem', t: `Início da viagem: ${v.destino || ''}${v.destino_complemento ? ' · ' + v.destino_complemento : ''}`, s: nomeCli(v.cliente_id) + (v.hotel ? ' · ' + v.hotel : ''), href: adminLink(v.cliente_id, 'viagens') }));
+  D.ags.forEach(a => {
+    if (a.status === 'confirmada' && a.data_confirmada) { const d = new Date(a.data_confirmada); const d0 = new Date(d); d0.setHours(0, 0, 0, 0); if (difDias(d0) >= -1) E.push({ cid: a.cliente_id, d: d0, hora: d.toTimeString().slice(0, 5), ic: 'reuniao', t: `Reunião com ${nomeCli(a.cliente_id)}`, s: a.link_reuniao ? 'Link da reunião pronto' : 'Sem link cadastrado', href: a.link_reuniao || adminLink(a.cliente_id, 'agendamentos_reuniao'), ext: !!a.link_reuniao }); }
+    if (a.status === 'solicitada') E.push({ cid: a.cliente_id, d: dia(a.data_preferida) || HOJE(), hora: '', ic: 'reuniao', alerta: true, t: `Reunião a confirmar: ${nomeCli(a.cliente_id)}`, s: `Preferência ${a.periodo ? 'pela ' + a.periodo.toLowerCase() : 'sem período'}${a.formato ? ' · ' + a.formato : ''}`, href: adminLink(a.cliente_id, 'agendamentos_reuniao') });
+  });
+  vencimentos(90).forEach(({ p, d }) => E.push({ cid: p.cliente_id, d, hora: '', ic: 'milhas', alerta: difDias(d) <= 30, t: `${num(p.vencimento_quantidade)} ${p.unidade || 'milhas'} ${p.programa} vencem`, s: nomeCli(p.cliente_id), href: adminLink(p.cliente_id, 'programas_milhas') }));
+  return E.filter(e => e.d && difDias(e.d) >= -1).sort((a, b) => a.d - b.d || String(a.hora).localeCompare(String(b.hora)));
+}
+function agrupar(lista) { let u = ''; return lista.map(e => { const k = nomeDia(e.d); const h = k !== u ? `<div class="dia">${k}</div>` : ''; u = k; return h + htmlEvento(e); }).join(''); }
+function htmlEvento(e) {
+  return `<a class="ev ${e.alerta ? 'alerta' : ''}" href="${esc(e.href)}" ${e.ext ? 'target="_blank" rel="noopener"' : ''}><div class="h">${IC[e.ic]}${esc(e.hora)}</div><div><div class="t">${esc(e.t)}</div><div class="d">${esc(e.s)}</div></div></a>`;
+}
+
+/* ================= telas ================= */
+function tela() {
+  $('bLeads').textContent = leadsSemResposta().length + convitesNovos().length; $('bLeads').hidden = !(+$('bLeads').textContent);
+  const ag = checkins().length + reunioesAConfirmar().length; $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
+  const P = $('pagina');
+  if (ABA === 'leads') return telaLeads(P);
+  if (ABA === 'clientes') return CLI ? telaFicha(P, CLI) : telaClientes(P);
+  if (ABA === 'agenda') return telaAgenda(P);
+  if (ABA === 'site') return telaSite(P);
+  return telaInicio(P);
+}
+
+function telaInicio(P) {
+  const hora = new Date().getHours();
+  const venc30 = vencimentos(30);
+  const pat = D.progs.reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
+  const leads30 = D.leads.filter(r => Date.now() - new Date(r.created_at) <= 30 * 864e5).length;
+  const itens = [
+    ['Leads sem resposta', leadsSemResposta().length, () => ir('leads', () => { LSUB = 'leads'; }), 'novo'],
+    ['Convites da Gestão sem análise', convitesNovos().length, () => ir('leads', () => { LSUB = 'convites'; }), 'nova'],
+    ['Check-ins nas próximas 48 h', checkins().length, () => ir('agenda')],
+    ['Reuniões a confirmar', reunioesAConfirmar().length, () => ir('agenda')],
+    ['Milhas vencendo em 30 dias', venc30.length, () => ir('agenda')],
+    ['Indicações de clientes aguardando', D.convPend, () => location.href = '/admin/?view=convitesAll'],
+    ['Painéis sem atualização há 30+ dias', semAtualizacao().length, () => ir('clientes', () => { FILTRO = 'atrasados'; })]
+  ];
+  const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 4);
+  P.innerHTML = `
+    <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
+    <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    <div class="secao">Precisa de você</div>
+    <div class="pend">${itens.map(([t, n], i) => `<button data-i="${i}"><span>${t}</span><span><b class="${n ? 'tem' : ''}">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>
+    <div class="secao">A Maktub hoje</div>
+    <div class="numeros">
+      <div class="num destaque"><div class="l">Patrimônio sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(D.progs.reduce((s, p) => s + (Number(p.saldo) || 0), 0))} milhas e pontos</div></div>
+      <div class="num"><div class="l">Clientes na Gestão</div><div class="v">${D.clientes.length}</div><div class="d">${D.gestores.length} gestor${D.gestores.length === 1 ? '' : 'es'}</div></div>
+      <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
+      <div class="num"><div class="l">Leads em 30 dias</div><div class="v">${leads30}</div><div class="d">${(n => n + (n === 1 ? ' fechado' : ' fechados'))(D.leads.filter(r => r.status === 'fechado' && Date.now() - new Date(r.created_at) <= 30 * 864e5).length)}</div></div>
+    </div>
+    <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
+    ${prox.length ? agrupar(prox) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
+    <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
+    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
+  P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
+  P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div><div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div><div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; });
+}
+
+/* ---------- leads ---------- */
+const noPeriodo = (arr) => DIAS ? arr.filter(r => Date.now() - new Date(r.created_at) <= DIAS * 864e5) : arr;
+const origemDe = (o) => {
+  const v = String(o || '').trim().toLowerCase();
+  if (!v || v === 'direto') return 'Direto';
+  if (/google/.test(v)) return 'Google';
+  if (/instagram|\big\b/.test(v)) return 'Instagram';
+  if (/facebook|\bfb\b/.test(v)) return 'Facebook';
+  if (/whatsapp|wa\.me/.test(v)) return 'WhatsApp';
+  if (/bing/.test(v)) return 'Bing';
+  if (/linkedin/.test(v)) return 'LinkedIn';
+  if (/maktubgo\.com\.br/.test(v)) return 'Direto';
+  try { return new URL(v).hostname.replace(/^www\./, ''); } catch (_) { return v.slice(0, 24); }
+};
+function barras(itens, classe = '') {
+  const max = Math.max(1, ...itens.map(i => i[1]));
+  return itens.length ? itens.map(([r, q]) => `<div class="barra"><span class="r">${esc(r)}</span><span class="t"><i class="${classe}" style="width:${q ? Math.max(2, q / max * 100) : 0}%"></i></span><span class="q">${q}</span></div>`).join('') : '<div class="vazio">Nenhum lead no período.</div>';
+}
+const selStatus = (t, id, atual, ops) => `<select data-t="${t}" data-id="${id}" aria-label="Status">${ops.map(([v, l]) => `<option value="${v}" ${v === atual ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+
+function telaLeads(P) {
+  const L = noPeriodo(D.leads), cnt = (st) => L.filter(r => r.status === st).length, fech = cnt('fechado');
+  const og = {}; L.forEach(r => { const k = origemDe(r.origem); og[k] = (og[k] || 0) + 1; });
+  const viagem = L.filter(r => r.tipo === 'viagem').length;
+  P.innerHTML = `
+    <h1 class="titulo">Leads do <em>site</em></h1>
+    <div class="seg" id="periodo">${[[7, '7 dias'], [30, '30 dias'], [90, '90 dias'], [0, 'Tudo']].map(([d, l]) => `<button data-d="${d}" class="${d === DIAS ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">Leads</div><div class="v">${L.length}</div><div class="d">${L.length ? `${viagem} viagem · ${L.length - viagem} corporativo` : 'nenhum ainda'}</div></div>
+      <div class="num ${leadsSemResposta().length ? 'alerta' : ''}"><div class="l">Sem resposta</div><div class="v">${leadsSemResposta().length}</div><div class="d">status novo</div></div>
+      <div class="num"><div class="l">Fechados</div><div class="v">${fech}</div><div class="d">${cnt('perdido')} perdido${cnt('perdido') === 1 ? '' : 's'}</div></div>
+      <div class="num"><div class="l">Conversão</div><div class="v">${L.length ? Math.round(fech / L.length * 100) : 0}%</div><div class="d">fechados sobre leads</div></div>
+    </div>
+    <div class="duas">
+      <section class="bloco"><h2>Funil do período</h2>${barras(ST_LEAD.map(([v, l]) => [l, cnt(v)]))}</section>
+      <section class="bloco"><h2>De onde vieram</h2>${barras(Object.entries(og).sort((a, b) => b[1] - a[1]).slice(0, 6), 'ouro')}</section>
+    </div>
+    <div class="seg" id="lsub" style="margin-top:20px">
+      <button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>
+      <button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Convites ${noPeriodo(D.sols).length}</button>
+      <button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}</button>
+    </div>
+    <div class="chips" id="filtro"></div>
+    <div class="lista" id="lista"></div>`;
+  $('periodo').onclick = (e) => { const b = e.target.closest('button'); if (b) { DIAS = +b.dataset.d; telaLeads(P); } };
+  $('lsub').onclick = (e) => { const b = e.target.closest('button'); if (b) { LSUB = b.dataset.s; FILTRO = 'todos'; telaLeads(P); } };
+  listaLeads();
+}
+function chips(opcoes, render) {
+  $('filtro').innerHTML = [['todos', 'Todos'], ...opcoes].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('');
+  $('filtro').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; render(); } };
+}
+function listaLeads() {
+  const el = $('lista');
+  if (LSUB === 'leads') {
+    chips(ST_LEAD, listaLeads);
+    const R = noPeriodo(D.leads).filter(r => FILTRO === 'todos' || r.status === FILTRO);
+    el.innerHTML = R.length ? R.map(r => {
+      const d = r.detalhes || {};
+      const linhas = r.tipo === 'corporativo'
+        ? [['Empresa', r.empresa], ['Perfil', d.segmento], ['Volume', d.volume], ['Trechos', d.trechos], ['Demanda', d.demanda]]
+        : [['Destino', r.destino || 'ainda não sabe'], ['Quando', r.quando], ['Viajantes', r.viajantes]];
+      return `<article class="card ${r.status === 'novo' ? 'novo' : ''}">
+        <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span></div><span class="quando">${quando(r.created_at)}</span></div>
+        <div class="info">${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
+        <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}</div>
+        <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
+      </article>`;
+    }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
+  } else if (LSUB === 'convites') {
+    chips(ST_SOL, listaLeads);
+    const R = noPeriodo(D.sols).filter(r => FILTRO === 'todos' || r.status === FILTRO);
+    el.innerHTML = R.length ? R.map(r => `<article class="card ${r.status === 'nova' ? 'novo' : ''}">
+        <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">Gestão de Milhas</span></div><span class="quando">${quando(r.created_at)}</span></div>
+        <div class="info">${[['Cidade', r.cidade], ['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Viagem dos sonhos', r.objetivo], ['Indicado por', r.indicado_por]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
+        <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('solicitacoes_acesso', r.id, r.status, ST_SOL)}</div>
+      </article>`).join('') : '<div class="vazio">Nenhuma solicitação com esse filtro.</div>';
+  } else {
+    $('filtro').innerHTML = '';
+    if (D.talErro) { el.innerHTML = '<div class="vazio">A equipe ainda não tem permissão de leitura no banco de talentos.</div>'; return; }
+    const R = noPeriodo(D.tal);
+    el.innerHTML = R.length ? R.map(r => `<article class="card">
+        <div class="cab"><div><div class="nome">${esc(r.nome)}</div>${r.area ? `<span class="tag">${esc(r.area)}</span>` : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
+        <div class="info">${[['Cidade', r.cidade], ['Mensagem', r.mensagem]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}${r.link ? `<div><span>Link:</span> <a href="${esc(/^https?:\/\//.test(r.link) ? r.link : 'https://' + r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>` : ''}</div>
+        <div class="acoes">${r.whatsapp ? `<a class="zap" href="https://wa.me/${zapNum(r.whatsapp)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}</div>
+      </article>`).join('') : '<div class="vazio">Nenhum cadastro no período.</div>';
+  }
+  el.querySelectorAll('select[data-t]').forEach(s => s.onchange = async () => {
+    const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    const r = (s.dataset.t === 'leads' ? D.leads : D.sols).find(x => x.id === s.dataset.id); if (r) r.status = s.value;
+    aviso('Status atualizado.'); telaLeads($('pagina'));
+  });
+  el.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.salvar, txt = el.querySelector(`textarea[data-id="${id}"]`).value.trim() || null;
+    b.disabled = true;
+    const { error } = await sb.from('leads').update({ observacoes: txt }).eq('id', id);
+    b.disabled = false;
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    const r = D.leads.find(x => x.id === id); if (r) r.observacoes = txt;
+    b.nextElementSibling.textContent = 'Salvo';
+  });
+}
+
+/* ---------- clientes ---------- */
+function telaClientes(P) {
+  const ordem = FILTRO === 'atrasados' ? semAtualizacao() : D.clientes;
+  const lista = ordem.filter(c => !BUSCA || String(c.nome_completo || '').toLowerCase().includes(BUSCA.toLowerCase()))
+    .map(c => ({ c, pat: patrimonio(c.id), mi: milhas(c.id), v: progsDe(c.id).filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => dia(p.vencimento_data)).filter(d => difDias(d) >= 0).sort((a, b) => a - b)[0] }))
+    .sort((a, b) => b.pat - a.pat);
+  const totPat = D.progs.reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
+  P.innerHTML = `
+    <h1 class="titulo">Clientes da <em>Gestão</em></h1>
+    <div class="sub">${D.clientes.length} clientes · ${brlC(totPat)} sob gestão · ${brlC(economiaAno())} de economia em ${new Date().getFullYear()}</div>
+    <input class="busca" id="busca" type="search" placeholder="Buscar cliente" value="${esc(BUSCA)}">
+    <div class="chips" style="margin-top:10px"><button data-f="todos" class="${FILTRO !== 'atrasados' ? 'on' : ''}">Todos</button><button data-f="atrasados" class="${FILTRO === 'atrasados' ? 'on' : ''}">Sem atualização há 30+ dias (${semAtualizacao().length})</button></div>
+    <div class="lista">${lista.length ? lista.map(({ c, pat, mi, v }) => {
+      const g = D.gestores.find(x => x.id === c.gestor_id);
+      const dias = c.ultima_atualizacao ? Math.floor((Date.now() - new Date(c.ultima_atualizacao)) / 864e5) : null;
+      return `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.nome_completo)}</div><div class="meta">${g ? esc(g.nome) + ' · ' : ''}${dias === null ? 'painel nunca atualizado' : dias === 0 ? 'atualizado hoje' : `atualizado há ${dias} dia${dias === 1 ? '' : 's'}`}${v && difDias(v) <= 60 ? ` · <span style="color:var(--alerta)">vencimento em ${dataCurta(v)}</span>` : ''}</div></div><div class="val"><b>${brlC(pat)}</b><span>${milC(mi)} milhas</span></div></button>`;
+    }).join('') : '<div class="vazio">Nenhum cliente encontrado.</div>'}</div>`;
+  $('busca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaClientes(P); $('busca').focus(); $('busca').setSelectionRange(pos, pos); };
+  P.querySelectorAll('.chips button').forEach(b => b.onclick = () => { FILTRO = b.dataset.f; telaClientes(P); });
+  P.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { CLI = b.dataset.c; history.pushState(null, '', '#clientes/' + CLI); telaFicha(P, CLI); scrollTo(0, 0); });
+}
+function telaFicha(P, id) {
+  const c = D.clientes.find(x => x.id === id);
+  if (!c) { CLI = null; return telaClientes(P); }
+  const g = D.gestores.find(x => x.id === c.gestor_id);
+  const progs = progsDe(id).filter(p => Number(p.saldo) > 0 || p.vencimento_data).sort((a, b) => (Number(b.patrimonio_brl) || 0) - (Number(a.patrimonio_brl) || 0));
+  const ev = eventos().filter(e => e.cid === id).filter(e => difDias(e.d) >= 0).slice(0, 6);
+  const eco = D.eco.filter(r => r.cliente_id === id).sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Clientes</button>
+    <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
+    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}</div>
+    <div class="numeros" style="margin-top:14px">
+      <div class="num destaque"><div class="l">Patrimônio</div><div class="v">${brlC(patrimonio(id))}</div><div class="d">${milC(milhas(id))} milhas e pontos</div></div>
+      <div class="num"><div class="l">Economia no ano</div><div class="v">${brlC(economiaAno(id))}</div><div class="d">${eco.length} registro${eco.length === 1 ? '' : 's'}</div></div>
+    </div>
+    <div class="card acoes" style="display:flex;gap:8px;margin-top:10px;border:0;padding:0;background:none">
+      <a class="zap" href="${adminLink(id, 'carteira')}">Lançar na carteira</a>
+      <a class="sec" href="${adminLink(id, 'cadastro')}">Editar</a>
+      <a class="sec" href="/painel/relatorio.html?cliente=${encodeURIComponent(id)}" target="_blank" rel="noopener">Relatório</a>
+    </div>
+    <div class="secao">Programas</div>
+    <div class="bloco" style="margin-top:0">${progs.length ? progs.map(p => { const v = p.vencimento_data ? dia(p.vencimento_data) : null; return `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} ${esc(p.unidade || 'milhas')}</div></div><div class="v">${p.patrimonio_brl ? brlC(p.patrimonio_brl) : ''}</div>${v && Number(p.vencimento_quantidade) > 0 && difDias(v) >= 0 ? `<div class="venc">${num(p.vencimento_quantidade)} vencem em ${v.toLocaleDateString('pt-BR')}</div>` : ''}</div>`; }).join('') : '<div class="vazio">Nenhum programa com saldo.</div>'}</div>
+    <div class="secao">Próximos compromissos</div>
+    ${ev.length ? agrupar(ev) : '<div class="vazio">Nada marcado.</div>'}
+    <div class="secao">Economias recentes <a href="${adminLink(id, 'historico_economia')}">Lançar ›</a></div>
+    <div class="bloco" style="margin-top:0">${eco.length ? eco.slice(0, 5).map(r => `<div class="lin"><span>${esc(r.descricao || r.categoria || '')}</span><span>${brl(ecoValor(r))}</span></div>`).join('') : '<div class="vazio">Nenhuma economia lançada neste ano.</div>'}</div>`;
+  $('voltar').onclick = () => history.back();
+}
+
+/* ---------- agenda ---------- */
+function telaAgenda(P) {
+  const E = eventos();
+  let ultimo = '';
+  P.innerHTML = `
+    <h1 class="titulo">Agenda da <em>operação</em></h1>
+    <div class="sub">Voos, viagens, reuniões e vencimentos dos próximos 120 dias</div>
+    <div class="numeros" style="margin-top:14px">
+      <div class="num ${checkins().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkins().length}</div></div>
+      <div class="num ${reunioesAConfirmar().length ? 'alerta' : ''}"><div class="l">Reuniões a confirmar</div><div class="v">${reunioesAConfirmar().length}</div></div>
+      <div class="num"><div class="l">Voos em 30 dias</div><div class="v">${D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length}</div></div>
+      <div class="num ${vencimentos(30).length ? 'alerta' : ''}"><div class="l">Vencimentos em 30 dias</div><div class="v">${vencimentos(30).length}</div></div>
+    </div>
+    <div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`;
+}
+
+/* ---------- site ---------- */
+async function carregarSite() {
+  if (SITE && SITE.dias === SITE_DIAS) return SITE;
+  try {
+    const { data, error } = await sb.functions.invoke('metricas-site', { body: { dias: SITE_DIAS } });
+    SITE = error || !data || !data.ok ? { ok: false, erro: (error && error.message) || (data && data.erro) || '', dias: SITE_DIAS } : { ...data, dias: SITE_DIAS };
+  } catch (e) { SITE = { ok: false, erro: String(e), dias: SITE_DIAS }; }
+  return SITE;
+}
+async function telaSite(P) {
+  P.innerHTML = `<h1 class="titulo">Números do <em>site</em></h1><div class="seg" id="sdias">${[[7, '7 dias'], [28, '28 dias'], [90, '90 dias']].map(([d, l]) => `<button data-d="${d}" class="${d === SITE_DIAS ? 'on' : ''}">${l}</button>`).join('')}</div><div id="sconteudo"><div class="vazio">Carregando...</div></div>`;
+  $('sdias').onclick = (e) => { const b = e.target.closest('button'); if (b) { SITE_DIAS = +b.dataset.d; telaSite(P); } };
+  await carregarSite();
+  const el = $('sconteudo'); if (!el || ABA !== 'site') return;
+  if (!SITE.ok) {
+    el.innerHTML = `<div class="config" style="margin-top:12px"><b>Ainda não conectado.</b><br>Os números do Google Analytics e do Search Console aparecem aqui depois da configuração da função <b>metricas-site</b> no Supabase, com uma conta de serviço do Google. O passo a passo está no guia de configuração do app.${SITE.erro ? `<div style="margin-top:8px;font-size:12px;color:var(--tinta-3)">Detalhe técnico: ${esc(SITE.erro)}</div>` : ''}</div>
+      <div class="bloco"><h2>Enquanto isso</h2><div class="lin"><a href="https://analytics.google.com/" target="_blank" rel="noopener">Abrir Google Analytics</a><span>›</span></div><div class="lin"><a href="https://search.google.com/search-console?resource_id=sc-domain%3Amaktubgo.com.br" target="_blank" rel="noopener">Abrir Search Console</a><span>›</span></div></div>`;
+    return;
+  }
+  const ga = SITE.ga, sc = SITE.sc;
+  el.innerHTML = `
+    <div class="secao">Visitas (Google Analytics)</div>
+    <div class="numeros">
+      <div class="num destaque"><div class="l">Visitas</div><div class="v">${num(ga.sessoes)}</div><div class="d">${num(ga.usuarios)} pessoas</div></div>
+      <div class="num"><div class="l">Cliques no WhatsApp</div><div class="v">${num(ga.whatsapp)}</div></div>
+      <div class="num"><div class="l">Formulários</div><div class="v">${num(ga.formularios)}</div></div>
+      <div class="num"><div class="l">Taxa de contato</div><div class="v">${ga.sessoes ? ((ga.whatsapp + ga.formularios) / ga.sessoes * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : 0}%</div><div class="d">contatos sobre visitas</div></div>
+    </div>
+    <section class="bloco"><h2>Páginas mais vistas</h2>${barras((ga.paginas || []).map(p => [p.pagina, p.visitas]))}</section>
+    <section class="bloco"><h2>De onde vêm as visitas</h2>${barras((ga.origens || []).map(o => [o.origem, o.visitas]), 'ouro')}</section>
+    <div class="secao">Busca no Google (Search Console)</div>
+    <div class="numeros">
+      <div class="num destaque"><div class="l">Cliques</div><div class="v">${num(sc.cliques)}</div></div>
+      <div class="num"><div class="l">Aparições</div><div class="v">${num(sc.impressoes)}</div></div>
+      <div class="num"><div class="l">Taxa de clique</div><div class="v">${(sc.ctr * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</div></div>
+      <div class="num"><div class="l">Posição média</div><div class="v">${Number(sc.posicao || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</div></div>
+    </div>
+    <section class="bloco"><h2>O que as pessoas buscaram</h2>${(sc.consultas || []).length ? sc.consultas.map(q => `<div class="lin"><span>${esc(q.termo)}</span><span>${num(q.cliques)} cliques · ${num(q.impressoes)} aparições</span></div>`).join('') : '<div class="vazio">Sem buscas registradas no período.</div>'}</section>
+    <div class="sub" style="margin-top:10px">Dados do Search Console chegam com cerca de 2 dias de atraso.</div>`;
+}
+</script>
+</body>
+</html>

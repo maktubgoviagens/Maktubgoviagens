@@ -1,0 +1,18 @@
+{
+  "name": "Maktub Go · Operação",
+  "short_name": "Maktub Op",
+  "description": "Leads, clientes, agenda e números da Maktub Go na palma da mão.",
+  "id": "/admin/app/",
+  "start_url": "/admin/app/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a3826",
+  "theme_color": "#1a3826",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/ativos/app-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ativos/app-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/ativos/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
