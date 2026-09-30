@@ -111,6 +111,27 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
  ]
 }
 </script>
+<style id="mk-rodape-css">
+/* RODAPÉ padrão */
+footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 28px;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;line-height:1.6;text-align:left}
+.mk-rodape *{box-sizing:border-box;margin:0;padding:0}
+.mk-rodape .mk-wrap{max-width:1180px;margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
+.mk-rodape .rodape-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:clamp(28px,4vw,48px)}
+.mk-rodape .rodape-marca img{width:36px;height:auto;margin-bottom:14px;display:block}
+.mk-rodape .rodape-marca p{font-size:.86rem;max-width:30ch;color:rgba(249,246,241,.74)}
+.mk-rodape h2{font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:.64rem;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:#c9a96e;margin-bottom:14px;line-height:1.4}
+.mk-rodape ul{list-style:none;display:grid;gap:4px}
+.mk-rodape a{font-size:.86rem;text-decoration:none;color:rgba(249,246,241,.8);padding-block:2px;display:inline-block;letter-spacing:normal;text-transform:none}
+.mk-rodape a:hover{color:#f9f6f1}
+.mk-rodape .rodape-base{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px 24px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(249,246,241,.15);font-size:.74rem;color:rgba(249,246,241,.6)}
+.mk-rodape .rodape-base a{font-size:inherit;color:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
+.mk-rodape .rodape-legal{display:flex;gap:18px;flex-wrap:wrap}
+.mk-rodape .rodape-legal a{text-decoration:none}
+.mk-rodape .rodape-legal a:hover{color:#f9f6f1}
+@media (max-width:900px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr 1fr}.mk-rodape .rodape-marca{grid-column:1/-1}}
+@media (max-width:560px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr;gap:28px 20px}.mk-rodape .rodape-grid>div:last-child{grid-column:1/-1}}
+@media print{footer.mk-rodape{display:none}}
+</style>
 </head>
 <body>
 <header class="mk-topo" id="navbar">
@@ -220,9 +241,46 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
   <p>Podemos atualizar esta política quando nossos serviços mudarem. A data no topo da página sempre mostra a versão em vigor.</p>
 </main>
 
-<footer>
-  Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51<br>
-  <a href="/">Voltar ao início</a> · <a href="/termos/">Termos de Uso</a> · <a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
+<footer class="mk-rodape">
+  <div class="mk-wrap">
+    <div class="rodape-grid">
+      <div class="rodape-marca">
+        <img src="/ativos/simbolo-creme.png" alt="Maktub Go" width="40" height="40" loading="lazy">
+        <p>Alfaiataria de viagens. Planejamento premium sob medida e gestão de milhas concierge.</p>
+      </div>
+      <div>
+        <h2>Navegar</h2>
+        <ul>
+          <li><a href="/quem-somos/">Quem somos</a></li>
+          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/viagens/">Viagens</a></li>
+          <li><a href="/quem-somos/#time">O time</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Serviços</h2>
+        <ul>
+          <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+          <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
+          <li><a href="/corporativo/">Maktub Corporativo</a></li>
+          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Contato</h2>
+        <ul>
+          <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
+          <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
+          <li><a href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a></li>
+          <li><a href="/acesso/">Acesso cliente</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="rodape-base">
+      <span>© 2026 Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener">Certificado Cadastur</a></span>
+      <span class="rodape-legal"><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos de Uso</a><a href="/trabalheconosco/">Trabalhe conosco</a></span>
+    </div>
+  </div>
 </footer>
 <script>
 (function(){
