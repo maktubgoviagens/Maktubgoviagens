@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  MAKTUB GO · HOME v5
+  ============================================================
+  INTERRUPTOR DE PUBLICAÇÃO
+ 
+  No atributo data-modo da tag <html> logo abaixo:
+ 
+    "rascunho"   mostra tudo, inclusive o que está pendente,
+                 marcado em dourado tracejado. É para você revisar.
+ 
+    "publicado"  esconde automaticamente todo bloco pendente.
+                 Nenhum visitante vê buraco, número zerado ou
+                 texto de espera. O site fica menor e correto.
+ 
+  Troque uma palavra e o site inteiro se ajusta.
+  Conforme os depoimentos e as fotos chegarem, você troca o
+  conteúdo e o bloco volta a aparecer sozinho.
+  ============================================================
+-->
+<html lang="pt-BR" data-modo="publicado">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classe executiva com milhas | Maktub Go</title>
+<meta name="description" content="Voe de classe executiva com milhas pela Gestão de Milhas Concierge da Maktub Go. Estratégia para a sua carteira e, se faltar saldo, a gente completa.">
+<meta name="theme-color" content="#1a3826">
+<link rel="canonical" href="https://www.maktubgo.com.br/classe-executiva-com-milhas/">
+<link rel="icon" href="/ativos/simbolo-verde.png">
+<link rel="apple-touch-icon" href="/ativos/simbolo-verde.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Maktub Go">
+<meta property="og:url" content="https://www.maktubgo.com.br/classe-executiva-com-milhas/">
+<meta property="og:title" content="Classe executiva com milhas | Maktub Go">
+<meta property="og:description" content="Executiva com milhas não é sorte. É gestão.">
+<meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-classe-executiva-com-milhas.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+ 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+ 
+ 
+<style>
+/* ============================================================
+   1. TOKENS
+   ============================================================ */
+:root{
+  --verde:#1a3826;
+  --verde-fundo:#14301f;
+  --verde-claro:#25503a;
+  --dourado:#8a6520;
+  --dourado-texto:#75551a;
+  --dourado-claro:#c9a96e;
+  --creme:#f9f6f1;
+  --creme-fundo:#f2ece1;
+  --tinta:#2b2b26;
+  --tinta-suave:rgba(43,43,38,.82);
+  --linha:rgba(26,56,38,.13);
+  --linha-clara:rgba(249,246,241,.15);
+ 
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;
+ 
+  /* escala tipográfica */
+  --t-xs:.68rem;
+  --t-sm:.88rem;
+  --t-base:1rem;
+  --t-md:clamp(1.08rem,1.6vw,1.24rem);
+  --t-lg:clamp(1.3rem,2.1vw,1.55rem);
+  --t-xl:clamp(1.95rem,4vw,3rem);
+  --t-2xl:clamp(2.8rem,6.6vw,5rem);
+ 
+  /* ritmo vertical */
+  --e1:8px; --e2:16px; --e3:26px; --e4:42px; --e5:68px; --e6:clamp(78px,9vw,118px);
+  --largura:1180px;
+}
+ 
+/* ============================================================
+   2. BASE
+   ============================================================ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--creme);color:var(--tinta);
+  font-family:var(--sans);font-weight:300;
+  font-size:var(--t-base);line-height:1.72;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block;height:auto}
+a{color:inherit}
+button{font:inherit}
+::selection{background:var(--dourado-claro);color:var(--verde)}
+ 
+.wrap{max-width:var(--largura);margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
+.secao{padding-block:var(--e6)}
+.secao-verde{background:var(--verde);color:rgba(249,246,241,.8)}
+.secao-creme{background:var(--creme-fundo)}
+ 
+h1,h2,h3{font-family:var(--serif);font-weight:300;line-height:1.1;letter-spacing:.004em;color:var(--verde);text-wrap:balance}
+.secao-verde :is(h1,h2,h3){color:var(--creme)}
+h2{font-size:var(--t-xl)}
+h2 em{font-style:italic;display:block;color:var(--dourado-texto)}
+.secao-verde h2 em{color:var(--dourado-claro)}
+h3{font-size:var(--t-lg)}
+p{max-width:62ch;text-wrap:pretty}
+.secao-verde p{color:rgba(249,246,241,.84)}
+.intro{margin-top:var(--e3);font-size:var(--t-md);line-height:1.68}
+ 
+.olho{
+  display:block;margin-bottom:var(--e3);
+  font-size:var(--t-xs);font-weight:400;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--dourado-texto);
+}
+.secao-verde .olho{color:var(--dourado-claro)}
+ 
+/* acessibilidade */
+.pular{
+  position:absolute;left:-9999px;top:0;z-index:999;
+  background:var(--verde);color:var(--creme);padding:14px 22px;font-size:var(--t-sm);
+}
+.pular:focus{left:12px;top:12px}
+:focus-visible{outline:2px solid var(--dourado);outline-offset:3px;border-radius:2px}
+.secao-verde :focus-visible{outline-color:var(--dourado-claro)}
+.oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ 
+/* ============================================================
+   3. INTERRUPTOR RASCUNHO / PUBLICADO
+   ============================================================ */
+html[data-modo="publicado"] .so-rascunho{display:none !important}
+ 
+/* blindagem de contraste: qualquer texto dentro de bloco verde fica claro,
+   independente da regra de componente que venha depois */
+.secao-verde :is(p,li,blockquote,.intro,.caso p,.pessoa p,.servico p,.etapa p,.depo blockquote){color:rgba(249,246,241,.84)}
+.secao-verde :is(.olho,.pessoa-cargo,.caso-rot,.etapa-n,.link-texto,label,cite,.depo cite){color:var(--dourado-claro)}
+.secao-verde :is(.etapa-nome,.caso h3,.pessoa h3,.servico h3){color:var(--creme)}
+.secao-verde .link-texto{border-bottom-color:rgba(201,169,110,.4)}
+.pend{color:var(--dourado);border-bottom:1px dashed var(--dourado-claro)}
+.secao-verde .pend{color:var(--dourado-claro)}
+.selo-rascunho{
+  position:fixed;left:0;bottom:0;z-index:200;
+  background:var(--dourado);color:var(--creme);
+  font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:7px 14px;
+}
+ 
+/* ============================================================
+   4. BOTÕES E LINKS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:52px;padding:0 40px;
+  font-size:.71rem;letter-spacing:.19em;text-transform:uppercase;
+  text-decoration:none;cursor:pointer;text-align:center;
+  border:1px solid var(--verde);color:var(--verde);background:transparent;
+  transition:background .3s ease,color .3s ease,border-color .3s ease;
+}
+.btn:hover{background:var(--verde);color:var(--creme)}
+.btn-cheio{background:var(--verde);color:var(--creme)}
+.btn-cheio:hover{background:var(--dourado);border-color:var(--dourado)}
+.btn-claro{border-color:rgba(249,246,241,.55);color:var(--creme)}
+.btn-claro:hover{background:var(--creme);color:var(--verde);border-color:var(--creme)}
+.btn-ouro{background:var(--dourado);border-color:var(--dourado);color:var(--creme)}
+.btn-ouro:hover{background:transparent;color:var(--dourado-claro);border-color:var(--dourado-claro)}
+.acoes{display:flex;flex-wrap:wrap;gap:14px;margin-top:var(--e4)}
+ 
+.link-texto{
+  display:inline-block;align-self:flex-start;
+  font-size:var(--t-xs);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dourado-texto);text-decoration:none;padding-block:6px;
+  border-bottom:1px solid rgba(117,85,26,.38);transition:border-color .3s ease;
+}
+.link-texto:hover{border-bottom-color:var(--dourado)}
+ 
+/* ============================================================
+   5. CABEÇALHO
+   ============================================================ */
+header{
+  position:fixed;inset:0 0 auto;z-index:100;
+  background:rgba(249,246,241,.93);backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid transparent;transition:border-color .3s ease;
+}
+header.rolou{border-bottom-color:var(--linha)}
+.barra{display:flex;align-items:center;justify-content:space-between;gap:20px;height:82px}
+.marca{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
+.marca img{width:32px}
+.marca-nome{font-size:.75rem;letter-spacing:.19em;color:var(--verde);line-height:1.45}
+.marca-nome span{display:block;font-size:.53rem;letter-spacing:.16em;color:var(--dourado)}
+nav ul{display:flex;align-items:center;gap:clamp(16px,2.2vw,30px);list-style:none}
+nav a{
+  display:inline-block;padding-block:10px;
+  font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;
+  text-decoration:none;color:var(--verde);opacity:.76;transition:opacity .25s ease;
+}
+nav a:hover{opacity:1}
+header nav a.foco{color:var(--dourado);opacity:1}
+nav a.destaque{
+  opacity:1;border:1px solid var(--verde);padding:12px 22px;
+  transition:background .3s ease,color .3s ease;
+}
+nav a.destaque:hover{background:var(--verde);color:var(--creme)}
+.menu-btn{
+  display:none;width:46px;height:46px;background:none;border:0;
+  color:var(--verde);cursor:pointer;align-items:center;justify-content:center;
+}
+.menu-btn svg{width:22px;height:22px}
+ 
+/* ============================================================
+   6. HERO
+   ============================================================ */
+.hero{
+  position:relative;display:flex;align-items:center;
+  min-height:clamp(600px,94svh,920px);
+  padding-block:150px var(--e6);overflow:hidden;
+}
+/* a foto entra por cima do gradiente da marca.
+   se o arquivo ainda não existir, o gradiente sustenta a tela sozinho. */
+.hero-fundo{
+  position:absolute;inset:0;
+  background-image:url('/ativos/hero.jpg'),
+    radial-gradient(120% 90% at 78% 18%, rgba(201,169,110,.28) 0%, transparent 58%),
+    linear-gradient(160deg, var(--creme-fundo) 0%, #e8dfcd 52%, #ded2b9 100%);
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+.hero-fundo::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(96deg,rgba(249,246,241,.97) 0%,rgba(249,246,241,.88) 44%,rgba(249,246,241,.3) 100%);
+}
+.hero .wrap{position:relative;z-index:2}
+.hero-texto{max-width:660px}
+.hero h1{font-size:var(--t-2xl);margin:var(--e2) 0 var(--e3)}
+.hero h1 em{font-style:italic;display:block;color:var(--dourado-texto)}
+.hero p{
+  font-family:var(--serif);font-size:clamp(1.16rem,2.1vw,1.44rem);
+  line-height:1.6;max-width:30em;color:var(--tinta);
+}
+.descer{
+  position:absolute;bottom:38px;left:50%;transform:translateX(-50%);z-index:2;
+  width:1px;height:62px;background:linear-gradient(180deg,transparent,rgba(201,169,110,.85));
+}
+.descer::after{
+  content:'';position:absolute;left:-2px;top:0;width:5px;height:5px;border-radius:50%;
+  background:var(--dourado);animation:desce 2.8s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes desce{0%{top:0;opacity:0}22%{opacity:1}72%{opacity:1}100%{top:58px;opacity:0}}
+ 
+/* ============================================================
+   7. FAIXA DE PROVA
+   ============================================================ */
+.prova{background:var(--verde);color:var(--creme)}
+.prova-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.prova-item{padding:var(--e5) var(--e3);text-align:center;border-right:1px solid var(--linha-clara)}
+.prova-item:last-child{border-right:0}
+.prova-num{display:block;font-family:var(--serif);font-size:clamp(2.3rem,3.6vw,2.9rem);line-height:1;color:var(--dourado-claro)}
+.prova-rot{display:block;margin-top:var(--e2);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(249,246,241,.8)}
+ 
+/* ============================================================
+   8. BLOCOS DE IMAGEM COM QUEDA ELEGANTE
+   ============================================================ */
+.figura{
+  position:relative;overflow:hidden;
+  background-color:var(--verde);
+  background-image:radial-gradient(90% 80% at 30% 20%, rgba(201,169,110,.2) 0%, transparent 60%),
+                   linear-gradient(150deg,var(--verde-claro),var(--verde-fundo));
+  background-size:cover;background-position:center;
+}
+.figura::before{
+  content:'';position:absolute;inset:0;
+  background:url('/ativos/simbolo-creme.png') center/76px no-repeat;
+  opacity:.09;
+}
+.figura[style*="ativos"]::before{display:none}
+/* sem moldura interna: a linha cortava as fotos */
+.figura-retrato{aspect-ratio:4/5}
+.figura-paisagem{aspect-ratio:3/2}
+.figura-caso{aspect-ratio:4/5}
+.figura-pessoa{aspect-ratio:3/4;background-position:top center}
+.figura-nota{
+  position:absolute;inset-inline:0;bottom:0;padding:10px;
+  font-size:.6rem;letter-spacing:.1em;text-align:center;
+  color:var(--dourado-claro);background:rgba(20,48,31,.82);
+}
+.monograma{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--serif);font-size:2.6rem;letter-spacing:.06em;color:rgba(201,169,110,.72);
+}
+ 
+/* ============================================================
+   9. ALFAIATARIA
+   ============================================================ */
+.duas{display:grid;grid-template-columns:1fr .82fr;gap:clamp(40px,6vw,86px);align-items:center}
+.duas-inv{grid-template-columns:.82fr 1fr;margin-top:var(--e6)}
+/* duas fotos do mesmo destino se alternando no mesmo quadro */
+.figura-alterna .camada{position:absolute;inset:0;background-size:cover;background-position:center;animation:alterna 12s ease-in-out infinite}
+.figura-alterna .camada:nth-child(2){animation-delay:-6s}
+@keyframes alterna{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
+.figura-alterna.tres .camada{animation:alterna3 18s ease-in-out infinite}
+.figura-alterna.tres .camada:nth-child(2){animation-delay:-12s}
+.figura-alterna.tres .camada:nth-child(3){animation-delay:-6s}
+@keyframes alterna3{0%,28%{opacity:1}33%,94%{opacity:0}100%{opacity:1}}
+.figura-alterna.quatro .camada{animation:alterna4 20s ease-in-out infinite}
+.figura-alterna.quatro .camada:nth-child(2){animation-delay:-15s}
+.figura-alterna.quatro .camada:nth-child(3){animation-delay:-10s}
+.figura-alterna.quatro .camada:nth-child(4){animation-delay:-5s}
+@keyframes alterna4{0%,22%{opacity:1}25%,97%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.figura-alterna .camada{animation:none}.figura-alterna .camada:nth-child(n+2){opacity:0}}
+/* galeria: fotos passam sozinhas e também pelas setas, pontos ou deslizando o dedo */
+.galeria .camada{animation:none!important;opacity:0;transition:opacity .9s ease}
+.galeria .camada.ativa{opacity:1}
+.galeria-seta{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:42px;height:42px;border-radius:50%;border:1px solid rgba(249,246,241,.55);background:rgba(26,56,38,.55);color:#f9f6f1;display:grid;place-items:center;cursor:pointer;font-size:1.5rem;line-height:1;padding:0 0 3px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:.85;transition:opacity .3s,background .3s}
+.galeria-seta:hover{opacity:1;background:rgba(26,56,38,.85)}
+.galeria-seta:focus-visible{outline:2px solid #c9a96e;outline-offset:2px}
+.galeria-seta.ant{left:12px}
+.galeria-seta.prox{right:12px}
+.galeria-pontos{position:absolute;left:0;right:0;bottom:12px;z-index:3;display:flex;justify-content:center;gap:4px}
+.galeria-pontos button{width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+.galeria-pontos button::before{content:'';width:8px;height:8px;border-radius:4px;background:rgba(249,246,241,.7);box-shadow:0 0 4px rgba(0,0,0,.35);transition:width .3s,background .3s}
+.galeria-pontos button[aria-current="true"]::before{width:20px;background:#c9a96e}
+.citacao{
+  margin-top:var(--e4);padding-left:26px;max-width:36ch;
+  border-left:1px solid var(--dourado-claro);
+  font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.5;color:var(--verde);
+}
+ 
+/* ============================================================
+   10. PRATELEIRA
+   ============================================================ */
+.prateleira{margin-top:var(--e5);border-top:1px solid var(--linha)}
+.etapa{
+  display:grid;grid-template-columns:58px 236px 1fr;gap:var(--e3);align-items:baseline;
+  padding-block:var(--e3);border-bottom:1px solid var(--linha);
+}
+.etapa-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
+.etapa-nome{font-family:var(--serif);font-size:1.5rem;color:var(--verde);line-height:1.2}
+.etapa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:54ch}
+.hero-nota{margin-top:var(--e2);font-size:.82rem;color:var(--tinta-suave);max-width:44ch}
+.jornada{margin-top:var(--e5);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--e4)}
+.passo{border-top:1px solid rgba(201,169,110,.35);padding-top:var(--e3);display:grid;gap:10px;align-content:start}
+.passo-n{font-family:var(--serif);font-size:1.28rem;color:var(--dourado-claro)}
+.passo h3{font-size:1.5rem;line-height:1.2}
+.passo p{font-size:var(--t-sm);max-width:40ch}
+.passo-seguro{border-top:2px solid var(--dourado-claro)}
+@media (max-width:1000px){.jornada{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.jornada{grid-template-columns:1fr;gap:var(--e3)}}
+.nota-prateleira{
+  margin-top:var(--e4);max-width:58ch;
+  font-family:var(--serif);font-style:italic;font-size:1.14rem;color:var(--verde);
+}
+ 
+/* ============================================================
+   11. SERVIÇOS
+   ============================================================ */
+.servicos{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:1px;
+  margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
+}
+.servico{background:var(--creme);padding:46px 34px;display:flex;flex-direction:column;gap:var(--e2)}
+.servico svg{width:25px;height:25px;color:var(--dourado);flex-shrink:0}
+.servico p{font-size:var(--t-sm);color:var(--tinta-suave);flex:1;max-width:none}
+.servico-destaque{background:var(--verde);position:relative}
+.servico-destaque :is(h3,svg){color:var(--creme)}
+.servico-destaque p{color:rgba(249,246,241,.8)}
+.servico-destaque .link-texto{color:var(--dourado-claro);border-bottom-color:rgba(201,169,110,.38)}
+.selo{
+  position:absolute;top:0;right:0;padding:7px 13px;
+  background:var(--dourado);color:var(--creme);
+  font-size:.57rem;letter-spacing:.16em;text-transform:uppercase;
+}
+ 
+/* ============================================================
+   12. COMPARATIVO
+   ============================================================ */
+.comparativo{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:var(--e5);background:var(--linha-clara)}
+.coluna{background:var(--verde);padding:42px 36px}
+.coluna.nossa{background:var(--verde-fundo)}
+.coluna.nossa h3{color:var(--dourado-claro)}
+.coluna ul{list-style:none;margin-top:var(--e3)}
+.coluna li{
+  position:relative;padding:14px 0 14px 26px;font-size:var(--t-sm);
+  color:rgba(249,246,241,.84);border-bottom:1px solid rgba(249,246,241,.08);
+}
+.coluna li:last-child{border-bottom:0}
+.coluna li::before{content:'·';position:absolute;left:8px;top:11px;font-size:1.3rem;color:rgba(249,246,241,.38)}
+.coluna.nossa li{color:var(--creme)}
+.coluna.nossa li::before{content:'✦';left:4px;top:15px;font-size:.66rem;color:var(--dourado-claro)}
+.objecao{
+  margin-top:var(--e5);padding:36px;max-width:72ch;
+  border:1px solid rgba(201,169,110,.38);
+  font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--creme);
+}
+ 
+/* ============================================================
+   13. CASOS E DEPOIMENTOS
+   ============================================================ */
+.casos{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:30px;margin-top:var(--e5)}
+.caso{background:var(--creme);border:1px solid var(--linha)}
+.caso-corpo{padding:28px}
+.caso-rot{display:block;margin-bottom:12px;font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-texto)}
+.caso h3{font-size:1.26rem;margin-bottom:10px}
+.caso p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
+ 
+.depoimentos{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
+  margin-top:var(--e5);background:var(--linha);border:1px solid var(--linha);
+}
+.depo{background:var(--creme);padding:44px 40px}
+@media (max-width:760px){.depoimentos{grid-template-columns:1fr}}
+.nota-google{margin-top:var(--e4);display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+.nota-google strong{font-family:var(--serif);font-weight:300;font-size:1.9rem;color:var(--verde);line-height:1}
+.nota-google .estrelas{color:var(--dourado-claro);letter-spacing:.12em}
+.nota-google span{font-size:var(--t-sm);color:var(--tinta-suave)}
+.nota-google a{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dourado-texto);text-decoration:none;border-bottom:1px solid var(--dourado-claro);padding-block:4px}
+.depo blockquote{font-family:var(--serif);font-style:italic;font-size:var(--t-lg);line-height:1.55;color:var(--verde)}
+.depo cite{
+  display:block;margin-top:var(--e3);font-style:normal;
+  font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--dourado-texto);
+}
+ 
+/* ============================================================
+   14. MILHAS
+   ============================================================ */
+.milhas{display:grid;grid-template-columns:1.05fr .9fr;gap:clamp(40px,6vw,78px);align-items:center}
+.painel{border:1px solid rgba(201,169,110,.32);padding:32px;background:rgba(0,0,0,.14)}
+.painel-topo{margin-bottom:var(--e3);font-size:.64rem;letter-spacing:.12em;color:rgba(249,246,241,.62)}
+.painel-topo{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 16px}
+.painel-selo{text-transform:uppercase;letter-spacing:.2em;color:var(--dourado-claro)}
+.painel-linha{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-block:14px;border-bottom:1px solid rgba(249,246,241,.09)}
+.painel-linha:last-child{border-bottom:0}
+.painel-linha span:first-child{font-size:var(--t-sm);color:rgba(249,246,241,.8)}
+.painel-linha span:last-child{font-family:var(--serif);font-size:1.45rem;color:var(--dourado-claro)}
+ 
+/* ============================================================
+   15. TIME
+   ============================================================ */
+.time{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:30px;margin-top:var(--e5)}
+.pessoa .figura{margin-bottom:var(--e3)}
+.pessoa h3{font-size:1.22rem}
+.pessoa-cargo{display:block;margin:8px 0 14px;font-size:.66rem;letter-spacing:.12em;line-height:1.5;text-transform:uppercase;color:var(--dourado-texto)}
+.pessoa p{font-size:var(--t-sm);color:var(--tinta-suave);max-width:none}
+ 
+/* ============================================================
+   16. CONTATO
+   ============================================================ */
+.contato{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(40px,6vw,78px);align-items:start}
+form{display:grid;gap:var(--e3)}
+.campo{display:grid;gap:7px}
+label{font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-claro)}
+input,select,textarea{
+  font-family:var(--sans);font-size:.95rem;font-weight:300;color:var(--creme);
+  background:transparent;border:0;border-bottom:1px solid rgba(249,246,241,.42);
+  padding:11px 0;min-height:44px;border-radius:0;
+}
+input::placeholder,textarea::placeholder{color:rgba(249,246,241,.5)}
+input:focus,select:focus,textarea:focus{outline:0;border-bottom-color:var(--dourado-claro)}
+select{appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23c9a96e' stroke-width='1.2'/%3E%3C/svg%3E") right center/11px no-repeat}
+select option{color:var(--tinta);background:var(--creme)}
+.dupla{display:grid;grid-template-columns:1fr 1fr;gap:var(--e3)}
+form .btn{justify-self:start;margin-top:var(--e1)}
+.aviso-form{font-size:.82rem;color:rgba(249,246,241,.72);max-width:44ch}
+.aviso-form[data-estado="erro"]{color:#e8b4a0}
+.aviso-form[data-estado="ok"]{color:var(--dourado-claro)}
+.canais{display:grid;gap:12px;margin-top:var(--e4);justify-items:start}
+.canal{font-size:var(--t-sm);color:rgba(249,246,241,.92);text-decoration:none;border-bottom:1px solid transparent;padding-block:4px}
+.canal:hover{border-bottom-color:var(--dourado-claro)}
+.outras-portas{
+  margin-top:var(--e4);padding-top:var(--e3);max-width:none;
+  border-top:1px solid var(--linha-clara);
+  font-size:var(--t-sm);line-height:2.1;color:rgba(249,246,241,.74);
+}
+.outras-portas a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.32)}
+.outras-portas a:hover{border-bottom-color:var(--dourado-claro)}
+.selo-cadastur{margin-top:var(--e4);border:1px solid rgba(201,169,110,.45);padding:22px 24px;display:grid;gap:10px;max-width:440px}
+.selo-cadastur+.selo-cadastur{margin-top:var(--e2)}
+.selo-rotulo{font-size:.63rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-claro)}
+.selo-cadastur p{font-size:var(--t-sm);line-height:1.7;color:rgba(249,246,241,.86)}
+.selo-cadastur strong{font-weight:400;color:var(--creme)}
+.selo-cadastur a{justify-self:start;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.5);padding-block:4px}
+.selo-cadastur a:hover{border-bottom-color:var(--dourado-claro)}
+.selo-cadastur small{font-size:.76rem;color:rgba(249,246,241,.6);line-height:1.6}
+ 
+/* ============================================================
+   17. MANIFESTO E RODAPÉ
+   ============================================================ */
+.manifesto{background:var(--creme-fundo);text-align:center;padding-block:var(--e6)}
+.manifesto p{
+  margin:0 auto var(--e3);max-width:22ch;
+  font-family:var(--serif);font-style:italic;font-size:clamp(1.34rem,2.7vw,1.95rem);
+  line-height:1.55;color:var(--verde);
+}
+.manifesto span{font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-texto)}
+ 
+footer{background:var(--verde);color:rgba(249,246,241,.78);padding:var(--e5) 0 30px}
+.rodape-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:clamp(34px,5vw,56px)}
+.rodape-marca img{width:40px;margin-bottom:var(--e2)}
+.rodape-marca p{font-size:var(--t-sm);max-width:32ch;color:rgba(249,246,241,.74)}
+footer h2{font-family:var(--sans);font-size:.64rem;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:var(--dourado-claro);margin-bottom:var(--e2)}
+footer ul{list-style:none;display:grid;gap:9px}
+footer a{font-size:var(--t-sm);text-decoration:none;color:rgba(249,246,241,.8);padding-block:3px;display:inline-block}
+footer a:hover{color:var(--creme)}
+.rodape-base{
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  margin-top:var(--e5);padding-top:var(--e3);
+  border-top:1px solid var(--linha-clara);
+  font-size:.78rem;color:rgba(249,246,241,.62);
+}
+ 
+.zap{
+  position:fixed;right:22px;bottom:22px;z-index:90;
+  width:56px;height:56px;border-radius:50%;background:#25d366;
+  display:grid;place-items:center;box-shadow:0 5px 20px rgba(0,0,0,.22);
+}
+.zap svg{width:27px;height:27px;fill:#fff}
+ 
+/* ============================================================
+   18. TELAS MENORES
+   ============================================================ */
+@media (max-width:1000px){
+  .menu-btn{display:flex}
+  nav{
+    position:absolute;inset:82px 0 auto;display:none;
+    background:var(--creme);border-bottom:1px solid var(--linha);
+    box-shadow:0 18px 30px rgba(26,56,38,.07);
+  }
+  nav[data-aberto="true"]{display:block}
+  nav ul{flex-direction:column;align-items:stretch;gap:0;padding:6px clamp(22px,5vw,36px) 24px}
+  nav li{border-bottom:1px solid var(--linha)}
+  nav li:last-child{border-bottom:0;padding-top:16px}
+  nav a{display:block;padding-block:17px;font-size:.73rem}
+  nav a.destaque{text-align:center;padding:16px}
+  .duas,.milhas,.contato{grid-template-columns:1fr}
+  .comparativo{grid-template-columns:1fr}
+  .duas .figura{order:-1;max-height:56vh}
+  .hero{min-height:auto;padding-block:130px var(--e6)}
+  .hero-fundo::after{background:linear-gradient(175deg,rgba(249,246,241,.95) 0%,rgba(249,246,241,.84) 70%,rgba(249,246,241,.78) 100%)}
+  .descer{display:none}
+  .etapa{grid-template-columns:40px 1fr;gap:6px var(--e2)}
+  .etapa p{grid-column:2}
+  .rodape-grid{grid-template-columns:1fr 1fr}
+  .rodape-marca{grid-column:1/-1}
+}
+@media (max-width:560px){
+  .dupla{grid-template-columns:1fr}
+  .servico{padding:38px 28px}
+  .depo{padding:36px 28px}
+  .coluna{padding:34px 26px}
+  .objecao{padding:28px}
+  .prova-item{border-right:0;border-bottom:1px solid var(--linha-clara)}
+  .rodape-grid{grid-template-columns:1fr}
+  .zap{right:16px;bottom:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+}
+@media print{
+  header,.zap,.descer,nav,form{display:none}
+  body{background:#fff;color:#000}
+}
+
+/* páginas internas e resumo da home */
+.primeira{padding-top:calc(82px + var(--e5))}
+.primeira h1{font-size:clamp(2.4rem,5.4vw,4rem)}
+.primeira h1 em{font-style:italic;display:block;color:var(--dourado-texto)}
+.jornada.quatro{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1000px){.jornada.quatro{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.jornada.quatro{grid-template-columns:1fr}}
+.mais{margin-top:var(--e4)}
+.hero p.hero-nota{margin-top:var(--e2);font-family:var(--sans);font-size:.85rem;line-height:1.6;color:var(--tinta-suave);max-width:44ch}
+.fecho{text-align:center}
+.fecho .intro{margin-inline:auto}
+.fecho .acoes{justify-content:center}
+</style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+</script>
+<!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
+<script>
+(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m");
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style id="mk-topo-css">
+/* TOPO padrão (igual à página Gestão de Milhas) */
+header.mk-topo{position:fixed;top:0;left:0;right:0;bottom:auto;z-index:1000;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(26,56,38,.09);transition:box-shadow .3s;font-family:'Jost',sans-serif;line-height:1.8}
+header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07);border-bottom-color:rgba(26,56,38,.09)}
+.mk-topo *{box-sizing:border-box;margin:0;padding:0}
+.mk-topo a{color:inherit;text-decoration:none}
+.mk-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1320px;margin:0 auto;padding:0 32px}
+.mk-logo{display:flex;align-items:center;gap:12px;margin-right:48px;flex-shrink:0}
+.mk-logo-img{width:42px;height:32px;object-fit:contain;display:block}
+.mk-logo-text{display:flex;flex-direction:column;line-height:1.2}
+.mk-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#1a3826}
+.mk-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#5c5c5c}
+.mk-links{display:flex;align-items:center;gap:32px;list-style:none}
+.mk-links a{white-space:nowrap;font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
+.mk-links a:hover{color:#1a3826}
+.mk-links a.mk-ouro{color:#8a6520}
+.mk-links a.mk-cta{border:1px solid rgba(138,101,32,.45);padding:9px 20px;color:#1a3826;font-weight:500;transition:background .25s,border-color .25s}
+.mk-links a.mk-cta:hover{background:rgba(138,101,32,.10);border-color:#8a6520}
+.mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+.mk-burger span{display:block;width:22px;height:1.5px;background:#1a3826}
+@media(max-width:1240px){
+  .mk-links{display:none}
+  .mk-links[data-aberto="true"]{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:#fff;border-bottom:1px solid rgba(26,56,38,.09);padding:24px 36px;gap:18px;z-index:999}
+  .mk-burger{display:flex}
+}
+@media print{header.mk-topo{display:none}}
+</style>
+<script type="application/ld+json" id="mk-dados">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "BreadcrumbList",
+   "itemListElement": [
+    {
+     "@type": "ListItem",
+     "position": 1,
+     "name": "Início",
+     "item": "https://www.maktubgo.com.br/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 2,
+     "name": "Gestão de Milhas",
+     "item": "https://www.maktubgo.com.br/gestao-de-milhas/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 3,
+     "name": "Classe executiva com milhas",
+     "item": "https://www.maktubgo.com.br/classe-executiva-com-milhas/"
+    }
+   ]
+  },
+  {
+   "@type": "Service",
+   "name": "Classe executiva com milhas",
+   "serviceType": "Emissão de classe executiva com milhas para clientes da Gestão de Milhas Concierge",
+   "url": "https://www.maktubgo.com.br/classe-executiva-com-milhas/",
+   "areaServed": "BR",
+   "provider": {
+    "@type": "TravelAgency",
+    "@id": "https://www.maktubgo.com.br/#agencia",
+    "name": "Maktub Go",
+    "url": "https://www.maktubgo.com.br/"
+   }
+  },
+  {
+   "@type": "FAQPage",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "Posso pedir só a emissão de uma executiva?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Concierge, porque o resultado depende do trabalho feito na carteira antes da viagem."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "E se eu não tiver milhas suficientes?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Esse é um dos motivos para estar na Gestão. Quando o seu saldo não fecha, a Maktub completa a emissão com milhas próprias, somadas às suas."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Pontos do cartão de crédito contam?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Contam. Parte do trabalho é olhar os seus cartões e decidir para onde e quando transferir esses pontos, de acordo com a rota que você quer."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Qual é o investimento?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "O investimento da Gestão é apresentado depois do diagnóstico, de acordo com a sua carteira e os seus objetivos. Você só avança se a proposta fizer sentido para você."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Como começo?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Solicitando o seu convite. O nosso time avalia com cuidado e entra em contato pelo WhatsApp para agendar o diagnóstico."
+     }
+    }
+   ]
+  }
+ ]
+}
+</script>
+<style id="mk-faq-css">
+.mk-faq{margin-top:var(--e4);max-width:760px;border-top:1px solid var(--linha)}
+.mk-faq details{border-bottom:1px solid var(--linha);padding:18px 0}
+.mk-faq summary{cursor:pointer;list-style:none;font-family:var(--serif);font-size:var(--t-lg);color:var(--verde);display:flex;justify-content:space-between;gap:16px}
+.mk-faq summary::-webkit-details-marker{display:none}
+.mk-faq summary::after{content:"+";color:var(--dourado);font-family:var(--sans);font-weight:300}
+.mk-faq details[open] summary::after{content:"\2212"}
+.mk-faq details p{margin-top:12px;max-width:62ch;color:var(--tinta-suave)}
+</style>
+</head>
+<body>
+ 
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+ 
+<header class="mk-topo" id="navbar">
+  <div class="mk-inner">
+    <a class="mk-logo" href="/" aria-label="Maktub Go, página inicial">
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go" class="mk-logo-img">
+      <span class="mk-logo-text">
+        <span class="mk-logo-name">Maktub Go</span>
+        <span class="mk-logo-sub">Alfaiataria de Viagens</span>
+      </span>
+    </a>
+    <ul class="mk-links" id="menu" aria-label="Principal">
+      <li><a href="/quem-somos/">Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
+      <li><a href="/trabalheconosco">Trabalhe Conosco</a></li>
+      <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
+    </ul>
+    <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
+  </div>
+</header>
+ 
+<main id="conteudo">
+ 
+<!-- ===================== ABERTURA ===================== -->
+<section class="secao primeira secao-creme" id="abertura" aria-labelledby="t-exec">
+  <div class="wrap">
+    <span class="olho">Classe executiva com milhas</span>
+    <h1 id="t-exec">Executiva com milhas<em>não é sorte. É gestão.</em></h1>
+    <p class="intro">Muita gente acumula pontos por anos e continua viajando apertado no fundo do avião. Na Gestão de Milhas Concierge da Maktub, a sua carteira é trabalhada o ano inteiro para que a poltrona que deita deixe de ser um sonho e vire plano.</p>
+    <div class="acoes" style="margin-top:var(--e4)">
+      <a class="btn btn-cheio" href="/gestao-de-milhas/#convite">Solicitar meu convite</a>
+      <a class="link-texto" href="/gestao-de-milhas/">Conhecer a Gestão de Milhas</a>
+    </div>
+ 
+    <div class="prateleira" style="margin-top:var(--e5)">
+      <div class="etapa"><span class="etapa-n">01</span><span class="etapa-nome">Pontos espalhados</span><p>Um pouco em cada programa, nenhum com saldo para a viagem que você quer. Separadas, as milhas não chegam a lugar nenhum.</p></div>
+      <div class="etapa"><span class="etapa-n">02</span><span class="etapa-nome">Prazo correndo</span><p>Pontos têm validade. Sem alguém acompanhando, eles vencem em silêncio e o esforço de acumular se perde.</p></div>
+      <div class="etapa"><span class="etapa-n">03</span><span class="etapa-nome">Assento que some</span><p>Lugar em executiva com milhas é disputado. Quem decide na hora da vontade encontra tudo esgotado ou pelo dobro de pontos.</p></div>
+      <div class="etapa"><span class="etapa-n">04</span><span class="etapa-nome">Regras que mudam</span><p>Programas alteram tabelas, parcerias e promoções o tempo todo. Acompanhar isso sozinho vira um segundo emprego.</p></div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ===================== COMO FAZEMOS ===================== -->
+<section class="secao secao-verde" id="como" aria-labelledby="t-como-exec">
+  <div class="wrap">
+    <span class="olho">Como a gente faz</span>
+    <h2 id="t-como-exec">Da sua carteira<em>até a poltrona que deita.</em></h2>
+    <p class="intro">A executiva é consequência de um trabalho feito antes. É por isso que ela faz parte da Gestão, e não de uma emissão avulsa.</p>
+ 
+    <div class="jornada">
+      <div class="passo"><span class="passo-n">01</span><h3>Diagnóstico da carteira</h3><p>Olhamos seus programas, seus cartões e seus saldos para entender de onde saem os pontos e para onde eles podem ir.</p></div>
+      <div class="passo"><span class="passo-n">02</span><h3>Estratégia para a sua rota</h3><p>Você conta a viagem dos sonhos. A gente desenha o caminho de pontos até ela: onde acumular, quando transferir e o que evitar.</p></div>
+      <div class="passo"><span class="passo-n">03</span><h3>Acompanhamento o ano inteiro</h3><p>Painel privado, relatório mensal e uma reunião por mês com o seu gestor. Você sabe exatamente onde está e quanto falta.</p></div>
+      <div class="passo passo-seguro"><span class="passo-n">04</span><h3>Se faltar milha, a gente completa</h3><p>Chegou a hora da viagem e o saldo não fechou? Como cliente da Gestão, a Maktub completa a emissão com milhas próprias, somadas às suas.</p></div>
+      <div class="passo"><span class="passo-n">05</span><h3>Emissão no momento certo</h3><p>Buscamos a disponibilidade, emitimos e entregamos tudo conferido. Você só escolhe a janela e faz a mala.</p></div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ===================== DIFERENÇA ===================== -->
+<section class="secao secao-verde" id="diferenca" aria-labelledby="t-dif">
+  <div class="wrap">
+    <span class="olho">A diferença</span>
+    <h2 id="t-dif">Tentar sozinho<em>ou ter quem cuide.</em></h2>
+    <p class="intro">Milha parada é dinheiro parado. O que muda o destino dela é ter estratégia antes de precisar.</p>
+ 
+    <div class="comparativo">
+      <div class="coluna">
+        <h3>Tentando sozinho</h3>
+        <ul>
+          <li>Pontos espalhados em vários programas</li>
+          <li>Busca feita na véspera, quando os assentos já sumiram</li>
+          <li>Transferências sem saber se valiam a pena</li>
+          <li>Milhas vencendo sem aviso</li>
+          <li>Faltou saldo, a viagem volta para a econômica</li>
+        </ul>
+      </div>
+      <div class="coluna nossa">
+        <h3>Gestão Maktub</h3>
+        <ul>
+          <li>Carteira organizada com um objetivo claro</li>
+          <li>Emissão planejada para quando a disponibilidade aparece</li>
+          <li>Cada transferência pensada para a sua rota</li>
+          <li>Painel e relatório mensal mostrando tudo</li>
+          <li>Faltou saldo, a Maktub completa com milhas próprias</li>
+        </ul>
+      </div>
+    </div>
+ 
+    <p class="objecao">Executiva com milhas não se resolve na véspera. Ela nasce meses antes, quando alguém olha para a sua carteira com a viagem na cabeça. É exatamente isso que a Gestão faz.</p>
+  </div>
+</section>
+ 
+<!-- ===================== PERGUNTAS ===================== -->
+<section class="secao secao-creme" id="perguntas" aria-labelledby="t-faq">
+  <div class="wrap">
+    <span class="olho">Perguntas frequentes</span>
+    <h2 id="t-faq">Antes de você<em>perguntar.</em></h2>
+    <div class="mk-faq">
+      <details><summary>Posso pedir só a emissão de uma executiva?</summary><p>Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Concierge, porque o resultado depende do trabalho feito na carteira antes da viagem.</p></details>
+      <details><summary>E se eu não tiver milhas suficientes?</summary><p>Esse é um dos motivos para estar na Gestão. Quando o seu saldo não fecha, a Maktub completa a emissão com milhas próprias, somadas às suas.</p></details>
+      <details><summary>Pontos do cartão de crédito contam?</summary><p>Contam. Parte do trabalho é olhar os seus cartões e decidir para onde e quando transferir esses pontos, de acordo com a rota que você quer.</p></details>
+      <details><summary>Qual é o investimento?</summary><p>O investimento da Gestão é apresentado depois do diagnóstico, de acordo com a sua carteira e os seus objetivos. Você só avança se a proposta fizer sentido para você.</p></details>
+      <details><summary>Como começo?</summary><p>Solicitando o seu convite. O nosso time avalia com cuidado e entra em contato pelo WhatsApp para agendar o diagnóstico.</p></details>
+    </div>
+  </div>
+</section>
+ 
+<!-- ===================== FECHO ===================== -->
+<section class="secao secao-verde fecho" aria-labelledby="t-fecho">
+  <div class="wrap">
+    <span class="olho">Gestão de Milhas Concierge</span>
+    <h2 id="t-fecho">A próxima viagem<em>pode ser deitado.</em></h2>
+    <p class="intro">Conte para onde você quer ir. A gente olha a sua carteira e mostra o caminho até lá.</p>
+    <div class="acoes" style="margin-top:var(--e4)">
+      <a class="btn btn-ouro" href="/gestao-de-milhas/#convite">Solicitar meu convite</a>
+      <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20saber%20como%20voar%20de%20executiva%20com%20milhas%20pela%20Gest%C3%A3o%20da%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
+    </div>
+  </div>
+</section>
+ 
+</main>
+ 
+<footer>
+  <div class="wrap">
+    <div class="rodape-grid">
+      <div class="rodape-marca">
+        <img src="/ativos/simbolo-creme.png" alt="Maktub Go" width="40" height="40" loading="lazy">
+        <p>Alfaiataria de viagens. Planejamento premium sob medida e gestão de milhas concierge.</p>
+      </div>
+      <div>
+        <h2>Navegar</h2>
+        <ul>
+          <li><a href="/quem-somos/">Quem somos</a></li>
+          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+          <li><a href="/como-trabalhamos/#servicos">Serviços</a></li>
+          <li><a href="/viagens/">Viagens</a></li>
+          <li><a href="/quem-somos/#time">O time</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Contato</h2>
+        <ul>
+          <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+          <li><a href="/corporativo/">Maktub Corporativo</a></li>
+          <li><a href="/acesso/">Acesso cliente</a></li>
+          <li><a href="/trabalheconosco/">Trabalhe conosco</a></li>
+          <li><a href="/privacidade/">Política de Privacidade</a></li>
+          <li><a href="/termos/">Termos de Uso</a></li>
+          <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
+          <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
+          <li><a href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="rodape-base">
+      <span>© 2026 Maktub Go. Todos os direitos reservados.</span>
+      <span>Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener" style="font-size:inherit;color:inherit;text-decoration:underline">Ver certificado Cadastur</a></span>
+    </div>
+  </div>
+</footer>
+ 
+<a class="zap" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="Falar com a Maktub Go no WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6 1.9.8 2.7.9 3.6.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Z"/></svg>
+</a>
+ 
+ 
+<script>
+/* menu em telas menores */
+const btn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+btn.addEventListener('click', function(){
+  const aberto = menu.dataset.aberto !== 'true';
+  menu.dataset.aberto = aberto;
+  btn.setAttribute('aria-expanded', aberto);
+  btn.setAttribute('aria-label', aberto ? 'Fechar menu' : 'Abrir menu');
+});
+menu.addEventListener('click', function(e){
+  if(e.target.tagName === 'A'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); }
+});
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
+});
+/* borda do cabeçalho ao rolar */
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 24);
+},{passive:true});
+</script>
+<script>
+/* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
+(function(){
+  var reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var figs = document.querySelectorAll('.figura-alterna, .caso-alterna');
+  Array.prototype.forEach.call(figs, function(fig, idx){
+    var cams = Array.prototype.filter.call(fig.children, function(c){ return c.classList.contains('camada'); });
+    if(cams.length < 2) return;
+    var i = 0, timer = null;
+    fig.classList.add('galeria');
+    fig.setAttribute('role','group');
+    fig.setAttribute('aria-roledescription','galeria de fotos');
+    function botao(cls, html, rotulo){ var b=document.createElement('button'); b.type='button'; if(cls) b.className=cls; if(html) b.innerHTML=html; b.setAttribute('aria-label', rotulo); return b; }
+    var pontos = document.createElement('div'); pontos.className = 'galeria-pontos';
+    var bts = cams.map(function(c, k){ var b = botao('', '', 'Foto ' + (k+1) + ' de ' + cams.length); b.addEventListener('click', function(){ ir(k); reinicia(); }); pontos.appendChild(b); return b; });
+    var ant = botao('galeria-seta ant', '&#8249;', 'Foto anterior');
+    var prox = botao('galeria-seta prox', '&#8250;', 'Próxima foto');
+    ant.addEventListener('click', function(){ ir(i-1); reinicia(); });
+    prox.addEventListener('click', function(){ ir(i+1); reinicia(); });
+    fig.appendChild(ant); fig.appendChild(prox); fig.appendChild(pontos);
+    function ir(n){
+      i = (n + cams.length) % cams.length;
+      cams.forEach(function(c, k){ c.classList.toggle('ativa', k === i); });
+      bts.forEach(function(b, k){ b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    }
+    function para(){ if(timer){ clearInterval(timer); timer = null; } }
+    function reinicia(){ para(); if(!reduz) timer = setInterval(function(){ ir(i+1); }, 6000); }
+    var x0 = null;
+    fig.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+    fig.addEventListener('touchend', function(e){ if(x0 === null) return; var dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx) > 40){ ir(i + (dx < 0 ? 1 : -1)); reinicia(); } x0 = null; });
+    fig.addEventListener('mouseenter', para);
+    fig.addEventListener('mouseleave', reinicia);
+    ir(0);
+    setTimeout(reinicia, idx * 1500);
+  });
+})();
+</script>
+</body>
+</html>
