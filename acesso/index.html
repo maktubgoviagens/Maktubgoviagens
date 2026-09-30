@@ -285,13 +285,22 @@
     return 'Não foi possível concluir agora. Tente novamente em instantes.';
   }
  
+  // sem destino pedido: equipe vai para o app da operação, cliente vai para o painel
+  async function irParaDestino() {
+    let alvo = destino;
+    if (!nextParam) {
+      try { const { data } = await supabase.rpc('is_time'); if (data === true) alvo = '/admin/app/'; } catch (_) {}
+    }
+    location.replace(alvo);
+  }
+
   function entrar() {
     try {
       if ($('keepConnected').checked) localStorage.removeItem('mg_sessao_temporaria');
       else { localStorage.setItem('mg_sessao_temporaria', '1'); sessionStorage.setItem('mg_aba_ativa', '1'); }
     } catch (_) {}
     showSuccess('Acesso confirmado. Abrindo seu painel...');
-    setTimeout(() => location.replace(destino), 600);
+    setTimeout(irParaDestino, 600);
   }
  
   // ===== Estado inicial =====
@@ -305,7 +314,7 @@
       if (isRecovery) {
         if (session) { recoveryHandled = true; show('stepReset'); }
         else setTimeout(() => { if (!recoveryHandled) { show('stepForgot'); showError('O link de redefinição expirou. Peça um novo abaixo.'); } }, 1500);
-      } else if (sessaoValida(session)) { location.replace(destino); return; }
+      } else if (sessaoValida(session)) { await irParaDestino(); return; }
       else if (session) await supabase.auth.signOut({ scope: 'local' });
     } catch (err) { console.error(err); }
     $('checkingAuth').style.display = 'none';
