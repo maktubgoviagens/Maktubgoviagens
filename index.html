@@ -658,6 +658,15 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 @media (max-width:560px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr;gap:28px 20px}.mk-rodape .rodape-grid>div:last-child{grid-column:1/-1}}
 @media print{footer.mk-rodape{display:none}}
 </style>
+<style id="mk-hero-css">
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.78fr);gap:clamp(32px,5vw,72px);align-items:center}
+.mk-hero-foto{margin:0}
+.mk-hero-foto div{aspect-ratio:4/5;background-size:cover;background-position:center 70%;border-radius:2px;box-shadow:0 30px 60px rgba(26,56,38,.16)}
+.mk-hero-foto figcaption{margin-top:12px;font-family:var(--sans);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase}
+.mk-hero-foto figcaption a{color:var(--dourado-texto);text-decoration:none}
+.mk-hero-foto figcaption a:hover{text-decoration:underline;text-underline-offset:4px}
+@media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.mk-hero-foto div{aspect-ratio:4/3}}
+</style>
 </head>
 <body>
  
@@ -699,6 +708,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </div>
       <p class="hero-nota">Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
     </div>
+    <figure class="mk-hero-foto">
+      <div role="img" aria-label="Lu e Laura com mountain bikes nos Alpes Franceses, em Saint-Gervais" style="background-image:url('/ativos/caso-lu-saint-gervais.jpg')"></div>
+      <figcaption><a href="/viagens/">Saint-Gervais, Alpes Franceses · Viagem Maktub</a></figcaption>
+    </figure>
   </div>
   <div class="descer" aria-hidden="true"></div>
 </section>
