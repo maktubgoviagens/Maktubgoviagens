@@ -478,14 +478,14 @@ function telaInicioColab(P) {
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
-    <button class="zap grande" id="nova" style="margin-top:16px">+ Registrar emissão</button>
+    ${botaoLancar('nova')}
     <div class="numeros" style="margin-top:12px">
       <div class="num destaque"><div class="l">Sua comissão em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'} no mês</div></div>
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
-  $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
+  if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
 }
 
@@ -501,6 +501,18 @@ const mesFechado = (k) => D.fech.some(f => String(f.mes).slice(0, 7) === k);
 const nomeTime = (id) => { const t = D.time.find(x => x.user_id === id); return t ? t.nome : ''; };
 const doMes = (k) => D.emissoes.filter(e => String(e.data_negociacao).slice(0, 7) === k);
 const soma = (arr, c) => arr.reduce((s, e) => s + (Number(e[c]) || 0), 0);
+const modoPlanilha = () => !!(D.cfg && D.cfg.origem_emissoes === 'planilha');
+function botaoLancar(id) {
+  if (!modoPlanilha()) return `<button class="zap grande" id="${id}" style="margin-top:14px">+ Registrar emissão</button>`;
+  return D.cfg.planilha_url ? `<a class="zap grande" href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener" style="margin-top:14px">Abrir a planilha para lançar</a>` : '';
+}
+function infoSinc() {
+  if (!modoPlanilha()) return '';
+  const u = D.cfg.ultima_sincronizacao ? quando(D.cfg.ultima_sincronizacao) : 'ainda não sincronizado';
+  const r = D.cfg.resumo_sincronizacao || {};
+  const alertas = ADMIN ? [...(r.vendedores_nao_encontrados || []).map(v => `Vendedor "${esc(v)}" da planilha não está na equipe do app`), ...(r.ignorados || []).slice(0, 5).map(i => `${i.linha ? 'Linha ' + i.linha + ': ' : ''}${esc(i.motivo)}`)] : [];
+  return `<div class="sub" style="margin-top:8px">Lançamentos vêm da planilha. Última sincronização: ${u}.</div>${alertas.length ? `<div class="config" style="margin-top:8px">${alertas.join('<br>')}</div>` : ''}`;
+}
 let EM_MES = mesKey(new Date()), EM_ED = null, EM_VEND = 'todos', FIN_MODO = 'mes', CONFIRMA = null;
 
 function seletorMes(id) {
@@ -537,7 +549,8 @@ function telaEmissoes(P) {
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `
     <h1 class="titulo">${ADMIN ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
-    <button class="zap grande" id="nova" style="margin-top:14px">+ Registrar emissão</button>
+    ${botaoLancar('nova')}
+    ${infoSinc()}
     ${seletorMes('emMes')}
     ${ADMIN ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
     <div class="numeros" style="margin-top:10px">
@@ -551,7 +564,7 @@ function telaEmissoes(P) {
         <div><span>Venda:</span> ${brl2(e.valor_receber)}${ADMIN ? ` · <span>Líquido:</span> ${brl2(e.lucro_liquido)}` : ''} · <span>Comissão:</span> ${brl2(e.comissao)}</div>
         ${ADMIN ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}</div>
       </button>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
-  $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
+  if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
   P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
@@ -568,10 +581,13 @@ function telaFormEmissao(P) {
   const e = nova ? { servico: 'Passagens (Milhas)', data_negociacao: new Date().toISOString().slice(0, 10), passageiros: 1, vendedor_id: D.meuId } : D.emissoes.find(x => x.id === EM_ED);
   if (!e) { EM_ED = null; return telaEmissoes(P); }
   const travado = !nova && mesFechado(String(e.data_negociacao).slice(0, 7));
-  const podeEditar = ADMIN || nova || e.vendedor_id === D.meuId;
+  if (nova && modoPlanilha()) { EM_ED = null; return telaEmissoes(P); }
+  const daPlanilha = modoPlanilha() || e.fonte === 'planilha';
+  const podeEditar = !daPlanilha && (ADMIN || nova || e.vendedor_id === D.meuId);
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Emissões</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? 'Registrar <em>emissão</em>' : esc(e.comprador || e.produto || 'Emissão')}</h1>
+    ${daPlanilha ? `<div class="config" style="margin-top:12px">Esta venda vem da planilha. Para alterar, edite a linha na planilha; o app atualiza em até 5 minutos.${D.cfg && D.cfg.planilha_url ? ` <a href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener">Abrir a planilha</a>` : ''}</div>` : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
     <form id="fEm" class="form" autocomplete="off">
       <div class="grupo">Serviço</div>
@@ -614,7 +630,7 @@ function telaFormEmissao(P) {
       <label class="fl"><span>Observações</span><textarea name="observacoes" rows="3">${esc(e.observacoes || '')}</textarea></label>
 
       ${podeEditar ? `<button class="zap grande" type="submit" id="salvar">${nova ? 'Registrar emissão' : 'Salvar alterações'}</button>` : ''}
-      ${ADMIN && !nova ? `<button class="sec grande" type="button" id="excluir" style="margin-top:8px;width:100%">Excluir emissão</button>` : ''}
+      ${ADMIN && !nova && !daPlanilha ? `<button class="sec grande" type="button" id="excluir" style="margin-top:8px;width:100%">Excluir emissão</button>` : ''}
       <div class="sub" id="msgEm" style="margin-top:8px"></div>
     </form>`;
   const f = $('fEm');
@@ -713,7 +729,7 @@ function telaFinanceiro(P) {
     meses = `<section class="bloco"><h2>Lucro líquido por mês</h2>${barras(arr)}</section>`;
   }
   P.innerHTML = `
-    <h1 class="titulo">Financeiro da <em>operação</em></h1>
+    <h1 class="titulo">Financeiro da <em>operação</em></h1>${infoSinc()}
     <div class="seg" id="finModo"><button data-m="mes" class="${FIN_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${FIN_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${FIN_MODO === 'mes' ? seletorMes('finMes') : `<div class="mesnav" id="finMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
@@ -792,6 +808,8 @@ function telaEquipe(P) {
 
     <div class="secao">Regras de cálculo</div>
     <form class="bloco form" id="fCfg">
+      <label class="fl"><span>Onde o time lança as emissões</span><select name="origem"><option value="planilha" ${modoPlanilha() ? 'selected' : ''}>Na planilha do Google Sheets</option><option value="app" ${modoPlanilha() ? '' : 'selected'}>No app</option></select></label>
+      ${campo('planilha_url', 'Link da planilha', D.cfg ? D.cfg.planilha_url : '', 'url')}
       ${campo('imposto_pct', 'Imposto (%) sobre o lucro', D.cfg ? D.cfg.imposto_pct : 6, 'number')}
       <label class="fc"><input type="checkbox" name="desc" ${D.cfg && D.cfg.comissao_desconta_imposto ? 'checked' : ''}><span>Descontar comissão e parceiro da base do imposto</span></label>
       <div class="sub">Desligado é o método 1: imposto primeiro, depois comissão, depois parceiro. Só ligue com a confirmação do contador. Vale para as próximas vendas.</div>
@@ -818,7 +836,7 @@ function telaEquipe(P) {
   };
   $('fCfg').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
-    const { error } = await sb.from('configuracoes').update({ imposto_pct: Number(f.elements.imposto_pct.value || 6), comissao_desconta_imposto: f.elements.desc.checked, atualizado_em: new Date().toISOString() }).eq('id', 1);
+    const { error } = await sb.from('configuracoes').update({ imposto_pct: Number(f.elements.imposto_pct.value || 6), comissao_desconta_imposto: f.elements.desc.checked, origem_emissoes: f.elements.origem.value, planilha_url: f.elements.planilha_url.value.trim() || null, atualizado_em: new Date().toISOString() }).eq('id', 1);
     if (error) { aviso('Não salvou: ' + error.message); return; }
     await carregarEquipe(); aviso('Regras salvas.');
   };
