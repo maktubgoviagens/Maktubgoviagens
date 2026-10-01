@@ -1302,7 +1302,7 @@ function telaFinanceiro(P) {
   const L = FIN_MODO === 'mes' ? doMes(EM_MES) : D.emissoes.filter(e => String(e.data_negociacao).slice(0, 4) === EM_MES.slice(0, 4));
   const vendas = soma(L, 'valor_receber'), liq = soma(L, 'lucro_liquido');
   const porServ = {}; L.forEach(e => { porServ[e.servico] = (porServ[e.servico] || 0) + (+e.lucro_liquido || 0); });
-  const porVend = {}; L.forEach(e => { const k = e.vendedor_id || ''; porVend[k] = porVend[k] || { n: 0, v: 0, c: 0 }; porVend[k].n++; porVend[k].v += +e.valor_receber || 0; porVend[k].c += +e.comissao || 0; });
+  const porVend = {}; L.forEach(e => { const k = e.vendedor_id || ''; porVend[k] = porVend[k] || { n: 0, v: 0, c: 0, b: 0 }; porVend[k].n++; porVend[k].v += +e.valor_receber || 0; porVend[k].c += +e.comissao || 0; porVend[k].b += +e.lucro_bruto || 0; });
   const aReceber = D.emissoes.filter(e => !e.pago), semNota = D.emissoes.filter(e => !e.nota_gerada && String(e.data_negociacao) >= new Date().getFullYear() + '-01-01');
   const fech = mesFechado(EM_MES);
   let meses = '';
@@ -1325,7 +1325,7 @@ function telaFinanceiro(P) {
     </div>
     ${meses}
     <section class="bloco"><h2>Lucro líquido por serviço</h2>${barras(Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, Math.round(v)]), 'ouro')}</section>
-    <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => `<button class="lin" data-vend="${k || 'sem'}"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}</span><span>${brl2(x.c)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: comissão a pagar. Toque para ver as vendas.</div></section>
+    <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => `<button class="lin" data-vend="${k || 'sem'}" style="align-items:flex-start"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}<small style="display:block;color:var(--tinta-3);font-size:12px;margin-top:2px">lucro bruto ${brl2(x.b)} · comissão ${brl2(x.c)}</small></span><span>${brl2(x.v)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: total vendido. Toque para ver as vendas.</div></section>
     <section class="bloco"><h2>Por serviço</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button class="lin" data-serv="${esc(k)}"><span>${esc(k)} · ${L.filter(e => e.servico === k).length}</span><span>${brl2(v)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: lucro líquido. Toque para ver as vendas.</div></section>
     <section class="bloco"><h2>Pendências financeiras</h2>
       <button class="lin" data-receber><span>Pagamentos a receber (${aReceber.length})</span><span>${brl2(soma(aReceber, 'valor_receber'))}<b class="seta">›</b></span></button>
