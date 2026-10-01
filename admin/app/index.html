@@ -1033,6 +1033,8 @@ async function telaMetas(P) {
       <div class="num"><div class="l">Valor vendido</div><div class="v">${brlC(+e.vendas || 0)}</div><div class="d">soma das vendas</div></div>
       <div class="num"><div class="l">Quantidade de vendas</div><div class="v">${num(+e.qtd || 0)}</div><div class="d">emiss${+e.qtd === 1 ? 'ão' : 'ões'} no mês</div></div>
     </div>
+    <div class="secao">Realizado por vendedor <span>automático, da planilha</span></div>
+    <section class="bloco" style="margin-top:0">${(m.pessoas || []).length ? (m.pessoas || []).slice().sort((x, y) => (+y.vendas || 0) - (+x.vendas || 0)).map(p => `<div class="prog"><span class="p">${esc(p.nome)}</span><span class="p">${brl2(+p.vendas || 0)}</span><span class="s">${num(+p.qtd || 0)} venda${+p.qtd === 1 ? '' : 's'} no mês</span><span class="s">lucro bruto ${brl2(+p.lucro || 0)}</span></div>`).join('') : '<div class="vazio">Sem vendedores ativos.</div>'}</section>
     <div class="secao">Progresso das metas</div>
     ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
     <button class="sec grande" id="abrirMetas" style="margin-top:14px;width:100%">Definir as metas de ${mesNome(MT_MES).toLowerCase()}</button>
