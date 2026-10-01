@@ -103,6 +103,21 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .card .quando{font-size:12px;color:var(--tinta-3);white-space:nowrap}
 .tag{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--linha);color:var(--tinta-2);margin-top:4px}
 .tag.ouro{border-color:rgba(138,101,32,.4);color:var(--dourado)}
+.tag.ok{border-color:rgba(27,67,50,.35);color:var(--verde);background:rgba(27,67,50,.06)}
+.ciclo{display:block;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-left:3px solid var(--dourado);padding:14px;margin-top:14px;cursor:pointer;font:inherit;color:inherit}
+.ciclo .top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--verde)}
+.ciclo .top b{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}
+.ciclo small{display:block;margin-top:8px;font-size:12.5px;color:var(--tinta-3);line-height:1.45}
+.fseg button{font-size:10.5px;letter-spacing:.05em;padding:11px 2px}
+.botoes4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.botoes4 .zap,.botoes4 .sec{min-width:0;padding:12px 6px;font-size:11px}
+.lanc{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--linha);font-size:14px}
+.lanc:first-child{border-top:0}
+.lanc b{font-weight:600;color:var(--verde)}
+.lanc small{display:block;color:var(--tinta-3);font-size:12px;margin-top:2px}
+.lanc .q{text-align:right;white-space:nowrap;color:var(--verde);font-weight:600}
+.lanc .q.neg{color:var(--alerta)}
+.lanc .mini{display:block;margin:4px 0 0 auto}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -268,7 +283,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
     <div class="acoes">
       <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
       <button class="icone" id="recarregar" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
-      <a class="icone" href="/admin/" aria-label="Administração completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg></a>
+      <button class="icone" id="maisTopo" aria-label="Mais" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="bola" id="bLeads" hidden></span></button>
       <button class="icone" id="sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
     </div>
   </header>
@@ -281,8 +296,10 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
+import * as CART from '/admin/app/carteira.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
+CART.usar(sb);
 
 /* ================= utilidades ================= */
 const $ = (id) => document.getElementById(id);
@@ -324,6 +341,7 @@ const ST_SOL = [['nova','Nova'],['em_analise','Em análise'],['diagnostico_agend
 const D = { leads: [], sols: [], tal: [], talErro: null, clientes: [], gestores: [], progs: [], eco: [], voos: [], viagens: [], ags: [], convPend: 0,
   perfil: null, meuId: null, metas: null, areu: [], agenda: [], tt: null, cal: null, calInfo: null, avisos: [], avSit: null, reunioes: [], reErro: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
 let ADMIN = false;
+let GE_FUNIL = false;
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
 /* ================= acesso ================= */
@@ -353,6 +371,7 @@ $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); loc
 $('recarregar').onclick = () => { SITE = null; OPM.recarregar(); carregar(); };
 $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
+$('maisTopo').onclick = () => ir('mais');
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
 window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
 $('pagina').addEventListener('click', async (e) => {
@@ -365,14 +384,16 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'];
+const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'];
 const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = (ADMIN ? ABAS_ADMIN : ABAS_COLAB).includes(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
-  RE_ED = ABA === 'reunioes' && h[1] ? h[1] : null;
+  GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
+  GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
+  RE_ED = ABA === 'reunioes' && h[1] ? h[1] : GE_FUNIL && h[2] ? h[2] : null;
   AG_ED = ABA === 'agenda' && h[1] && !h[1].startsWith('?') ? h[1].split('?')[0] : null;
   if (ABA === 'agenda' && (h[1] || location.hash.includes('ticktick='))) AG_VISTA = 'reunioes';
 }
@@ -380,29 +401,32 @@ const NAV_IC = {
   inicio: '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>',
   emissoes: '<path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/>',
   reunioes: '<path d="M4 5h16v11H9l-4 4v-4H4Z"/><path d="M8 9h8M8 12h5"/>',
+  gestao: '<path d="M3.5 7.5h17v12h-17Z"/><path d="M3.5 7.5 6 4h12l2.5 3.5M15 13.5h3"/>',
   agenda: '<rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   financeiro: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   comissao: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.5M12 6.5v1.5M12 16v1.5"/>',
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
 function montarNav() {
-  const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro'], ['mais', 'Mais']]
+  const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro']]
                       : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['agenda', 'Agenda'], ['comissao', 'Comissão']];
   $('nav').classList.toggle('seis', itens.length > 5);
   $('sino').hidden = !ADMIN;
-  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
+  $('maisTopo').hidden = !ADMIN;
+  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
 function ir(aba, extra) {
-  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; FILTRO = 'todos';
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
   if (extra) extra();
-  history.pushState(null, '', '#' + aba);
+  history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['receber', 'opmilhas', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'].includes(ABA) ? 'mais' : ABA;
+  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
-  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('maisTopo').classList.toggle('on', alvo === 'mais');
+  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -448,6 +472,14 @@ async function carregar(silencioso) {
     if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
     [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => r.data || []);
     D.talErro = q[2].error; D.convPend = q[10].count || 0;
+    const k0 = mesKey(new Date());
+    const gx = await Promise.all([
+      sb.from('convites').select('*').order('created_at', { ascending: false }).limit(300),
+      sb.from('relatorios_mensais').select('cliente_id,publicado').eq('mes', mesMais(k0, -1) + '-01'),
+      sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', k0 + '-01'),
+      sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', k0 + '-01')
+    ]);
+    [D.indic, D.rel, D.extMes, D.atasMes] = gx.map(r => r.data || []);
   }
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
@@ -507,11 +539,13 @@ function htmlEvento(e) {
 
 /* ================= telas ================= */
 function tela() {
-  if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length + convitesNovos().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
-  const ag = checkinsTotal() + reunioesAConfirmar().length; $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
+  if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
+  if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
+  const ag = checkinsTotal(); $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
   if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
   if (ABA === 'reunioes') return telaReunioes(P);
+  if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'receber') return telaReceber(P);
@@ -531,22 +565,14 @@ function tela() {
 
 function telaInicio(P) {
   const hora = new Date().getHours();
-  const venc30 = vencimentos(30);
-  const pat = D.progs.reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
   const leads30 = D.leads.filter(r => Date.now() - new Date(r.created_at) <= 30 * 864e5).length;
   const itens = [
     ['Leads sem resposta', leadsSemResposta().length, () => ir('leads', () => { LSUB = 'leads'; }), 'novo'],
-    ['Convites da Gestão sem análise', convitesNovos().length, () => ir('leads', () => { LSUB = 'convites'; }), 'nova'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago && String(e.data_negociacao) >= mesMais(mesKey(new Date()), -2)).length, () => ir('receber')],
-    ['Reuniões a confirmar', reunioesAConfirmar().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
-    ['Retornos comerciais para hoje', retornosHoje().length, () => ir('reunioes')],
-    ['Milhas vencendo em 30 dias', venc30.length, () => ir('agenda')],
-    ['Indicações de clientes aguardando', D.convPend, () => location.href = '/admin/?view=convitesAll'],
-    ['Renovações da Gestão em 90 dias', renovacoes(90).length, () => ir('clientes', () => { FILTRO = 'renovar'; })],
-    ['Clientes da Gestão sem data de entrada', semContrato().length, () => ir('clientes', () => { FILTRO = 'semcontrato'; })],
-    ['Painéis sem atualização há 30+ dias', semAtualizacao().length, () => ir('clientes', () => { FILTRO = 'atrasados'; })]
+    ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
+    ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')]
   ];
   const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 4);
   P.innerHTML = `
@@ -561,9 +587,6 @@ function telaInicio(P) {
       ${(c => `<div class="num destaque"><div class="l">Conversão do mês</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} reuniões decididas</div></div>`)(conversao(reunioesDoPeriodo(mesKey(new Date()), 'mes')))}
       <div class="num destaque"><div class="l">Lucro líquido do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
       <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">a pagar ao time</div></div>
-      <div class="num"><div class="l">Patrimônio sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(D.progs.reduce((s, p) => s + (Number(p.saldo) || 0), 0))} milhas e pontos</div></div>
-      <div class="num"><div class="l">Clientes na Gestão</div><div class="v">${D.clientes.length}</div><div class="d">${D.gestores.length} gestor${D.gestores.length === 1 ? '' : 'es'}</div></div>
-      <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
       <div class="num"><div class="l">Leads em 30 dias</div><div class="v">${leads30}</div><div class="d">${(n => n + (n === 1 ? ' fechado' : ' fechados'))(D.leads.filter(r => r.status === 'fechado' && Date.now() - new Date(r.created_at) <= 30 * 864e5).length)}</div></div>
     </div>
     <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
@@ -918,6 +941,7 @@ function ligarAvisos(P) {
   P.querySelectorAll('[data-av]').forEach(b => b.onclick = () => {
     const h = (b.dataset.av.split('#')[1] || '').split('/');
     if (!h[0]) return ir('inicio');
+    if (h[0] === 'reunioes' && h[1]) return abrirAtendimento(h[1]);
     ir(h[0], () => { if (h[1] && h[0] === 'emissoes') EM_ED = h[1]; if (h[1] && h[0] === 'reunioes') RE_ED = h[1]; if (h[1] && h[0] === 'agenda') { AG_ED = h[1]; AG_VISTA = 'reunioes'; } if (h[0] === 'clientes' && h[1]) CLI = h[1]; });
     if (h[1]) history.replaceState(null, '', '#' + h.join('/'));
   });
@@ -1027,6 +1051,8 @@ async function telaMetas(P) {
   const v = (x) => x === null || x === undefined ? '' : x;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div>
+    <div class="secao">Progresso das metas</div>
+    ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
     <div class="secao">Realizado no mês <span>automático, da planilha</span></div>
     <div class="numeros" style="margin-top:0">
       <div class="num destaque"><div class="l">Lucro bruto</div><div class="v">${brlC(+e.lucro || 0)}</div><div class="d">venda menos custo</div></div>
@@ -1035,8 +1061,6 @@ async function telaMetas(P) {
     </div>
     <div class="secao">Realizado por vendedor <span>automático, da planilha</span></div>
     <section class="bloco" style="margin-top:0">${(m.pessoas || []).length ? (m.pessoas || []).slice().sort((x, y) => (+y.vendas || 0) - (+x.vendas || 0)).map(p => `<div class="prog"><span class="p">${esc(p.nome)}</span><span class="p">${brl2(+p.vendas || 0)}</span><span class="s">${num(+p.qtd || 0)} venda${+p.qtd === 1 ? '' : 's'} no mês</span><span class="s">lucro bruto ${brl2(+p.lucro || 0)}</span></div>`).join('') : '<div class="vazio">Sem vendedores ativos.</div>'}</section>
-    <div class="secao">Progresso das metas</div>
-    ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
     <button class="sec grande" id="abrirMetas" style="margin-top:14px;width:100%">Definir as metas de ${mesNome(MT_MES).toLowerCase()}</button>
     <form class="bloco form" id="fMeta" hidden>
       <h2>Metas da Maktub</h2>
@@ -1119,8 +1143,15 @@ function htmlReuniao(r) {
     ${r.resultado === 'Em andamento' ? `<div class="resq"><button class="f" data-mv="${r.id}" data-et="Fechou">Fechou</button><button class="n" data-mv="${r.id}" data-et="Não fechou">Não fechou</button></div>` : ''}
   </div>`;
 }
+const reHash = (id) => '#' + (ABA === 'gestao' ? 'gestao/funil' : 'reunioes') + (id ? '/' + id : '');
+function abrirAtendimento(id, pre) {
+  const r = D.reunioes.find(x => x.id === id);
+  const g = ADMIN && (r ? ehGestao(r) : !!(pre && pre.produto === 'Gestão de Milhas'));
+  ABA = g ? 'gestao' : 'reunioes'; GE_FUNIL = g; RE_ED = id; RE_PRE = pre || null;
+  history.pushState(null, '', reHash(id)); marcarNav(); tela(); scrollTo(0, 0);
+}
 function ligarCardsReuniao(P) {
-  P.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { ABA = 'reunioes'; RE_ED = b.dataset.r; history.pushState(null, '', '#reunioes/' + RE_ED); marcarNav(); telaReunioes($('pagina')); scrollTo(0, 0); });
+  P.querySelectorAll('[data-r]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.r));
   P.querySelectorAll('.resq [data-mv]').forEach(b => b.onclick = () => moverEtapa(b.dataset.mv, b.dataset.et));
 }
 function htmlKCard(r, etapas) {
@@ -1138,14 +1169,20 @@ function htmlKCard(r, etapas) {
 }
 async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
-  if (etapa === 'Fechou' || etapa === 'Não fechou') { ABA = 'reunioes'; RE_ED = id; RE_PRE = { etapa }; history.pushState(null, '', '#reunioes/' + id); telaReunioes($('pagina')); scrollTo(0, 0); return; }
+  if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
   const { data, error } = await sb.from('atendimentos').update({ etapa }).eq('id', id).select().single();
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
 }
 function telaReunioes(P) {
+  if (ADMIN && ABA === 'reunioes' && RE_ED) {
+    const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
+    if (x ? ehGestao(x) : RE_ED === 'nova' && RE_PRE && RE_PRE.produto === 'Gestão de Milhas') { ABA = 'gestao'; GE_FUNIL = true; history.replaceState(null, '', reHash(RE_ED)); marcarNav(); }
+  }
+  if (ABA === 'gestao') RE_VISTA = 'gestao';
+  else if (ADMIN && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = '<h1 class="titulo">Comercial</h1>';
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
   if (D.reErro) { P.innerHTML = titulo + '<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'; return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento')
@@ -1155,7 +1192,7 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    <div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>
+    ${ADMIN ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Nova cotação ou reunião'}</button>
     <div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no nome para abrir.</div>
@@ -1177,8 +1214,9 @@ function telaReunioes(P) {
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`;
-  $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
-  $('novaR').onclick = () => { RE_ED = 'nova'; history.pushState(null, '', '#reunioes/nova'); telaReunioes(P); scrollTo(0, 0); };
+  if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
+  if ($('voltarG')) $('voltarG').onclick = () => ir('gestao');
+  $('novaR').onclick = () => { RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
   $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
   ligarMes('reMes', () => telaReunioes(P));
   $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
@@ -1202,7 +1240,7 @@ function telaFormReuniao(P) {
   const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
   const sel = (nome, rot, ops, val) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}${val && !ops.includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select></label>`;
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Comercial</button>
+    <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Nova <em>cotação</em>') : esc(r.cliente)}</h1>
     <form id="fRe" class="form" autocomplete="off">
       <div class="grupo">Reunião</div>
@@ -1278,13 +1316,13 @@ function telaFormReuniao(P) {
       if (nr.error) aviso('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
     aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Lead da Gestão registrado.' : 'Cotação registrada.') : 'Atualizado.');
-    RE_ED = null; history.replaceState(null, '', '#reunioes'); telaReunioes(P); scrollTo(0, 0);
+    RE_ED = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
   if ($('excluirRe')) $('excluirRe').onclick = async () => {
     if (CONFIRMA !== 're' + base.id) { CONFIRMA = 're' + base.id; $('excluirRe').textContent = 'Toque de novo para confirmar'; return; }
     const { error } = await sb.from('atendimentos').delete().eq('id', base.id);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
-    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; history.replaceState(null, '', '#reunioes'); telaReunioes(P);
+    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; history.replaceState(null, '', reHash()); telaReunioes(P);
   };
 }
 
@@ -1388,8 +1426,7 @@ function telaReceber(P) {
 /* ---------- mais (administradores) ---------- */
 function telaMais(P) {
   const itens = [
-    ['leads', 'Leads do site', leadsSemResposta().length + convitesNovos().length],
-    ['clientes', 'Clientes da Gestão de Milhas', semAtualizacao().length],
+    ['leads', 'Leads do site', leadsSemResposta().length],
     ['site', 'Números do site', 0],
     ['equipe', 'Equipe, comissões e parceiros', 0],
     ['metas', 'Metas do mês', 0],
@@ -1532,7 +1569,7 @@ function telaLeads(P) {
     </div>
     <div class="seg" id="lsub" style="margin-top:20px">
       <button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>
-      <button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Convites ${noPeriodo(D.sols).length}</button>
+      <button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}</button>
       <button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}</button>
     </div>
     <div class="chips" id="filtro"></div>
@@ -1581,7 +1618,7 @@ function listaLeads() {
         <div class="acoes">${r.whatsapp ? `<a class="zap" href="https://wa.me/${zapNum(r.whatsapp)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}</div>
       </article>`).join('') : '<div class="vazio">Nenhum cadastro no período.</div>';
   }
-  el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => { const pre = JSON.parse(b.dataset.reu); ir('reunioes', () => { RE_ED = 'nova'; RE_PRE = pre; }); });
+  el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => abrirAtendimento('nova', JSON.parse(b.dataset.reu)));
   el.querySelectorAll('select[data-t]').forEach(s => s.onchange = async () => {
     const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);
     if (error) { aviso('Não salvou: ' + error.message); return; }
@@ -1599,15 +1636,172 @@ function listaLeads() {
   });
 }
 
+
+/* ================= gestão de milhas ================= */
+let GE_CICLO = false;
+const mesAnterior = () => mesMais(mesKey(new Date()), -1);
+const mesNomeCurto = (k) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
+function cicloCliente(c) {
+  const k = mesKey(new Date());
+  const saldos = (D.extMes || []).some(x => x.cliente_id === c.id);
+  const reuniao = (D.agenda || []).some(a => a.cliente_id === c.id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasMes || []).some(x => x.cliente_id === c.id);
+  const carta = (D.rel || []).some(r => r.cliente_id === c.id && r.publicado);
+  return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
+}
+const vencendo = () => vencimentos(30).filter(({ p }) => !(p.vencimento_avisado_em && dia(p.vencimento_avisado_em) >= new Date(dia(p.vencimento_data) - 60 * 864e5)));
+const pedidosSite = () => (D.sols || []).filter(r => r.status === 'nova');
+const indicacoesNovas = () => (D.indic || []).filter(r => r.status === 'enviado');
+function pendGestao() {
+  return [
+    ['Pedidos de reunião dos clientes', reunioesAConfirmar().length],
+    ['Pedidos de convite pelo site', pedidosSite().length],
+    ['Indicações de clientes', indicacoesNovas().length],
+    ['Leads para retornar hoje', retornosHoje().filter(ehGestao).length],
+    ['Milhas de clientes vencendo', vencendo().length],
+    ['Renovações em 90 dias', renovacoes(90).length],
+    ['Clientes sem data de entrada', semContrato().length]
+  ];
+}
+const pilula = (ok, txt) => `<span class="tag ${ok ? 'ok' : 'alerta'}">${ok ? '✓ ' : ''}${txt}</span>`;
+function htmlCiclo(c, ciclo) {
+  return `${pilula(ciclo.saldos, 'Saldos')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
+}
+function telaGestao(P) {
+  if (GE_CICLO) return telaCiclo(P);
+  const ags = reunioesAConfirmar(), sols = pedidosSite(), ind = indicacoesNovas();
+  const ret = retornosHoje().filter(ehGestao), venc = vencendo(), renov = renovacoes(90), semc = semContrato();
+  const ciclos = D.clientes.map(c => ({ c, x: cicloCliente(c) }));
+  const emDia = ciclos.filter(y => y.x.feitos === 3).length;
+  const pat = D.progs.reduce((t, p) => t + (Number(p.patrimonio_brl) || 0), 0);
+  const mi = D.progs.reduce((t, p) => t + (Number(p.saldo) || 0), 0);
+  const leads = D.reunioes.filter(r => ehGestao(r) && r.resultado === 'Em andamento');
+  const c = conversao(reunioesDoPeriodo(mesKey(new Date()), 'ano').filter(ehGestao));
+  const total = ags.length + sols.length + ind.length + ret.length + venc.length + renov.filter(x => diasPara(x.gestao_vencimento) <= 30).length + semc.length;
+  const grupo = (titulo, html) => html ? `<div class="secao">${titulo}</div>${html}` : '';
+  P.innerHTML = `
+    <h1 class="titulo">Gestão de <em>Milhas</em></h1>
+    <div class="sub">${total ? plural(total, 'coisa', 'coisas') + ' para resolver' : 'Nada pendente agora'} · ${D.clientes.length} cliente${D.clientes.length === 1 ? '' : 's'}</div>
+
+    <button class="ciclo" id="geCiclo">
+      <div class="top"><span>Ciclo de ${mesNomeCurto(mesKey(new Date()))}</span><b>${emDia} de ${D.clientes.length} em dia</b></div>
+      <div class="barra2"><i class="${emDia === D.clientes.length && emDia ? 'ok' : ''}" style="width:${D.clientes.length ? emDia / D.clientes.length * 100 : 0}%"></i></div>
+      <small>Saldos lançados, reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
+    </button>
+
+    ${grupo('Pedidos de reunião dos clientes', ags.map(a => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(nomeCli(a.cliente_id))}</div><span class="tag ouro">pediu pelo painel</span></div><span class="quando">${quando(a.created_at)}</span></div>
+      <div class="info">${[['Preferência', [a.data_preferida ? dataBR(a.data_preferida) : '', a.periodo].filter(Boolean).join(' · ')], ['Formato', a.formato], ['Pauta', a.pauta]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
+      <div class="acoes"><button class="zap" data-conf="${a.id}">Confirmar e marcar</button><button class="sec" data-ficha="${a.cliente_id}">Ficha</button></div></article>`).join(''))}
+
+    ${grupo('Pedidos de convite pelo site', sols.map(r => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">quer entrar na Gestão</span></div><span class="quando">${quando(r.created_at)}</span></div>
+      <div class="info">${[['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Objetivo', r.objetivo], ['Indicado por', r.indicado_por]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
+      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-sol="${r.id}">Levar para o funil</button><button class="sec" data-recusa-sol="${r.id}">Recusar</button></div></article>`).join(''))}
+
+    ${grupo('Indicações de clientes', ind.map(r => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">indicação de ${esc(nomeCli(r.cliente_id))}</span></div><span class="quando">${quando(r.created_at)}</span></div>
+      <div class="info">${[['Relação', r.relacao], ['Mensagem', r.mensagem], ['E-mail', r.email]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
+      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. ${String(nomeCli(r.cliente_id)).split(' ')[0]} nos indicou para conversar com você sobre a Gestão de Milhas Concierge.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-ind="${r.id}">Levar para o funil</button><button class="sec" data-recusa-ind="${r.id}">Não seguiu</button></div></article>`).join(''))}
+
+    ${grupo('Leads para retornar hoje', ret.map(htmlReuniao).join(''))}
+
+    ${grupo('Milhas de clientes vencendo em 30 dias', venc.map(({ p, d }) => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(nomeCli(p.cliente_id))}</div><span class="tag alerta">${num(p.vencimento_quantidade)} ${esc(p.unidade || 'milhas')} · ${esc(p.programa)}</span></div><span class="quando">vence ${dataCurta(d)}</span></div>
+      <div class="acoes"><button class="zap" data-avisado="${p.id}">Já avisei o cliente</button><button class="sec" data-ficha="${p.cliente_id}" data-fa="carteira">Carteira</button></div></article>`).join(''))}
+
+    ${grupo('Renovações em 90 dias', renov.length ? `<div class="pend">${renov.map(x => { const dv = diasPara(x.gestao_vencimento); return `<button data-ficha="${x.id}"><span>${esc(x.nome_completo)}</span><span><span style="${dv <= 30 ? 'color:var(--alerta)' : 'color:var(--tinta-2)'};font-size:13px">${dv < 0 ? 'vencido' : 'vence ' + dataBR(x.gestao_vencimento)}</span><span class="seta">›</span></span></button>`; }).join('')}</div>` : '')}
+
+    ${grupo('Clientes sem data de entrada', semc.length ? `<div class="pend">${semc.map(x => `<button data-ficha="${x.id}"><span>${esc(x.nome_completo)}</span><span><span style="color:var(--alerta);font-size:13px">definir</span><span class="seta">›</span></span></button>`).join('')}</div>` : '')}
+
+    <div class="secao">Carteira de clientes</div>
+    <div class="numeros" style="margin-top:0">
+      <div class="num destaque"><div class="l">Patrimônio sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
+      <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
+      <div class="num"><div class="l">Conversão no ano</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} leads decididos</div></div>
+      <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
+    </div>
+    <div class="pend" style="margin-top:10px">
+      <button data-g="clientes"><span>Clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
+      <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
+    </div>
+    <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>`;
+  ligarGestao(P);
+}
+function ligarGestao(P) {
+  $('geCiclo') && ($('geCiclo').onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); });
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : ir('clientes'));
+  P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
+  P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
+    const a = D.ags.find(x => String(x.id) === b.dataset.conf); if (!a) return;
+    const pref = a.data_preferida ? a.data_preferida + 'T' + ({ 'Manhã': '10:00', 'Tarde': '15:00', 'Noite': '19:00' }[a.periodo] || '10:00') : '';
+    abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: a.cliente_id, agendamento_id: String(a.id), titulo: 'Reunião com ' + nomeCli(a.cliente_id), data: pref, link: a.link_reuniao || '' });
+  });
+  const muda = async (tabela, id, status, lista) => {
+    const { error } = await sb.from(tabela).update({ status }).eq('id', id);
+    if (error) { aviso('Não salvou: ' + error.message); return false; }
+    const r = lista.find(x => String(x.id) === String(id)); if (r) r.status = status; return true;
+  };
+  P.querySelectorAll('[data-funil-sol]').forEach(b => b.onclick = async () => {
+    const r = D.sols.find(x => String(x.id) === b.dataset.funilSol); if (!r) return;
+    if (!(await muda('solicitacoes_acesso', r.id, 'em_analise', D.sols))) return;
+    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' });
+  });
+  P.querySelectorAll('[data-funil-ind]').forEach(b => b.onclick = async () => {
+    const r = D.indic.find(x => String(x.id) === b.dataset.funilInd); if (!r) return;
+    if (!(await muda('convites', r.id, 'em_contato', D.indic))) return;
+    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Indicação de cliente', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' });
+  });
+  P.querySelectorAll('[data-recusa-sol],[data-recusa-ind]').forEach(b => b.onclick = async () => {
+    const sol = !!b.dataset.recusaSol, id = b.dataset.recusaSol || b.dataset.recusaInd;
+    if (CONFIRMA !== 'rec' + id) { CONFIRMA = 'rec' + id; b.textContent = 'Toque de novo'; return; }
+    CONFIRMA = null;
+    if (await muda(sol ? 'solicitacoes_acesso' : 'convites', id, sol ? 'recusada' : 'recusado', sol ? D.sols : D.indic)) { aviso('Registrado.'); telaGestao(P); }
+  });
+  P.querySelectorAll('[data-avisado]').forEach(b => b.onclick = async () => {
+    const { error } = await sb.from('programas_milhas').update({ vencimento_avisado_em: hojeISO() }).eq('id', b.dataset.avisado);
+    if (error) { aviso(/vencimento_avisado_em/.test(error.message) ? 'Rode o 24-gestao.sql no Supabase para ativar.' : 'Não salvou: ' + error.message); return; }
+    const p = D.progs.find(x => String(x.id) === b.dataset.avisado); if (p) p.vencimento_avisado_em = hojeISO();
+    aviso('Anotado. Sai da lista até o próximo vencimento.'); telaGestao(P);
+  });
+  if ($('geNovo')) $('geNovo').onclick = () => abrirAtendimento('nova', { produto: 'Gestão de Milhas' });
+  ligarCardsReuniao(P);
+}
+function telaCiclo(P) {
+  const k = mesKey(new Date());
+  const L = D.clientes.map(c => ({ c, x: cicloCliente(c) })).sort((a, b) => a.x.feitos - b.x.feitos || String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
+  const falta = (t) => L.filter(y => !y.x[t]).length;
+  P.innerHTML = `<button class="voltar" id="voltarCiclo">‹ Gestão</button>
+    <h1 class="titulo" style="margin-top:6px">Ciclo de <em>${mesNomeCurto(k)}</em></h1>
+    <div class="sub">Tudo aqui é marcado sozinho: lançar na carteira marca Saldos, registrar a reunião realizada marca Reunião e publicar a carta marca Carta.</div>
+    <div class="numeros" style="margin-top:12px">
+      <div class="num ${falta('saldos') ? 'alerta' : ''}"><div class="l">Sem saldos no mês</div><div class="v">${falta('saldos')}</div></div>
+      <div class="num ${falta('reuniao') ? 'alerta' : ''}"><div class="l">Sem reunião no mês</div><div class="v">${falta('reuniao')}</div></div>
+      <div class="num ${falta('carta') ? 'alerta' : ''}"><div class="l">Sem carta de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('carta')}</div></div>
+    </div>
+    <div class="lista">${L.length ? L.map(({ c, x }) => `<article class="card">
+      <div class="cab"><div class="nome">${esc(c.nome_completo)}</div><span class="quando">${x.feitos} de 3</span></div>
+      <div style="margin-top:6px">${htmlCiclo(c, x)}</div>
+      ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-ficha="${c.id}" data-fa="carteira">Lançar saldos</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
+    </article>`).join('') : '<div class="vazio">Nenhum cliente na Gestão.</div>'}</div>`;
+  $('voltarCiclo').onclick = () => history.back();
+  P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
+}
+function abrirFicha(id, aba) {
+  ABA = 'clientes'; CLI = id; FI_ABA = aba || 'resumo'; GE_FUNIL = false; GE_CICLO = false;
+  history.pushState(null, '', '#clientes/' + id); marcarNav(); tela(); scrollTo(0, 0);
+}
+
 /* ---------- clientes ---------- */
 function telaClientes(P) {
+  setTimeout(() => { if ($('voltarCli')) $('voltarCli').onclick = () => ir('gestao'); });
   const ordem = FILTRO === 'atrasados' ? semAtualizacao() : FILTRO === 'renovar' ? renovacoes(90) : FILTRO === 'semcontrato' ? semContrato() : D.clientes;
   const lista = ordem.filter(c => !BUSCA || String(c.nome_completo || '').toLowerCase().includes(BUSCA.toLowerCase()))
     .map(c => ({ c, pat: patrimonio(c.id), mi: milhas(c.id), v: progsDe(c.id).filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => dia(p.vencimento_data)).filter(d => difDias(d) >= 0).sort((a, b) => a - b)[0] }))
     .sort((a, b) => FILTRO === 'renovar' ? String(a.c.gestao_vencimento).localeCompare(String(b.c.gestao_vencimento)) : b.pat - a.pat);
   const totPat = D.progs.reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
   P.innerHTML = `
-    <h1 class="titulo">Clientes da <em>Gestão</em></h1>
+    <button class="voltar" id="voltarCli">‹ Gestão</button>
+    <h1 class="titulo" style="margin-top:6px">Clientes da <em>Gestão</em></h1>
     <div class="sub">${D.clientes.length} clientes · ${brlC(totPat)} sob gestão · ${brlC(economiaAno())} de economia em ${new Date().getFullYear()}</div>
     <input class="busca" id="busca" type="search" placeholder="Buscar cliente" value="${esc(BUSCA)}">
     <div class="chips" style="margin-top:10px"><button data-f="todos" class="${!['atrasados', 'renovar', 'semcontrato'].includes(FILTRO) ? 'on' : ''}">Todos</button><button data-f="atrasados" class="${FILTRO === 'atrasados' ? 'on' : ''}">Sem atualização há 30+ dias (${semAtualizacao().length})</button><button data-f="renovar" class="${FILTRO === 'renovar' ? 'on' : ''}">Renovação em 90 dias (${renovacoes(90).length})</button><button data-f="semcontrato" class="${FILTRO === 'semcontrato' ? 'on' : ''}">Sem data de entrada (${semContrato().length})</button></div>
@@ -1616,49 +1810,316 @@ function telaClientes(P) {
       const dias = c.ultima_atualizacao ? Math.floor((Date.now() - new Date(c.ultima_atualizacao)) / 864e5) : null;
       const dv = diasPara(c.gestao_vencimento);
       const contrato = c.gestao_vencimento ? `<span style="${dv <= 30 ? 'color:var(--alerta)' : ''}">${dv < 0 ? 'contrato vencido em ' + dataBR(c.gestao_vencimento) : dv <= 90 ? 'renova em ' + plural(dv, 'dia', 'dias') : 'contrato até ' + dataBR(c.gestao_vencimento)}</span> · ` : '<span style="color:var(--alerta)">sem data de entrada</span> · ';
-      return `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.nome_completo)}</div><div class="meta">${contrato}${g ? esc(g.nome) + ' · ' : ''}${dias === null ? 'painel nunca atualizado' : dias === 0 ? 'atualizado hoje' : `atualizado há ${dias} dia${dias === 1 ? '' : 's'}`}${v && difDias(v) <= 60 ? ` · <span style="color:var(--alerta)">vencimento em ${dataCurta(v)}</span>` : ''}</div></div><div class="val"><b>${brlC(pat)}</b><span>${milC(mi)} milhas</span></div></button>`;
+      return `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.nome_completo)}</div><div style="margin:4px 0 2px">${htmlCiclo(c, cicloCliente(c))}</div><div class="meta">${contrato}${g ? esc(g.nome) + ' · ' : ''}${dias === null ? 'painel nunca atualizado' : dias === 0 ? 'atualizado hoje' : `atualizado há ${dias} dia${dias === 1 ? '' : 's'}`}${v && difDias(v) <= 60 ? ` · <span style="color:var(--alerta)">vencimento em ${dataCurta(v)}</span>` : ''}</div></div><div class="val"><b>${brlC(pat)}</b><span>${milC(mi)} milhas</span></div></button>`;
     }).join('') : '<div class="vazio">Nenhum cliente encontrado.</div>'}</div>`;
   $('busca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaClientes(P); $('busca').focus(); $('busca').setSelectionRange(pos, pos); };
   P.querySelectorAll('.chips button').forEach(b => b.onclick = () => { FILTRO = b.dataset.f; telaClientes(P); });
-  P.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { CLI = b.dataset.c; history.pushState(null, '', '#clientes/' + CLI); telaFicha(P, CLI); scrollTo(0, 0); });
+  P.querySelectorAll('[data-c]').forEach(b => b.onclick = () => abrirFicha(b.dataset.c));
 }
+/* ---------- ficha do cliente da Gestão ---------- */
+let FI_ABA = 'resumo', FI_FORM = null;
+const PROG_PADRAO = ['Livelo', 'Esfera', 'Smiles', 'LATAM Pass', 'Azul Fidelidade', 'TAP Miles&Go', 'Iberia Plus', 'British Airways Executive Club', 'Qatar Privilege Club', 'AAdvantage', 'Átomos C6', 'Inter Loop', 'Itaú Pontos', 'KMV'];
+const TIPO_CART = { saldo_inicial: 'Saldo herdado', acumulo: 'Acúmulo no cartão', bonus: 'Bônus ou promoção', compra: 'Compra de pontos', clube: 'Clube de pontos', transf_entrada: 'Transferência recebida', transf_saida: 'Transferência enviada', emissao: 'Uso de milhas', expiracao: 'Expiração', ajuste: 'Ajuste', transferencia: 'Transferência' };
+const TIPO_DOC = [['bilhete', 'Bilhete aéreo'], ['voucher', 'Voucher'], ['seguro', 'Seguro viagem'], ['roteiro', 'Roteiro'], ['relatorio', 'Relatório'], ['contrato', 'Contrato'], ['outro', 'Outro']];
+const selG = (nome, rotulo, opcoes, valor) => `<label class="fl"><span>${rotulo}</span><select name="${nome}">${opcoes.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(valor) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+const nv = (f, n) => { const el = f.elements[n]; if (!el || el.value.trim() === '') return null; const x = Number(el.value.replace(',', '.')); return isFinite(x) ? x : null; };
+const tv = (f, n) => f.elements[n] ? f.elements[n].value.trim() : '';
+
 function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
+  const abas = [['resumo', 'Resumo'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Voltar</button>
+    <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
+    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}</div>
+    <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}</div>
+    <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div id="fiCorpo"></div>`;
+  $('voltar').onclick = () => history.back();
+  $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
+  ({ resumo: fiResumo, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+}
+
+function fiResumo(el, c) {
+  const id = c.id;
   const progs = progsDe(id).filter(p => Number(p.saldo) > 0 || p.vencimento_data).sort((a, b) => (Number(b.patrimonio_brl) || 0) - (Number(a.patrimonio_brl) || 0));
   const ev = eventos().filter(e => e.cid === id).filter(e => difDias(e.d) >= 0).slice(0, 6);
   const eco = D.eco.filter(r => r.cliente_id === id).sort((a, b) => String(b.data).localeCompare(String(a.data)));
-  P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Clientes</button>
-    <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
-    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}</div>
-    <div class="numeros" style="margin-top:14px">
+  el.innerHTML = `
+    <div class="numeros" style="margin-top:12px">
       <div class="num destaque"><div class="l">Patrimônio</div><div class="v">${brlC(patrimonio(id))}</div><div class="d">${milC(milhas(id))} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia no ano</div><div class="v">${brlC(economiaAno(id))}</div><div class="d">${eco.length} registro${eco.length === 1 ? '' : 's'}</div></div>
     </div>
-    <div class="card acoes" style="display:flex;gap:8px;margin-top:10px;border:0;padding:0;background:none">
-      <a class="zap" href="${adminLink(id, 'carteira')}">Lançar na carteira</a>
-      <a class="sec" href="${adminLink(id, 'cadastro')}">Editar</a>
-      <a class="sec" href="/painel/relatorio.html?cliente=${encodeURIComponent(id)}" target="_blank" rel="noopener">Relatório</a>
-    </div>
     <div class="secao">Contrato da Gestão</div>
     <section class="bloco" style="margin-top:0" id="blContrato">${htmlContrato(c)}</section>
-    <div class="secao">Reuniões <span><button id="agendaCli">+ Agendar</button> <button id="novaReuCli">+ Resumo para o painel</button></span></div>
-    ${(D.agenda || []).filter(x => x.cliente_id === c.id).slice(0, 5).map(htmlReuniaoAgenda).join('')}
-    <div id="reuCli"><div class="vazio">Carregando...</div></div>
-    <div class="secao">Programas</div>
-    <div class="bloco" style="margin-top:0">${progs.length ? progs.map(p => { const v = p.vencimento_data ? dia(p.vencimento_data) : null; return `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} ${esc(p.unidade || 'milhas')}</div></div><div class="v">${p.patrimonio_brl ? brlC(p.patrimonio_brl) : ''}</div>${v && Number(p.vencimento_quantidade) > 0 && difDias(v) >= 0 ? `<div class="venc">${num(p.vencimento_quantidade)} vencem em ${v.toLocaleDateString('pt-BR')}</div>` : ''}</div>`; }).join('') : '<div class="vazio">Nenhum programa com saldo.</div>'}</div>
+    <div class="secao">Programas <button data-fa="carteira">Abrir carteira ›</button></div>
+    <div class="bloco" style="margin-top:0">${progs.length ? progs.map(p => { const v = p.vencimento_data ? dia(p.vencimento_data) : null; return `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} ${esc(p.unidade || 'milhas')}</div></div><div class="v">${p.patrimonio_brl ? brlC(p.patrimonio_brl) : ''}</div>${v && Number(p.vencimento_quantidade) > 0 && difDias(v) >= 0 ? `<div class="s" style="grid-column:1/-1;${difDias(v) <= 30 ? 'color:var(--alerta)' : ''}">${num(p.vencimento_quantidade)} vencem em ${dataBR(p.vencimento_data)}</div>` : ''}</div>`; }).join('') : '<div class="vazio">Nenhum saldo lançado ainda.</div>'}</div>
     <div class="secao">Próximos compromissos</div>
     ${ev.length ? agrupar(ev) : '<div class="vazio">Nada marcado.</div>'}
-    <div class="secao">Economias recentes <a href="${adminLink(id, 'historico_economia')}">Lançar ›</a></div>
-    <div class="bloco" style="margin-top:0">${eco.length ? eco.slice(0, 5).map(r => `<div class="lin"><span>${esc(r.descricao || r.categoria || '')}</span><span>${brl(ecoValor(r))}</span></div>`).join('') : '<div class="vazio">Nenhuma economia lançada neste ano.</div>'}</div>`;
-  $('voltar').onclick = () => history.back();
+    <div class="secao">Economias recentes</div>
+    <div class="bloco" style="margin-top:0">${eco.length ? eco.slice(0, 5).map(r => `<div class="lin"><span>${esc(r.descricao || r.categoria || '')}</span><span>${brl(ecoValor(r))}</span></div>`).join('') : '<div class="vazio">Nenhuma economia lançada neste ano.</div>'}</div>
+    <div class="acoes" style="display:flex;gap:8px;margin-top:14px">
+      <a class="sec" style="flex:1" href="/painel/relatorio.html?cliente=${encodeURIComponent(id)}" target="_blank" rel="noopener">Ver relatório</a>
+      <a class="sec" style="flex:1" href="${adminLink(id, 'cadastro')}">Editar cadastro</a>
+    </div>`;
   ligarContrato(c);
+  el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FI_ABA = b.dataset.fa; telaFicha($('pagina'), c.id); });
+  el.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+}
+
+/* carteira no celular */
+async function fiCarteira(el, c) {
+  if (!c._W) el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando a carteira...</div>';
+  const [ex, refs] = await Promise.all([sb.from('extrato_milhas').select('*').eq('cliente_id', c.id), CART.valoresRef()]);
+  if (CLI !== c.id || FI_ABA !== 'carteira' || !$('fiCorpo')) return;
+  if (ex.error) { el.innerHTML = `<div class="vazio">Não carregou a carteira: ${esc(ex.error.message)}</div>`; return; }
+  c._ex = ex.data || []; c._refs = refs; c._W = CART.calcCarteira(c._ex);
+  const W = c._W, L = c._ex.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || ''))).slice(0, 20);
+  const patr = W.programas.reduce((t, p) => t + (refs[p.key] !== undefined ? p.saldo * refs[p.key] / 1000 : 0), 0);
+  el.innerHTML = `
+    <div class="numeros" style="margin-top:12px">
+      <div class="num destaque"><div class="l">Saldo total</div><div class="v">${milC(W.total)}</div><div class="d">${W.programas.filter(p => p.saldo).length} programas</div></div>
+      <div class="num"><div class="l">Patrimônio</div><div class="v">${brlC(patr)}</div><div class="d">pelo valor do milheiro</div></div>
+    </div>
+    <div class="botoes4">
+      <button class="zap" data-form="entrada">+ Entrada</button>
+      <button class="sec" data-form="uso">Uso de milhas</button>
+      <button class="sec" data-form="transf">Transferência</button>
+      <button class="sec" data-form="ajuste">Expiração ou ajuste</button>
+      <button class="sec" data-form="economia" style="grid-column:1/-1">+ Cashback ou outro ganho</button>
+    </div>
+    <div id="ctForm"></div>
+    <div class="secao">Por programa</div>
+    <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
+    <div class="secao">Últimos lançamentos</div>
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}<button class="mini" data-del="${x.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
+      <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
+  el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const x = c._ex.find(y => String(y.id) === b.dataset.del); if (!x) return;
+    if (CONFIRMA !== 'ex' + x.id) { CONFIRMA = 'ex' + x.id; b.textContent = 'confirmar'; return; }
+    CONFIRMA = null;
+    const ids = x.grupo_id ? c._ex.filter(y => y.grupo_id === x.grupo_id).map(y => y.id) : [x.id];
+    const { error } = await sb.from('extrato_milhas').delete().in('id', ids);
+    if (error) { aviso('Não excluiu: ' + error.message); return; }
+    await depoisDaCarteira(c, 'Lançamento excluído e painel recalculado.');
+  });
+  if (FI_FORM) formCarteira(c);
+}
+async function depoisDaCarteira(c, msg) {
+  try { await CART.syncCarteira(c.id, c._refs); } catch (e) { aviso('Salvou, mas o recálculo falhou: ' + (e.message || e)); }
+  const agora = new Date().toISOString();
+  await sb.from('clientes').update({ ultima_atualizacao: agora }).eq('id', c.id).then(({ error }) => { if (!error) c.ultima_atualizacao = agora; });
+  const pr = await sb.from('programas_milhas').select('*').eq('cliente_id', c.id);
+  if (!pr.error) D.progs = D.progs.filter(p => p.cliente_id !== c.id).concat(pr.data || []);
+  D.extMes = (D.extMes || []).concat([{ cliente_id: c.id, created_at: agora }]);
+  const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).gte('data', new Date().getFullYear() + '-01-01');
+  if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []);
+  FI_FORM = null; aviso(msg); telaFicha($('pagina'), c.id);
+}
+function formCarteira(c) {
+  const box = $('ctForm'); if (!box) return;
+  const W = c._W, hoje = hojeISO(), tipo = FI_FORM;
+  const nomes = [...new Set(W.programas.map(p => p.programa).concat(PROG_PADRAO))];
+  const comSaldo = W.programas.filter(p => p.saldo > 0).map(p => [p.programa, `${p.programa} (${num(p.saldo)})`]);
+  const dl = `<datalist id="dlProg">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+  const progIn = (nome, rot) => `<label class="fl"><span>${rot}</span><input name="${nome}" list="dlProg" autocomplete="off" required></label>`;
+  if ((tipo === 'uso' || tipo === 'transf') && !comSaldo.length) { aviso('Lance primeiro um saldo.'); FI_FORM = null; return; }
+  const corpo = {
+    entrada: `<h2>Entrada de pontos</h2>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${progIn('programa', 'Programa')}</div>
+      ${selG('tipo', 'Origem', [['acumulo', 'Acúmulo no cartão ou parceiros'], ['bonus', 'Bônus ou promoção'], ['compra', 'Compra de pontos (pago)'], ['clube', 'Clube de pontos (pago)'], ['saldo_inicial', 'Saldo herdado (já tinha antes)']], 'acumulo')}
+      <div class="duas-col">${campo('quantidade', 'Quantidade', '', 'number', 'required min="1"')}<span id="wCusto">${campo('custo_brl', 'Valor pago (R$)', '', 'number')}</span></div>
+      ${campo('validade', 'Validade dos pontos (opcional)', '', 'date')}${campo('descricao', 'Descrição', '', 'text', 'placeholder="Ex.: fatura de setembro do Unique"')}`,
+    uso: `<h2>Uso de milhas</h2>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('programa', 'Programa', comSaldo, comSaldo[0][0])}</div>
+      <div class="duas-col">${campo('quantidade', 'Milhas usadas', '', 'number', 'required min="1"')}${selG('categoria_uso', 'O que foi emitido', [['passagem', 'Passagem aérea'], ['hospedagem', 'Hospedagem'], ['upgrade', 'Upgrade'], ['produto', 'Produtos ou vale-compras'], ['outro', 'Outro']], 'passagem')}</div>
+      <div class="duas-col">${campo('taxas_brl', 'Taxas pagas (R$)', '', 'number')}${campo('valor_pagante_brl', 'Valor em dinheiro (R$)', '', 'number')}</div>
+      ${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: GRU > SCL, executiva, 2 passageiros"')}
+      <div class="sub" style="margin-top:4px">Com o valor em dinheiro, a economia entra sozinha no painel do cliente.</div>`,
+    transf: `<h2>Transferência entre programas</h2>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('de', 'De', comSaldo, comSaldo[0][0])}</div>
+      ${progIn('para', 'Para')}
+      <div class="duas-col">${campo('enviados', 'Pontos enviados', '', 'number', 'required min="1"')}${selG('paridade', 'Paridade', [['1', '1 ponto = 1 milha'], ['2', '2 pontos = 1 milha'], ['3', '3 pontos = 1 milha'], ['0.5', '1 ponto = 2 milhas']], '1')}</div>
+      <div class="duas-col">${campo('bonus', 'Bônus da promoção (%)', '0', 'number')}${campo('recebidas', 'Milhas recebidas', '', 'number', 'required min="1"')}</div>
+      ${campo('validade', 'Validade no destino (opcional)', '', 'date')}${campo('descricao', 'Descrição', '', 'text', 'placeholder="Ex.: promoção 100% Livelo > Smiles"')}`,
+    ajuste: `<h2>Expiração ou ajuste</h2>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${progIn('programa', 'Programa')}</div>
+      <div class="duas-col">${selG('tipo', 'Tipo', [['expiracao', 'Expiração'], ['menos', 'Ajuste para menos'], ['mais', 'Ajuste para mais']], 'expiracao')}${campo('quantidade', 'Quantidade', '', 'number', 'required min="1"')}</div>
+      ${campo('descricao', 'Descrição', '', 'text')}`,
+    economia: `<h2>Cashback ou outro ganho</h2>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('categoria', 'Tipo', [['cashback', 'Cashback'], ['outro', 'Outro ganho']], 'cashback')}</div>
+      <div class="duas-col">${campo('valor', 'Valor (R$)', '', 'number', 'required')}${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: cashback Méliuz de setembro"')}</div>
+      <div class="sub" style="margin-top:4px">Passagens entram sozinhas pelo Uso de milhas. Use aqui só o que não passa pela carteira.</div>`
+  }[tipo];
+  box.innerHTML = `<form class="bloco form" id="fCart">${corpo}${dl}<div class="sub" id="prevCart"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" id="salvarCart" style="flex:2">Salvar e atualizar o painel</button><button class="sec" type="button" id="cancCart" style="flex:1">Cancelar</button></div></form>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const f = $('fCart');
+  $('cancCart').onclick = () => { FI_FORM = null; box.innerHTML = ''; };
+  const estado = (nome) => W.programas.find(p => p.key === CART.normProg(nome));
+  let manual = false;
+  const upd = (ev) => {
+    const pv = $('prevCart');
+    if (tipo === 'entrada') {
+      const t = tv(f, 'tipo'); $('wCusto').hidden = t === 'acumulo' || t === 'bonus';
+      const q = nv(f, 'quantidade'), cu = nv(f, 'custo_brl');
+      pv.textContent = !$('wCusto').hidden && q > 0 && cu > 0 ? `Milheiro desta entrada: ${brl2(cu / q * 1000)}` : '';
+    } else if (tipo === 'uso') {
+      const s = estado(tv(f, 'programa')), q = nv(f, 'quantidade'), tx = nv(f, 'taxas_brl') || 0, pag = nv(f, 'valor_pagante_brl');
+      if (s && q > 0 && s.custo_medio !== null) { const real = s.custo_medio * q / 1000 + tx; pv.textContent = `Custo real: ${brl2(real)}` + (pag > 0 ? ` · economia: ${brl2(pag - real)}` : ''); } else pv.textContent = '';
+    } else if (tipo === 'transf') {
+      if (ev && ev.target && ev.target.name === 'recebidas') manual = true;
+      else if (ev && ev.target && ['enviados', 'paridade', 'bonus'].includes(ev.target.name)) manual = false;
+      const env = nv(f, 'enviados'), par = Number(tv(f, 'paridade') || 1), bon = nv(f, 'bonus') || 0;
+      if (!manual && env > 0) f.elements.recebidas.value = Math.round(env / par * (1 + bon / 100));
+    }
+  };
+  f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const erro = (m) => { $('prevCart').textContent = m; $('prevCart').style.color = 'var(--alerta)'; };
+    let linhas = [];
+    if (tipo === 'entrada') {
+      const t = tv(f, 'tipo'), q = nv(f, 'quantidade'), cu = nv(f, 'custo_brl');
+      if (!tv(f, 'programa') || !(q > 0)) return erro('Preencha programa e quantidade.');
+      if ((t === 'compra' || t === 'clube') && !(cu > 0)) return erro('Compra e clube precisam do valor pago.');
+      linhas = [{ data: tv(f, 'data'), programa: tv(f, 'programa'), tipo: t, quantidade: Math.round(q), custo_brl: t === 'acumulo' || t === 'bonus' ? null : cu, validade: tv(f, 'validade') || null, descricao: tv(f, 'descricao') || null }];
+    } else if (tipo === 'uso') {
+      const q = nv(f, 'quantidade'), s = estado(tv(f, 'programa'));
+      if (!(q > 0) || !tv(f, 'descricao')) return erro('Preencha milhas usadas e descrição.');
+      if (!s || q > s.saldo) return erro(`Saldo insuficiente: ${num(s ? s.saldo : 0)}.`);
+      linhas = [{ data: tv(f, 'data'), programa: tv(f, 'programa'), tipo: 'emissao', quantidade: -Math.round(q), categoria_uso: tv(f, 'categoria_uso'), taxas_brl: nv(f, 'taxas_brl'), valor_pagante_brl: nv(f, 'valor_pagante_brl'), descricao: tv(f, 'descricao') }];
+    } else if (tipo === 'transf') {
+      const de = tv(f, 'de'), para = tv(f, 'para'), env = nv(f, 'enviados'), rec = nv(f, 'recebidas'), par = Number(tv(f, 'paridade') || 1), s = estado(de);
+      if (!para || !(env > 0) || !(rec > 0)) return erro('Preencha destino, pontos enviados e milhas recebidas.');
+      if (CART.normProg(de) === CART.normProg(para)) return erro('Origem e destino precisam ser diferentes.');
+      if (!s || env > s.saldo) return erro(`Saldo insuficiente em ${de}: ${num(s ? s.saldo : 0)}.`);
+      const grupo = crypto.randomUUID(), d = tv(f, 'descricao');
+      linhas = [{ data: tv(f, 'data'), programa: de, tipo: 'transf_saida', quantidade: -Math.round(env), grupo_id: grupo, descricao: `Para ${para}${d ? ' · ' + d : ''}` },
+        { data: tv(f, 'data'), programa: para, tipo: 'transf_entrada', quantidade: Math.round(rec), milhas_bonus: Math.max(0, Math.round(rec - env / par)), grupo_id: grupo, validade: tv(f, 'validade') || null, descricao: `De ${de}${d ? ' · ' + d : ''}` }];
+    } else if (tipo === 'ajuste') {
+      const q = nv(f, 'quantidade'), t = tv(f, 'tipo');
+      if (!tv(f, 'programa') || !(q > 0)) return erro('Preencha programa e quantidade.');
+      linhas = [{ data: tv(f, 'data'), programa: tv(f, 'programa'), tipo: t === 'expiracao' ? 'expiracao' : 'ajuste', quantidade: t === 'mais' ? Math.round(q) : -Math.round(q), descricao: tv(f, 'descricao') || null }];
+    }
+    $('salvarCart').disabled = true; $('prevCart').style.color = ''; $('prevCart').textContent = 'Salvando...';
+    if (tipo === 'economia') {
+      const v = nv(f, 'valor'); if (!(v > 0) || !tv(f, 'descricao')) { $('salvarCart').disabled = false; return erro('Preencha valor e descrição.'); }
+      const { error } = await sb.from('historico_economia').insert({ cliente_id: c.id, categoria: tv(f, 'categoria'), data: tv(f, 'data'), descricao: tv(f, 'descricao'), valor_economia_brl: v });
+      if (error) { $('salvarCart').disabled = false; return erro('Não salvou: ' + error.message); }
+      return depoisDaCarteira(c, 'Ganho lançado. Já aparece no painel do cliente.');
+    }
+    const { error } = await sb.from('extrato_milhas').insert(linhas.map(x => ({ ...x, cliente_id: c.id })));
+    if (error) { $('salvarCart').disabled = false; return erro('Não salvou: ' + error.message); }
+    await depoisDaCarteira(c, 'Salvo. O painel do cliente já mostra a atualização.');
+  };
+}
+
+/* reuniões do cliente */
+function fiReunioes(el, c) {
+  const pedidos = D.ags.filter(a => a.cliente_id === c.id && a.status === 'solicitada');
+  el.innerHTML = `
+    ${pedidos.length ? `<div class="secao">Pedidos do cliente</div>${pedidos.map(a => `<article class="card" style="margin-bottom:8px"><div class="cab"><div class="nome" style="font-size:19px">Pediu reunião</div><span class="quando">${quando(a.created_at)}</span></div>
+      <div class="info">${[['Preferência', [a.data_preferida ? dataBR(a.data_preferida) : '', a.periodo].filter(Boolean).join(' · ')], ['Pauta', a.pauta]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
+      <div class="acoes"><button class="zap" data-conf="${a.id}">Confirmar e marcar</button></div></article>`).join('')}` : ''}
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" id="agendaCli" style="flex:1">+ Agendar</button><button class="sec" id="novaReuCli" style="flex:1">+ Resumo para o painel</button></div>
+    <div class="secao">Agenda interna</div>
+    ${(D.agenda || []).filter(x => x.cliente_id === c.id).slice(0, 8).map(htmlReuniaoAgenda).join('') || '<div class="vazio">Nenhuma reunião na agenda.</div>'}
+    <div class="secao">O que o cliente vê no painel</div>
+    <div id="reuCli"><div class="vazio">Carregando...</div></div>
+    <div class="sub">Reunião marcada como realizada na agenda, com "publicar no painel", aparece aqui sozinha.</div>`;
   carregarReunioesCliente(c);
   $('novaReuCli').onclick = () => formReuniaoCliente(c, null);
   $('agendaCli').onclick = () => meuCal() ? abrirCal({ cliente_id: c.id, nome: c.nome_completo, tipo: 'Cliente da Gestão' }) : abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: c.id, titulo: 'Reunião com ' + c.nome_completo });
-  P.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+  el.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+  el.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
+    const a = D.ags.find(x => String(x.id) === b.dataset.conf); if (!a) return;
+    const pref = a.data_preferida ? a.data_preferida + 'T' + ({ 'Manhã': '10:00', 'Tarde': '15:00', 'Noite': '19:00' }[a.periodo] || '10:00') : '';
+    abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: a.cliente_id, agendamento_id: String(a.id), titulo: 'Reunião com ' + c.nome_completo, data: pref, link: a.link_reuniao || '' });
+  });
+}
+
+/* carta do relatório mensal */
+let FI_MES = null;
+async function fiRelatorio(el, c) {
+  const mes = FI_MES || mesAnterior();
+  el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando...</div>';
+  const { data, error } = await sb.from('relatorios_mensais').select('*').eq('cliente_id', c.id).order('mes', { ascending: false });
+  if (CLI !== c.id || FI_ABA !== 'relatorio' || !$('fiCorpo')) return;
+  if (error) { el.innerHTML = `<div class="vazio">Não carregou: ${esc(error.message)}</div>`; return; }
+  const r = (data || []).find(x => String(x.mes).slice(0, 7) === mes) || {};
+  const prev = `/painel/relatorio.html?mes=${mes}&cliente=${encodeURIComponent(c.id)}`;
+  el.innerHTML = `
+    <div class="mesnav" id="fiMes" style="margin-top:12px"><button data-n="-1">‹</button><span>${mesNome(mes)}</span><button data-n="1">›</button></div>
+    <div class="sub">${r.id ? (r.publicado ? '<b style="color:var(--verde)">Publicada</b>: o cliente já vê esta carta.' : '<b style="color:var(--alerta)">Rascunho</b>: o cliente ainda não vê.') : 'Sem carta neste mês.'} Os números do relatório saem sozinhos da carteira e das economias.</div>
+    <form class="bloco form" id="fRel">
+      <label class="fl"><span>Carta do gestor</span><textarea name="carta_gestor" rows="8" placeholder="Como foi o mês, o que foi conquistado e o que vem a seguir.">${esc(r.carta_gestor || '')}</textarea></label>
+      <label class="fl"><span>Destaques (um por linha)</span><textarea name="destaques" rows="3">${esc(r.destaques || '')}</textarea></label>
+      <label class="fl"><span>Próximos passos (um por linha)</span><textarea name="proximos_passos" rows="3">${esc(r.proximos_passos || '')}</textarea></label>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" data-pub="1" style="flex:2">${r.publicado ? 'Salvar publicada' : 'Salvar e publicar'}</button><button class="sec" type="submit" data-pub="0" style="flex:1">Rascunho</button></div>
+      <a class="sec" href="${prev}" target="_blank" rel="noopener" style="margin-top:8px">Pré-visualizar o relatório</a>
+    </form>
+    ${(data || []).length ? `<div class="secao">Meses com carta</div><div class="pend">${data.map(x => `<button data-m="${String(x.mes).slice(0, 7)}"><span>${mesNome(String(x.mes).slice(0, 7))}</span><span><span style="font-size:13px;color:${x.publicado ? 'var(--verde)' : 'var(--alerta)'}">${x.publicado ? 'publicada' : 'rascunho'}</span><span class="seta">›</span></span></button>`).join('')}</div>` : ''}`;
+  $('fiMes').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_MES = mesMais(mes, +b.dataset.n); fiRelatorio(el, c); } };
+  el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { FI_MES = b.dataset.m; fiRelatorio(el, c); });
+  let pub = true;
+  el.querySelectorAll('[data-pub]').forEach(b => b.onclick = () => { pub = b.dataset.pub === '1'; });
+  $('fRel').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target;
+    if (pub && !tv(f, 'carta_gestor')) { aviso('Escreva a carta antes de publicar.'); return; }
+    const row = { cliente_id: c.id, mes: mes + '-01', carta_gestor: tv(f, 'carta_gestor') || null, destaques: tv(f, 'destaques') || null, proximos_passos: tv(f, 'proximos_passos') || null, publicado: pub, publicado_em: pub ? (r.publicado_em || new Date().toISOString()) : null };
+    const { error: er } = await sb.from('relatorios_mensais').upsert(row, { onConflict: 'cliente_id,mes' });
+    if (er) { aviso('Não salvou: ' + er.message); return; }
+    if (mes === mesAnterior()) { D.rel = (D.rel || []).filter(x => x.cliente_id !== c.id).concat([{ cliente_id: c.id, publicado: pub }]); }
+    aviso(pub ? 'Carta publicada. O cliente já vê no relatório.' : 'Rascunho salvo.'); telaFicha($('pagina'), c.id);
+  };
+}
+
+/* documentos */
+async function fiDocs(el, c) {
+  el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando...</div>';
+  const { data, error } = await sb.from('documentos').select('*').eq('cliente_id', c.id).order('created_at', { ascending: false });
+  if (CLI !== c.id || FI_ABA !== 'docs' || !$('fiCorpo')) return;
+  if (error) { el.innerHTML = `<div class="vazio">Não carregou: ${esc(error.message)}</div>`; return; }
+  el.innerHTML = `
+    <form class="bloco form" id="fDoc" style="margin-top:12px"><h2>Enviar para o painel do cliente</h2>
+      ${campo('titulo', 'Título', '', 'text', 'required placeholder="Ex.: Bilhete GRU-SCL"')}
+      ${selG('tipo', 'Tipo', TIPO_DOC, 'bilhete')}
+      <label class="fl"><span>Arquivo (PDF, imagem ou HTML, até 20 MB)</span><input type="file" name="arquivo" required accept=".pdf,.html,.htm,.png,.jpg,.jpeg,.webp"></label>
+      <button class="zap" type="submit" id="upBtn" style="margin-top:10px;width:100%">Enviar documento</button></form>
+    <div class="secao">Enviados</div>
+    <div class="bloco" style="margin-top:0">${(data || []).length ? data.map(d => `<div class="lanc"><div><b>${esc(d.titulo)}</b><small>${esc((TIPO_DOC.find(x => x[0] === d.tipo) || [0, d.tipo])[1])} · ${new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><div class="q"><button class="mini" data-ver="${esc(d.arquivo_path)}">ver</button><button class="mini" data-rm="${d.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Nenhum documento enviado.</div>'}</div>`;
+  $('fDoc').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target, file = f.elements.arquivo.files[0];
+    if (!tv(f, 'titulo') || !file) { aviso('Informe o título e escolha o arquivo.'); return; }
+    if (file.size > 20 * 1024 * 1024) { aviso('Arquivo acima de 20 MB.'); return; }
+    const nome = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.\-]+/g, '-').toLowerCase(), path = `${c.id}/${Date.now()}-${nome}`;
+    $('upBtn').disabled = true; $('upBtn').textContent = 'Enviando...';
+    const up = await sb.storage.from('documentos').upload(path, file, { contentType: /\.html?$/i.test(nome) ? 'text/html' : (file.type || 'application/octet-stream'), upsert: false });
+    if (up.error) { $('upBtn').disabled = false; $('upBtn').textContent = 'Enviar documento'; aviso('Não enviou: ' + up.error.message); return; }
+    const ins = await sb.from('documentos').insert({ cliente_id: c.id, titulo: tv(f, 'titulo'), tipo: tv(f, 'tipo'), arquivo_path: path, tamanho_bytes: file.size });
+    if (ins.error) { await sb.storage.from('documentos').remove([path]); $('upBtn').disabled = false; $('upBtn').textContent = 'Enviar documento'; aviso('Não salvou: ' + ins.error.message); return; }
+    const agora = new Date().toISOString();
+    await sb.from('clientes').update({ ultima_atualizacao: agora }).eq('id', c.id).then(({ error: e2 }) => { if (!e2) c.ultima_atualizacao = agora; });
+    aviso('Documento enviado. Já está no painel do cliente.'); fiDocs(el, c);
+  };
+  el.querySelectorAll('[data-ver]').forEach(b => b.onclick = async () => {
+    const w = window.open('', '_blank');
+    const { data: s, error: er } = await sb.storage.from('documentos').createSignedUrl(b.dataset.ver, 300);
+    if (er) { w && w.close(); aviso('Não abriu: ' + er.message); } else if (w) w.location = s.signedUrl;
+  });
+  el.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
+    const d = data.find(x => String(x.id) === b.dataset.rm); if (!d) return;
+    if (CONFIRMA !== 'doc' + d.id) { CONFIRMA = 'doc' + d.id; b.textContent = 'confirmar'; return; }
+    CONFIRMA = null;
+    await sb.storage.from('documentos').remove([d.arquivo_path]);
+    const { error: er } = await sb.from('documentos').delete().eq('id', d.id);
+    if (er) aviso('Não excluiu: ' + er.message); else { aviso('Documento excluído.'); fiDocs(el, c); }
+  });
 }
 
 /* ---------- contrato e reuniões do cliente da Gestão ---------- */
