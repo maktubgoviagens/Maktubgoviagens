@@ -280,6 +280,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import * as OPM from '/admin/app/op-milhas.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 
@@ -349,7 +350,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
 })();
 
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
-$('recarregar').onclick = () => { SITE = null; carregar(); };
+$('recarregar').onclick = () => { SITE = null; OPM.recarregar(); carregar(); };
 $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
@@ -364,7 +365,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['inicio', 'emissoes', 'reunioes', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'];
+const ABAS_ADMIN = ['opmilhas', 'inicio', 'emissoes', 'reunioes', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'];
 const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -399,9 +400,9 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'].includes(ABA) ? 'mais' : ABA;
+  const alvo = ['opmilhas', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'].includes(ABA) ? 'mais' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
-  $('topoS').textContent = { inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { opmilhas: 'Operação de milhas', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -513,6 +514,7 @@ function tela() {
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'metas') return telaMetas(P);
+  if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
   if (ABA === 'financeiro') return telaFinanceiro(P);
@@ -1346,6 +1348,7 @@ function telaMais(P) {
     ['site', 'Números do site', 0],
     ['equipe', 'Equipe, comissões e parceiros', 0],
     ['metas', 'Metas do mês', 0],
+    ['opmilhas', 'Operação de milhas dos sócios', 0],
     ['avisos', 'Avisos no celular, Telegram e WhatsApp', avisosNovos().length]
   ];
   P.innerHTML = `<h1 class="titulo">Mais</h1>
