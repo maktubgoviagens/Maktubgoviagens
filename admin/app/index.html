@@ -994,12 +994,12 @@ function blocoMetasAdmin(m, comLink) {
   const cab = `<div class="secao">Metas de ${mes}${comLink ? ' <button data-ir="metas">Definir metas ›</button>' : ''}</div>`;
   if (!m) return comLink ? cab + '<div class="vazio">Metas ainda não ativadas no Supabase (9-funil-e-metas.sql).</div>' : '';
   const e = m.empresa || {};
-  const temEmp = [e.lucro_meta1, e.lucro_meta2, e.vendas_meta, e.qtd_meta].some(x => x > 0);
+  const temEmp = [e.lucro_meta1, e.lucro_meta2, e.lucro_meta3, e.lucro_meta4, e.vendas_meta, e.qtd_meta].some(x => x > 0);
   const pessoas = (m.pessoas || []).filter(p => p.qtd_meta > 0 || p.vendas_meta > 0 || p.lucro_meta1 > 0);
   if (!temEmp && !pessoas.length) return cab + '<div class="vazio">Nenhuma meta definida para este mês.</div>';
   const n = (x) => num(x) + (x === 1 ? ' venda' : ' vendas');
   return cab + (temEmp ? `<section class="bloco" style="margin-top:0"><h2>Maktub</h2>
-      ${linhaMeta('Meta 1 · lucro líquido', +e.lucro, +e.lucro_meta1, brl)}${linhaMeta('Meta 2 · lucro líquido', +e.lucro, +e.lucro_meta2, brl)}
+      ${linhaMeta('Meta 1 · lucro líquido', +e.lucro, +e.lucro_meta1, brl)}${linhaMeta('Meta 2 · lucro líquido', +e.lucro, +e.lucro_meta2, brl)}${linhaMeta('Meta 3 · lucro líquido', +e.lucro, +e.lucro_meta3, brl)}${linhaMeta('Meta 4 · lucro líquido', +e.lucro, +e.lucro_meta4, brl)}
       ${linhaMeta('Valor vendido', +e.vendas, +e.vendas_meta, brl)}${linhaMeta('Quantidade de vendas', +e.qtd, +e.qtd_meta, n)}</section>` : '')
     + (pessoas.length ? `<section class="bloco"><h2>Por vendedor</h2>${pessoas.map(p => `<div style="margin-top:8px"><b style="font-weight:600;color:var(--verde)">${esc(p.nome)}</b>${linhaMeta('Vendas', +p.qtd, +p.qtd_meta, n)}${linhaMeta('Valor vendido', +p.vendas, +p.vendas_meta, brl)}${linhaMeta('Lucro líquido', +p.lucro, +p.lucro_meta1, brl)}</div>`).join('')}</section>` : '');
 }
@@ -1008,7 +1008,7 @@ function blocoMetasColab(m) {
   const e = m.empresa || {}, eu = m.eu || {};
   const lp = (rot, p) => p === null || p === undefined ? '' : `<div class="meta"><div class="top"><span>${rot}</span><b>${pct(p)}</b></div><div class="barra2"><i class="${p >= 100 ? 'ok' : ''}" style="width:${Math.min(p, 100)}%"></i></div><small>${p >= 100 ? 'batida' : 'faltam ' + pct(100 - p)}</small></div>`;
   const minha = (eu.qtd_meta > 0 || eu.vendas_meta > 0) ? linhaMeta('Suas vendas', +eu.qtd, +eu.qtd_meta, x => num(x)) + linhaMeta('Seu valor vendido', +eu.vendas, +eu.vendas_meta, brl) : '';
-  const emp = lp('Meta 1 da Maktub', e.meta1) + lp('Meta 2 da Maktub', e.meta2) + lp('Vendas da Maktub', e.vendas);
+  const emp = lp('Meta 1 da Maktub', e.meta1) + lp('Meta 2 da Maktub', e.meta2) + lp('Meta 3 da Maktub', e.meta3) + lp('Meta 4 da Maktub', e.meta4) + lp('Vendas da Maktub', e.vendas);
   if (!minha && !emp) return '';
   return `<div class="secao">Metas do mês</div><section class="bloco" style="margin-top:0">${minha ? '<h2>Sua meta</h2>' + minha : ''}${emp ? `<h2 style="margin-top:${minha ? 16 : 0}px">Maktub</h2>` + emp : ''}</section>`;
 }
@@ -1028,6 +1028,7 @@ async function telaMetas(P) {
     <form class="bloco form" id="fMeta">
       <h2>Metas da Maktub</h2>
       <div class="duas-col">${campo('lucro1', 'Meta 1 · lucro líquido (R$)', v(e.lucro_meta1), 'number')}${campo('lucro2', 'Meta 2 · lucro líquido (R$)', v(e.lucro_meta2), 'number')}</div>
+      <div class="duas-col">${campo('lucro3', 'Meta 3 · lucro líquido (R$, opcional)', v(e.lucro_meta3), 'number')}${campo('lucro4', 'Meta 4 · lucro líquido (R$, opcional)', v(e.lucro_meta4), 'number')}</div>
       <div class="duas-col">${campo('vendas', 'Valor vendido (R$)', v(e.vendas_meta), 'number')}${campo('qtd', 'Quantidade de vendas', v(e.qtd_meta), 'number')}</div>
       <h2 style="margin-top:18px">Meta de cada vendedor</h2>
       ${(m.pessoas || []).map(p => `<div data-u="${p.user_id}" style="margin-top:10px"><b style="font-weight:600;color:var(--verde)">${esc(p.nome)}</b>
@@ -1043,7 +1044,7 @@ async function telaMetas(P) {
     ev.preventDefault(); const f = ev.target;
     const n = (x) => x === '' || x === undefined ? null : Number(String(x).replace(',', '.'));
     $('salvarMeta').disabled = true; $('msgMeta').textContent = 'Salvando...';
-    const chamadas = [sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: null, p_lucro1: n(f.elements.lucro1.value), p_lucro2: n(f.elements.lucro2.value), p_vendas: n(f.elements.vendas.value), p_qtd: n(f.elements.qtd.value) })];
+    const chamadas = [sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: null, p_lucro1: n(f.elements.lucro1.value), p_lucro2: n(f.elements.lucro2.value), p_lucro3: n(f.elements.lucro3.value), p_lucro4: n(f.elements.lucro4.value), p_vendas: n(f.elements.vendas.value), p_qtd: n(f.elements.qtd.value) })];
     f.querySelectorAll('[data-u]').forEach(d => chamadas.push(sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: d.dataset.u, p_lucro1: n(d.querySelector('[name=pl]').value), p_lucro2: null, p_vendas: n(d.querySelector('[name=pv]').value), p_qtd: n(d.querySelector('[name=pq]').value) })));
     const r = await Promise.all(chamadas); const erro = r.find(x => x.error);
     $('salvarMeta').disabled = false;
