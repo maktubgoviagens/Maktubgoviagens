@@ -3,6 +3,12 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
+// Sempre busca a versão mais nova do app ao abrir (evita o celular mostrar uma versão antiga guardada).
+self.addEventListener('fetch', (e) => {
+  if (e.request.mode !== 'navigate') return;
+  e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => fetch(e.request)));
+});
+
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Maktub Go', body: e.data ? e.data.text() : '' }; }

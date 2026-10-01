@@ -1027,26 +1027,32 @@ async function telaMetas(P) {
   const v = (x) => x === null || x === undefined ? '' : x;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div>
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Lucro bruto no mês</div><div class="v">${brlC(+e.lucro || 0)}</div><div class="d">automático, pelas emissões</div></div>
-      <div class="num"><div class="l">Vendas no mês</div><div class="v">${brlC(+e.vendas || 0)}</div><div class="d">${num(+e.qtd || 0)} emiss${+e.qtd === 1 ? 'ão' : 'ões'}</div></div>
+    <div class="secao">Realizado no mês <span>automático, da planilha</span></div>
+    <div class="numeros" style="margin-top:0">
+      <div class="num destaque"><div class="l">Lucro bruto</div><div class="v">${brlC(+e.lucro || 0)}</div><div class="d">venda menos custo</div></div>
+      <div class="num"><div class="l">Valor vendido</div><div class="v">${brlC(+e.vendas || 0)}</div><div class="d">soma das vendas</div></div>
+      <div class="num"><div class="l">Quantidade de vendas</div><div class="v">${num(+e.qtd || 0)}</div><div class="d">emiss${+e.qtd === 1 ? 'ão' : 'ões'} no mês</div></div>
     </div>
+    <div class="secao">Progresso das metas</div>
     ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
-    <form class="bloco form" id="fMeta">
+    <button class="sec grande" id="abrirMetas" style="margin-top:14px;width:100%">Definir as metas de ${mesNome(MT_MES).toLowerCase()}</button>
+    <form class="bloco form" id="fMeta" hidden>
       <h2>Metas da Maktub</h2>
+      <div class="sub" style="margin-top:0">Aqui você define só o alvo. O realizado é sempre calculado pelas emissões da planilha e não se edita no app.</div>
       <div class="duas-col">${campo('lucro1', 'Meta 1 · lucro bruto (R$)', v(e.lucro_meta1), 'number')}${campo('lucro2', 'Meta 2 · lucro bruto (R$)', v(e.lucro_meta2), 'number')}</div>
       <div class="duas-col">${campo('lucro3', 'Meta 3 · lucro bruto (R$, opcional)', v(e.lucro_meta3), 'number')}${campo('lucro4', 'Meta 4 · lucro bruto (R$, opcional)', v(e.lucro_meta4), 'number')}</div>
-      <div class="duas-col">${campo('vendas', 'Valor vendido (R$)', v(e.vendas_meta), 'number')}${campo('qtd', 'Quantidade de vendas', v(e.qtd_meta), 'number')}</div>
+      <div class="duas-col">${campo('vendas', 'Meta de valor vendido (R$)', v(e.vendas_meta), 'number')}${campo('qtd', 'Meta de quantidade de vendas', v(e.qtd_meta), 'number')}</div>
       <h2 style="margin-top:18px">Meta de cada vendedor</h2>
       ${(m.pessoas || []).map(p => `<div data-u="${p.user_id}" style="margin-top:10px"><b style="font-weight:600;color:var(--verde)">${esc(p.nome)}</b>
-        <div class="duas-col">${campo('pq', 'Vendas (quantidade)', v(p.qtd_meta), 'number')}${campo('pv', 'Valor vendido (R$)', v(p.vendas_meta), 'number')}</div>
-        ${campo('pl', 'Lucro bruto gerado (R$, opcional)', v(p.lucro_meta1), 'number')}</div>`).join('')}
+        <div class="duas-col">${campo('pq', 'Meta de vendas (quantidade)', v(p.qtd_meta), 'number')}${campo('pv', 'Meta de valor vendido (R$)', v(p.vendas_meta), 'number')}</div>
+        ${campo('pl', 'Meta de lucro bruto (R$, opcional)', v(p.lucro_meta1), 'number')}</div>`).join('')}
       <button class="zap grande" type="submit" id="salvarMeta" style="margin-top:14px;width:100%">Salvar metas de ${mesNome(MT_MES).toLowerCase()}</button>
       <div class="sub">Deixe em branco o que não tiver meta. O time vê só a porcentagem das metas da Maktub e a própria meta. Quando uma meta da Maktub é batida, você recebe um aviso.</div>
       <div class="sub" id="msgMeta"></div>
     </form>`;
   $('voltar').onclick = () => ir('mais');
   $('mtMes').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { MT_MES = mesMais(MT_MES, +b.dataset.n); telaMetas(P); } };
+  $('abrirMetas').onclick = () => { $('fMeta').hidden = false; $('abrirMetas').hidden = true; $('fMeta').scrollIntoView({ behavior: 'smooth' }); };
   $('fMeta').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
     const n = (x) => x === '' || x === undefined ? null : Number(String(x).replace(',', '.'));
