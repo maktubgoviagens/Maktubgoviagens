@@ -118,6 +118,15 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .lanc .q{text-align:right;white-space:nowrap;color:var(--verde);font-weight:600}
 .lanc .q.neg{color:var(--alerta)}
 .lanc .mini{display:block;margin:4px 0 0 auto}
+.conf{border-top:1px solid var(--linha);padding:12px 0}
+.conf:first-child{border-top:0}
+.conf .cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.conf .cab b{font-weight:600;color:var(--verde);font-size:15px}
+.conf .cab small{color:var(--tinta-3);font-size:12.5px}
+.conf input,.conf select{width:100%;padding:11px;border:1px solid var(--linha);background:var(--creme);font-size:16px;margin-top:6px;border-radius:0}
+.conf .dif{margin-top:6px;font-weight:600;color:var(--verde);font-size:14px}
+.conf .dif.neg{color:var(--alerta)}
+.resumoConf{margin-top:12px;font-size:14px;color:var(--tinta-2)}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -1643,7 +1652,7 @@ const mesAnterior = () => mesMais(mesKey(new Date()), -1);
 const mesNomeCurto = (k) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 function cicloCliente(c) {
   const k = mesKey(new Date());
-  const saldos = (D.extMes || []).some(x => x.cliente_id === c.id);
+  const saldos = (D.extMes || []).some(x => x.cliente_id === c.id) || !!(c.conferencia_em && mesLocal(c.conferencia_em) === k);
   const reuniao = (D.agenda || []).some(a => a.cliente_id === c.id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasMes || []).some(x => x.cliente_id === c.id);
   const carta = (D.rel || []).some(r => r.cliente_id === c.id && r.publicado);
   return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
@@ -1834,7 +1843,7 @@ function telaFicha(P, id) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
-    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}</div>
+    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
     <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
@@ -1885,7 +1894,8 @@ async function fiCarteira(el, c) {
       <div class="num"><div class="l">Patrimônio</div><div class="v">${brlC(patr)}</div><div class="d">pelo valor do milheiro</div></div>
     </div>
     <div class="botoes4">
-      <button class="zap" data-form="entrada">+ Entrada</button>
+      <button class="zap" data-form="conferencia" style="grid-column:1/-1">Conferência do mês</button>
+      <button class="sec" data-form="entrada">+ Entrada</button>
       <button class="sec" data-form="uso">Uso de milhas</button>
       <button class="sec" data-form="transf">Transferência</button>
       <button class="sec" data-form="ajuste">Expiração ou ajuste</button>
@@ -1921,6 +1931,7 @@ async function depoisDaCarteira(c, msg) {
   FI_FORM = null; aviso(msg); telaFicha($('pagina'), c.id);
 }
 function formCarteira(c) {
+  if (FI_FORM === 'conferencia') return formConferencia(c);
   const box = $('ctForm'); if (!box) return;
   const W = c._W, hoje = hojeISO(), tipo = FI_FORM;
   const nomes = [...new Set(W.programas.map(p => p.programa).concat(PROG_PADRAO))];
@@ -2016,6 +2027,104 @@ function formCarteira(c) {
     const { error } = await sb.from('extrato_milhas').insert(linhas.map(x => ({ ...x, cliente_id: c.id })));
     if (error) { $('salvarCart').disabled = false; return erro('Não salvou: ' + error.message); }
     await depoisDaCarteira(c, 'Salvo. O painel do cliente já mostra a atualização.');
+  };
+}
+
+/* conferência mensal: digita o saldo de hoje e o app lança a diferença */
+function formConferencia(c) {
+  const box = $('ctForm'); if (!box) return;
+  const W = c._W, refs = c._refs || {}, primeira = !c._ex.length;
+  const progs = W.programas.filter(p => p.saldo !== 0);
+  const extras = c._confExtra || (c._confExtra = []);
+  const linha = (nome, atual, i) => `<div class="conf" data-i="${i}">
+      <div class="cab"><b>${esc(nome)}</b><small>${atual === null ? 'programa novo' : 'no painel: ' + num(atual)}</small></div>
+      <input type="number" inputmode="numeric" min="0" step="1" name="novo" placeholder="${atual === null ? 'saldo de hoje' : 'saldo de hoje (em branco = igual)'}">
+      <div class="dif" hidden></div>
+      <div class="det" hidden></div></div>`;
+  const nomes = [...new Set(W.programas.map(p => p.programa).concat(PROG_PADRAO))];
+  box.innerHTML = `<form class="bloco form" id="fConf">
+    <h2>Conferência de ${mesNomeCurto(mesKey(new Date()))}</h2>
+    <div class="sub" style="margin-top:0">Digite o saldo que aparece hoje em cada programa. O app calcula a diferença e faz os lançamentos sozinho.${primeira ? ' Como é a primeira vez, tudo entra como saldo herdado.' : ''}</div>
+    ${campo('data', 'Data da conferência', hojeISO(), 'date', 'required')}
+    <div id="confLinhas">${progs.map((p, i) => linha(p.programa, p.saldo, i)).join('')}${extras.map((n, j) => linha(n, null, progs.length + j)).join('')}</div>
+    <div class="duas-col" style="align-items:end;margin-top:8px"><label class="fl"><span>Outro programa</span><input id="confNovoProg" list="dlProgC" autocomplete="off" placeholder="Ex.: Smiles"></label><button class="sec" type="button" id="confAdd" style="height:44px">+ Adicionar</button></div>
+    <datalist id="dlProgC">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="resumoConf" id="confResumo"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" id="salvarConf" style="flex:2">Salvar conferência</button><button class="sec" type="button" id="cancConf" style="flex:1">Cancelar</button></div>
+  </form>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const f = $('fConf');
+  const lista = () => progs.map(p => ({ nome: p.programa, atual: p.saldo, key: p.key })).concat(extras.map(n => ({ nome: n, atual: null, key: CART.normProg(n) })));
+  $('cancConf').onclick = () => { FI_FORM = null; c._confExtra = []; box.innerHTML = ''; };
+  $('confAdd').onclick = () => {
+    const n = $('confNovoProg').value.trim(); if (!n) return;
+    if (lista().some(x => x.key === CART.normProg(n))) { aviso('Esse programa já está na lista.'); return; }
+    const vals = [...f.querySelectorAll('.conf [name=novo]')].map(x => x.value);
+    extras.push(n); formConferencia(c);
+    $('fConf').querySelectorAll('.conf [name=novo]').forEach((x, i) => { if (vals[i] !== undefined) x.value = vals[i]; });
+    $('fConf').dispatchEvent(new Event('input'));
+  };
+  const detalhe = (div, dif, atual) => {
+    const d = div.querySelector('.det'), tipoAtual = d.dataset.t;
+    if (!dif) { d.hidden = true; d.innerHTML = ''; d.dataset.t = ''; return; }
+    const sobe = dif > 0, chave = sobe ? 'sobe' : 'desce';
+    if (tipoAtual === chave) return;
+    d.dataset.t = chave; d.hidden = false;
+    d.innerHTML = sobe
+      ? `<select name="tipo">${(primeira || atual === null ? [['saldo_inicial', 'Saldo herdado (já tinha antes)']] : []).concat([['acumulo', 'Acúmulo no cartão ou parceiros'], ['bonus', 'Bônus ou promoção'], ['compra', 'Compra de pontos'], ['clube', 'Clube de pontos']]).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+         <input type="number" name="custo" placeholder="Valor pago (R$)" hidden step="any" inputmode="decimal">`
+      : `<select name="tipo"><option value="emissao">Uso de milhas</option><option value="expiracao">Expiração</option><option value="ajuste">Ajuste para menos</option></select>
+         <input name="desc" placeholder="O que foi emitido (ex.: GRU > LIS, 2 pax)">
+         <div class="duas-col"><input type="number" name="pagante" placeholder="Valor em dinheiro (R$)" step="any" inputmode="decimal"><input type="number" name="taxas" placeholder="Taxas (R$)" step="any" inputmode="decimal"></div>`;
+  };
+  const ler = () => lista().map((x, i) => {
+    const div = f.querySelector(`.conf[data-i="${i}"]`), v = div.querySelector('[name=novo]').value.trim();
+    const novo = v === '' ? null : Math.round(Number(v)), base = x.atual || 0, dif = novo === null ? 0 : novo - base;
+    return { ...x, div, novo, dif };
+  });
+  const upd = () => {
+    let sobe = 0, valor = 0, mexidos = 0;
+    ler().forEach(r => {
+      const el = r.div.querySelector('.dif');
+      el.hidden = !r.dif; el.className = 'dif ' + (r.dif < 0 ? 'neg' : '');
+      el.textContent = r.dif ? `${r.dif > 0 ? '+' : ''}${num(r.dif)}${refs[r.key] !== undefined ? ' · ' + brl2(r.dif * refs[r.key] / 1000) : ''}` : '';
+      detalhe(r.div, r.dif, r.atual);
+      const d = r.div.querySelector('.det');
+      if (d.dataset.t === 'sobe') { const t = d.querySelector('[name=tipo]').value; d.querySelector('[name=custo]').hidden = !(t === 'compra' || t === 'clube'); }
+      if (d.dataset.t === 'desce') { const t = d.querySelector('[name=tipo]').value; d.querySelectorAll('[name=desc],[name=pagante],[name=taxas]').forEach(x => { x.hidden = t !== 'emissao'; }); d.querySelector('.duas-col').hidden = t !== 'emissao'; }
+      if (r.novo !== null) mexidos++;
+      if (r.dif > 0) { sobe += r.dif; if (refs[r.key] !== undefined) valor += r.dif * refs[r.key] / 1000; }
+    });
+    $('confResumo').innerHTML = mexidos ? `<b>${plural(mexidos, 'programa conferido', 'programas conferidos')}</b>${sobe ? ` · ${num(sobe)} novos pontos${valor ? ', cerca de ' + brl2(valor) + ' em patrimônio' : ''}` : ''}` : '';
+  };
+  f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const data = tv(f, 'data'), R = ler(), linhas = [];
+    if (!R.some(r => r.novo !== null)) { aviso('Digite o saldo de pelo menos um programa.'); return; }
+    for (const r of R) {
+      if (!r.dif) continue;
+      const d = r.div.querySelector('.det'), t = d.querySelector('[name=tipo]').value;
+      if (r.dif > 0) {
+        const custo = d.querySelector('[name=custo]').value.trim() === '' ? null : Number(d.querySelector('[name=custo]').value.replace(',', '.'));
+        if ((t === 'compra' || t === 'clube') && !(custo > 0)) { aviso(`${r.nome}: informe o valor pago.`); return; }
+        linhas.push({ data, programa: r.nome, tipo: t, quantidade: r.dif, custo_brl: t === 'compra' || t === 'clube' ? custo : null, descricao: 'Conferência mensal' });
+      } else if (t === 'emissao') {
+        const desc = d.querySelector('[name=desc]').value.trim(), pag = d.querySelector('[name=pagante]').value.trim(), tx = d.querySelector('[name=taxas]').value.trim();
+        if (!desc) { aviso(`${r.nome}: descreva o que foi emitido.`); return; }
+        linhas.push({ data, programa: r.nome, tipo: 'emissao', quantidade: r.dif, categoria_uso: 'passagem', descricao: desc, valor_pagante_brl: pag ? Number(pag.replace(',', '.')) : null, taxas_brl: tx ? Number(tx.replace(',', '.')) : null });
+      } else linhas.push({ data, programa: r.nome, tipo: t, quantidade: r.dif, descricao: 'Conferência mensal' });
+    }
+    $('salvarConf').disabled = true; $('salvarConf').textContent = 'Salvando...';
+    if (linhas.length) {
+      const { error } = await sb.from('extrato_milhas').insert(linhas.map(x => ({ ...x, cliente_id: c.id })));
+      if (error) { $('salvarConf').disabled = false; $('salvarConf').textContent = 'Salvar conferência'; aviso('Não salvou: ' + error.message); return; }
+    }
+    const agora = new Date().toISOString();
+    const cf = await sb.from('clientes').update({ conferencia_em: agora }).eq('id', c.id);
+    if (!cf.error) c.conferencia_em = agora;
+    c._confExtra = [];
+    await depoisDaCarteira(c, linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.');
   };
 }
 
