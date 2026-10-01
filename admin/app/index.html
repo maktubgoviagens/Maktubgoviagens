@@ -173,6 +173,39 @@ button.card.em{text-align:left;width:100%;cursor:pointer;font:inherit;color:inhe
 .caixas{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
 .fc{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;cursor:pointer}
 .fc input{width:20px;height:20px;accent-color:var(--verde)}
+.toque{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);margin-top:6px}
+.ajuste{background:var(--branco);border:1px solid rgba(138,101,32,.45);padding:4px 14px 14px;margin-top:14px}
+.ajuste .grupo{margin-top:12px}
+.fl small{display:block;font-size:11.5px;color:var(--tinta-3);margin-top:4px}
+button.lin{width:100%;background:none;border:0;border-top:1px solid var(--linha);font:inherit;color:inherit;cursor:pointer;text-align:left}
+button.lin:first-of-type{border-top:0}
+button.lin .seta{color:var(--dourado);margin-left:6px}
+.icone{position:relative}
+.icone .bola{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;border-radius:9px;background:var(--alerta);color:#fff;font-size:10px;line-height:17px;text-align:center;padding:0 4px;font-weight:600;font-family:Montserrat,sans-serif}
+.nav.seis button{font-size:9.5px;letter-spacing:.03em}
+.av{display:grid;grid-template-columns:30px 1fr;gap:10px;background:var(--branco);border:1px solid var(--linha);padding:12px;margin-bottom:6px;text-decoration:none;color:inherit;width:100%;text-align:left;font:inherit;cursor:pointer}
+.av.novo{border-left:3px solid var(--dourado)}
+.av .ic{width:30px;height:30px;border-radius:50%;background:var(--creme-2);display:grid;place-items:center;color:var(--dourado);font-size:13px}
+.av .ic svg{width:16px;height:16px}
+.av .t{font-size:14.5px;color:var(--verde);line-height:1.3}
+.av .d{font-size:12.5px;color:var(--tinta-3);margin-top:2px;white-space:pre-line}
+.av .q{font-size:11px;color:var(--tinta-3);margin-top:4px}
+.canal{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--linha);font-size:14px}
+.canal:first-of-type{border-top:0}
+.canal small{display:block;font-size:12px;color:var(--tinta-3);margin-top:2px}
+.canal .ok{color:var(--ok);font-size:12px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.canal .sec,.canal .zap{flex:0 0 auto;min-width:0;padding:8px 12px;font-size:11px}
+.conv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--linha);font-size:14px}
+.conv:first-of-type{border-top:0}
+.conv .m{grid-column:1/-1;height:6px;background:var(--creme-2);position:relative;margin-top:4px}
+.conv .m i{position:absolute;inset:0 auto 0 0;background:var(--verde)}
+.conv b{font-weight:600;color:var(--verde);font-variant-numeric:tabular-nums}
+.conv small{grid-column:1/-1;font-size:12px;color:var(--tinta-3)}
+.resq{display:flex;gap:6px;margin-top:10px}
+.resq button{flex:1;padding:9px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--linha);background:var(--branco);cursor:pointer;color:var(--tinta-2)}
+.resq button.f{border-color:var(--ok);color:var(--ok)}
+.resq button.n{border-color:rgba(160,86,31,.45);color:var(--alerta)}
+.tag.ok{border-color:rgba(47,107,74,.45);color:var(--ok)}
 .resumo{background:var(--creme-2);border-left:3px solid var(--dourado);padding:10px 14px;margin-top:16px}
 .resumo .lin{border-top-color:rgba(26,56,38,.08)}
 .lin.forte span{color:var(--verde);font-weight:600}
@@ -201,6 +234,7 @@ button.card.em{text-align:left;width:100%;cursor:pointer;font:inherit;color:inhe
     <img src="/ativos/simbolo-creme.png" alt="Maktub Go">
     <div><div class="n">Maktub Go</div><div class="s" id="topoS">Operação</div></div>
     <div class="acoes">
+      <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
       <button class="icone" id="recarregar" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
       <a class="icone" href="/admin/" aria-label="Administração completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg></a>
       <button class="icone" id="sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
@@ -255,7 +289,7 @@ const ST_SOL = [['nova','Nova'],['em_analise','Em análise'],['diagnostico_agend
 
 /* ================= estado ================= */
 const D = { leads: [], sols: [], tal: [], talErro: null, clientes: [], gestores: [], progs: [], eco: [], voos: [], viagens: [], ags: [], convPend: 0,
-  perfil: null, meuId: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
+  perfil: null, meuId: null, avisos: [], avSit: null, reunioes: [], reErro: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
 let ADMIN = false;
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
@@ -275,6 +309,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   D.perfil = perfil; D.meuId = session.user.id; ADMIN = perfil.papel === 'admin';
   D.eu = String(perfil.nome || '').split(' ')[0];
   $('portao').hidden = true; $('app').hidden = false;
+  if (ADMIN && 'serviceWorker' in navigator) navigator.serviceWorker.register('/admin/app/sw.js', { scope: '/admin/app/' }).catch(() => {});
   montarNav();
   lerHash();
   marcarNav();
@@ -283,6 +318,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
 
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
 $('recarregar').onclick = () => { SITE = null; carregar(); };
+$('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
 window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
@@ -296,38 +332,42 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['inicio', 'emissoes', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe'];
-const ABAS_COLAB = ['inicio', 'emissoes', 'agenda', 'comissao'];
+const ABAS_ADMIN = ['inicio', 'emissoes', 'reunioes', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos'];
+const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = (ADMIN ? ABAS_ADMIN : ABAS_COLAB).includes(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
+  RE_ED = ABA === 'reunioes' && h[1] ? h[1] : null;
 }
 const NAV_IC = {
   inicio: '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>',
   emissoes: '<path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/>',
+  reunioes: '<path d="M4 5h16v11H9l-4 4v-4H4Z"/><path d="M8 9h8M8 12h5"/>',
   agenda: '<rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   financeiro: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   comissao: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.5M12 6.5v1.5M12 16v1.5"/>',
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
 function montarNav() {
-  const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro'], ['mais', 'Mais']]
-                      : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['agenda', 'Agenda'], ['comissao', 'Comissão']];
+  const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Reuniões'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro'], ['mais', 'Mais']]
+                      : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Reuniões'], ['agenda', 'Agenda'], ['comissao', 'Comissão']];
+  $('nav').classList.toggle('seis', itens.length > 5);
+  $('sino').hidden = !ADMIN;
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
 function ir(aba, extra) {
-  ABA = aba; CLI = null; EM_ED = null; FILTRO = 'todos';
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; FILTRO = 'todos';
   if (extra) extra();
   history.pushState(null, '', '#' + aba);
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['leads', 'clientes', 'site', 'equipe'].includes(ABA) ? 'mais' : ABA;
+  const alvo = ['leads', 'clientes', 'site', 'equipe', 'avisos'].includes(ABA) ? 'mais' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
-  $('topoS').textContent = { inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Reuniões', avisos: 'Avisos', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -342,8 +382,10 @@ async function carregar(silencioso) {
     sb.from('fechamentos').select('*'),
     sb.rpc('parceiros_ativos'),
     sb.rpc('time_nomes'),
-    carregarAgendaEm()
+    carregarAgendaEm(),
+    sb.from('reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
   ]);
+  D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
   D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
   if (ADMIN) {
@@ -359,7 +401,8 @@ async function carregar(silencioso) {
       sb.from('viagens').select('*').gte('data_viagem', iso(ontem)).lte('data_viagem', iso(em120)).order('data_viagem'),
       sb.from('agendamentos_reuniao').select('*').in('status', ['solicitada', 'confirmada']).order('created_at', { ascending: false }).limit(200),
       sb.from('convites').select('id', { count: 'exact', head: true }).eq('status', 'enviado'),
-      carregarEquipe()
+      carregarEquipe(),
+      carregarAvisos()
     ]);
     const erro = q.slice(0, 10).find(r => r.error && r !== q[2]);
     if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
@@ -419,7 +462,10 @@ function htmlEvento(e) {
 function tela() {
   if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length + convitesNovos().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
   const ag = checkinsTotal() + reunioesAConfirmar().length; $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
+  if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
+  if (ABA === 'reunioes') return telaReunioes(P);
+  if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
   if (ABA === 'financeiro') return telaFinanceiro(P);
@@ -444,6 +490,7 @@ function telaInicio(P) {
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago && String(e.data_negociacao) >= mesMais(mesKey(new Date()), -2)).length, () => ir('financeiro')],
     ['Reuniões a confirmar', reunioesAConfirmar().length, () => ir('agenda')],
+    ['Retornos de reuniões para hoje', retornosHoje().length, () => ir('reunioes', () => { RE_FILTRO = 'retorno'; })],
     ['Milhas vencendo em 30 dias', venc30.length, () => ir('agenda')],
     ['Indicações de clientes aguardando', D.convPend, () => location.href = '/admin/?view=convitesAll'],
     ['Painéis sem atualização há 30+ dias', semAtualizacao().length, () => ir('clientes', () => { FILTRO = 'atrasados'; })]
@@ -454,8 +501,10 @@ function telaInicio(P) {
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     <div class="secao">Precisa de você</div>
     <div class="pend">${itens.map(([t, n], i) => `<button data-i="${i}"><span>${t}</span><span><b class="${n ? 'tem' : ''}">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>
+    ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
     <div class="secao">A Maktub hoje</div>
     <div class="numeros">
+      ${(c => `<div class="num destaque"><div class="l">Conversão do mês</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} reuniões decididas</div></div>`)(conversao(reunioesDoPeriodo(mesKey(new Date()), 'mes')))}
       <div class="num destaque"><div class="l">Lucro líquido do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
       <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">a pagar ao time</div></div>
       <div class="num"><div class="l">Patrimônio sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(D.progs.reduce((s, p) => s + (Number(p.saldo) || 0), 0))} milhas e pontos</div></div>
@@ -469,6 +518,7 @@ function telaInicio(P) {
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  ligarAvisos(P);
   carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div><div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div><div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; });
 }
 
@@ -483,8 +533,12 @@ function telaInicioColab(P) {
       <div class="num destaque"><div class="l">Sua comissão em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'} no mês</div></div>
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
+    <button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Registrar reunião ou atendimento</button>
+    ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
+  $('novaReuniao').onclick = () => ir('reunioes', () => { RE_ED = 'nova'; });
+  ligarCardsReuniao(P);
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
 }
@@ -513,7 +567,7 @@ function infoSinc() {
   const alertas = ADMIN ? [...(r.vendedores_nao_encontrados || []).map(v => `Vendedor "${esc(v)}" da planilha não está na equipe do app`), ...(r.ignorados || []).slice(0, 5).map(i => `${i.linha ? 'Linha ' + i.linha + ': ' : ''}${esc(i.motivo)}`)] : [];
   return `<div class="sub" style="margin-top:8px">Lançamentos vêm da planilha. Última sincronização: ${u}.</div>${alertas.length ? `<div class="config" style="margin-top:8px">${alertas.join('<br>')}</div>` : ''}`;
 }
-let EM_MES = mesKey(new Date()), EM_ED = null, EM_VEND = 'todos', FIN_MODO = 'mes', CONFIRMA = null;
+let EM_MES = mesKey(new Date()), EM_ED = null, EM_VEND = 'todos', EM_SERV = 'todos', FIN_MODO = 'mes', CONFIRMA = null;
 
 function seletorMes(id) {
   return `<div class="mesnav" id="${id}"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(EM_MES)}${mesFechado(EM_MES) ? ' <i class="tag">fechado</i>' : ''}</span><button data-n="1" aria-label="Próximo mês">›</button></div>`;
@@ -521,6 +575,10 @@ function seletorMes(id) {
 function ligarMes(id, render) { $(id).onclick = (e) => { const b = e.target.closest('button'); if (b) { EM_MES = mesMais(EM_MES, +b.dataset.n); render(); } }; }
 
 /* cálculo igual ao do banco (método 1 por padrão) */
+const temManual = (x) => x != null && x !== '';
+const pctPadraoVend = (id) => +((D.equipe.find(x => x.user_id === id) || {}).comissao_pct || 0);
+const pctPadraoParc = (id) => +((D.parceirosAdm.find(x => x.id === id) || {}).pct || 0);
+const nomeParc = (id) => ((D.parceirosAdm.find(x => x.id === id) || D.parc.find(x => x.id === id) || {}).nome || '');
 function calcular(v) {
   const t = Number((D.cfg && D.cfg.imposto_pct) ?? 6) / 100;
   const custo = Math.round(((+v.milhas || 0) * (+v.milheiro || 0) / 1000 + (+v.taxas || 0)) * 100) / 100;
@@ -530,13 +588,13 @@ function calcular(v) {
   let imposto, comissao, repasse;
   if (D.cfg && D.cfg.comissao_desconta_imposto) {
     const iref = Math.max(m, 0) * t;
-    comissao = r2(v.comissao_manual != null && v.comissao_manual !== '' ? +v.comissao_manual : Math.max(m - iref, 0) * cp);
-    repasse = r2(v.repasse_manual != null && v.repasse_manual !== '' ? +v.repasse_manual : Math.max(m - iref - comissao, 0) * pp);
+    comissao = r2(temManual(v.comissao_manual) && !v.pct_app ? +v.comissao_manual : Math.max(m - iref, 0) * cp);
+    repasse = r2(temManual(v.repasse_manual) && !v.ppct_app ? +v.repasse_manual : Math.max(m - iref - comissao, 0) * pp);
     imposto = r2(Math.max(m - comissao - repasse, 0) * t);
   } else {
     imposto = r2(Math.max(m, 0) * t);
-    comissao = r2(v.comissao_manual != null && v.comissao_manual !== '' ? +v.comissao_manual : Math.max(m - imposto, 0) * cp);
-    repasse = r2(v.repasse_manual != null && v.repasse_manual !== '' ? +v.repasse_manual : Math.max(m - imposto - comissao, 0) * pp);
+    comissao = r2(temManual(v.comissao_manual) && !v.pct_app ? +v.comissao_manual : Math.max(m - imposto, 0) * cp);
+    repasse = r2(temManual(v.repasse_manual) && !v.ppct_app ? +v.repasse_manual : Math.max(m - imposto - comissao, 0) * pp);
   }
   return { custo, lucro_bruto: r2(m), imposto, comissao, repasse, lucro_liquido: r2(m - imposto - comissao - repasse) };
 }
@@ -546,6 +604,7 @@ function telaEmissoes(P) {
   if (EM_ED) return telaFormEmissao(P);
   let L = doMes(EM_MES);
   if (ADMIN && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
+  if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `
     <h1 class="titulo">${ADMIN ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
@@ -553,6 +612,7 @@ function telaEmissoes(P) {
     ${infoSinc()}
     ${seletorMes('emMes')}
     ${ADMIN ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
+    <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${brlC(soma(L, 'valor_receber'))} em vendas</div></div>
       ${ADMIN ? `<div class="num"><div class="l">Lucro líquido</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
@@ -562,11 +622,13 @@ function telaEmissoes(P) {
         <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div><span>Venda:</span> ${brl2(e.valor_receber)}${ADMIN ? ` · <span>Líquido:</span> ${brl2(e.lucro_liquido)}` : ''} · <span>Comissão:</span> ${brl2(e.comissao)}</div>
-        ${ADMIN ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}</div>
+        ${ADMIN ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
+        <div class="toque">${ADMIN ? 'Toque para ver e definir comissão e parceiro' : 'Toque para ver os detalhes'} ›</div></div>
       </button>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
+  $('emServ').onchange = (e) => { EM_SERV = e.target.value; telaEmissoes(P); };
   P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
 }
 
@@ -587,13 +649,14 @@ function telaFormEmissao(P) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Emissões</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? 'Registrar <em>emissão</em>' : esc(e.comprador || e.produto || 'Emissão')}</h1>
-    ${daPlanilha ? `<div class="config" style="margin-top:12px">Esta venda vem da planilha. Para alterar, edite a linha na planilha; o app atualiza em até 5 minutos.${D.cfg && D.cfg.planilha_url ? ` <a href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener">Abrir a planilha</a>` : ''}</div>` : ''}
+    ${daPlanilha ? `<div class="config" style="margin-top:12px">${ADMIN ? 'Comissão, parceiro, vendedor e serviço você define aqui embaixo. Os demais dados vêm da planilha: para alterar, edite a linha nela; o app atualiza em até 5 minutos.' : 'Os dados desta venda vêm da planilha. Para alterar, edite a linha na planilha; o app atualiza em até 5 minutos. O check-in você marca aqui mesmo.'}${D.cfg && D.cfg.planilha_url ? ` <a href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener">Abrir a planilha</a>` : ''}</div>` : ''}
+    ${daPlanilha ? blocoAjuste(e, travado) : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
     <form id="fEm" class="form" autocomplete="off">
       <div class="grupo">Serviço</div>
       <label class="fl"><span>Tipo de serviço</span><select name="servico">${SERVICOS.map(s => `<option ${s === e.servico ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
       ${campo('data_negociacao', 'Data da venda', e.data_negociacao, 'date', 'required')}
-      ${ADMIN ? `<label class="fl"><span>Vendedor</span><select name="vendedor_id"><option value="">Sem vendedor</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === e.vendedor_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
+      ${ADMIN && !daPlanilha ? `<label class="fl"><span>Vendedor</span><select name="vendedor_id"><option value="">Sem vendedor</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === e.vendedor_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
 
       <div class="grupo">Cliente e passageiros</div>
       ${campo('comprador', 'Comprador', e.comprador, 'text', 'required')}
@@ -602,7 +665,7 @@ function telaFormEmissao(P) {
       ${campo('contato', 'Contato (WhatsApp)', e.contato, 'tel')}
       ${campo('cpf_nf', 'CPF ou CNPJ para a nota', e.cpf_nf, 'text', 'inputmode="numeric"')}
       <label class="fl"><span>PF ou PJ</span><select name="pf_pj"><option value="">-</option>${['PF', 'PJ'].map(x => `<option ${x === e.pf_pj ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-      <label class="fl"><span>Indicação de parceiro</span><select name="parceiro_id"><option value="">Sem parceiro</option>${D.parc.map(p => `<option value="${p.id}" ${p.id === e.parceiro_id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></label>
+      <label class="fl" ${daPlanilha ? 'hidden' : ''}><span>Indicação de parceiro</span><select name="parceiro_id"><option value="">Sem parceiro</option>${D.parc.map(p => `<option value="${p.id}" ${p.id === e.parceiro_id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></label>
 
       <div class="grupo">Voo</div>
       <div class="duas-col">${campo('origem', 'Origem', e.origem, 'text', 'maxlength="40"')}${campo('destino', 'Destino', e.destino, 'text', 'maxlength="40"')}</div>
@@ -620,7 +683,8 @@ function telaFormEmissao(P) {
       <div class="duas-col">${campo('fornecedor', 'Fornecedor das milhas', e.fornecedor)}${campo('conta', 'Conta usada', e.conta)}</div>
       ${ADMIN ? `<div class="duas-col">${campo('comissao_manual', 'Comissão manual (opcional)', e.comissao_manual, 'number')}${campo('repasse_manual', 'Repasse manual (opcional)', e.repasse_manual, 'number')}</div>` : ''}
 
-      <div class="resumo" id="resumo"></div>
+      ${ADMIN && !daPlanilha ? `<div class="duas-col">${campo('comissao_pct_app', 'Comissão do vendedor (%)', e.comissao_pct_app, 'number', `placeholder="padrão: ${pct(nova ? pctPadraoVend(e.vendedor_id) : e.comissao_pct)}"`)}${campo('parceiro_pct_app', 'Remuneração do parceiro (%)', e.parceiro_pct_app, 'number', `placeholder="padrão do parceiro"`)}</div>` : ''}
+      ${daPlanilha ? '' : '<div class="resumo" id="resumo"></div>'}
 
       <div class="grupo">Pagamento</div>
       <div class="duas-col"><label class="fl"><span>Forma</span><select name="forma_pagamento"><option value="">-</option>${['Pix', 'Cartão de crédito', 'Boleto', 'Transferência'].map(x => `<option ${String(e.forma_pagamento || '').toLowerCase() === x.toLowerCase() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>${campo('parcelas', 'Parcelas', e.parcelas, 'number')}</div>
@@ -634,22 +698,36 @@ function telaFormEmissao(P) {
       <div class="sub" id="msgEm" style="margin-top:8px"></div>
     </form>`;
   const f = $('fEm');
-  const financeiros = ['servico', 'data_negociacao', 'vendedor_id', 'parceiro_id', 'milhas', 'milheiro', 'taxas', 'custo_direto', 'valor_receber', 'comissao_manual', 'repasse_manual'];
+  const financeiros = ['servico', 'data_negociacao', 'vendedor_id', 'parceiro_id', 'milhas', 'milheiro', 'taxas', 'custo_direto', 'valor_receber', 'comissao_manual', 'repasse_manual', 'comissao_pct_app', 'parceiro_pct_app'];
+  if (daPlanilha && ADMIN) ligarAjuste(e, travado);
   if (travado || !podeEditar) financeiros.forEach(n => { if (f.elements[n]) f.elements[n].disabled = true; });
-  if (!podeEditar) [...f.elements].forEach(x => x.disabled = true);
+  if (!podeEditar) [...f.elements].forEach(x => { if (!(daPlanilha && /^checkin_/.test(x.name))) x.disabled = true; });
+  if (daPlanilha) ['checkin_ida', 'checkin_volta'].forEach(n => {
+    const cx = f.elements[n]; if (!cx) return;
+    cx.onchange = async () => {
+      const { error } = await sb.rpc('marcar_checkin', { p_id: e.id, p_trecho: n.slice(8), p_feito: cx.checked });
+      if (error) { cx.checked = !cx.checked; aviso('Não salvou: ' + error.message); return; }
+      e[n] = cx.checked; const v = D.voosEm.find(x => x.id === e.id); if (v) v[n] = cx.checked;
+      aviso(cx.checked ? 'Check-in marcado como feito.' : 'Check-in desmarcado.');
+    };
+  });
   const lerValores = () => {
     const g = (n) => f.elements[n] ? f.elements[n].value : undefined;
     const serv = g('servico');
     const v = { milhas: ehMilhas(serv) ? g('milhas') : 0, milheiro: ehMilhas(serv) ? g('milheiro') : 0, taxas: ehMilhas(serv) ? g('taxas') : g('custo_direto'), valor_receber: g('valor_receber'), comissao_manual: g('comissao_manual'), repasse_manual: g('repasse_manual') };
     const vend = ADMIN ? g('vendedor_id') : D.meuId;
-    v.comissao_pct = (!nova && vend === e.vendedor_id) ? e.comissao_pct : (ADMIN ? ((D.equipe.find(x => x.user_id === vend) || {}).comissao_pct || 0) : D.perfil.comissao_pct);
+    v.comissao_pct = (!nova && vend === e.vendedor_id && e.comissao_pct_app == null) ? e.comissao_pct : (ADMIN ? pctPadraoVend(vend) : D.perfil.comissao_pct);
     const parc = g('parceiro_id');
-    v.parceiro_pct = (!nova && parc === (e.parceiro_id || '')) ? e.parceiro_pct : (ADMIN ? ((D.parceirosAdm.find(p => p.id === parc) || {}).pct || 0) : 0);
+    v.parceiro_pct = (!nova && parc === (e.parceiro_id || '') && e.parceiro_pct_app == null) ? e.parceiro_pct : (ADMIN ? pctPadraoParc(parc) : 0);
+    const cpa = g('comissao_pct_app'), ppa = g('parceiro_pct_app');
+    if (temManual(cpa)) { v.comissao_pct = +String(cpa).replace(',', '.'); v.pct_app = true; }
+    if (temManual(ppa)) { v.parceiro_pct = +String(ppa).replace(',', '.'); v.ppct_app = true; }
     return v;
   };
   const atualizar = () => {
     const serv = f.elements.servico.value;
     $('blocoMilhas').hidden = !ehMilhas(serv); $('blocoCusto').hidden = ehMilhas(serv);
+    if (daPlanilha) return;
     const r = calcular(lerValores());
     $('resumo').innerHTML = ADMIN
       ? `<div class="lin"><span>Custo</span><span>${brl2(r.custo)}</span></div><div class="lin"><span>Lucro bruto</span><span>${brl2(r.lucro_bruto)}</span></div><div class="lin"><span>Imposto</span><span>− ${brl2(r.imposto)}</span></div><div class="lin"><span>Comissão do vendedor</span><span>− ${brl2(r.comissao)}</span></div><div class="lin"><span>Parceiro</span><span>− ${brl2(r.repasse)}</span></div><div class="lin forte"><span>Lucro líquido da Maktub</span><span>${brl2(r.lucro_liquido)}</span></div>`
@@ -675,9 +753,10 @@ function telaFormEmissao(P) {
       observacoes: g('observacoes') || null
     };
     ['pago', 'nota_gerada', 'checkin_ida', 'checkin_volta', 'monitorado', 'voado', 'feito_pos'].forEach(n => row[n] = f.elements[n].checked);
-    if (ADMIN) { row.vendedor_id = g('vendedor_id') || null; row.comissao_manual = numOuNulo(g('comissao_manual')); row.repasse_manual = numOuNulo(g('repasse_manual')); }
+    if (ADMIN) { row.vendedor_id = g('vendedor_id') || null; row.comissao_manual = numOuNulo(g('comissao_manual')); row.repasse_manual = numOuNulo(g('repasse_manual')); row.comissao_pct_app = numOuNulo(g('comissao_pct_app')); row.parceiro_pct_app = numOuNulo(g('parceiro_pct_app')); }
     else if (nova) row.vendedor_id = D.meuId;
     if (travado) financeiros.forEach(n => delete row[n]);
+  if (!ADMIN) { delete row.comissao_pct_app; delete row.parceiro_pct_app; }
     $('salvar').disabled = true; $('msgEm').textContent = 'Salvando...';
     const q = nova ? sb.from('emissoes').insert(row).select().single() : sb.from('emissoes').update(row).eq('id', e.id).select().single();
     const { data, error } = await q;
@@ -694,6 +773,298 @@ function telaFormEmissao(P) {
     const { error } = await sb.from('emissoes').delete().eq('id', e.id);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
     D.emissoes = D.emissoes.filter(x => x.id !== e.id); CONFIRMA = null; aviso('Emissão excluída.'); history.back();
+  };
+}
+
+/* ---------- ajuste do administrador nas emissões da planilha ---------- */
+function blocoAjuste(e, travado) {
+  if (!ADMIN) return '';
+  const vPlan = e.vendedor_app ? '' : e.vendedor_id;
+  return `<form class="ajuste form" id="fAj" autocomplete="off">
+    <div class="grupo">Comissão e parceiro desta venda</div>
+    <label class="fl"><span>Vendedor</span><select name="vendedor_app">
+      <option value="">${e.vendedor_app ? 'Usar o da planilha' : `Da planilha: ${esc(nomeTime(vPlan) || 'sem vendedor')}`}</option>
+      ${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === e.vendedor_app ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+    <label class="fl"><span>Comissão do vendedor (%)</span><input name="comissao_pct_app" type="number" step="any" min="0" max="100" inputmode="decimal" value="${e.comissao_pct_app ?? ''}"><small id="ajVendDica"></small></label>
+    <label class="fl"><span>Parceiro que indicou</span><select name="parceiro_app">
+      <option value="">${e.parceiro_app ? 'Usar o da planilha' : (e.parceiro_id ? `Da planilha: ${esc(nomeParc(e.parceiro_id))}` : 'Sem parceiro')}</option>
+      ${D.parceirosAdm.filter(p => p.ativo || p.id === e.parceiro_app).map(p => `<option value="${p.id}" ${p.id === e.parceiro_app ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></label>
+    <label class="fl"><span>Remuneração do parceiro (%)</span><input name="parceiro_pct_app" type="number" step="any" min="0" max="100" inputmode="decimal" value="${e.parceiro_pct_app ?? ''}"><small id="ajParcDica"></small></label>
+    <label class="fl"><span>Tipo de serviço</span><select name="servico_app">
+      <option value="">${e.servico_app ? 'Usar o da planilha' : `Da planilha: ${esc(e.servico || '-')}`}</option>
+      ${SERVICOS.map(x => `<option ${x === e.servico_app ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+    <div class="resumo" id="resumoAj"></div>
+    <button class="zap grande" type="submit" id="salvarAj" style="margin-top:12px;width:100%">Salvar comissão e parceiro</button>
+    ${travado ? '<div class="sub">Mês fechado: vendedor, percentuais e parceiro estão travados. O tipo de serviço continua editável.</div>' : '<div class="sub">Deixe um percentual em branco para usar o padrão. O que você definir aqui vale só para esta venda e a planilha não apaga.</div>'}
+    <div class="sub" id="msgAj"></div>
+  </form>`;
+}
+function ligarAjuste(e, travado) {
+  const f = $('fAj'); if (!f) return;
+  if (travado) ['vendedor_app', 'comissao_pct_app', 'parceiro_app', 'parceiro_pct_app'].forEach(n => f.elements[n].disabled = true);
+  const g = (n) => f.elements[n].value.trim();
+  const valores = () => {
+    const vendApp = g('vendedor_app'), parcApp = g('parceiro_app');
+    const vend = vendApp || (e.vendedor_app ? null : e.vendedor_id);
+    const parc = parcApp || (e.parceiro_app ? null : e.parceiro_id);
+    const padraoV = vend === e.vendedor_id && e.comissao_pct_app == null ? +e.comissao_pct : pctPadraoVend(vend);
+    const padraoP = parc === e.parceiro_id && e.parceiro_pct_app == null ? +e.parceiro_pct : pctPadraoParc(parc);
+    const cpa = g('comissao_pct_app'), ppa = g('parceiro_pct_app');
+    const v = { milhas: e.milhas, milheiro: e.milheiro, taxas: e.taxas, valor_receber: e.valor_receber,
+      comissao_manual: e.comissao_manual, repasse_manual: e.repasse_manual,
+      comissao_pct: temManual(cpa) ? +cpa.replace(',', '.') : padraoV, pct_app: temManual(cpa),
+      parceiro_pct: parc ? (temManual(ppa) ? +ppa.replace(',', '.') : padraoP) : 0, ppct_app: temManual(ppa) };
+    return { v, vend, parc, padraoV, padraoP };
+  };
+  const atualizar = () => {
+    const { v, vend, parc, padraoV, padraoP } = valores(), r = calcular(v);
+    $('ajVendDica').textContent = vend ? `Em branco = ${pct(padraoV)}${temManual(e.comissao_manual) && !v.pct_app ? `, mas a planilha tem ${brl2(e.comissao_manual)} fixos na coluna Comissão` : ''}` : 'Escolha o vendedor para calcular a comissão';
+    $('ajParcDica').textContent = parc ? `Em branco = ${pct(padraoP)} (padrão do parceiro)` : 'Sem parceiro nesta venda';
+    f.elements.parceiro_pct_app.disabled = travado || !parc;
+    $('resumoAj').innerHTML = `<div class="lin"><span>Valor da venda</span><span>${brl2(e.valor_receber)}</span></div><div class="lin"><span>Custo</span><span>− ${brl2(r.custo)}</span></div><div class="lin"><span>Imposto (${pct(D.cfg ? D.cfg.imposto_pct : 6)})</span><span>− ${brl2(r.imposto)}</span></div><div class="lin"><span>Comissão ${vend ? esc(nomeTime(vend)) : ''} (${pct(v.comissao_pct)})</span><span>− ${brl2(r.comissao)}</span></div><div class="lin"><span>Parceiro ${parc ? esc(nomeParc(parc)) + ` (${pct(v.parceiro_pct)})` : ''}</span><span>− ${brl2(r.repasse)}</span></div><div class="lin forte"><span>Lucro líquido da Maktub</span><span>${brl2(r.lucro_liquido)}</span></div>`;
+  };
+  f.oninput = atualizar; f.onchange = atualizar; atualizar();
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const num = (x) => x === '' ? null : Number(x.replace(',', '.'));
+    const cpa = num(g('comissao_pct_app')), ppa = num(g('parceiro_pct_app'));
+    if ([cpa, ppa].some(x => x != null && (isNaN(x) || x < 0 || x > 100))) { $('msgAj').textContent = 'Os percentuais precisam estar entre 0 e 100.'; return; }
+    const row = { servico_app: g('servico_app') || null };
+    if (!travado) Object.assign(row, { vendedor_app: g('vendedor_app') || null, parceiro_app: g('parceiro_app') || null, comissao_pct_app: cpa, parceiro_pct_app: ppa });
+    $('salvarAj').disabled = true; $('msgAj').textContent = 'Salvando...';
+    const { data, error } = await sb.from('emissoes').update(row).eq('id', e.id).select().single();
+    $('salvarAj').disabled = false;
+    if (error) { $('msgAj').textContent = 'Não salvou: ' + error.message; return; }
+    const i = D.emissoes.findIndex(x => x.id === data.id); if (i >= 0) D.emissoes[i] = data;
+    aviso(`Salvo. Comissão: ${brl2(data.comissao)} · parceiro: ${brl2(data.repasse)} · líquido: ${brl2(data.lucro_liquido)}.`);
+    telaFormEmissao($('pagina'));
+  };
+}
+
+/* ================= avisos ================= */
+const VAPID = 'BC3X1jCIe3UoWoPDk9q857kykbSiRbJQQZ8gNhf2fmHiCFDlWgzNMzrIXhwRPdytmYqcfLgz7zlsPy27HodS7EQ';
+const AV_IC = { venda: '$', pagamento: '$', lead: '@', convite: '+', reuniao: '•', talento: '+', checkin: '✈', milhas: '!', receber: '$', resumo: '≡', fechou: '✓', retorno: '↺', teste: '•', sistema: '•' };
+async function carregarAvisos() {
+  const [a, s] = await Promise.all([sb.from('avisos').select('*').order('id', { ascending: false }).limit(200), sb.rpc('avisos_situacao')]);
+  D.avisos = a.data || []; D.avSit = s.error ? null : s.data;
+}
+const avisosNovos = () => D.avSit ? D.avisos.filter(a => a.id > (D.avSit.visto_ate || 0)) : [];
+function htmlAviso(a) {
+  const novo = D.avSit && a.id > (D.avSit.visto_ate || 0);
+  return `<button class="av ${novo ? 'novo' : ''}" data-av="${esc(a.link || '')}"><span class="ic">${esc(AV_IC[a.tipo] || '•')}</span><span><span class="t" style="display:block">${esc(a.titulo)}</span>${a.texto ? `<span class="d" style="display:block">${esc(a.texto)}</span>` : ''}<span class="q" style="display:block">${quando(a.created_at)}</span></span></button>`;
+}
+function ligarAvisos(P) {
+  P.querySelectorAll('[data-av]').forEach(b => b.onclick = () => {
+    const h = (b.dataset.av.split('#')[1] || '').split('/');
+    if (!h[0]) return ir('inicio');
+    ir(h[0], () => { if (h[1] && h[0] === 'emissoes') EM_ED = h[1]; if (h[1] && h[0] === 'reunioes') RE_ED = h[1]; });
+    if (h[1]) history.replaceState(null, '', '#' + h.join('/'));
+  });
+}
+const pushSuportado = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function b64u(s) { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...b].map(c => c.charCodeAt(0))); }
+async function estadoPush() {
+  if (!pushSuportado()) return 'sem';
+  if (Notification.permission === 'denied') return 'negado';
+  const reg = await navigator.serviceWorker.getRegistration('/admin/app/');
+  const sub = reg && await reg.pushManager.getSubscription();
+  return sub ? 'ativo' : 'inativo';
+}
+async function ativarPush() {
+  if (!pushSuportado()) { aviso(ehIOS() && !instalado() ? 'No iPhone, abra o app pelo ícone Maktub Op da tela de início.' : 'Este navegador não recebe notificações.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { aviso('Notificações não autorizadas. Libere nas configurações do celular.'); return; }
+  const reg = await navigator.serviceWorker.register('/admin/app/sw.js', { scope: '/admin/app/' });
+  await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+  const j = sub.toJSON();
+  const { error } = await sb.rpc('push_inscrever', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_aparelho: navigator.userAgent });
+  if (error) { aviso('Não ativou: ' + error.message); return; }
+  aviso('Notificações ativadas neste aparelho.');
+}
+async function desativarPush() {
+  const reg = await navigator.serviceWorker.getRegistration('/admin/app/');
+  const sub = reg && await reg.pushManager.getSubscription();
+  if (sub) { await sb.rpc('push_remover', { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+  aviso('Notificações desligadas neste aparelho.');
+}
+async function telaAvisos(P) {
+  const s = D.avSit;
+  const pendente = !s;
+  const tg = s && s.telegram_bot ? `https://t.me/${s.telegram_bot}?start=${s.telegram_codigo}` : '';
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Mais</button>
+    <h1 class="titulo" style="margin-top:6px">Avisos da <em>Maktub</em></h1>
+    <div class="sub">Vendas, pagamentos, leads, reuniões, check-ins, milhas vencendo e o resumo do dia, na hora em que acontecem.</div>
+    ${pendente ? '<div class="config" style="margin-top:12px">Os avisos ainda não foram ativados no Supabase. Siga o guia de ativação.</div>' : `
+    <section class="bloco"><h2>Onde você recebe</h2>
+      <div class="canal"><div>Neste celular<small id="pushTxt">Verificando...</small></div><span id="pushAcao"></span></div>
+      <div class="canal"><div>Telegram<small>${s.telegram_conectados ? `${s.telegram_conectados} conta${s.telegram_conectados === 1 ? '' : 's'} conectada${s.telegram_conectados === 1 ? '' : 's'}` : 'Nenhuma conta conectada'}</small></div>${tg ? `<a class="${s.telegram_conectados ? 'sec' : 'zap'}" href="${esc(tg)}" target="_blank" rel="noopener">${s.telegram_conectados ? 'Conectar outra' : 'Conectar'}</a>` : '<span class="sub" style="margin:0">aguardando o robô</span>'}</div>
+      <div class="canal"><div>WhatsApp<small>${s.whatsapp ? 'Enviando pelo WAHA' : 'Precisa do WAHA acessível pela internet'}</small></div>${s.whatsapp ? '<span class="ok">ativo</span>' : '<span class="sub" style="margin:0">não ligado</span>'}</div>
+      <button class="sec grande" id="teste" style="margin-top:10px;width:100%">Enviar aviso de teste</button>
+    </section>`}
+    <div class="secao">Histórico ${D.avisos.length ? `<span>${D.avisos.length} mais recentes</span>` : ''}</div>
+    <div id="lista">${D.avisos.length ? D.avisos.map(htmlAviso).join('') : '<div class="vazio">Nenhum aviso ainda.</div>'}</div>`;
+  $('voltar').onclick = () => ir('mais');
+  ligarAvisos(P);
+  if (D.avisos.length && D.avSit && D.avisos[0].id > (D.avSit.visto_ate || 0)) {
+    const ate = D.avisos[0].id;
+    sb.rpc('avisos_marcar_vistos', { p_ate: ate }).then(({ error }) => { if (!error) { D.avSit.visto_ate = ate; $('bSino').hidden = true; } });
+  }
+  if (pendente) return;
+  $('teste').onclick = async () => { const { error } = await sb.rpc('avisos_teste'); aviso(error ? 'Não enviou: ' + error.message : 'Aviso de teste enviado. Deve chegar em alguns segundos.'); setTimeout(() => carregarAvisos().then(() => ABA === 'avisos' && telaAvisos(P)), 4000); };
+  const st = await estadoPush();
+  const txt = { sem: ehIOS() && !instalado() ? 'No iPhone, abra pelo ícone Maktub Op da tela de início para ativar' : 'Este navegador não recebe notificações', negado: 'Bloqueado nas configurações do celular', ativo: 'Notificações ativadas', inativo: 'Desligado neste aparelho' }[st];
+  if (!$('pushTxt')) return;
+  $('pushTxt').textContent = txt;
+  $('pushAcao').innerHTML = st === 'ativo' ? '<button class="sec" id="pushOff">Desligar</button>' : st === 'inativo' ? '<button class="zap" id="pushOn">Ativar</button>' : '';
+  if ($('pushOn')) $('pushOn').onclick = async () => { await ativarPush(); telaAvisos(P); };
+  if ($('pushOff')) $('pushOff').onclick = async () => { await desativarPush(); telaAvisos(P); };
+}
+
+/* ================= reuniões e conversão ================= */
+const RE_TIPOS = ['Reunião de venda', 'Cotação', 'Diagnóstico da Gestão de Milhas', 'Reunião com cliente', 'Pós-venda', 'Parceria', 'Reunião interna'];
+const RE_PRODUTOS = ['Passagens', 'Viagem completa / pacote', 'Hotelaria', 'Gestão de Milhas', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
+const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
+const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
+const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
+let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null;
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const retornosHoje = () => D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && r.proximo_passo_data <= hojeISO());
+const mesLocal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+function reunioesDoPeriodo(k, modo) { return D.reunioes.filter(r => modo === 'ano' ? mesLocal(r.data).slice(0, 4) === k.slice(0, 4) : mesLocal(r.data) === k); }
+function conversao(L) {
+  const fechou = L.filter(r => r.resultado === 'Fechou').length, perdeu = L.filter(r => r.resultado === 'Não fechou').length;
+  const decididas = fechou + perdeu;
+  return { fechou, perdeu, decididas, andamento: L.filter(r => r.resultado === 'Em andamento').length, taxa: decididas ? fechou / decididas * 100 : null, valor: soma(L.filter(r => r.resultado === 'Fechou'), 'valor_fechado') };
+}
+function blocoConv(titulo, L, chave, rotulo) {
+  const grupos = {};
+  L.filter(r => r.resultado !== 'Não se aplica').forEach(r => { const k = chave(r) || 'Não informado'; (grupos[k] = grupos[k] || []).push(r); });
+  const linhas = Object.entries(grupos).map(([k, arr]) => [k, conversao(arr), arr.length]).sort((a, b) => b[2] - a[2]);
+  return `<section class="bloco"><h2>${titulo}</h2>${linhas.length ? linhas.map(([k, c, n]) => `<div class="conv"><span>${esc(rotulo ? rotulo(k) : k)}</span><b>${c.taxa === null ? '-' : pct(c.taxa)}</b><span class="m"><i style="width:${c.taxa || 0}%"></i></span><small>${c.fechou} fechou · ${c.perdeu} não fechou · ${c.andamento} em andamento${c.valor ? ' · ' + brl2(c.valor) : ''}</small></div>`).join('') : '<div class="vazio">Sem reuniões no período.</div>'}</section>`;
+}
+function htmlReuniao(r) {
+  const tag = { 'Fechou': 'ok', 'Não fechou': 'alerta', 'Em andamento': 'ouro' }[r.resultado] || '';
+  const atrasado = r.resultado === 'Em andamento' && r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
+  return `<div class="card ${atrasado ? 'novo' : ''}" style="margin-bottom:8px">
+    <button class="card em" data-r="${r.id}" style="border:0;padding:0;background:none">
+      <div class="cab"><div><div class="nome">${esc(r.cliente)}</div><span class="tag">${esc(r.produto)}</span> <span class="tag ${tag}">${esc(r.resultado)}</span></div><span class="quando">${dataCurta(new Date(r.data))}</span></div>
+      <div class="info"><div>${esc(r.tipo)}${r.origem ? ' · ' + esc(r.origem) : ''}${ADMIN ? ' · ' + esc(nomeTime(r.responsavel_id) || 'sem responsável') : ''}</div>
+      ${r.resultado === 'Fechou' && r.valor_fechado ? `<div><span>Fechado:</span> ${brl2(r.valor_fechado)}</div>` : r.valor_estimado ? `<div><span>Potencial:</span> ${brl2(r.valor_estimado)}</div>` : ''}
+      ${r.resultado === 'Não fechou' && r.motivo_perda ? `<div><span>Motivo:</span> ${esc(r.motivo_perda)}</div>` : ''}
+      ${r.resultado === 'Em andamento' && (r.proximo_passo || r.proximo_passo_data) ? `<div style="${atrasado ? 'color:var(--alerta)' : ''}"><span>Próximo passo:</span> ${esc(r.proximo_passo || '')}${r.proximo_passo_data ? ' · ' + dataCurta(dia(r.proximo_passo_data)) : ''}</div>` : ''}</div>
+    </button>
+    ${r.resultado === 'Em andamento' ? `<div class="resq"><button class="f" data-res="Fechou" data-id="${r.id}">Fechou</button><button class="n" data-res="Não fechou" data-id="${r.id}">Não fechou</button></div>` : ''}
+  </div>`;
+}
+function ligarCardsReuniao(P) {
+  P.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { ABA = 'reunioes'; RE_ED = b.dataset.r; history.pushState(null, '', '#reunioes/' + RE_ED); marcarNav(); telaReunioes($('pagina')); scrollTo(0, 0); });
+  P.querySelectorAll('[data-res]').forEach(b => b.onclick = () => { ABA = 'reunioes'; RE_ED = b.dataset.id; RE_PRE = { resultado: b.dataset.res }; history.pushState(null, '', '#reunioes/' + RE_ED); marcarNav(); telaReunioes($('pagina')); scrollTo(0, 0); });
+}
+function telaReunioes(P) {
+  if (RE_ED) return telaFormReuniao(P);
+  if (D.reErro) { P.innerHTML = `<h1 class="titulo">Reuniões</h1><div class="config" style="margin-top:12px">O registro de reuniões ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>`; return; }
+  const base = reunioesDoPeriodo(EM_MES, RE_MODO);
+  let L = base;
+  if (RE_FILTRO === 'retorno') L = retornosHoje();
+  else if (RE_FILTRO !== 'todos') L = base.filter(r => r.resultado === RE_FILTRO);
+  const c = conversao(base);
+  P.innerHTML = `
+    <h1 class="titulo">Reuniões e <em>conversão</em></h1>
+    <button class="zap grande" id="novaR" style="margin-top:14px;width:100%">+ Registrar reunião ou atendimento</button>
+    <div class="seg" id="reModo"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
+    ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
+      <div class="num"><div class="l">Reuniões</div><div class="v">${base.length}</div><div class="d">${c.andamento} em andamento</div></div>
+      <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">nas reuniões que fecharam</div></div>
+      <div class="num ${retornosHoje().length ? 'alerta' : ''}"><div class="l">Retornos para hoje</div><div class="v">${retornosHoje().length}</div><div class="d">inclui atrasados</div></div>
+    </div>
+    ${blocoConv('Conversão por produto', base, r => r.produto)}
+    ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
+    ${blocoConv('Conversão por origem', base, r => r.origem)}
+    ${(m => m.length ? `<section class="bloco"><h2>Por que não fechou</h2>${m.map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}</section>` : '')(Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]))}
+    <div class="secao">Registros</div>
+    <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['retorno', 'Retornar hoje'], ...RE_RES.map(x => [x, x])].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
+    <div class="lista" style="margin-top:8px">${L.length ? L.map(htmlReuniao).join('') : '<div class="vazio">Nenhuma reunião com esse filtro.</div>'}</div>
+    <div class="sub">Conversão = reuniões que fecharam ÷ (fecharam + não fecharam). Pós-venda, parceria e reuniões internas podem ser marcadas como "Não se aplica" para não entrar na conta.</div>`;
+  $('novaR').onclick = () => { RE_ED = 'nova'; history.pushState(null, '', '#reunioes/nova'); telaReunioes(P); scrollTo(0, 0); };
+  $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
+  ligarMes('reMes', () => telaReunioes(P));
+  $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
+  ligarCardsReuniao(P);
+}
+function telaFormReuniao(P) {
+  const nova = RE_ED === 'nova';
+  const agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+  const base = nova ? { data: agora, tipo: 'Reunião de venda', produto: 'Passagens', resultado: 'Em andamento', responsavel_id: D.meuId } : D.reunioes.find(x => x.id === RE_ED);
+  if (!base) { RE_ED = null; return telaReunioes(P); }
+  const r = { ...base, ...(RE_PRE || {}) }; RE_PRE = null;
+  const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+  const sel = (nome, rot, ops, val) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}${val && !ops.includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select></label>`;
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Reuniões</button>
+    <h1 class="titulo" style="margin-top:6px">${nova ? 'Registrar <em>reunião</em>' : esc(r.cliente)}</h1>
+    <form id="fRe" class="form" autocomplete="off">
+      <div class="grupo">Reunião</div>
+      ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
+      ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
+      ${sel('produto', 'Produto', RE_PRODUTOS, r.produto)}
+      ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
+      <div class="grupo">Cliente</div>
+      ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required')}
+      ${campo('contato', 'WhatsApp ou e-mail', r.contato)}
+      <label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+      <div class="grupo">Resultado</div>
+      <div class="seg" id="reRes" style="margin-top:6px">${RE_RES.map(x => `<button type="button" data-v="${x}" class="${x === r.resultado ? 'on' : ''}">${x === 'Não se aplica' ? 'N/A' : x}</button>`).join('')}</div>
+      <input type="hidden" name="resultado" value="${esc(r.resultado)}">
+      <div id="blFechou">${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}</div>
+      <div id="blPerdeu"><label class="fl"><span>Por que não fechou</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label></div>
+      <div id="blAndamento">
+        ${campo('valor_estimado', 'Valor potencial (R$)', r.valor_estimado, 'number')}
+        ${campo('proximo_passo', 'Próximo passo', r.proximo_passo, 'text', 'placeholder="Ex.: enviar a cotação, ligar para confirmar datas"')}
+        ${campo('proximo_passo_data', 'Retornar em', r.proximo_passo_data, 'date')}
+        <div class="sub">No dia do retorno, você recebe um aviso.</div>
+      </div>
+      <label class="fl"><span>Anotações</span><textarea name="observacoes" rows="3">${esc(r.observacoes || '')}</textarea></label>
+      <button class="zap grande" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
+      ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
+      <div class="sub" id="msgRe"></div>
+    </form>`;
+  const f = $('fRe');
+  const mostrar = () => { const v = f.elements.resultado.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = v !== 'Em andamento'; };
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.resultado.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); };
+  mostrar();
+  $('voltar').onclick = () => history.back();
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
+    const n2 = (x) => x === '' ? null : Number(x.replace(',', '.'));
+    if (!g('cliente')) { $('msgRe').textContent = 'Informe o cliente.'; return; }
+    const res = g('resultado');
+    const row = { data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
+      resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
+      valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
+      proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null };
+    if (ADMIN) row.responsavel_id = g('responsavel_id') || null;
+    $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
+    const q = nova ? sb.from('reunioes').insert(row).select().single() : sb.from('reunioes').update(row).eq('id', base.id).select().single();
+    const { data, error } = await q;
+    $('salvarRe').disabled = false;
+    if (error) { $('msgRe').textContent = 'Não salvou: ' + error.message; return; }
+    const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    aviso(res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? 'Reunião registrada.' : 'Reunião atualizada.');
+    RE_ED = null; history.replaceState(null, '', '#reunioes'); telaReunioes(P); scrollTo(0, 0);
+  };
+  if ($('excluirRe')) $('excluirRe').onclick = async () => {
+    if (CONFIRMA !== 're' + base.id) { CONFIRMA = 're' + base.id; $('excluirRe').textContent = 'Toque de novo para confirmar'; return; }
+    const { error } = await sb.from('reunioes').delete().eq('id', base.id);
+    if (error) { aviso('Não excluiu: ' + error.message); return; }
+    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; history.replaceState(null, '', '#reunioes'); telaReunioes(P);
   };
 }
 
@@ -742,13 +1113,16 @@ function telaFinanceiro(P) {
     </div>
     ${meses}
     <section class="bloco"><h2>Lucro líquido por serviço</h2>${barras(Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, Math.round(v)]), 'ouro')}</section>
-    <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => `<div class="lin"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}</span><span>${brl2(x.c)}</span></div>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: comissão a pagar.</div></section>
+    <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => `<button class="lin" data-vend="${k || 'sem'}"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}</span><span>${brl2(x.c)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: comissão a pagar. Toque para ver as vendas.</div></section>
+    <section class="bloco"><h2>Por serviço</h2>${Object.keys(porServ).length ? Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button class="lin" data-serv="${esc(k)}"><span>${esc(k)} · ${L.filter(e => e.servico === k).length}</span><span>${brl2(v)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: lucro líquido. Toque para ver as vendas.</div></section>
     <section class="bloco"><h2>Pendências financeiras</h2>
       <div class="lin"><span>Pagamentos a receber (${aReceber.length})</span><span>${brl2(soma(aReceber, 'valor_receber'))}</span></div>
       <div class="lin"><span>Notas fiscais a emitir no ano</span><span>${semNota.length}</span></div>
     </section>
     ${FIN_MODO === 'mes' ? `<button class="${fech ? 'sec' : 'zap'} grande" id="fechar" style="margin-top:14px;width:100%">${fech ? 'Reabrir o mês' : 'Fechar o mês e travar os valores'}</button>
     <div class="sub">Fechar o mês trava valores, vendedores e comissões de ${mesNome(EM_MES)}. Check-in, nota e pagamento continuam editáveis.</div>` : ''}`;
+  P.querySelectorAll('[data-vend]').forEach(b => b.onclick = () => { EM_VEND = b.dataset.vend; EM_SERV = 'todos'; ir('emissoes'); });
+  P.querySelectorAll('[data-serv]').forEach(b => b.onclick = () => { EM_SERV = b.dataset.serv; EM_VEND = 'todos'; ir('emissoes'); });
   $('finModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { FIN_MODO = b.dataset.m; telaFinanceiro(P); } };
   ligarMes('finMes', () => telaFinanceiro(P));
   if ($('fechar')) $('fechar').onclick = async () => {
@@ -768,7 +1142,8 @@ function telaMais(P) {
     ['leads', 'Leads do site', leadsSemResposta().length + convitesNovos().length],
     ['clientes', 'Clientes da Gestão de Milhas', semAtualizacao().length],
     ['site', 'Números do site', 0],
-    ['equipe', 'Equipe, comissões e parceiros', 0]
+    ['equipe', 'Equipe, comissões e parceiros', 0],
+    ['avisos', 'Avisos no celular, Telegram e WhatsApp', avisosNovos().length]
   ];
   P.innerHTML = `<h1 class="titulo">Mais</h1>
     <div class="pend" style="margin-top:14px">${itens.map(([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
@@ -931,7 +1306,7 @@ function listaLeads() {
       return `<article class="card ${r.status === 'novo' ? 'novo' : ''}">
         <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span></div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
-        <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}</div>
+        <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}<button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: r.tipo === 'corporativo' ? 'Maktub Corporativo' : 'Passagens', tipo: 'Reunião de venda' }))}">Registrar reunião</button></div>
         <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
       </article>`;
     }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
@@ -942,6 +1317,7 @@ function listaLeads() {
         <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">Gestão de Milhas</span></div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${[['Cidade', r.cidade], ['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Viagem dos sonhos', r.objetivo], ['Indicado por', r.indicado_por]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
         <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('solicitacoes_acesso', r.id, r.status, ST_SOL)}</div>
+        <div class="acoes"><button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' }))}">Registrar diagnóstico</button></div>
       </article>`).join('') : '<div class="vazio">Nenhuma solicitação com esse filtro.</div>';
   } else {
     $('filtro').innerHTML = '';
@@ -953,6 +1329,7 @@ function listaLeads() {
         <div class="acoes">${r.whatsapp ? `<a class="zap" href="https://wa.me/${zapNum(r.whatsapp)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}</div>
       </article>`).join('') : '<div class="vazio">Nenhum cadastro no período.</div>';
   }
+  el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => { const pre = JSON.parse(b.dataset.reu); ir('reunioes', () => { RE_ED = 'nova'; RE_PRE = pre; }); });
   el.querySelectorAll('select[data-t]').forEach(s => s.onchange = async () => {
     const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);
     if (error) { aviso('Não salvou: ' + error.message); return; }
