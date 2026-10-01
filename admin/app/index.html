@@ -235,6 +235,9 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .etapas{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .etapas button{padding:8px 10px;font-size:12px;border:1px solid var(--linha);background:var(--branco);cursor:pointer;color:var(--tinta-2);border-radius:18px}
 .etapas button.on{background:var(--verde);border-color:var(--verde);color:var(--creme)}
+#calInline{min-height:620px;width:100%;overflow:auto;background:var(--branco);border:1px solid var(--linha);margin-top:10px}
+.copiar{display:flex;gap:6px;align-items:center;margin-top:6px}
+.copiar code{flex:1;font-size:11.5px;background:var(--creme-2);padding:8px;overflow-x:auto;white-space:nowrap}
 .resumo{background:var(--creme-2);border-left:3px solid var(--dourado);padding:10px 14px;margin-top:16px}
 .resumo .lin{border-top-color:rgba(26,56,38,.08)}
 .lin.forte span{color:var(--verde);font-weight:600}
@@ -318,7 +321,7 @@ const ST_SOL = [['nova','Nova'],['em_analise','Em análise'],['diagnostico_agend
 
 /* ================= estado ================= */
 const D = { leads: [], sols: [], tal: [], talErro: null, clientes: [], gestores: [], progs: [], eco: [], voos: [], viagens: [], ags: [], convPend: 0,
-  perfil: null, meuId: null, metas: null, areu: [], agenda: [], tt: null, avisos: [], avSit: null, reunioes: [], reErro: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
+  perfil: null, meuId: null, metas: null, areu: [], agenda: [], tt: null, cal: null, calInfo: null, avisos: [], avSit: null, reunioes: [], reErro: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
 let ADMIN = false;
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
@@ -419,6 +422,8 @@ async function carregar(silencioso) {
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
   { const ar = await sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000); D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda; }
   { const tt = await sb.rpc('ticktick_situacao'); D.tt = tt.error ? null : tt.data; }
+  { const cl = await sb.rpc('cal_links'); D.cal = cl.error ? null : (cl.data || []); }
+  if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
   D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
@@ -1206,7 +1211,8 @@ function telaFormReuniao(P) {
       <div class="grupo">Reuniões</div>
       ${D.agenda === null ? '<div class="sub">As reuniões são ativadas pelo 11-agenda-reunioes.sql.</div>' : `
       ${!nova && reunioesDe(base.id).length ? reunioesDe(base.id).map(htmlReuniaoAgenda).join('') : ''}
-      <div class="sub" style="margin-top:8px">${nova ? 'Já tem reunião marcada ou feita com este cliente? Registre aqui.' : 'Nova reunião com este cliente:'}</div>
+      ${!nova && meuCal() ? '<button class="zap" type="button" id="calAtd" style="margin-top:8px;width:100%">Agendar pelo meu Cal.com</button>' : ''}
+      <div class="sub" style="margin-top:8px">${nova ? 'Já tem reunião marcada ou feita com este cliente? Registre aqui.' : meuCal() ? 'Ou registre uma reunião sem o Cal.com:' : 'Nova reunião com este cliente:'}</div>
       ${campo('nr_assunto', 'Assunto da reunião', '', 'text', 'placeholder="Ex.: diagnóstico das milhas, apresentação da cotação"')}
       ${campo('nr_data', 'Data e hora', '', 'datetime-local')}
       <label class="fc"><input type="checkbox" name="nr_feita"><span>Essa reunião já aconteceu</span></label>
@@ -1221,6 +1227,7 @@ function telaFormReuniao(P) {
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+  if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); };
   mostrar();
   $('voltar').onclick = () => history.back();
@@ -1602,7 +1609,7 @@ function telaFicha(P, id) {
   ligarContrato(c);
   carregarReunioesCliente(c);
   $('novaReuCli').onclick = () => formReuniaoCliente(c, null);
-  $('agendaCli').onclick = () => abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: c.id, titulo: 'Reunião com ' + c.nome_completo });
+  $('agendaCli').onclick = () => meuCal() ? abrirCal({ cliente_id: c.id, nome: c.nome_completo, tipo: 'Cliente da Gestão' }) : abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: c.id, titulo: 'Reunião com ' + c.nome_completo });
   P.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
 }
 
@@ -1684,6 +1691,7 @@ function formReuniaoCliente(c, x) {
 
 /* ---------- agenda ---------- */
 function telaAgenda(P) {
+  if (AG_ED === 'cal') return telaCal(P);
   if (AG_ED) return telaFormAgenda(P);
   if (AG_VISTA === 'reunioes') return telaReunioesAgenda(P);
   const E = eventos();
@@ -1719,6 +1727,79 @@ function htmlReuniaoAgenda(x) {
     <span style="display:block;margin-top:4px"><span class="tag ${tag}">${esc(x.status)}</span>${falta ? ' <span class="tag alerta">falta o resumo</span>' : ''}${passou ? ' <span class="tag alerta">como foi?</span>' : ''}${x.ticktick && Object.keys(x.ticktick).length ? ' <span class="tag">no TickTick</span>' : ''}</span>
     ${x.resumo ? `<span class="d" style="display:block;margin-top:4px">${esc(String(x.resumo).slice(0, 220))}${String(x.resumo).length > 220 ? '...' : ''}</span>` : ''}</span></button>`;
 }
+const meuCal = () => ((D.cal || []).find(x => x.user_id === D.meuId) || {}).cal_link || '';
+function blocoCal() {
+  if (D.cal === null) return '';
+  const info = D.calInfo;
+  return `<section class="bloco"><h2>Cal.com</h2>
+    <div class="canal"><div>Seu link do Cal.com<small>${meuCal() ? 'cal.com/' + esc(meuCal()) : 'Ainda não cadastrado. Cole o link do evento que você usa para reuniões.'}</small></div><button class="sec" id="calEd">${meuCal() ? 'Alterar' : 'Cadastrar'}</button></div>
+    <div id="calForm" hidden>${campo('cal_link', 'Link do evento no Cal.com', meuCal() ? 'https://cal.com/' + meuCal() : '', 'text', 'placeholder="https://cal.com/seu-usuario/reuniao"')}<button class="zap" id="calSalvar" style="margin-top:8px;width:100%">Salvar meu link</button></div>
+    ${ADMIN ? `<div class="sub" style="margin-top:10px">Equipe: ${(D.cal || []).map(x => esc(x.nome) + (x.cal_link ? ' (conectado)' : ' (sem link)')).join(' · ')}</div>` : ''}
+    ${ADMIN && info ? `<details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Dados do webhook (para colar no Cal.com de cada pessoa)</summary>
+      <div class="sub" style="margin-top:6px">Subscriber URL</div><div class="copiar"><code>${esc(info.url)}</code><button class="mini" data-copiar="${esc(info.url)}">copiar</button></div>
+      <div class="sub" style="margin-top:6px">Secret</div><div class="copiar"><code>${esc(info.segredo)}</code><button class="mini" data-copiar="${esc(info.segredo)}">copiar</button></div>
+      <div class="sub" style="margin-top:6px">Eventos: Booking Created, Booking Rescheduled e Booking Cancelled.</div></details>` : ''}
+  </section>`;
+}
+function ligarCal(P) {
+  if ($('calEd')) $('calEd').onclick = () => { $('calForm').hidden = !$('calForm').hidden; };
+  if ($('calSalvar')) $('calSalvar').onclick = async () => {
+    const { error } = await sb.rpc('cal_definir', { p_user: D.meuId, p_link: P.querySelector('[name=cal_link]').value });
+    if (error) { aviso(error.message); return; }
+    const cl = await sb.rpc('cal_links'); D.cal = cl.data || []; aviso('Link do Cal.com salvo.'); telaAgenda(P);
+  };
+  P.querySelectorAll('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copiar); aviso('Copiado.'); } catch (_) { aviso('Não foi possível copiar. Selecione e copie manualmente.'); } });
+}
+let CAL_CTX = null;
+function abrirCal(ctx) { CAL_CTX = ctx || {}; ABA = 'agenda'; AG_ED = 'cal'; AG_VISTA = 'reunioes'; history.pushState(null, '', '#agenda/cal'); marcarNav(); telaAgenda($('pagina')); scrollTo(0, 0); }
+function telaCal(P) {
+  const link = meuCal();
+  if (!link) { AG_ED = null; aviso('Cadastre seu link do Cal.com primeiro.'); return telaReunioesAgenda(P); }
+  const ctx = CAL_CTX || {};
+  const atds = (D.reunioes || []).filter(r => r.resultado === 'Em andamento' || r.id === ctx.atendimento_id);
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Reuniões</button>
+    <h1 class="titulo" style="margin-top:6px">Agendar pelo <em>Cal.com</em></h1>
+    <form id="fCal" class="form" autocomplete="off">
+      <div class="grupo">Com quem</div>
+      <label class="fl"><span>Atendimento do comercial</span><select name="atendimento_id"><option value="">-</option>${atds.map(r => `<option value="${r.id}" ${r.id === ctx.atendimento_id ? 'selected' : ''}>${esc(r.cliente)} · ${esc(r.produto)}${r.trecho ? ' · ' + esc(r.trecho) : ''}</option>`).join('')}</select></label>
+      ${ADMIN && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === ctx.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
+      <div class="duas-col">${campo('nome', 'Nome do convidado', ctx.nome || '', 'text')}${campo('email', 'E-mail do convidado', ctx.email || '', 'email')}</div>
+      <label class="fl"><span>Tipo</span><select name="tipo">${AG_TIPOS.map(t => `<option ${t === (ctx.tipo || (ctx.cliente_id ? 'Cliente da Gestão' : 'Comercial · Viagens')) ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <button class="zap grande" type="submit" style="margin-top:12px;width:100%">Abrir minha agenda</button>
+      <div class="sub">Abre o seu Cal.com (cal.com/${esc(link)}). O convite com o link da reunião vai para o e-mail do convidado, e a reunião entra no app (e no seu TickTick, se estiver conectado).</div>
+    </form>
+    <div id="calInline" hidden></div>`;
+  $('voltar').onclick = () => history.back();
+  const f = $('fCal');
+  f.elements.atendimento_id.onchange = () => { const r = D.reunioes.find(x => x.id === f.elements.atendimento_id.value); if (r) { if (!f.elements.nome.value) f.elements.nome.value = r.cliente || ''; if (!f.elements.email.value && /@/.test(r.contato || '')) f.elements.email.value = r.contato; f.elements.tipo.value = r.produto === 'Gestão de Milhas' ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens'; } };
+  if (f.elements.cliente_id) f.elements.cliente_id.onchange = () => { const c = D.clientes.find(x => x.id === f.elements.cliente_id.value); if (c) { if (!f.elements.nome.value) f.elements.nome.value = c.nome_completo || ''; f.elements.tipo.value = 'Cliente da Gestão'; } };
+  f.onsubmit = (ev) => {
+    ev.preventDefault();
+    const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
+    const escolha = { atendimento_id: g('atendimento_id') || null, cliente_id: g('cliente_id') || null, tipo: g('tipo'), nome: g('nome'), email: g('email') };
+    f.hidden = true; $('calInline').hidden = false; $('calInline').innerHTML = '';
+    (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, 'https://app.cal.com/embed/embed.js', 'init');
+    const Cal = window.Cal;
+    if (!telaCal.init) { Cal('init', 'op', { origin: 'https://app.cal.com' }); telaCal.init = true; }
+    Cal.ns.op('inline', { elementOrSelector: '#calInline', calLink: link, config: { layout: 'month_view', name: escolha.nome, email: escolha.email, theme: 'light' } });
+    Cal.ns.op('ui', { theme: 'light', hideEventTypeDetails: false, layout: 'month_view', cssVarsPerTheme: { light: { 'cal-brand': '#1a3826' } } });
+    Cal.ns.op('on', { action: 'bookingSuccessfulV2', callback: async (e) => {
+      const d = (e && e.detail && e.detail.data) || {};
+      const ini = new Date(d.startTime || (d.booking && d.booking.startTime) || ''), fim = new Date(d.endTime || (d.booking && d.booking.endTime) || '');
+      const uid = String(d.uid || (d.booking && d.booking.uid) || '') || null;
+      if (isNaN(ini)) return;
+      const row = { cal_uid: uid, data: ini.toISOString(), duracao_min: isNaN(fim) ? 60 : Math.max(15, Math.round((fim - ini) / 6e4)),
+        titulo: d.title || d.eventType?.title || ('Reunião com ' + (escolha.nome || 'cliente')), tipo: escolha.tipo, cliente: escolha.nome || null, convidado_email: escolha.email || null,
+        atendimento_id: escolha.atendimento_id, cliente_id: escolha.cliente_id, participantes: [D.meuId], status: 'Agendada', link: d.videoCallUrl || d.location || null };
+      let r = await sb.from('agenda_reunioes').insert(row).select().single();
+      if (r.error && uid) r = await sb.from('agenda_reunioes').update({ atendimento_id: row.atendimento_id, cliente_id: row.cliente_id, tipo: row.tipo, cliente: row.cliente }).eq('cal_uid', uid).select().single();
+      if (r.data) { const i = (D.agenda || []).findIndex(y => y.id === r.data.id); if (i >= 0) D.agenda[i] = r.data; else if (D.agenda) D.agenda.unshift(r.data); }
+      aviso(r.error ? 'Reunião marcada no Cal.com. Ela entra no app em instantes.' : 'Reunião agendada. Já está no app' + (D.tt && D.tt.conectado ? ' e no seu TickTick.' : '.'));
+      setTimeout(() => { if (AG_ED === 'cal') { AG_ED = null; history.replaceState(null, '', '#agenda'); telaAgenda(P); } }, 3500);
+    } });
+  };
+}
 function abrirReuniao(id, pre) { ABA = 'agenda'; AG_ED = id; AG_PRE = pre || null; history.pushState(null, '', '#agenda/' + id); marcarNav(); telaAgenda($('pagina')); scrollTo(0, 0); }
 function blocoTickTick() {
   if (D.tt === null) return '';
@@ -1748,7 +1829,7 @@ function telaReunioesAgenda(P) {
   P.innerHTML = `
     <h1 class="titulo">Agenda da <em>operação</em></h1>
     <div class="seg" id="agVista"><button data-v="tudo">Compromissos</button><button data-v="reunioes" class="on">Reuniões${prox.length ? ' · ' + prox.length : ''}</button></div>
-    <button class="zap grande" id="novaAg" style="margin-top:10px;width:100%">+ Agendar reunião</button>
+    ${meuCal() ? `<button class="zap grande" id="calAg" style="margin-top:10px;width:100%">+ Agendar pelo meu Cal.com</button><button class="sec grande" id="novaAg" style="margin-top:8px;width:100%">Registrar sem o Cal.com</button>` : `<button class="zap grande" id="novaAg" style="margin-top:10px;width:100%">+ Agendar reunião</button>`}
     ${pedidos.length ? `<div class="secao">Pedidos de clientes para confirmar · ${pedidos.length}</div>${pedidos.map(a => `<div class="card" style="margin-bottom:8px"><div class="nome">${esc(nomeCli(a.cliente_id))}</div><div class="info"><div>Preferência: ${a.data_preferida ? dataBR(a.data_preferida) : 'sem data'}${a.periodo ? ' · ' + esc(a.periodo) : ''}${a.formato ? ' · ' + esc(a.formato) : ''}</div>${a.pauta ? `<div>${esc(a.pauta)}</div>` : ''}</div><div class="acoes"><button class="zap" data-conf="${a.id}">Confirmar e agendar</button></div></div>`).join('')}` : ''}
     ${sr.length ? `<div class="secao">Falta o resumo · ${sr.length}</div>${sr.map(htmlReuniaoAgenda).join('')}` : ''}
     <div class="secao">Próximas · ${prox.length}</div>
@@ -1762,7 +1843,10 @@ function telaReunioesAgenda(P) {
     ${Object.keys(porTipo).length ? `<section class="bloco"><h2>Realizadas por tipo</h2>${Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}</section>` : ''}
     ${ADMIN && Object.keys(porPessoa).length ? `<section class="bloco"><h2>Realizadas por pessoa</h2>${Object.entries(porPessoa).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="lin"><span>${esc(nomeTime(k) || 'Sem nome')}</span><span>${n}</span></div>`).join('')}</section>` : ''}
     <div style="margin-top:8px">${doMesAg.filter(x => x.status !== 'Agendada').map(htmlReuniaoAgenda).join('') || '<div class="vazio">Nenhuma reunião registrada neste mês.</div>'}</div>
+    ${blocoCal()}
     ${blocoTickTick()}`;
+  if ($('calAg')) $('calAg').onclick = () => abrirCal({});
+  ligarCal(P);
   $('agVista').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.v === 'tudo') { AG_VISTA = 'tudo'; telaAgenda(P); } };
   $('novaAg').onclick = () => abrirReuniao('nova');
   $('agMes').onclick = (e) => { const b = e.target.closest('button'); if (b) { AG_MES = mesMais(AG_MES, +b.dataset.n); telaAgenda(P); } };
