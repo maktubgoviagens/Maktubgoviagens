@@ -1,7 +1,7 @@
 // Maktub Go: Acervo de viagens (só administradores).
 // Destinos: mapa e números tirados das emissões. Roteiros: biblioteca dos roteiros e propostas em HTML.
 
-let ACV_ABA = 'destinos', ACV_PER = '12m', EMS = null, AERO = null, MAPA = null, RT = null, RT_TIPO = 'todos', RT_BUSCA = '', RT_NOVO = false, CONF = null;
+let PAISES = null, ACV_ABA = 'destinos', ACV_PER = '12m', EMS = null, AERO = null, MAPA = null, RT = null, RT_TIPO = 'todos', RT_BUSCA = '', RT_NOVO = false, CONF = null;
 
 // nomes em português para os aeroportos mais comuns (o resto usa o nome da base aberta de aeroportos)
 const NOME_PT = { GRU: 'São Paulo', CGH: 'São Paulo', VCP: 'Campinas', GIG: 'Rio de Janeiro', SDU: 'Rio de Janeiro', CNF: 'Belo Horizonte', PLU: 'Belo Horizonte',
@@ -112,8 +112,14 @@ async function desenharMapa(topT, topC) {
   const box = document.getElementById('acvMapa'); if (!box) return;
   if (MAPA) { MAPA.remove(); MAPA = null; }
   const L = window.L;
-  MAPA = L.map(box, { zoomControl: false, attributionControl: true, worldCopyJump: true, scrollWheelZoom: false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 10, attribution: '© OpenStreetMap © CARTO' }).addTo(MAPA);
+  MAPA = L.map(box, { zoomControl: false, attributionControl: true, scrollWheelZoom: false, minZoom: 1, maxZoom: 6, zoomSnap: 0.25 });
+  box.style.background = '#dde5e8';
+  MAPA.setView([-10, -40], 2);
+  try {
+    if (!PAISES) PAISES = await (await fetch('/admin/app/paises.json')).json();
+    L.geoJSON(PAISES, { interactive: false, style: { color: '#cfcac0', weight: 0.6, fillColor: '#f4f2ec', fillOpacity: 1 } }).addTo(MAPA);
+    MAPA.attributionControl.addAttribution('Natural Earth');
+  } catch (_) {}
   const verde = '#1B4332', ouro = '#A88B4A', pts = [];
   const maxT = Math.max(1, ...topT.map(([, x]) => x.n));
   topT.filter(([, x]) => x.o.lat !== null && x.d.lat !== null).slice(0, 40).forEach(([, x]) => {
