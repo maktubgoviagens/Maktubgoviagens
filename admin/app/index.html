@@ -128,6 +128,21 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .conf .dif.neg{color:var(--alerta)}
 .resumoConf{margin-top:12px;font-size:14px;color:var(--tinta-2)}
 .dre .lin.sub{font-weight:600;color:var(--verde)}
+.mapa{height:340px;margin-top:12px;border:1px solid var(--linha);background:#eef0ea;z-index:0}
+.mapa .leaflet-tooltip{font-family:inherit;font-size:12.5px}
+.rank .rk{padding:7px 0}
+.rank .rt{display:flex;gap:10px;align-items:baseline}
+.rank .rt span{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--dourado);min-width:14px}
+.rank .rt b{flex:1;font-weight:400;font-size:14.5px;color:var(--tinta)}
+.rank .rt em{font-style:normal;font-weight:600;font-size:14px;color:var(--verde);white-space:nowrap}
+.rank .rb{height:5px;background:var(--linha);margin:5px 0 0 24px}
+.rank .rb i{display:block;height:100%;background:var(--verde)}
+.rank .rb i.ouro{background:var(--dourado)}
+.meses{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;height:130px;align-items:end}
+.meses div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.meses i{display:block;width:70%;background:var(--verde);opacity:.85}
+.meses b{font-size:11px;font-weight:600;color:var(--verde);margin-top:3px;min-height:14px}
+.meses span{font-size:10.5px;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.05em}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -307,6 +322,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
+import * as ACV from '/admin/app/acervo.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -378,7 +394,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
 })();
 
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
-$('recarregar').onclick = () => { SITE = null; OPM.recarregar(); carregar(); };
+$('recarregar').onclick = () => { SITE = null; OPM.recarregar(); ACV.recarregar(); carregar(); };
 $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
@@ -394,7 +410,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos'];
+const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo'];
 const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -433,10 +449,10 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
+  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos', 'acervo'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
-  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', custos: 'Salários e despesas', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -561,6 +577,7 @@ function tela() {
   if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
+  if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -1566,6 +1583,7 @@ function telaMais(P) {
     ['equipe', 'Equipe, comissões e parceiros', 0],
     ['metas', 'Metas do mês', 0],
     ['custos', 'Salários e despesas fixas', 0],
+    ['acervo', 'Acervo de viagens: destinos e roteiros', 0],
     ['opmilhas', 'Operação de milhas dos sócios', 0],
     ['avisos', 'Avisos no celular, Telegram e WhatsApp', avisosNovos().length]
   ];
