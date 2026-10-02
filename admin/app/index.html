@@ -583,7 +583,7 @@ function telaInicio(P) {
     ['Leads esperando alguém assumir', leadsSemDono().length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
-    ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago && String(e.data_negociacao) >= mesMais(mesKey(new Date()), -2)).length, () => ir('receber')],
+    ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago).length, () => ir('receber')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
     ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')]
@@ -809,6 +809,7 @@ function telaFormEmissao(P) {
       aviso(cx.checked ? `${nome} marcado. Vai para a planilha em até 5 minutos.` : `${nome} desmarcado no app. Desmarque também na planilha.`);
     };
   });
+  if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('emissoes', e.id); }
   const lerValores = () => {
     const g = (n) => f.elements[n] ? f.elements[n].value : undefined;
     const serv = g('servico');
@@ -1297,6 +1298,7 @@ function telaFormReuniao(P) {
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+  if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); };
   mostrar();
@@ -1416,6 +1418,15 @@ function telaFinanceiro(P) {
     const f = await sb.from('fechamentos').select('*'); D.fech = f.data || [];
     aviso(fech ? 'Mês reaberto.' : 'Mês fechado.'); telaFinanceiro(P);
   };
+}
+
+/* ---------- histórico de alterações (administradores) ---------- */
+const CAMPO_NOME = { pago: 'Pago', nota_gerada: 'Nota fiscal', checkin_ida: 'Check-in da ida', checkin_volta: 'Check-in da volta', monitorado: 'Monitorado', voado: 'Voado', feito_pos: 'Pós-venda', vendedor_app: 'Vendedor (ajuste)', comissao_pct_app: 'Comissão % (ajuste)', parceiro_app: 'Parceiro (ajuste)', parceiro_pct_app: 'Parceiro % (ajuste)', servico_app: 'Serviço (ajuste)', valor_receber: 'Valor a receber', vendedor_id: 'Vendedor', comissao: 'Comissão', etapa: 'Etapa', resultado: 'Resultado', responsavel_id: 'Responsável', valor_estimado: 'Valor estimado', valor_fechado: 'Valor fechado', motivo_perda: 'Motivo da perda', status: 'Situação' };
+const valorHist = (v) => v === null || v === undefined || v === '' ? 'vazio' : v === 'true' ? 'sim' : v === 'false' ? 'não' : /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(v) ? (nomeTime(v) || 'outra pessoa') : v;
+async function historico(tabela, id) {
+  const { data, error } = await sb.from('alteracoes').select('*').eq('tabela', tabela).eq('registro_id', String(id)).order('em', { ascending: false }).limit(40);
+  const el = $('histAlt'); if (!el || error || !(data || []).length) return;
+  el.innerHTML = `<details class="obs bloco"><summary>Histórico de alterações (${data.length})</summary>${data.map(x => `<div class="lin" style="align-items:flex-start"><span>${esc(CAMPO_NOME[x.campo] || x.campo)}: ${esc(x.antes === null && /^(true|false)$/.test(x.depois || '') ? 'não' : valorHist(x.antes))} → <b>${esc(valorHist(x.depois))}</b></span><span style="font-size:12px;color:var(--tinta-3);text-align:right">${esc(nomeTime(x.user_id) || 'planilha ou sistema')}<br>${new Date(x.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>`).join('')}</details>`;
 }
 
 /* ---------- DRE da empresa (administradores) ---------- */
