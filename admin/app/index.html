@@ -146,10 +146,12 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .meses span{font-size:10.5px;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.05em}
 .perms{display:grid;gap:6px;margin-top:4px}
 .perm{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--linha);background:var(--branco);cursor:pointer}
-.perm input{margin-top:3px;width:18px;height:18px;accent-color:var(--verde)}
+.perm input{flex:none;margin-top:3px;width:18px;height:18px;accent-color:var(--verde)}
 .perm b{display:block;font-weight:600;font-size:14px;color:var(--verde)}
 .perm small{display:block;font-size:12px;color:var(--tinta-3)}
-.perm.off{opacity:.55;cursor:default;padding-left:38px}
+.perm.off{opacity:.55;cursor:default;padding-left:38px;margin-top:6px}
+.pgrupo{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta-3);font-weight:600;margin:10px 0 0}
+.pgrupo:first-child{margin-top:2px}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -419,13 +421,25 @@ $('pagina').addEventListener('click', async (e) => {
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
 const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos'];
-const PERMS = [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas'], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito'], ['agenda', 'Agenda e reuniões', 'Vê e edita reuniões'], ['comercial', 'Comercial', 'Cotações e atendimentos'], ['comissao', 'Própria comissão', 'Vê só a remuneração dela']];
-const pode = (k) => ADMIN || ((D.perfil && D.perfil.permissoes) || {})[k] !== false;
-const ABAS_COLAB_TODAS = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
-const abasColab = () => ABAS_COLAB_TODAS.filter(a => a === 'inicio' || pode({ reunioes: 'comercial' }[a] || a));
+/* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
+const PERMS = [
+  ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
+  ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
+  ['Gestão de Milhas', [['gestao', 'Clientes da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
+  ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
+  ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
+];
+const PERM_LISTA = PERMS.flatMap(g => g[1]);
+const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
+const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
+/* aba -> permissão que libera */
+const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas' };
+const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
+const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'mais'].filter(podeAba);
+const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
-  ABA = (ADMIN ? ABAS_ADMIN : abasColab()).includes(h[0]) ? h[0] : 'inicio';
+  ABA = podeAba(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
@@ -444,23 +458,28 @@ const NAV_IC = {
   comissao: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.5M12 6.5v1.5M12 16v1.5"/>',
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
+function navItens() {
+  if (ADMIN) return [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro']];
+  const L = [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro'], ['comissao', 'Comissão']].filter(([k]) => podeAba(k));
+  return L.length > 6 ? L.filter(([k]) => k !== 'comissao') : L;
+}
 function montarNav() {
-  const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro']]
-                      : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['agenda', 'Agenda'], ['comissao', 'Comissão']].filter(([k]) => abasColab().includes(k));
+  const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
   $('sino').hidden = !ADMIN;
-  $('maisTopo').hidden = !ADMIN;
+  $('maisTopo').hidden = !podeAba('mais');
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
 function ir(aba, extra) {
+  if (!podeAba(aba)) aba = 'inicio';
   ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
   if (extra) extra();
   history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos', 'acervo', 'acessos'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
+  const alvo = ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
@@ -489,26 +508,30 @@ async function carregar(silencioso) {
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
   D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
-  if (ADMIN) {
+  const G = pode('gestao'), LE = pode('leads');
+  if (ADMIN || G || LE || pode('talentos')) {
+    const nada = Promise.resolve({ data: [], error: null, count: 0 });
     const q = await Promise.all([
-      sb.from('leads').select('*').order('created_at', { ascending: false }).limit(1000),
-      sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false }).limit(500),
-      sb.from('banco_talentos').select('*').order('created_at', { ascending: false }).limit(300),
-      sb.from('clientes').select('*').order('nome_completo'),
-      sb.from('gestores').select('*'),
-      sb.from('programas_milhas').select('*'),
-      sb.from('historico_economia').select('*').gte('data', inicioAno),
-      sb.from('voos').select('*').gte('data_voo', iso(ontem)).lte('data_voo', iso(em120)).order('data_voo').order('hora_partida'),
-      sb.from('viagens').select('*').gte('data_viagem', iso(ontem)).lte('data_viagem', iso(em120)).order('data_viagem'),
-      sb.from('agendamentos_reuniao').select('*').in('status', ['solicitada', 'confirmada']).order('created_at', { ascending: false }).limit(200),
-      sb.from('convites').select('id', { count: 'exact', head: true }).eq('status', 'enviado'),
-      carregarEquipe(),
-      carregarAvisos()
+      LE ? sb.from('leads').select('*').order('created_at', { ascending: false }).limit(1000) : nada,
+      LE || G ? sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false }).limit(500) : nada,
+      pode('talentos') ? sb.from('banco_talentos').select('*').order('created_at', { ascending: false }).limit(300) : nada,
+      G ? sb.from('clientes').select('*').order('nome_completo') : nada,
+      G ? sb.from('gestores').select('*') : nada,
+      G ? sb.from('programas_milhas').select('*') : nada,
+      G ? sb.from('historico_economia').select('*').gte('data', inicioAno) : nada,
+      G ? sb.from('voos').select('*').gte('data_voo', iso(ontem)).lte('data_voo', iso(em120)).order('data_voo').order('hora_partida') : nada,
+      G ? sb.from('viagens').select('*').gte('data_viagem', iso(ontem)).lte('data_viagem', iso(em120)).order('data_viagem') : nada,
+      G ? sb.from('agendamentos_reuniao').select('*').in('status', ['solicitada', 'confirmada']).order('created_at', { ascending: false }).limit(200) : nada,
+      G ? sb.from('convites').select('id', { count: 'exact', head: true }).eq('status', 'enviado') : nada,
+      ADMIN ? carregarEquipe() : nada,
+      ADMIN ? carregarAvisos() : nada
     ]);
-    const erro = q.slice(0, 10).find(r => r.error && r !== q[2]);
+    const erro = q.slice(0, 10).find(r => r && r.error && r !== q[2]);
     if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
-    [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => r.data || []);
+    [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => (r && r.data) || []);
     D.talErro = q[2].error; D.convPend = q[10].count || 0;
+  }
+  if (G) {
     const k0 = mesKey(new Date());
     const gx = await Promise.all([
       sb.from('convites').select('*').order('created_at', { ascending: false }).limit(300),
@@ -597,7 +620,7 @@ function tela() {
   if (ABA === 'financeiro') return telaFinanceiro(P);
   if (ABA === 'mais') return telaMais(P);
   if (ABA === 'equipe') return telaEquipe(P);
-  if (!ADMIN && ABA !== 'agenda') return telaInicioColab(P);
+  if (!ADMIN && ABA === 'inicio') return telaInicioColab(P);
   if (ABA === 'leads') return telaLeads(P);
   if (ABA === 'clientes') return CLI ? telaFicha(P, CLI) : telaClientes(P);
   if (ABA === 'agenda') return telaAgenda(P);
@@ -643,7 +666,7 @@ function telaInicio(P) {
 }
 
 function telaInicioColab(P) {
-  const hora = new Date().getHours(), k = mesKey(new Date()), L = doMes(k);
+  const hora = new Date().getHours(), k = mesKey(new Date()), L = doMes(k).filter(e => e.vendedor_id === D.meuId);
   const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 5);
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
@@ -653,7 +676,7 @@ function telaInicioColab(P) {
       <div class="num destaque"><div class="l">Sua comissão em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'} no mês</div></div>
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
-    ${blocoMetasColab(D.metas)}
+    ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
     ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>' : ''}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
@@ -723,27 +746,29 @@ function calcular(v) {
 /* ---------- lista de emissões ---------- */
 function telaEmissoes(P) {
   if (EM_ED) return telaFormEmissao(P);
+  const VER = VER_TODAS();
   let L = doMes(EM_MES);
-  if (ADMIN && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
+  if (!VER) L = L.filter(e => e.vendedor_id === D.meuId);
+  if (VER && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
   if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `
-    <h1 class="titulo">${ADMIN ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
+    <h1 class="titulo">${VER ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
     ${infoSinc()}
     ${seletorMes('emMes')}
-    ${ADMIN ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
+    ${VER ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
     <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${ADMIN ? brlC(soma(L, 'valor_receber')) + ' em vendas' : 'no mês'}</div></div>
-      ${ADMIN ? `<div class="num"><div class="l">Lucro líquido</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
+      <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : 'no mês'}</div></div>
+      ${VER ? `<div class="num"><div class="l">Lucro líquido</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
         <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
-        <div>${ADMIN ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
-        ${ADMIN ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
+        <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
+        ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
         <div class="toque">${ADMIN ? 'Toque para ver e definir comissão e parceiro' : 'Toque para ver os detalhes'} ›</div></div>
       </button>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
@@ -1106,7 +1131,7 @@ async function telaMetas(P) {
     </div>
     <div class="secao">Realizado por vendedor <span>automático, da planilha</span></div>
     <section class="bloco" style="margin-top:0">${(m.pessoas || []).length ? (m.pessoas || []).slice().sort((x, y) => (+y.vendas || 0) - (+x.vendas || 0)).map(p => `<div class="prog"><span class="p">${esc(p.nome)}</span><span class="p">${brl2(+p.vendas || 0)}</span><span class="s">${num(+p.qtd || 0)} venda${+p.qtd === 1 ? '' : 's'} no mês</span><span class="s">lucro bruto ${brl2(+p.lucro || 0)}</span></div>`).join('') : '<div class="vazio">Sem vendedores ativos.</div>'}</section>
-    <button class="sec grande" id="abrirMetas" style="margin-top:14px;width:100%">Definir as metas de ${mesNome(MT_MES).toLowerCase()}</button>
+    ${ADMIN ? `    <button class="sec grande" id="abrirMetas" style="margin-top:14px;width:100%">Definir as metas de ${mesNome(MT_MES).toLowerCase()}</button>
     <form class="bloco form" id="fMeta" hidden>
       <h2>Metas da Maktub</h2>
       <div class="sub" style="margin-top:0">Aqui você define só o alvo. O realizado é sempre calculado pelas emissões da planilha e não se edita no app.</div>
@@ -1120,9 +1145,10 @@ async function telaMetas(P) {
       <button class="zap grande" type="submit" id="salvarMeta" style="margin-top:14px;width:100%">Salvar metas de ${mesNome(MT_MES).toLowerCase()}</button>
       <div class="sub">Deixe em branco o que não tiver meta. O time vê só a porcentagem das metas da Maktub e a própria meta. Quando uma meta da Maktub é batida, você recebe um aviso.</div>
       <div class="sub" id="msgMeta"></div>
-    </form>`;
+    </form>` : ''}`;
   $('voltar').onclick = () => ir('mais');
   $('mtMes').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { MT_MES = mesMais(MT_MES, +b.dataset.n); telaMetas(P); } };
+  if (!ADMIN) return;
   $('abrirMetas').onclick = () => { $('fMeta').hidden = false; $('abrirMetas').hidden = true; $('fMeta').scrollIntoView({ behavior: 'smooth' }); };
   $('fMeta').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
@@ -1192,7 +1218,7 @@ function htmlReuniao(r) {
 const reHash = (id) => '#' + (ABA === 'gestao' ? 'gestao/funil' : 'reunioes') + (id ? '/' + id : '');
 function abrirAtendimento(id, pre) {
   const r = D.reunioes.find(x => x.id === id);
-  const g = ADMIN && (r ? ehGestao(r) : !!(pre && pre.produto === 'Gestão de Milhas'));
+  const g = pode('gestao') && (r ? ehGestao(r) : !!(pre && pre.produto === 'Gestão de Milhas'));
   ABA = g ? 'gestao' : 'reunioes'; GE_FUNIL = g; RE_ED = id; RE_PRE = pre || null;
   history.pushState(null, '', reHash(id)); marcarNav(); tela(); scrollTo(0, 0);
 }
@@ -1221,12 +1247,12 @@ async function moverEtapa(id, etapa) {
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
 }
 function telaReunioes(P) {
-  if (ADMIN && ABA === 'reunioes' && RE_ED) {
+  if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
     if (x ? ehGestao(x) : RE_ED === 'nova' && RE_PRE && RE_PRE.produto === 'Gestão de Milhas') { ABA = 'gestao'; GE_FUNIL = true; history.replaceState(null, '', reHash(RE_ED)); marcarNav(); }
   }
   if (ABA === 'gestao') RE_VISTA = 'gestao';
-  else if (ADMIN && !RE_ED) RE_VISTA = 'viagens';
+  else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
   const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
   if (D.reErro) { P.innerHTML = titulo + '<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'; return; }
@@ -1238,7 +1264,7 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    ${ADMIN ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
+    ${pode('gestao') ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Nova cotação ou reunião'}</button>
     <div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no nome para abrir.</div>
@@ -1376,7 +1402,8 @@ function telaFormReuniao(P) {
 
 /* ---------- comissão do colaborador ---------- */
 function telaComissao(P) {
-  const L = doMes(EM_MES), ano = D.emissoes.filter(e => String(e.data_negociacao).slice(0, 4) === EM_MES.slice(0, 4));
+  const minha = (e) => e.vendedor_id === D.meuId;
+  const L = doMes(EM_MES).filter(minha), ano = D.emissoes.filter(e => minha(e) && String(e.data_negociacao).slice(0, 4) === EM_MES.slice(0, 4));
   P.innerHTML = `
     <h1 class="titulo">Minha <em>comissão</em></h1>
     <div class="sub">${pct(D.perfil.comissao_pct)} sobre o lucro de cada venda, depois do imposto</div>
@@ -1423,7 +1450,7 @@ function telaFinanceiro(P) {
       <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">a pagar ao time</div></div>
       <div class="num"><div class="l">Parceiros</div><div class="v">${brlC(soma(L, 'repasse'))}</div><div class="d">remuneração de indicações</div></div>
     </div>
-    <div id="dreBloco"><div class="vazio" style="margin-top:12px">Calculando o DRE...</div></div>
+    ${pode('dre') ? '<div id="dreBloco"><div class="vazio" style="margin-top:12px">Calculando o DRE...</div></div>' : ''}
     ${meses}
     <section class="bloco"><h2>Lucro líquido por serviço</h2>${barras(Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, Math.round(v)]), 'ouro')}</section>
     <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => `<button class="lin" data-vend="${k || 'sem'}" style="align-items:flex-start"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}<small style="display:block;color:var(--tinta-3);font-size:12px;margin-top:2px">lucro bruto ${brl2(x.b)} · comissão ${brl2(x.c)}</small></span><span>${brl2(x.v)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: total vendido. Toque para ver as vendas.</div></section>
@@ -1432,7 +1459,7 @@ function telaFinanceiro(P) {
       <button class="lin" data-receber><span>Pagamentos a receber (${aReceber.length})</span><span>${brl2(soma(aReceber, 'valor_receber'))}<b class="seta">›</b></span></button>
       <div class="lin"><span>Notas fiscais a emitir no ano</span><span>${semNota.length}</span></div>
     </section>
-    ${FIN_MODO === 'mes' ? `<button class="${fech ? 'sec' : 'zap'} grande" id="fechar" style="margin-top:14px;width:100%">${fech ? 'Reabrir o mês' : 'Fechar o mês e travar os valores'}</button>
+    ${FIN_MODO === 'mes' && ADMIN ? `<button class="${fech ? 'sec' : 'zap'} grande" id="fechar" style="margin-top:14px;width:100%">${fech ? 'Reabrir o mês' : 'Fechar o mês e travar os valores'}</button>
     <div class="sub">Fechar o mês trava valores, vendedores e comissões de ${mesNome(EM_MES)}. Check-in, nota e pagamento continuam editáveis.</div>` : ''}`;
   P.querySelectorAll('[data-vend]').forEach(b => b.onclick = () => { EM_VEND = b.dataset.vend; EM_SERV = 'todos'; ir('emissoes'); });
   P.querySelectorAll('[data-serv]').forEach(b => b.onclick = () => { EM_SERV = b.dataset.serv; EM_VEND = 'todos'; ir('emissoes'); });
@@ -1454,10 +1481,11 @@ function telaFinanceiro(P) {
 
 /* ---------- equipe e acessos (administradores) ---------- */
 let AC_NOVO = false;
-const permPadrao = () => Object.fromEntries(PERMS.map(([k]) => [k, true]));
-const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${(perm || {})[k] !== false ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}
-  <div class="perm off"><span><b>Financeiro, DRE, Gestão de Milhas, leads e metas em reais</b><small>Só administradores</small></span></div></div>`;
-const lerPerms = (box, nome) => Object.fromEntries(PERMS.map(([k]) => [k, !!box.querySelector(`[name="${nome || 'p'}_${k}"]`).checked]));
+const permPadrao = () => ({ ...PERM_PADRAO });
+const marcado = (perm, k) => { const v = (perm || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
+const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([g, L]) => `<div class="pgrupo">${g}</div>${L.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${marcado(perm, k) ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}`).join('')}
+  <div class="perm off"><span><b>Equipe e acessos, comissões e regras, avisos e fechamento do mês</b><small>Só administradores</small></span></div></div>`;
+const lerPerms = (box, nome) => Object.fromEntries(PERM_LISTA.map(([k]) => [k, !!box.querySelector(`[name="${nome || 'p'}_${k}"]`).checked]));
 async function telaAcessos(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
   $('voltar').onclick = () => ir('mais');
@@ -1650,22 +1678,29 @@ function telaReceber(P) {
 }
 
 /* ---------- mais (administradores) ---------- */
-function telaMais(P) {
-  const itens = [
+function itensMais() {
+  const L = [
     ['acessos', 'Equipe e acessos', 0],
-    ['leads', 'Leads do site', leadsSemResposta().length],
+    ['leads', 'Leads do site', LE_NOVOS()],
     ['site', 'Números do site', 0],
     ['equipe', 'Comissões, parceiros e regras', 0],
     ['metas', 'Metas do mês', 0],
     ['custos', 'Salários e despesas fixas', 0],
     ['acervo', 'Acervo de viagens: destinos e roteiros', 0],
     ['opmilhas', 'Operação de milhas dos sócios', 0],
-    ['avisos', 'Avisos no celular, Telegram e WhatsApp', avisosNovos().length]
+    ['avisos', 'Avisos no celular, Telegram e WhatsApp', ADMIN ? avisosNovos().length : 0],
+    ['comissao', 'Minha comissão', 0]
   ];
+  const naNav = navItens().map(([k]) => k);
+  return L.filter(([k]) => !naNav.includes(k) && podeAba(k));
+}
+const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
+function telaMais(P) {
+  const itens = itensMais();
   P.innerHTML = `<h1 class="titulo">Mais</h1>
     <div class="pend" style="margin-top:14px">${itens.map(([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
-      <button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>`;
+      ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
 }
@@ -1782,6 +1817,8 @@ function barras(itens, classe = '') {
 const selStatus = (t, id, atual, ops) => `<select data-t="${t}" data-id="${id}" aria-label="Status">${ops.map(([v, l]) => `<option value="${v}" ${v === atual ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 
 function telaLeads(P) {
+  const SUBS = [['leads', pode('leads')], ['convites', pode('leads')], ['talentos', pode('talentos')]].filter(x => x[1]).map(x => x[0]);
+  if (!SUBS.includes(LSUB)) LSUB = SUBS[0] || 'leads';
   const L = noPeriodo(D.leads), cnt = (st) => L.filter(r => r.status === st).length, fech = cnt('fechado');
   const og = {}; L.forEach(r => { const k = origemDe(r.origem); og[k] = (og[k] || 0) + 1; });
   const viagem = L.filter(r => r.tipo === 'viagem').length;
@@ -1800,9 +1837,9 @@ function telaLeads(P) {
       <section class="bloco"><h2>De onde vieram</h2>${barras(Object.entries(og).sort((a, b) => b[1] - a[1]).slice(0, 6), 'ouro')}</section>
     </div>
     <div class="seg" id="lsub" style="margin-top:20px">
-      <button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>
-      <button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}</button>
-      <button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}</button>
+      ${SUBS.includes('leads') ? `<button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>` : ''}
+      ${SUBS.includes('convites') ? `<button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}</button>` : ''}
+      ${SUBS.includes('talentos') ? `<button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}</button>` : ''}
     </div>
     <div class="chips" id="filtro"></div>
     <div class="lista" id="lista"></div>`;
@@ -2582,12 +2619,12 @@ function telaAgenda(P) {
   P.innerHTML = `
     <h1 class="titulo">Agenda da <em>operação</em></h1>
     <div class="seg" id="agVista"><button data-v="tudo" class="on">Compromissos</button><button data-v="reunioes">Reuniões${proximasReunioes().length ? ' · ' + proximasReunioes().length : ''}</button></div>
-    <div class="sub">${ADMIN ? 'Voos, viagens, reuniões e vencimentos dos próximos 120 dias' : 'Todos os voos da Maktub nos próximos 120 dias'}</div>
+    <div class="sub">${pode('gestao') ? 'Voos, viagens, reuniões e vencimentos dos próximos 120 dias' : 'Todos os voos da Maktub nos próximos 120 dias'}</div>
     <div class="numeros" style="margin-top:14px">
       <div class="num ${checkinsTotal() ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsTotal()}</div></div>
-      ${ADMIN ? `<div class="num ${reunioesAConfirmar().length ? 'alerta' : ''}"><div class="l">Reuniões a confirmar</div><div class="v">${reunioesAConfirmar().length}</div></div>` : ''}
+      ${pode('gestao') ? `<div class="num ${reunioesAConfirmar().length ? 'alerta' : ''}"><div class="l">Reuniões a confirmar</div><div class="v">${reunioesAConfirmar().length}</div></div>` : ''}
       <div class="num"><div class="l">Voos em 30 dias</div><div class="v">${D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length + trechosEm().filter(t => difDias(t.d) >= 0 && difDias(t.d) <= 30).length}</div></div>
-      ${ADMIN ? `<div class="num ${vencimentos(30).length ? 'alerta' : ''}"><div class="l">Vencimentos em 30 dias</div><div class="v">${vencimentos(30).length}</div></div>` : ''}
+      ${pode('gestao') ? `<div class="num ${vencimentos(30).length ? 'alerta' : ''}"><div class="l">Vencimentos em 30 dias</div><div class="v">${vencimentos(30).length}</div></div>` : ''}
     </div>
     <div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`;
   $('agVista').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.v === 'reunioes') { AG_VISTA = 'reunioes'; telaAgenda(P); } };
@@ -2646,7 +2683,7 @@ function telaCal(P) {
     <form id="fCal" class="form" autocomplete="off">
       <div class="grupo">Com quem</div>
       <label class="fl"><span>Atendimento do comercial</span><select name="atendimento_id"><option value="">-</option>${atds.map(r => `<option value="${r.id}" ${r.id === ctx.atendimento_id ? 'selected' : ''}>${esc(r.cliente)} · ${esc(r.produto)}${r.trecho ? ' · ' + esc(r.trecho) : ''}</option>`).join('')}</select></label>
-      ${ADMIN && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === ctx.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
+      ${pode('gestao') && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === ctx.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
       <div class="duas-col">${campo('nome', 'Nome do convidado', ctx.nome || '', 'text')}${campo('email', 'E-mail do convidado', ctx.email || '', 'email')}</div>
       <label class="fl"><span>Tipo</span><select name="tipo">${AG_TIPOS.map(t => `<option ${t === (ctx.tipo || (ctx.cliente_id ? 'Cliente da Gestão' : 'Comercial · Viagens')) ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       <button class="zap grande" type="submit" style="margin-top:12px;width:100%">Abrir minha agenda</button>
@@ -2707,7 +2744,7 @@ function telaReunioesAgenda(P) {
   const feitas = doMesAg.filter(x => x.status === 'Realizada');
   const porTipo = {}, porPessoa = {};
   feitas.forEach(x => { porTipo[x.tipo] = (porTipo[x.tipo] || 0) + 1; (x.participantes || []).forEach(u => { porPessoa[u] = (porPessoa[u] || 0) + 1; }); });
-  const pedidos = ADMIN ? reunioesAConfirmar() : [];
+  const pedidos = pode('gestao') ? reunioesAConfirmar() : [];
   const prox = proximasReunioes(), sr = semResumo();
   P.innerHTML = `
     <h1 class="titulo">Agenda da <em>operação</em></h1>
@@ -2759,7 +2796,7 @@ function telaFormAgenda(P) {
       <div class="duas-col">${campo('data', 'Data e hora', dl(x.data), 'datetime-local', 'required')}${campo('duracao_min', 'Duração (min)', x.duracao_min || 60, 'number')}</div>
       ${campo('link', 'Link da reunião (Meet, Zoom)', x.link, 'url', 'placeholder="https://"')}
       <div class="grupo">Com quem</div>
-      ${ADMIN && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === x.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
+      ${pode('gestao') && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === x.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
       <label class="fl"><span>Atendimento do comercial</span><select name="atendimento_id"><option value="">-</option>${atds.map(r => `<option value="${r.id}" ${r.id === x.atendimento_id ? 'selected' : ''}>${esc(r.cliente)} · ${esc(r.produto)}${r.trecho ? ' · ' + esc(r.trecho) : ''}</option>`).join('')}</select></label>
       ${campo('cliente', 'Ou o nome de quem participa', x.cliente_id || x.atendimento_id ? '' : x.cliente, 'text', 'placeholder="Cliente, parceiro ou empresa"')}
       <div class="grupo">Vendedor e participantes</div>
