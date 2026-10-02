@@ -508,6 +508,8 @@ const checkins = () => D.voos.filter(v => ['confirmado', 'checkin_aberto'].inclu
 const checkinsTotal = () => checkins().length + checkinsEm().length;
 const reunioesAConfirmar = () => D.ags.filter(a => a.status === 'solicitada');
 const leadsSemResposta = () => D.leads.filter(r => r.status === 'novo');
+const leadsSemDono = () => D.leads.filter(r => r.status === 'novo' && !r.responsavel_id);
+const medianaAssumir = (L) => { const v = L.filter(r => r.assumido_em).map(r => (new Date(r.assumido_em) - new Date(r.created_at)) / 6e4).filter(x => x >= 0).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null; };
 const convitesNovos = () => D.sols.filter(r => r.status === 'nova');
 const diasPara = (d) => d ? difDias(dia(d)) : null;
 const renovacoes = (n) => D.clientes.filter(c => c.gestao_vencimento && diasPara(c.gestao_vencimento) <= n).sort((a, b) => String(a.gestao_vencimento).localeCompare(String(b.gestao_vencimento)));
@@ -578,7 +580,8 @@ function telaInicio(P) {
   const hora = new Date().getHours();
   const leads30 = D.leads.filter(r => Date.now() - new Date(r.created_at) <= 30 * 864e5).length;
   const itens = [
-    ['Leads sem resposta', leadsSemResposta().length, () => ir('leads', () => { LSUB = 'leads'; }), 'novo'],
+    ['Leads esperando alguém assumir', leadsSemDono().length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
+    ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago && String(e.data_negociacao) >= mesMais(mesKey(new Date()), -2)).length, () => ir('receber')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
@@ -1314,6 +1317,7 @@ function telaFormReuniao(P) {
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null;
+    if (nova && r.lead_id) row.lead_id = r.lead_id;
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
@@ -1679,7 +1683,8 @@ function telaLeads(P) {
     <div class="seg" id="periodo">${[[7, '7 dias'], [30, '30 dias'], [90, '90 dias'], [0, 'Tudo']].map(([d, l]) => `<button data-d="${d}" class="${d === DIAS ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Leads</div><div class="v">${L.length}</div><div class="d">${L.length ? `${viagem} viagem · ${L.length - viagem} corporativo` : 'nenhum ainda'}</div></div>
-      <div class="num ${leadsSemResposta().length ? 'alerta' : ''}"><div class="l">Sem resposta</div><div class="v">${leadsSemResposta().length}</div><div class="d">status novo</div></div>
+      <div class="num ${leadsSemResposta().length ? 'alerta' : ''}"><div class="l">Sem resposta</div><div class="v">${leadsSemResposta().length}</div><div class="d">${leadsSemDono().length} sem dono</div></div>
+      ${(t => t === null ? '' : `<div class="num"><div class="l">Tempo até assumir</div><div class="v">${t < 60 ? Math.round(t) + ' min' : (t / 60).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' h'}</div><div class="d">mediana do período</div></div>`)(medianaAssumir(L))}
       <div class="num"><div class="l">Fechados</div><div class="v">${fech}</div><div class="d">${cnt('perdido')} perdido${cnt('perdido') === 1 ? '' : 's'}</div></div>
       <div class="num"><div class="l">Conversão</div><div class="v">${L.length ? Math.round(fech / L.length * 100) : 0}%</div><div class="d">fechados sobre leads</div></div>
     </div>
@@ -1713,9 +1718,10 @@ function listaLeads() {
         ? [['Empresa', r.empresa], ['Perfil', d.segmento], ['Volume', d.volume], ['Trechos', d.trechos], ['Demanda', d.demanda]]
         : [['Destino', r.destino || 'ainda não sabe'], ['Quando', r.quando], ['Viajantes', r.viajantes]];
       return `<article class="card ${r.status === 'novo' ? 'novo' : ''}">
-        <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span></div><span class="quando">${quando(r.created_at)}</span></div>
+        <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span> ${r.responsavel_id ? `<span class="tag ok">com ${esc(nomeTime(r.responsavel_id) || 'equipe')}</span>` : r.status === 'novo' ? '<span class="tag alerta">sem dono</span>' : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
-        <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}<button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: r.tipo === 'corporativo' ? 'Maktub Corporativo' : 'Passagens', tipo: 'Reunião de venda' }))}">Registrar reunião</button></div>
+        ${!r.responsavel_id && r.status === 'novo' ? `<button class="zap grande" data-assumir="${r.id}" style="width:100%;margin-top:12px">Assumir este lead</button>` : ''}
+        <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: r.tipo === 'corporativo' ? 'Maktub Corporativo' : 'Passagens', tipo: 'Reunião de venda' }))}">Registrar reunião</button></div>
         <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
       </article>`;
     }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
@@ -1745,6 +1751,16 @@ function listaLeads() {
     const r = (s.dataset.t === 'leads' ? D.leads : D.sols).find(x => x.id === s.dataset.id); if (r) r.status = s.value;
     aviso('Status atualizado.'); telaLeads($('pagina'));
   });
+  const assumir = async (id, silencioso) => {
+    const r = D.leads.find(x => String(x.id) === String(id)); if (!r || r.responsavel_id) return;
+    const { data, error } = await sb.rpc('lead_assumir', { p_id: id });
+    if (error) { if (!silencioso) aviso(/lead_assumir/.test(error.message) ? 'Rode o 28-leads-assumir.sql no Supabase.' : 'Não assumiu: ' + error.message); return; }
+    Object.assign(r, { responsavel_id: data.responsavel_id, assumido_em: data.assumido_em });
+    if (!silencioso) aviso(data.responsavel_id === D.meuId ? 'Lead é seu. Responda agora para não esfriar.' : 'Já tinha sido assumido por ' + (nomeTime(data.responsavel_id) || 'outra pessoa') + '.');
+    listaLeads();
+  };
+  el.querySelectorAll('[data-assumir]').forEach(b => b.onclick = () => assumir(b.dataset.assumir));
+  el.querySelectorAll('[data-zapl]').forEach(a => a.addEventListener('click', () => assumir(a.dataset.zapl, true)));
   el.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
     const id = b.dataset.salvar, txt = el.querySelector(`textarea[data-id="${id}"]`).value.trim() || null;
     b.disabled = true;
