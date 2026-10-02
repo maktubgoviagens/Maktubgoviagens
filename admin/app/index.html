@@ -1493,6 +1493,15 @@ const marcado = (perm, k) => { const v = (perm || {})[k]; return v === undefined
 const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([g, L]) => `<div class="pgrupo">${g}</div>${L.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${marcado(perm, k) ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}`).join('')}
   <div class="perm off"><span><b>Equipe e acessos, comissões e regras, avisos e fechamento do mês</b><small>Só administradores</small></span></div></div>`;
 const lerPerms = (box, nome) => Object.fromEntries(PERM_LISTA.map(([k]) => [k, !!box.querySelector(`[name="${nome || 'p'}_${k}"]`).checked]));
+function mostrarLinkAcesso(el, nome, link) {
+  if (!el) return;
+  const pn = String(nome || '').split(' ')[0];
+  const texto = `Oi, ${pn}! Seu acesso ao app da Maktub Go está liberado. Toque no link abaixo para criar a sua senha (ele vale por 1 hora):\n\n${link}\n\nDepois é só entrar em maktubgo.com.br/acesso com o seu e-mail e a senha. A cada entrada chega um código de confirmação no seu e-mail.`;
+  el.innerHTML = `<a class="zap grande" href="https://wa.me/?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" style="margin-top:8px;width:100%">Abrir o WhatsApp e enviar para ${esc(pn)}</a>
+    <button class="sec" type="button" data-copiar style="margin-top:8px;width:100%">Copiar a mensagem</button>
+    <div class="sub">O link vale por 1 hora e só funciona uma vez. Se passar do prazo, gere outro aqui.</div>`;
+  el.querySelector('[data-copiar]').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Mensagem copiada.'); } catch (_) { aviso('Não deu para copiar. Use o botão do WhatsApp.'); } };
+}
 async function telaAcessos(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
   $('voltar').onclick = () => ir('mais');
@@ -1508,7 +1517,7 @@ async function telaAcessos(P) {
       <div class="duas-col"><label class="fl"><span>Perfil</span><select name="papel"><option value="colaborador">Colaborador</option><option value="admin">Administrador</option></select></label>${campo('pct', 'Comissão (%)', 10, 'number')}</div>
       <div id="acPerms"><div class="grupo">O que pode ver e fazer</div>${htmlPerms(permPadrao(), 'n')}</div>
       <button class="zap" type="submit" id="acSalvar" style="margin-top:10px;width:100%">Adicionar e liberar o acesso</button>
-      <div class="sub" id="acMsg">A pessoa entra em maktubgo.com.br/acesso com este e-mail e recebe o código de entrada no próprio e-mail.</div>
+      <div class="sub" id="acMsg">Depois de adicionar, aparece o botão para mandar pelo WhatsApp o link em que a pessoa cria a senha.</div>
     </form>` : ''}
     <div class="lista">${L.map(p => { const eu = p.user_id === D.meuId, adm = p.papel === 'admin'; return `<form class="card form" data-u="${p.user_id}">
       <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:2px 0 0">${esc(p.email || '')}</div></div><div style="text-align:right">${eu ? '<span class="tag">você</span> ' : ''}<span class="tag ${adm ? 'ouro' : ''}">${adm ? 'Administrador' : 'Colaborador'}</span>${p.ativo ? '' : ' <span class="tag alerta">sem acesso</span>'}</div></div>
@@ -1517,6 +1526,7 @@ async function telaAcessos(P) {
       <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div>${htmlPerms(p.permissoes, 'p')}</div>
       <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${eu ? 'disabled' : ''}><span>Acesso ativo</span></label>
       <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar ${esc(String(p.nome).split(' ')[0])}</button>
+      ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
     </form>`; }).join('')}</div>
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
   $('voltar').onclick = () => ir('mais');
@@ -1531,6 +1541,14 @@ async function telaAcessos(P) {
       await carregarEquipe(); aviso('Salvo. Vale na próxima vez que a pessoa abrir o app.'); telaAcessos(P);
     };
   });
+  P.querySelectorAll('[data-link]').forEach(b => b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Gerando o link...';
+    const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body: { acao: 'link', email: b.dataset.link } });
+    b.disabled = false; b.textContent = 'Enviar acesso pelo WhatsApp';
+    const msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
+    if (msg || !r || !r.link) { aviso(/Failed to send|not found|404/i.test(msg || '') ? 'Atualize a função equipe-convidar no Supabase (pacote 24).' : 'Não gerou o link: ' + (msg || 'tente de novo')); return; }
+    mostrarLinkAcesso(b.nextElementSibling, b.dataset.nome, r.link); b.hidden = true;
+  });
   if ($('fAc')) {
     const f = $('fAc');
     f.elements.papel.onchange = () => { $('acPerms').hidden = f.elements.papel.value === 'admin'; };
@@ -1542,7 +1560,10 @@ async function telaAcessos(P) {
       $('acSalvar').disabled = false; $('acSalvar').textContent = 'Adicionar e liberar o acesso';
       let msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
       if (msg) { $('acMsg').textContent = /Failed to send|not found|404/i.test(msg) ? 'A função equipe-convidar ainda não foi criada no Supabase. Siga o passo 2 do guia.' : 'Não liberou: ' + msg; $('acMsg').style.color = 'var(--alerta)'; return; }
-      AC_NOVO = false; await carregarEquipe(); aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : body.nome.split(' ')[0] + ' já pode entrar em maktubgo.com.br/acesso.'); telaAcessos(P);
+      AC_NOVO = false; await carregarEquipe(); await telaAcessos(P);
+      const card = P.querySelector(`[data-link="${CSS.escape(body.email.toLowerCase())}"]`);
+      if (card && r.link) { mostrarLinkAcesso(card.nextElementSibling, body.nome, r.link); card.hidden = true; card.closest('form').scrollIntoView({ behavior: 'smooth' }); }
+      aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : body.nome.split(' ')[0] + ' adicionada. Agora mande o link pelo WhatsApp.');
     };
   }
 }
