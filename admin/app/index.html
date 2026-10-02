@@ -143,6 +143,12 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .meses i{display:block;width:70%;background:var(--verde);opacity:.85}
 .meses b{font-size:11px;font-weight:600;color:var(--verde);margin-top:3px;min-height:14px}
 .meses span{font-size:10.5px;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.05em}
+.perms{display:grid;gap:6px;margin-top:4px}
+.perm{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--linha);background:var(--branco);cursor:pointer}
+.perm input{margin-top:3px;width:18px;height:18px;accent-color:var(--verde)}
+.perm b{display:block;font-weight:600;font-size:14px;color:var(--verde)}
+.perm small{display:block;font-size:12px;color:var(--tinta-3)}
+.perm.off{opacity:.55;cursor:default;padding-left:38px}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -403,6 +409,7 @@ window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
 $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
+  if (!pode('checkin')) { aviso('Seu acesso não inclui marcar check-in.'); return; }
   const feito = !b.classList.contains('feito');
   const { error } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: b.dataset.tr, p_feito: feito });
   if (error) { aviso('Não salvou: ' + error.message); return; }
@@ -410,11 +417,14 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo'];
-const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
+const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos'];
+const PERMS = [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas'], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito'], ['agenda', 'Agenda e reuniões', 'Vê e edita reuniões'], ['comercial', 'Comercial', 'Cotações e atendimentos'], ['comissao', 'Própria comissão', 'Vê só a remuneração dela']];
+const pode = (k) => ADMIN || ((D.perfil && D.perfil.permissoes) || {})[k] !== false;
+const ABAS_COLAB_TODAS = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
+const abasColab = () => ABAS_COLAB_TODAS.filter(a => a === 'inicio' || pode({ reunioes: 'comercial' }[a] || a));
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
-  ABA = (ADMIN ? ABAS_ADMIN : ABAS_COLAB).includes(h[0]) ? h[0] : 'inicio';
+  ABA = (ADMIN ? ABAS_ADMIN : abasColab()).includes(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
@@ -435,7 +445,7 @@ const NAV_IC = {
 };
 function montarNav() {
   const itens = ADMIN ? [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro']]
-                      : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['agenda', 'Agenda'], ['comissao', 'Comissão']];
+                      : [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['agenda', 'Agenda'], ['comissao', 'Comissão']].filter(([k]) => abasColab().includes(k));
   $('nav').classList.toggle('seis', itens.length > 5);
   $('sino').hidden = !ADMIN;
   $('maisTopo').hidden = !ADMIN;
@@ -449,10 +459,10 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos', 'acervo'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
+  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos', 'acervo', 'acessos'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
-  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -577,6 +587,7 @@ function tela() {
   if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
+  if (ABA === 'acessos') return telaAcessos(P);
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
@@ -642,11 +653,11 @@ function telaInicioColab(P) {
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
     ${blocoMetasColab(D.metas)}
-    <button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>
+    ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>' : ''}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
-  $('novaReuniao').onclick = () => ir('reunioes', () => { RE_ED = 'nova'; });
+  if ($('novaReuniao')) $('novaReuniao').onclick = () => ir('reunioes', () => { RE_ED = 'nova'; });
   ligarCardsReuniao(P);
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -814,6 +825,7 @@ function telaFormEmissao(P) {
   const MARCAS = ['pago', 'nota_gerada', 'checkin_ida', 'checkin_volta', 'monitorado', 'voado', 'feito_pos'];
   const podeMarcar = daPlanilha && (ADMIN || e.vendedor_id === D.meuId);
   if (!podeEditar) [...f.elements].forEach(x => { if (!(daPlanilha && (/^checkin_/.test(x.name) || (podeMarcar && MARCAS.includes(x.name))))) x.disabled = true; });
+  if (!pode('checkin')) ['checkin_ida', 'checkin_volta'].forEach(n => { if (f.elements[n]) f.elements[n].disabled = true; });
   if (daPlanilha) MARCAS.forEach(n => {
     const cx = f.elements[n]; if (!cx || cx.disabled) return;
     cx.onchange = async () => {
@@ -1438,6 +1450,67 @@ function telaFinanceiro(P) {
   };
 }
 
+
+/* ---------- equipe e acessos (administradores) ---------- */
+let AC_NOVO = false;
+const permPadrao = () => Object.fromEntries(PERMS.map(([k]) => [k, true]));
+const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${(perm || {})[k] !== false ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}
+  <div class="perm off"><span><b>Financeiro, DRE, Gestão de Milhas, leads e metas em reais</b><small>Só administradores</small></span></div></div>`;
+const lerPerms = (box, nome) => Object.fromEntries(PERMS.map(([k]) => [k, !!box.querySelector(`[name="${nome || 'p'}_${k}"]`).checked]));
+async function telaAcessos(P) {
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => ir('mais');
+  const { data, error } = await sb.rpc('equipe_acessos_listar');
+  if (ABA !== 'acessos') return;
+  if (error) { P.querySelector('.vazio').textContent = 'Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'; return; }
+  const L = data || [], admins = L.filter(p => p.papel === 'admin' && p.ativo);
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
+    <div class="sub">${admins.map(p => esc(String(p.nome).split(' ')[0])).join(' e ')} ${admins.length === 1 ? 'é administrador' : 'são administradores'}: veem e controlam tudo, inclusive esta tela. Para cada colaborador, você escolhe o que ele vê e faz.</div>
+    <button class="zap grande" id="acNovoB" style="margin-top:12px;width:100%">${AC_NOVO ? 'Fechar' : '+ Adicionar pessoa'}</button>
+    ${AC_NOVO ? `<form class="bloco form" id="fAc">
+      <div class="duas-col">${campo('nome', 'Nome', '', 'text', 'required')}${campo('email', 'E-mail de login', '', 'email', 'required')}</div>
+      <div class="duas-col"><label class="fl"><span>Perfil</span><select name="papel"><option value="colaborador">Colaborador</option><option value="admin">Administrador</option></select></label>${campo('pct', 'Comissão (%)', 10, 'number')}</div>
+      <div id="acPerms"><div class="grupo">O que pode ver e fazer</div>${htmlPerms(permPadrao(), 'n')}</div>
+      <button class="zap" type="submit" id="acSalvar" style="margin-top:10px;width:100%">Adicionar e liberar o acesso</button>
+      <div class="sub" id="acMsg">A pessoa entra em maktubgo.com.br/acesso com este e-mail e recebe o código de entrada no próprio e-mail.</div>
+    </form>` : ''}
+    <div class="lista">${L.map(p => { const eu = p.user_id === D.meuId, adm = p.papel === 'admin'; return `<form class="card form" data-u="${p.user_id}">
+      <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:2px 0 0">${esc(p.email || '')}</div></div><div style="text-align:right">${eu ? '<span class="tag">você</span> ' : ''}<span class="tag ${adm ? 'ouro' : ''}">${adm ? 'Administrador' : 'Colaborador'}</span>${p.ativo ? '' : ' <span class="tag alerta">sem acesso</span>'}</div></div>
+      <div class="sub" style="margin-top:4px">${p.ultimo_acesso ? 'Último acesso em ' + new Date(p.ultimo_acesso).toLocaleDateString('pt-BR') : 'Ainda não entrou no app'}</div>
+      <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Perfil</span><select name="papel" ${eu ? 'disabled' : ''}><option value="colaborador" ${!adm ? 'selected' : ''}>Colaborador</option><option value="admin" ${adm ? 'selected' : ''}>Administrador</option></select></label>${campo('pct', 'Comissão (%)', p.comissao_pct, 'number')}</div>
+      <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div>${htmlPerms(p.permissoes, 'p')}</div>
+      <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${eu ? 'disabled' : ''}><span>Acesso ativo</span></label>
+      <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar ${esc(String(p.nome).split(' ')[0])}</button>
+    </form>`; }).join('')}</div>
+    <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
+  $('voltar').onclick = () => ir('mais');
+  $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
+  P.querySelectorAll('form[data-u]').forEach(f => {
+    f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
+    f.onsubmit = async (ev) => {
+      ev.preventDefault(); const u = f.dataset.u;
+      const r1 = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: f.elements.papel.value, p_pct: Number(String(f.elements.pct.value || 0).replace(',', '.')), p_ativo: f.elements.ativo.checked });
+      if (r1.error) { aviso('Não salvou: ' + r1.error.message); return; }
+      if (f.elements.papel.value !== 'admin') { const r2 = await sb.rpc('equipe_permissoes', { p_user: u, p_perm: lerPerms(f, 'p') }); if (r2.error) { aviso('Perfil salvo, mas os acessos não: ' + r2.error.message); return; } }
+      await carregarEquipe(); aviso('Salvo. Vale na próxima vez que a pessoa abrir o app.'); telaAcessos(P);
+    };
+  });
+  if ($('fAc')) {
+    const f = $('fAc');
+    f.elements.papel.onchange = () => { $('acPerms').hidden = f.elements.papel.value === 'admin'; };
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      $('acSalvar').disabled = true; $('acSalvar').textContent = 'Liberando...';
+      const body = { nome: f.elements.nome.value.trim(), email: f.elements.email.value.trim(), papel: f.elements.papel.value, comissao_pct: Number(String(f.elements.pct.value || 10).replace(',', '.')), permissoes: f.elements.papel.value === 'admin' ? {} : lerPerms(f, 'n') };
+      const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body });
+      $('acSalvar').disabled = false; $('acSalvar').textContent = 'Adicionar e liberar o acesso';
+      let msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
+      if (msg) { $('acMsg').textContent = /Failed to send|not found|404/i.test(msg) ? 'A função equipe-convidar ainda não foi criada no Supabase. Siga o passo 2 do guia.' : 'Não liberou: ' + msg; $('acMsg').style.color = 'var(--alerta)'; return; }
+      AC_NOVO = false; await carregarEquipe(); aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : body.nome.split(' ')[0] + ' já pode entrar em maktubgo.com.br/acesso.'); telaAcessos(P);
+    };
+  }
+}
+
 /* ---------- histórico de alterações (administradores) ---------- */
 const CAMPO_NOME = { pago: 'Pago', nota_gerada: 'Nota fiscal', checkin_ida: 'Check-in da ida', checkin_volta: 'Check-in da volta', monitorado: 'Monitorado', voado: 'Voado', feito_pos: 'Pós-venda', vendedor_app: 'Vendedor (ajuste)', comissao_pct_app: 'Comissão % (ajuste)', parceiro_app: 'Parceiro (ajuste)', parceiro_pct_app: 'Parceiro % (ajuste)', servico_app: 'Serviço (ajuste)', valor_receber: 'Valor a receber', vendedor_id: 'Vendedor', comissao: 'Comissão', etapa: 'Etapa', resultado: 'Resultado', responsavel_id: 'Responsável', valor_estimado: 'Valor estimado', valor_fechado: 'Valor fechado', motivo_perda: 'Motivo da perda', status: 'Situação' };
 const valorHist = (v) => v === null || v === undefined || v === '' ? 'vazio' : v === 'true' ? 'sim' : v === 'false' ? 'não' : /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(v) ? (nomeTime(v) || 'outra pessoa') : v;
@@ -1578,9 +1651,10 @@ function telaReceber(P) {
 /* ---------- mais (administradores) ---------- */
 function telaMais(P) {
   const itens = [
+    ['acessos', 'Equipe e acessos', 0],
     ['leads', 'Leads do site', leadsSemResposta().length],
     ['site', 'Números do site', 0],
-    ['equipe', 'Equipe, comissões e parceiros', 0],
+    ['equipe', 'Comissões, parceiros e regras', 0],
     ['metas', 'Metas do mês', 0],
     ['custos', 'Salários e despesas fixas', 0],
     ['acervo', 'Acervo de viagens: destinos e roteiros', 0],
@@ -1599,8 +1673,9 @@ function telaMais(P) {
 function telaEquipe(P) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Mais</button>
-    <h1 class="titulo" style="margin-top:6px">Equipe e <em>comissões</em></h1>
-    <div class="secao">Pessoas</div>
+    <h1 class="titulo" style="margin-top:6px">Comissões e <em>regras</em></h1>
+    <div class="sub">Quem entra no app e o que cada pessoa vê ficam em <a href="#acessos" id="irAcessos">Equipe e acessos</a>.</div>
+    <div class="secao">Comissão de cada pessoa</div>
     <div class="lista" style="margin-top:0">${D.equipe.map(p => `<div class="card" data-u="${p.user_id}">
       <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:0">${esc(p.email || '')}</div></div>${p.user_id === D.meuId ? '<span class="tag">você</span>' : ''}</div>
       <div class="duas-col" style="margin-top:10px">
@@ -1639,6 +1714,7 @@ function telaEquipe(P) {
     if (error) { aviso('Não salvou: ' + error.message); return; }
     await carregarEquipe(); aviso('Salvo.'); telaEquipe(P);
   });
+  if ($('irAcessos')) $('irAcessos').onclick = (e) => { e.preventDefault(); ir('acessos'); };
   P.querySelectorAll('[data-par]').forEach(b => b.onclick = () => {
     const p = D.parceirosAdm.find(x => x.id === b.dataset.par), f = $('fPar');
     f.elements.id.value = p.id; f.elements.nome.value = p.nome; f.elements.pct.value = p.pct; f.elements.whatsapp.value = p.whatsapp || ''; f.elements.ativo.checked = p.ativo;
