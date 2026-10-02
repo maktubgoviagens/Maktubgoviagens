@@ -219,6 +219,13 @@ button.card.em{text-align:left;width:100%;cursor:pointer;font:inherit;color:inhe
 .fl input,.fl select,.fl textarea{width:100%;padding:11px 12px;border:1px solid var(--linha);background:var(--branco);font-size:16px;border-radius:0}
 .fl input:disabled,.fl select:disabled{background:var(--creme-2);color:var(--tinta-3)}
 .duas-col{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.duas-col>*{min-width:0}
+.fl input{min-width:0;max-width:100%}
+.fl input[type=month],.fl input[type=date]{-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
+.fl input::-webkit-date-and-time-value{text-align:left}
+.fxlin small{display:block;font-size:12px;color:var(--tinta-3);margin-top:2px}
+.fxlin{align-items:flex-start;text-align:left}
+.fxed{padding:6px 0 12px;border-bottom:1px solid var(--linha)}
 .caixas{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
 .fc{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;cursor:pointer}
 .fc input{width:20px;height:20px;accent-color:var(--verde)}
@@ -1603,6 +1610,9 @@ async function carregarDRE(L) {
 }
 
 /* ---------- salários e despesas fixas (administradores) ---------- */
+let FX_ED = null;
+const mesCurto = (d) => { const k = String(d).slice(0, 7); const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + '/' + y; };
+const periodoFixa = (x) => 'desde ' + mesCurto(x.desde) + (x.ate ? ' até ' + mesCurto(x.ate) : ' · sem data de término');
 async function telaCustos(P) {
   const hoje = mesKey(new Date());
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
@@ -1622,7 +1632,15 @@ async function telaCustos(P) {
     </form>`).join('')}</div>
     <div class="sub">Um salário novo vale a partir do mês escolhido. Os meses anteriores mantêm o valor antigo no DRE.</div>
     <div class="secao">Despesas fixas mensais · ${brl2(fixas.filter(ativa).reduce((a, x) => a + (+x.valor || 0), 0))}/mês</div>
-    <div class="bloco" style="margin-top:0">${fixas.length ? fixas.map(x => `<div class="lin"><span>${esc(x.descricao)} · ${esc(x.categoria)}${ativa(x) ? '' : ' <span class="tag">encerrada</span>'}</span><span>${brl2(x.valor)} ${ativa(x) ? `<button class="mini" data-fim="${x.id}">encerrar</button>` : ''}</span></div>`).join('') : '<div class="vazio">Nenhuma despesa fixa cadastrada.</div>'}</div>
+    <div class="bloco" style="margin-top:0">${fixas.length ? fixas.map(x => FX_ED === x.id ? `<form class="form fxed" data-fx="${x.id}">
+        <div class="duas-col">${campo('descricao', 'Descrição', x.descricao, 'text', 'required')}${campo('valor', 'Valor mensal (R$)', x.valor, 'number', 'required step="0.01"')}</div>
+        <label class="fl"><span>Categoria</span><select name="categoria">${[...new Set([...CAT_DESP, x.categoria])].map(c => `<option ${c === x.categoria ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        <div class="duas-col">${campo('desde', 'Começou em', String(x.desde).slice(0, 7), 'month', 'required')}${campo('ate', 'Último mês (opcional)', x.ate ? String(x.ate).slice(0, 7) : '', 'month')}</div>
+        <div class="sub" style="margin-top:2px">Sem último mês, ela entra em todos os meses daqui para frente. Mudar o valor aqui muda também os meses passados; se o valor mudou de um mês para o outro, encerre esta e cadastre uma nova.</div>
+        <div class="duas-col" style="margin-top:8px"><button class="zap" type="submit">Salvar</button><button class="sec" type="button" data-fxcancel>Cancelar</button></div>
+        <button class="mini" type="button" data-fxdel="${x.id}" style="margin-top:10px">excluir de todos os meses</button>
+      </form>` : `<button class="lin fxlin" data-fxed="${x.id}"><span>${esc(x.descricao)} · ${esc(x.categoria)}${ativa(x) ? '' : ' <span class="tag">encerrada</span>'}<small>${periodoFixa(x)}</small></span><span>${brl2(x.valor)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Nenhuma despesa fixa cadastrada.</div>'}
+      ${fixas.length ? '<div class="sub">Toque numa despesa para mudar o mês de início, encerrar ou corrigir.</div>' : ''}</div>
     <form class="bloco form" id="fFixa"><h2>Nova despesa fixa</h2>
       <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: contador, Supabase, Canva"')}${campo('valor', 'Valor mensal (R$)', '', 'number', 'required')}</div>
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
@@ -1640,12 +1658,22 @@ async function telaCustos(P) {
     if (error) { aviso('Não salvou: ' + error.message); return; }
     aviso('Despesa fixa adicionada.'); telaCustos(P);
   };
-  P.querySelectorAll('[data-fim]').forEach(b => b.onclick = async () => {
-    if (CONFIRMA !== 'fim' + b.dataset.fim) { CONFIRMA = 'fim' + b.dataset.fim; b.textContent = 'confirmar'; return; }
-    CONFIRMA = null;
-    const { error } = await sb.from('despesas_fixas').update({ ate: mesMais(hoje, -1) + '-01' }).eq('id', b.dataset.fim);
+  P.querySelectorAll('[data-fxed]').forEach(b => b.onclick = () => { FX_ED = b.dataset.fxed; CONFIRMA = null; telaCustos(P); });
+  P.querySelectorAll('[data-fxcancel]').forEach(b => b.onclick = () => { FX_ED = null; telaCustos(P); });
+  P.querySelectorAll('form[data-fx]').forEach(f => f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const desde = f.elements.desde.value, ate = f.elements.ate.value;
+    if (ate && ate < desde) { aviso('O último mês não pode ser antes do início.'); return; }
+    const { error } = await sb.from('despesas_fixas').update({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: desde + '-01', ate: ate ? ate + '-01' : null }).eq('id', f.dataset.fx);
     if (error) { aviso('Não salvou: ' + error.message); return; }
-    aviso('Encerrada: não entra mais a partir deste mês.'); telaCustos(P);
+    FX_ED = null; aviso('Despesa fixa atualizada. O DRE já considera os novos meses.'); telaCustos(P);
+  });
+  P.querySelectorAll('[data-fxdel]').forEach(b => b.onclick = async () => {
+    if (CONFIRMA !== 'fxdel' + b.dataset.fxdel) { CONFIRMA = 'fxdel' + b.dataset.fxdel; b.textContent = 'toque de novo para excluir de todos os meses'; return; }
+    CONFIRMA = null;
+    const { error } = await sb.from('despesas_fixas').delete().eq('id', b.dataset.fxdel);
+    if (error) { aviso('Não excluiu: ' + error.message); return; }
+    FX_ED = null; aviso('Despesa fixa excluída.'); telaCustos(P);
   });
 }
 
