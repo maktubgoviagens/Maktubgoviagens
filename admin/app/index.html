@@ -127,6 +127,7 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .conf .dif{margin-top:6px;font-weight:600;color:var(--verde);font-size:14px}
 .conf .dif.neg{color:var(--alerta)}
 .resumoConf{margin-top:12px;font-size:14px;color:var(--tinta-2)}
+.dre .lin.sub{font-weight:600;color:var(--verde)}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .info{margin-top:10px;display:grid;gap:3px;font-size:14px}
 .info span{color:var(--tinta-3)}
@@ -393,7 +394,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas'];
+const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos'];
 const ABAS_COLAB = ['inicio', 'emissoes', 'reunioes', 'agenda', 'comissao'];
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -432,10 +433,10 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
+  const alvo = ['receber', 'opmilhas', 'leads', 'site', 'equipe', 'avisos', 'metas', 'mais', 'custos'].includes(ABA) ? 'mais' : ABA === 'clientes' ? 'gestao' : ABA;
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
-  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', custos: 'Salários e despesas', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -557,6 +558,7 @@ function tela() {
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
   if (ABA === 'metas') return telaMetas(P);
+  if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -1346,10 +1348,16 @@ function telaComissao(P) {
       <div class="num destaque"><div class="l">Comissão do mês</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado, valor final' : 'parcial, mês em aberto'}</div></div>
       <div class="num"><div class="l">Emissões no mês</div><div class="v">${L.length}</div><div class="d">com você como vendedor</div></div>
     </div>
+    <div id="minhaRem"></div>
     <section class="bloco"><h2>Acumulado em ${EM_MES.slice(0, 4)}</h2><div class="lin"><span>Comissões</span><span>${brl2(soma(ano, 'comissao'))}</span></div><div class="lin"><span>Emissões</span><span>${ano.length}</span></div></section>
     <div class="secao">Emissões do mês</div>
     <div class="bloco" style="margin-top:0">${L.length ? L.map(e => `<div class="lin"><span>${esc(e.comprador || e.produto || e.servico)} · ${dataCurta(dia(e.data_negociacao))}</span><span>${brl2(e.comissao)}</span></div>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   ligarMes('coMes', () => telaComissao(P));
+  const alvo = EM_MES;
+  sb.rpc('minha_remuneracao', { p_mes: EM_MES + '-01' }).then(({ data, error }) => {
+    const el = $('minhaRem'); if (!el || error || !data || EM_MES !== alvo || !(+data.fixo)) return;
+    el.innerHTML = `<section class="bloco"><h2>Sua remuneração em ${mesNome(EM_MES).toLowerCase()}</h2><div class="lin"><span>Salário fixo</span><span>${brl2(data.fixo)}</span></div><div class="lin"><span>Comissões</span><span>${brl2(data.comissao)}</span></div><div class="lin forte"><span>Total</span><span>${brl2(+data.fixo + +data.comissao)}</span></div></section>`;
+  });
 }
 
 /* ---------- financeiro (administradores) ---------- */
@@ -1378,6 +1386,7 @@ function telaFinanceiro(P) {
       <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">a pagar ao time</div></div>
       <div class="num"><div class="l">Parceiros</div><div class="v">${brlC(soma(L, 'repasse'))}</div><div class="d">remuneração de indicações</div></div>
     </div>
+    <div id="dreBloco"><div class="vazio" style="margin-top:12px">Calculando o DRE...</div></div>
     ${meses}
     <section class="bloco"><h2>Lucro líquido por serviço</h2>${barras(Object.entries(porServ).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, Math.round(v)]), 'ouro')}</section>
     <section class="bloco"><h2>Por vendedor</h2>${Object.keys(porVend).length ? Object.entries(porVend).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => `<button class="lin" data-vend="${k || 'sem'}" style="align-items:flex-start"><span>${esc(nomeTime(k) || 'Sem vendedor')} · ${x.n} emiss${x.n === 1 ? 'ão' : 'ões'}<small style="display:block;color:var(--tinta-3);font-size:12px;margin-top:2px">lucro bruto ${brl2(x.b)} · comissão ${brl2(x.c)}</small></span><span>${brl2(x.v)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Sem emissões.</div>'}<div class="sub">Valor à direita: total vendido. Toque para ver as vendas.</div></section>
@@ -1391,6 +1400,7 @@ function telaFinanceiro(P) {
   P.querySelectorAll('[data-vend]').forEach(b => b.onclick = () => { EM_VEND = b.dataset.vend; EM_SERV = 'todos'; ir('emissoes'); });
   P.querySelectorAll('[data-serv]').forEach(b => b.onclick = () => { EM_SERV = b.dataset.serv; EM_VEND = 'todos'; ir('emissoes'); });
   P.querySelectorAll('[data-receber]').forEach(b => b.onclick = () => ir('receber'));
+  carregarDRE(L);
   $('finModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { FIN_MODO = b.dataset.m; telaFinanceiro(P); } };
   ligarMes('finMes', () => telaFinanceiro(P));
   if ($('fechar')) $('fechar').onclick = async () => {
@@ -1402,6 +1412,106 @@ function telaFinanceiro(P) {
     const f = await sb.from('fechamentos').select('*'); D.fech = f.data || [];
     aviso(fech ? 'Mês reaberto.' : 'Mês fechado.'); telaFinanceiro(P);
   };
+}
+
+/* ---------- DRE da empresa (administradores) ---------- */
+const CAT_DESP = ['Marketing', 'Ferramentas', 'Contabilidade', 'Pessoal', 'Viagens', 'Taxas e tarifas', 'Escritório', 'Outros'];
+async function carregarDRE(L) {
+  const el = $('dreBloco'); if (!el) return;
+  const y = EM_MES.slice(0, 4), mesModo = FIN_MODO === 'mes', alvo = EM_MES;
+  const [cu, dv] = await Promise.all([
+    sb.rpc('dre_custos', { p_ini: mesModo ? EM_MES + '-01' : y + '-01-01', p_fim: mesModo ? EM_MES + '-01' : y + '-12-01' }),
+    mesModo ? sb.from('despesas').select('*').eq('mes', EM_MES + '-01').order('criado_em', { ascending: false }) : Promise.resolve({ data: [] })
+  ]);
+  if (ABA !== 'financeiro' || !$('dreBloco') || EM_MES !== alvo) return;
+  if (cu.error) { el.innerHTML = '<div class="vazio">O DRE é ativado pelo 27-dre-e-salarios.sql no Supabase.</div>'; return; }
+  const C = cu.data || [], tot = (k) => C.reduce((t, r) => t + (+r[k] || 0), 0);
+  const rec = soma(L, 'valor_receber'), cus = soma(L, 'custo'), lb = soma(L, 'lucro_bruto'), imp = soma(L, 'imposto'), com = soma(L, 'comissao'), rep = soma(L, 'repasse');
+  const margem = lb - imp - com - rep, sal = tot('salarios'), fix = tot('fixas'), avu = tot('avulsas'), res = margem - sal - fix - avu;
+  const ln = (t, v, cls) => `<div class="lin ${cls || ''}"><span>${t}</span><span>${v < 0 ? '− ' + brl2(-v) : brl2(v)}</span></div>`;
+  const pessoas = mesModo && C[0] ? (C[0].por_pessoa || []) : [];
+  let porMes = '';
+  if (!mesModo) porMes = `<section class="bloco"><h2>Resultado por mês</h2>${C.map(r => { const k = String(r.mes).slice(0, 7), E = doMes(k); const mg = soma(E, 'lucro_bruto') - soma(E, 'imposto') - soma(E, 'comissao') - soma(E, 'repasse'); const rr = mg - (+r.salarios || 0) - (+r.fixas || 0) - (+r.avulsas || 0); return E.length || +r.salarios || +r.fixas || +r.avulsas ? `<button class="lin" data-mesdre="${k}"><span>${mesNome(k)}</span><span style="color:${rr < 0 ? 'var(--alerta)' : 'var(--verde)'}">${rr < 0 ? '− ' + brl2(-rr) : brl2(rr)}<b class="seta">›</b></span></button>` : ''; }).join('') || '<div class="vazio">Sem movimento no ano.</div>'}</section>`;
+  el.innerHTML = `<section class="bloco dre"><h2>DRE ${mesModo ? 'de ' + mesNome(EM_MES).toLowerCase() : 'de ' + y}</h2>
+      ${ln('Receita das vendas', rec)}${ln('(−) Custo das emissões', -cus)}${ln('= Lucro bruto', lb, 'sub')}
+      ${ln('(−) Imposto', -imp)}${ln('(−) Comissões do time', -com)}${ln('(−) Parceiros', -rep)}${ln('= Margem de contribuição', margem, 'sub')}
+      ${ln('(−) Salários fixos', -sal)}${ln('(−) Despesas fixas', -fix)}${ln('(−) Despesas do mês', -avu)}
+      <div class="lin forte"><span>= Resultado da empresa</span><span style="color:${res < 0 ? 'var(--alerta)' : 'var(--verde)'}">${res < 0 ? '− ' + brl2(-res) : brl2(res)}</span></div>
+      ${rec ? `<div class="sub" style="margin-top:6px">Margem final de ${pct(res / rec * 100)} sobre as vendas.</div>` : ''}
+      ${pessoas.length ? `<div class="sub" style="margin-top:8px">Fixos: ${pessoas.map(p => esc(p.nome) + ' ' + brl(p.fixo)).join(' · ')}</div>` : ''}
+    </section>
+    ${porMes}
+    ${mesModo ? `<div class="secao">Despesas do mês <button id="abrirDesp">+ Lançar</button></div>
+    <form class="bloco form" id="fDesp" hidden style="margin-top:0">
+      <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: tráfego pago, bônus"')}${campo('valor', 'Valor (R$)', '', 'number', 'required')}</div>
+      <label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>
+      <button class="zap" type="submit" style="margin-top:8px;width:100%">Lançar em ${mesNome(EM_MES).toLowerCase()}</button>
+    </form>
+    <div class="bloco" style="margin-top:0">${(dv.data || []).length ? dv.data.map(d => `<div class="lin"><span>${esc(d.descricao)} · ${esc(d.categoria)}</span><span>${brl2(d.valor)} <button class="mini" data-rmdesp="${d.id}">excluir</button></span></div>`).join('') : '<div class="vazio">Nenhuma despesa avulsa neste mês.</div>'}
+      <div class="sub">Salários e despesas que se repetem todo mês ficam em <a href="#custos" id="irCustos">Mais > Salários e despesas fixas</a>.</div></div>` : ''}`;
+  el.querySelectorAll('[data-mesdre]').forEach(b => b.onclick = () => { FIN_MODO = 'mes'; EM_MES = b.dataset.mesdre; telaFinanceiro($('pagina')); scrollTo(0, 0); });
+  if ($('irCustos')) $('irCustos').onclick = (e) => { e.preventDefault(); ir('custos'); };
+  if ($('abrirDesp')) $('abrirDesp').onclick = () => { $('fDesp').hidden = !$('fDesp').hidden; };
+  if ($('fDesp')) $('fDesp').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target;
+    const { error } = await sb.from('despesas').insert({ mes: EM_MES + '-01', descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')) });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    aviso('Despesa lançada.'); carregarDRE(L);
+  };
+  el.querySelectorAll('[data-rmdesp]').forEach(b => b.onclick = async () => {
+    if (CONFIRMA !== 'desp' + b.dataset.rmdesp) { CONFIRMA = 'desp' + b.dataset.rmdesp; b.textContent = 'confirmar'; return; }
+    CONFIRMA = null;
+    const { error } = await sb.from('despesas').delete().eq('id', b.dataset.rmdesp);
+    if (error) { aviso('Não excluiu: ' + error.message); return; }
+    aviso('Despesa excluída.'); carregarDRE(L);
+  });
+}
+
+/* ---------- salários e despesas fixas (administradores) ---------- */
+async function telaCustos(P) {
+  const hoje = mesKey(new Date());
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => ir('mais');
+  const [sl, fx] = await Promise.all([sb.rpc('salarios_listar'), sb.from('despesas_fixas').select('*').order('desde', { ascending: false })]);
+  if (ABA !== 'custos') return;
+  if (sl.error || fx.error) { P.querySelector('.vazio').textContent = 'Rode o 27-dre-e-salarios.sql no Supabase para ativar.'; return; }
+  const fixas = fx.data || [], ativa = (x) => !x.ate || String(x.ate).slice(0, 7) >= hoje;
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1>
+    <div class="sub">Tudo aqui entra sozinho no DRE de cada mês. A comissão continua automática.</div>
+    <div class="secao">Salário fixo de cada pessoa</div>
+    <div class="lista" style="margin-top:0">${(sl.data || []).map(p => `<form class="card form" data-sal="${p.user_id}">
+      <div class="cab"><div class="nome" style="font-size:19px">${esc(p.nome)}</div><span class="quando">${+p.salario_atual ? brl2(p.salario_atual) + (p.desde ? ' desde ' + mesNome(String(p.desde).slice(0, 7)).toLowerCase() : '') : 'sem salário fixo'}</span></div>
+      <div class="duas-col">${campo('valor', 'Novo salário (R$)', '', 'number', 'required')}${campo('desde', 'Vale a partir de', hoje, 'month', 'required')}</div>
+      <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar</button>
+      ${(p.historico || []).length > 1 ? `<div class="sub" style="margin-top:6px">Histórico: ${p.historico.map(h => brl(h.valor) + ' desde ' + mesNome(String(h.desde).slice(0, 7)).toLowerCase()).join(' · ')}</div>` : ''}
+    </form>`).join('')}</div>
+    <div class="sub">Um salário novo vale a partir do mês escolhido. Os meses anteriores mantêm o valor antigo no DRE.</div>
+    <div class="secao">Despesas fixas mensais · ${brl2(fixas.filter(ativa).reduce((a, x) => a + (+x.valor || 0), 0))}/mês</div>
+    <div class="bloco" style="margin-top:0">${fixas.length ? fixas.map(x => `<div class="lin"><span>${esc(x.descricao)} · ${esc(x.categoria)}${ativa(x) ? '' : ' <span class="tag">encerrada</span>'}</span><span>${brl2(x.valor)} ${ativa(x) ? `<button class="mini" data-fim="${x.id}">encerrar</button>` : ''}</span></div>`).join('') : '<div class="vazio">Nenhuma despesa fixa cadastrada.</div>'}</div>
+    <form class="bloco form" id="fFixa"><h2>Nova despesa fixa</h2>
+      <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: contador, Supabase, Canva"')}${campo('valor', 'Valor mensal (R$)', '', 'number', 'required')}</div>
+      <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
+      <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
+  $('voltar').onclick = () => ir('mais');
+  P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const { error } = await sb.rpc('salario_definir', { p_user: f.dataset.sal, p_valor: Number(String(f.elements.valor.value || 0).replace(',', '.')), p_desde: (f.elements.desde.value || hoje) + '-01' });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    aviso('Salário salvo.'); telaCustos(P);
+  });
+  $('fFixa').onsubmit = async (ev) => {
+    ev.preventDefault(); const f = ev.target;
+    const { error } = await sb.from('despesas_fixas').insert({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: (f.elements.desde.value || hoje) + '-01' });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    aviso('Despesa fixa adicionada.'); telaCustos(P);
+  };
+  P.querySelectorAll('[data-fim]').forEach(b => b.onclick = async () => {
+    if (CONFIRMA !== 'fim' + b.dataset.fim) { CONFIRMA = 'fim' + b.dataset.fim; b.textContent = 'confirmar'; return; }
+    CONFIRMA = null;
+    const { error } = await sb.from('despesas_fixas').update({ ate: mesMais(hoje, -1) + '-01' }).eq('id', b.dataset.fim);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    aviso('Encerrada: não entra mais a partir deste mês.'); telaCustos(P);
+  });
 }
 
 /* ---------- pagamentos a receber (administradores) ---------- */
@@ -1439,6 +1549,7 @@ function telaMais(P) {
     ['site', 'Números do site', 0],
     ['equipe', 'Equipe, comissões e parceiros', 0],
     ['metas', 'Metas do mês', 0],
+    ['custos', 'Salários e despesas fixas', 0],
     ['opmilhas', 'Operação de milhas dos sócios', 0],
     ['avisos', 'Avisos no celular, Telegram e WhatsApp', avisosNovos().length]
   ];
