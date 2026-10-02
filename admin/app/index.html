@@ -2341,7 +2341,7 @@ function htmlReuniaoAgenda(x) {
   const passou = x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5;
   return `<button class="av ${falta || passou ? 'novo' : ''}" data-ag="${x.id}" type="button"><span class="ic">•</span><span>
     <span class="t" style="display:block">${esc(x.titulo)}${x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + esc(x.cliente) : ''}</span>
-    <span class="q" style="display:block">${dataHora(x.data)} · ${esc(x.tipo)}${(x.participantes || []).length ? ' · ' + esc(x.participantes.map(nomeTime).filter(Boolean).join(', ')) : ''}</span>
+    <span class="q" style="display:block">${dataHora(x.data)} · ${esc(x.tipo)}${x.vendedor_id && nomeTime(x.vendedor_id) ? ' · vendedor: ' + esc(nomeTime(x.vendedor_id)) : ''}${(x.participantes || []).filter(u => u !== x.vendedor_id).length ? ' · com ' + esc(x.participantes.filter(u => u !== x.vendedor_id).map(nomeTime).filter(Boolean).join(', ')) : ''}</span>
     <span style="display:block;margin-top:4px"><span class="tag ${tag}">${esc(x.status)}</span>${falta ? ' <span class="tag alerta">falta o resumo</span>' : ''}${passou ? ' <span class="tag alerta">como foi?</span>' : ''}${x.ticktick && Object.keys(x.ticktick).length ? ' <span class="tag">no TickTick</span>' : ''}</span>
     ${x.resumo ? `<span class="d" style="display:block;margin-top:4px">${esc(String(x.resumo).slice(0, 220))}${String(x.resumo).length > 220 ? '...' : ''}</span>` : ''}</span></button>`;
 }
@@ -2497,7 +2497,8 @@ function telaFormAgenda(P) {
       ${ADMIN && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === x.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
       <label class="fl"><span>Atendimento do comercial</span><select name="atendimento_id"><option value="">-</option>${atds.map(r => `<option value="${r.id}" ${r.id === x.atendimento_id ? 'selected' : ''}>${esc(r.cliente)} · ${esc(r.produto)}${r.trecho ? ' · ' + esc(r.trecho) : ''}</option>`).join('')}</select></label>
       ${campo('cliente', 'Ou o nome de quem participa', x.cliente_id || x.atendimento_id ? '' : x.cliente, 'text', 'placeholder="Cliente, parceiro ou empresa"')}
-      <div class="grupo">Participantes da Maktub</div>
+      <div class="grupo">Vendedor e participantes</div>
+      <label class="fl"><span>Vendedor responsável</span><select name="vendedor_id"><option value="">Automático (dono do atendimento)</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === (x.vendedor_id || (nova && !x.atendimento_id ? D.meuId : '')) ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
       <div class="caixas">${D.time.map(t => `<label class="fc"><input type="checkbox" name="part" value="${t.user_id}" ${(x.participantes || []).includes(t.user_id) ? 'checked' : ''}><span>${esc(t.nome)}${D.tt && (D.tt.conectados || []).includes(t.user_id) ? ' · TickTick' : ''}</span></label>`).join('')}</div>
       <div class="grupo">Situação</div>
       <div class="etapas" id="agSt">${AG_STATUS.map(st => `<button type="button" data-v="${st}" class="${st === x.status ? 'on' : ''}">${st}</button>`).join('')}</div>
@@ -2513,14 +2514,18 @@ function telaFormAgenda(P) {
   const f = $('fAg');
   const mostrar = () => { const st = f.elements.status.value; $('agResumo').hidden = st !== 'Realizada'; $('agPub').hidden = !(f.elements.cliente_id && f.elements.cliente_id.value); $('salvarAg').textContent = nova ? (st === 'Agendada' ? 'Agendar' : 'Registrar') : 'Salvar'; };
   $('agSt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.status.value = b.dataset.v; [...$('agSt').children].forEach(y => y.classList.toggle('on', y === b)); mostrar(); };
-  f.onchange = mostrar; mostrar();
+  f.onchange = (ev) => {
+    if (ev && ev.target && ev.target.name === 'atendimento_id') { const at = D.reunioes.find(r => r.id === ev.target.value); if (at && at.responsavel_id) f.elements.vendedor_id.value = at.responsavel_id; }
+    mostrar();
+  };
+  mostrar();
   $('voltar').onclick = () => history.back();
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
     const parts = [...f.querySelectorAll('[name=part]:checked')].map(c => c.value);
     if (!parts.length) { $('msgAg').textContent = 'Marque pelo menos um participante da Maktub.'; return; }
-    const row = { titulo: g('titulo'), tipo: g('tipo'), data: new Date(g('data')).toISOString(), duracao_min: Number(g('duracao_min') || 60), link: g('link') || null,
+    const row = { vendedor_id: g('vendedor_id') || null, titulo: g('titulo'), tipo: g('tipo'), data: new Date(g('data')).toISOString(), duracao_min: Number(g('duracao_min') || 60), link: g('link') || null,
       cliente_id: g('cliente_id') || null, atendimento_id: g('atendimento_id') || null, cliente: g('cliente') || null, participantes: parts,
       status: g('status'), resumo: g('status') === 'Realizada' ? (g('resumo') || null) : (x.resumo || null), publicar_no_painel: !!(f.elements.publicar_no_painel && f.elements.publicar_no_painel.checked && g('cliente_id')) };
     if (nova && x.agendamento_id) row.agendamento_id = x.agendamento_id;
