@@ -345,6 +345,7 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=4';
 import * as CRM from '/admin/app/crm.js?v=7';
 import * as FORN from '/admin/app/fornecedores.js?v=6';
+import * as COT from '/admin/app/cotador.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -436,7 +437,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['empresa', 'receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores'];
+const ABAS_ADMIN = ['empresa', 'receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -449,9 +450,9 @@ const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'] };
+const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'mais'].filter(podeAba);
+const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -459,6 +460,7 @@ function lerHash() {
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   if (ABA === 'crm') CRM.rota(h);
   if (ABA === 'fornecedores') FORN.rota(h);
+  if (ABA === 'cotador') COT.rota(h);
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
   GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
@@ -510,13 +512,14 @@ function ir(aba, extra) {
   history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
   marcarNav(); tela(); scrollTo(0, 0);
 }
+window.irCotador = () => ir('cotador');
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { fornecedores: 'Fornecedores', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { cotador: 'Cotações', fornecedores: 'Fornecedores', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -672,6 +675,7 @@ function tela() {
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
+  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
@@ -1327,7 +1331,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + (podeAba('cotador') ? '<button class="sec grande" onclick="irCotador()" style="width:100%;margin-top:10px">Montador de cotações ›</button>' : '');
   if (D.reErro) { P.innerHTML = titulo + '<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'; return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento')
