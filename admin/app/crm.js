@@ -12,6 +12,17 @@ const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const idade = (nasc) => { if (!nasc) return null; const n = new Date(nasc + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) a--; return a; };
 const proxAniv = (nasc) => { if (!nasc) return null; const n = new Date(nasc + 'T12:00:00'), h = new Date(); h.setHours(0, 0, 0, 0); let d = new Date(h.getFullYear(), n.getMonth(), n.getDate()); if (d < h) d = new Date(h.getFullYear() + 1, n.getMonth(), n.getDate()); return d; };
 const mascara = (cpf) => { const d = so(cpf); return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '***'; };
+const dataBR = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+function textoEmissao(D, ids) {
+  return ids.map(id => {
+    const p = pessoa(D, id); if (!p) return '';
+    const d = (D.docs || []).find(x => x.pessoa_id === id) || {};
+    return [p.nome.toUpperCase(), `CPF: ${d.cpf ? fmtCpf(d.cpf) : 'falta'}`, `Nascimento: ${p.nascimento ? dataBR(p.nascimento) : 'falta'}`,
+      p.sexo === 'F' ? 'Sexo: Feminino' : p.sexo === 'M' ? 'Sexo: Masculino' : '',
+      d.passaporte ? `Passaporte: ${d.passaporte}${d.passaporte_validade ? ' (validade ' + dataBR(d.passaporte_validade) + ')' : ''}${d.nacionalidade ? ' · ' + d.nacionalidade : ''}` : '',
+      p.celular ? `Celular: ${p.celular}` : '', p.email ? `E-mail: ${p.email}` : ''].filter(Boolean).join('\n');
+  }).filter(Boolean).join('\n\n');
+}
 const serv = (e) => e.servico_app || e.servico || 'Outro';
 const fmtCpf = (cpf) => { const d = so(cpf); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : (cpf || ''); };
 
@@ -152,6 +163,15 @@ function telaFicha(P, X) {
         ${doc && doc.visto ? lin('Visto', esc(doc.visto) + (doc.visto_validade ? ' · vence ' + new Date(doc.visto_validade + 'T12:00:00').toLocaleDateString('pt-BR') : '')) : ''}`
       : lin('Documentos', p.tem_documentos ? 'Cadastrados (visíveis para quem emite)' : 'Não cadastrados')}
     </section>
+    ${verDocs ? `<section class="bloco"><h2>Kit de emissão</h2>
+      <div class="sub" style="margin-top:0">Marque quem vai viajar e copie os dados de todos para colar no site da companhia.</div>
+      <div id="kitQuem" style="margin-top:8px">${[{ o: p, t: 'Titular' }, ...vinc.map(x => ({ o: x.o, t: x.v.tipo === 'familia' ? 'Família' : 'Viaja junto' }))].map(({ o, t }) => {
+        const d = (D.docs || []).find(x => x.pessoa_id === o.id) || {};
+        const falta = [!d.cpf && 'CPF', !o.nascimento && 'nascimento'].filter(Boolean);
+        return `<label class="fc" style="align-items:flex-start"><input type="checkbox" value="${o.id}" ${o.id === p.id ? 'checked' : ''}><span>${esc(o.nome)} <small style="color:var(--tinta-3)">· ${t}</small>${falta.length ? `<small style="display:block;color:var(--alerta)">falta ${falta.join(' e ')}</small>` : ''}</span></label>`;
+      }).join('')}</div>
+      <button class="zap" type="button" id="copiarKit" style="margin-top:10px;width:100%">Copiar dados para emitir</button>
+    </section>` : ''}
     <section class="bloco"><h2>Como chegou</h2>
       ${lin('Origem', esc(p.origem) || 'Não informado')}
       ${ind ? `<button class="lin" data-p="${ind.id}" style="width:100%"><span>Indicado por</span><span>${esc(ind.nome)} ›</span></button>` : ''}
@@ -173,6 +193,13 @@ function telaFicha(P, X) {
     ${ADMIN ? '<button class="sec grande" id="excluirP" style="margin-top:14px;width:100%">Excluir ficha</button>' : ''}`;
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarP').onclick = () => ir(X, 'editar', p.id);
+  if ($('copiarKit')) $('copiarKit').onclick = async () => {
+    const ids = [...P.querySelectorAll('#kitQuem input:checked')].map(c => c.value);
+    if (!ids.length) return X.aviso('Marque pelo menos uma pessoa.');
+    const txt = textoEmissao(D, ids);
+    try { await navigator.clipboard.writeText(txt); X.aviso(ids.length === 1 ? 'Dados copiados.' : `Dados de ${ids.length} pessoas copiados.`); }
+    catch (_) { prompt('Copie os dados:', txt); }
+  };
   $('novaCot').onclick = () => X.novaCotacao({ cliente: p.nome, contato: p.celular || p.email || '', pessoa_id: p.id, origem: p.origem || '' });
   $('linkCad').onclick = () => gerarLink(P, X, p);
   if ($('irGestao')) $('irGestao').onclick = () => X.abrirFicha(p.cliente_id);
