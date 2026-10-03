@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#1a3826" />
+  <title>Como foi o atendimento | Maktub Go</title>
+  <link rel="icon" href="/ativos/app-icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{--green:#1a3826;--green-mid:#234832;--gold:#8a6520;--gold-warm:#c9a96e;--cream:#f9f6f1;--cream-deep:#f2ece1;--white:#fff;--text:#2c2c2c;--muted:#6b6b63;--line:rgba(26,56,38,.14);--alert:#a0561f}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--cream);color:var(--text);font-family:'Jost',sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    header{background:var(--green);color:var(--cream);padding:28px 20px 34px;position:relative;overflow:hidden}
+    header::before{content:'';position:absolute;width:420px;height:420px;border:1px solid rgba(201,169,110,.18);border-radius:50%;top:-220px;right:-180px}
+    .wrap{max-width:560px;margin:0 auto;position:relative}
+    .marca{display:flex;align-items:center;gap:12px}.logo{height:38px;width:auto;display:block}.marca span{font-size:13px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--white)}
+    .eyebrow{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-warm);margin-top:26px}
+    h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:34px;line-height:1.15;margin-top:8px}
+    h1 em{font-style:italic;color:var(--gold-warm)}
+    header p{color:rgba(249,246,241,.82);margin-top:10px;font-weight:300}
+    main{padding:8px 20px 48px}
+    .card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px 18px;margin-top:18px}
+    h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:var(--green)}
+    h2 + .hint{margin-top:2px}
+    .hint{font-size:13px;color:var(--muted)}
+    label{display:block;margin-top:14px}
+    label > span{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:500;margin-bottom:6px}
+    input,select{width:100%;font:inherit;color:var(--text);background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:48px;-webkit-appearance:none;appearance:none}
+    input:focus,select:focus{outline:2px solid var(--gold-warm);outline-offset:1px;background:var(--white)}
+    .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .duo label{margin-top:14px}
+    .check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:var(--text)}
+    .check span{display:inline;font-size:14px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:400;margin:0}
+    .check input{width:22px;height:22px;min-height:0;flex:none;margin-top:1px;appearance:auto;-webkit-appearance:auto;accent-color:var(--green)}
+    details{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+    summary{cursor:pointer;color:var(--green);font-weight:500;list-style:none}
+    summary::before{content:'+ ';color:var(--gold)}
+    details[open] summary::before{content:'− '}
+    .acomp{border:1px solid var(--line);border-radius:12px;padding:12px 14px 16px;margin-top:14px;background:var(--cream)}
+    .acomp input,.acomp select{background:var(--white)}
+    .acomp .topo{display:flex;justify-content:space-between;align-items:center}
+    .acomp .topo b{font-weight:500;color:var(--green)}
+    .rem{background:none;border:0;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+    .btn{display:block;width:100%;font:inherit;font-weight:500;letter-spacing:.14em;text-transform:uppercase;font-size:13px;border-radius:999px;padding:16px;cursor:pointer;margin-top:18px;border:1px solid var(--green)}
+    .btn.main{background:var(--green);color:var(--cream)}
+    .btn.ghost{background:transparent;color:var(--green)}
+    .btn:disabled{opacity:.6}
+    .msg{margin-top:12px;font-size:14px;color:var(--alert);min-height:1em}
+    .done{text-align:center;padding:36px 8px}
+    .done h2{font-size:30px}
+    .done p{color:var(--muted);margin-top:10px}
+    .priv{font-size:12px;color:var(--muted);margin-top:22px;text-align:center}
+    .priv a{color:var(--green);text-decoration:underline}
+    [hidden]{display:none!important}
+  
+    .notas{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+    .notas button{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;min-height:58px;border-radius:12px;border:1px solid var(--line);background:var(--cream);color:var(--green);cursor:pointer}
+    .notas button.on{background:var(--green);color:var(--cream);border-color:var(--green)}
+    .legenda{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
+    .opcoes{display:grid;gap:8px;margin-top:12px}
+    .opcoes button{font:inherit;text-align:left;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--cream);color:var(--text);cursor:pointer}
+    .opcoes button.on{border-color:var(--green);background:var(--white);box-shadow:inset 0 0 0 1px var(--green);color:var(--green);font-weight:500}
+    textarea{width:100%;font:inherit;color:var(--text);background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:110px;resize:vertical}
+    textarea:focus{outline:2px solid var(--gold-warm);outline-offset:1px;background:var(--white)}
+    .q{font-size:15px;font-weight:500;color:var(--green);margin-top:4px}
+  </style>
+</head>
+<body>
+  <header><div class="wrap">
+    <div class="marca"><img class="logo" src="/ativos/simbolo-creme.png" alt="" /><span>Maktub Go</span></div>
+    <div class="eyebrow">Alfaiataria de Viagens</div>
+    <h1 id="ola">Como foi a nossa <em>conversa?</em></h1>
+    <p id="intro">Leva 30 segundos e faz diferença de verdade: é assim que a gente melhora cada atendimento.</p>
+  </div></header>
+
+  <main><div class="wrap">
+    <div class="card" id="estado" hidden></div>
+    <form id="f" hidden novalidate>
+      <div class="card">
+        <h2>Sua nota</h2>
+        <div class="q" id="pNota">De 1 a 5, como foi o atendimento?</div>
+        <div class="notas" id="notas"></div>
+        <div class="legenda"><span>Precisa melhorar</span><span>Excelente</span></div>
+      </div>
+      <div class="card">
+        <h2>Próximo passo</h2>
+        <div class="q">Você saiu da conversa sabendo o que vem a seguir?</div>
+        <div class="opcoes" id="clareza">
+          <button type="button" data-v="sim">Sim, ficou tudo claro</button>
+          <button type="button" data-v="em_parte">Em parte</button>
+          <button type="button" data-v="nao">Não ficou claro</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Quer contar mais?</h2>
+        <div class="hint">Opcional. Elogio, sugestão ou o que poderia ter sido diferente.</div>
+        <label><textarea name="comentario" maxlength="2000"></textarea></label>
+      </div>
+      <button type="submit" class="btn main" id="enviar">Enviar avaliação</button>
+      <div class="msg" id="msg"></div>
+      <p class="priv">Sua resposta é lida pelos sócios da Maktub Go. Veja a nossa <a href="/privacidade/">política de privacidade</a>.</p>
+    </form>
+  </div></main>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: false } });
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get('a') || '';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+const estado = (t, x) => { $('f').hidden = true; $('estado').hidden = false; $('estado').innerHTML = `<div class="done"><h2>${t}</h2><p>${x}</p></div>`; };
+let nota = 0, clareza = '';
+$('notas').innerHTML = [1, 2, 3, 4, 5].map(n => `<button type="button" data-n="${n}" aria-label="Nota ${n}">${n}</button>`).join('');
+$('notas').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; nota = +b.dataset.n; [...$('notas').children].forEach(x => x.classList.toggle('on', x === b)); };
+$('clareza').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; clareza = b.dataset.v; [...$('clareza').children].forEach(x => x.classList.toggle('on', x === b)); };
+
+async function iniciar() {
+  if (!token) return estado('Link incompleto', 'Abra o link exatamente como recebeu da Maktub Go.');
+  const { data, error } = await sb.rpc('avaliacao_ver', { p_token: token });
+  if (error || !data || !data.ok) return estado('Este link expirou', 'Obrigado por querer avaliar. Se quiser nos contar algo, é só responder no WhatsApp.');
+  if (data.respondida) return estado('Avaliação recebida', 'Você já respondeu. Muito obrigado pelo seu tempo.');
+  if (data.nome) $('ola').innerHTML = `${esc(data.nome)}, como foi a nossa <em>conversa?</em>`;
+  if (data.vendedor) $('pNota').textContent = `De 1 a 5, como foi o atendimento com ${data.vendedor}?`;
+  $('f').hidden = false;
+}
+
+$('f').onsubmit = async (ev) => {
+  ev.preventDefault();
+  $('msg').textContent = '';
+  if (!nota) { $('msg').textContent = 'Escolha uma nota de 1 a 5.'; return; }
+  $('enviar').disabled = true; $('enviar').textContent = 'Enviando...';
+  const { error } = await sb.rpc('avaliacao_enviar', { p_token: token, p_nota: nota, p_clareza: clareza || null, p_comentario: ev.target.elements.comentario.value.trim() || null });
+  $('enviar').disabled = false; $('enviar').textContent = 'Enviar avaliação';
+  if (error) { $('msg').textContent = error.message || 'Não foi possível enviar agora. Tente de novo em instantes.'; return; }
+  scrollTo(0, 0);
+  estado('Obrigado!', nota >= 4 ? 'Ficamos muito felizes. Conte com a gente em cada detalhe da sua viagem.' : 'Obrigado pela sinceridade. Vamos olhar com atenção e falar com você.');
+};
+iniciar();
+</script>
+</body>
+</html>

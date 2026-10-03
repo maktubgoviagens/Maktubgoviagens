@@ -342,7 +342,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=2';
-import * as CRM from '/admin/app/crm.js?v=2';
+import * as CRM from '/admin/app/crm.js?v=3';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -568,6 +568,7 @@ async function carregar(silencioso) {
       ADMIN ? sb.from('pessoas_duplicatas').select('*').eq('status', 'pendente').limit(500) : nada
     ]);
     D.pessoas = px[0].error ? null : (px[0].data || []);
+    { const av = await sb.from('avaliacoes').select('*').order('created_at', { ascending: false }).limit(5000); D.avaliacoes = av.error ? null : (av.data || []); }
     [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
   } else D.pessoas = [];
   $('pagina').classList.remove('carregando');
@@ -1319,6 +1320,7 @@ function telaReunioes(P) {
     ${G ? '' : blocoConv('Conversão por produto', base, r => r.produto)}
     ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
     ${blocoConv('Conversão por origem', base, r => r.origem)}
+    ${blocoAtendimento(base)}
     ${(m => m.length ? `<section class="bloco"><h2>Por que não fechou</h2>${m.map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}${base.filter(r => r.resultado === 'Não fechou' && r.motivo_detalhe).map(r => `<button class="lin" data-r="${r.id}" style="display:block;padding:10px 0"><b style="font-weight:600;color:var(--verde)">${esc(r.cliente)}</b> · ${esc(r.motivo_perda || 'sem motivo')}<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">${esc(r.motivo_detalhe)}</span></button>`).join('')}</section>` : '')(Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]))}
     <div class="secao">Histórico do período</div>
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
@@ -1331,6 +1333,7 @@ function telaReunioes(P) {
   ligarMes('reMes', () => telaReunioes(P));
   $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
   ligarCardsReuniao(P);
+  P.querySelectorAll('[data-agav]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.agav));
   P.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => moverEtapa(b.dataset.mv, b.dataset.et));
   const kb = P.querySelector('.kanban'), col = kb && [...kb.children].find(c => c.querySelector('.kc'));
   if (col) requestAnimationFrame(() => { kb.style.scrollSnapType = 'none'; kb.scrollLeft = 0; kb.scrollLeft = col.getBoundingClientRect().left - kb.getBoundingClientRect().left - 16; kb.style.scrollSnapType = ''; });
@@ -2736,8 +2739,73 @@ function htmlReuniaoAgenda(x) {
   return `<button class="av ${falta || passou ? 'novo' : ''}" data-ag="${x.id}" type="button"><span class="ic">•</span><span>
     <span class="t" style="display:block">${esc(x.titulo)}${x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + esc(x.cliente) : ''}</span>
     <span class="q" style="display:block">${dataHora(x.data)} · ${esc(x.tipo)}${x.vendedor_id && nomeTime(x.vendedor_id) ? ' · vendedor: ' + esc(nomeTime(x.vendedor_id)) : ''}${(x.participantes || []).filter(u => u !== x.vendedor_id).length ? ' · com ' + esc(x.participantes.filter(u => u !== x.vendedor_id).map(nomeTime).filter(Boolean).join(', ')) : ''}</span>
-    <span style="display:block;margin-top:4px"><span class="tag ${tag}">${esc(x.status)}</span>${falta ? ' <span class="tag alerta">falta o resumo</span>' : ''}${passou ? ' <span class="tag alerta">como foi?</span>' : ''}${x.ticktick && Object.keys(x.ticktick).length ? ' <span class="tag">no TickTick</span>' : ''}</span>
+    <span style="display:block;margin-top:4px"><span class="tag ${tag}">${esc(x.status)}</span>${falta ? ' <span class="tag alerta">falta o resumo</span>' : ''}${passou ? ' <span class="tag alerta">como foi?</span>' : ''}${x.ticktick && Object.keys(x.ticktick).length ? ' <span class="tag">no TickTick</span>' : ''}${tagAvaliacao(x)}</span>
     ${x.resumo ? `<span class="d" style="display:block;margin-top:4px">${esc(String(x.resumo).slice(0, 220))}${String(x.resumo).length > 220 ? '...' : ''}</span>` : ''}</span></button>`;
+}
+/* ---------- avaliação de atendimento ---------- */
+const AUTO_ITENS = [['necessidade', 'Entendi a necessidade do cliente'], ['valor', 'Mostrei o valor do que oferecemos'], ['objecao', 'Tratei as objeções'], ['proximo', 'Combinei o próximo passo']];
+const CLAREZA = { sim: 'Saiu sabendo o próximo passo', em_parte: 'Saiu em parte sabendo o próximo passo', nao: 'Não saiu sabendo o próximo passo' };
+const avDe = (rid) => (D.avaliacoes || []).find(a => a.reuniao_id === rid);
+const mediaAuto = (a) => { const v = a && a.auto ? Object.values(a.auto).map(Number).filter(n => n > 0) : []; return v.length ? v.reduce((s, n) => s + n, 0) / v.length : null; };
+function tagAvaliacao(x) {
+  if (D.avaliacoes === null || D.avaliacoes === undefined || x.status !== 'Realizada') return '';
+  const a = avDe(x.id);
+  if (a && a.nota) return ` <span class="tag ${a.nota <= 2 ? 'alerta' : 'ok'}">nota ${a.nota}</span>`;
+  if (a && a.enviada_em) return ' <span class="tag">avaliação enviada</span>';
+  return (x.pessoa_id || x.atendimento_id || x.cliente_id) ? ' <span class="tag ouro">pedir avaliação</span>' : '';
+}
+function blocoAvaliacao(x) {
+  if (D.avaliacoes === null || D.avaliacoes === undefined) return '';
+  const a = avDe(x.id) || {};
+  const souVend = ADMIN || [x.vendedor_id, ...(x.participantes || [])].includes(D.meuId);
+  const auto = a.auto || {};
+  return `<section class="bloco" id="blAval"><h2>Avaliação do atendimento</h2>
+    ${a.respondida_em ? `<div class="numeros" style="margin-top:4px"><div class="num ${a.nota <= 2 ? 'alerta' : 'destaque'}"><div class="l">Nota do cliente</div><div class="v">${a.nota}</div><div class="d">${dataBR(a.respondida_em)}</div></div>${mediaAuto(a) !== null ? `<div class="num"><div class="l">Autoavaliação</div><div class="v">${mediaAuto(a).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</div><div class="d">média dos 4 itens</div></div>` : ''}</div>
+      ${a.clareza ? `<div class="lin"><span>${CLAREZA[a.clareza]}</span></div>` : ''}
+      ${a.comentario ? `<div style="white-space:pre-wrap;color:var(--tinta-2);margin-top:8px">"${esc(a.comentario)}"</div>` : ''}`
+    : `<div class="sub" style="margin-top:0">${a.enviada_em ? 'Pedido enviado em ' + dataBR(a.enviada_em) + '. Aguardando a resposta do cliente.' : 'O cliente recebe um link e avalia em 30 segundos.'}</div>
+      ${souVend ? `<button class="zap" type="button" id="pedirAval" style="margin-top:10px;width:100%">${ZAP}${a.enviada_em ? 'Reenviar pelo WhatsApp' : 'Pedir avaliação pelo WhatsApp'}</button>` : ''}`}
+    ${souVend ? `<div class="grupo" style="margin-top:14px">Sua autoavaliação</div>
+      ${AUTO_ITENS.map(([k, l]) => `<div style="margin-top:10px"><div style="font-size:14px;color:var(--tinta)">${l}</div><div class="seg" data-auto="${k}" style="margin-top:6px">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-n="${n}" class="${+auto[k] === n ? 'on' : ''}">${n}</button>`).join('')}</div></div>`).join('')}
+      <button class="sec" type="button" id="salvarAuto" style="margin-top:12px;width:100%">Salvar autoavaliação</button>` : ''}
+  </section>`;
+}
+function ligarAvaliacao(P, x) {
+  if (!$('blAval')) return;
+  const auto = { ...((avDe(x.id) || {}).auto || {}) };
+  P.querySelectorAll('[data-auto]').forEach(g => g.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; auto[g.dataset.auto] = +b.dataset.n; [...g.children].forEach(y => y.classList.toggle('on', y === b)); });
+  if ($('salvarAuto')) $('salvarAuto').onclick = async () => {
+    if (AUTO_ITENS.some(([k]) => !auto[k])) { aviso('Dê uma nota para os 4 itens.'); return; }
+    const { error } = await sb.rpc('avaliacao_auto', { p_reuniao: x.id, p_auto: auto });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    const a = avDe(x.id); if (a) { a.auto = auto; a.auto_em = new Date().toISOString(); } else D.avaliacoes.unshift({ reuniao_id: x.id, auto, auto_em: new Date().toISOString(), vendedor_id: x.vendedor_id || D.meuId });
+    aviso('Autoavaliação salva.');
+  };
+  if ($('pedirAval')) $('pedirAval').onclick = async () => {
+    const { data, error } = await sb.rpc('avaliacao_link', { p_reuniao: x.id });
+    if (error) { aviso('Não gerou o link: ' + error.message); return; }
+    const url = `${location.origin}/avaliacao/?a=${data.token}`;
+    const prim = String(data.nome || '').split(' ')[0];
+    const texto = `Oi${prim ? ', ' + prim : ''}! Obrigado pela conversa. Leva 30 segundos e faz diferença pra gente: como foi o atendimento? ${url}`;
+    const a = avDe(x.id); if (a) a.enviada_em = a.enviada_em || new Date().toISOString(); else D.avaliacoes.unshift({ reuniao_id: x.id, token: data.token, enviada_em: new Date().toISOString(), vendedor_id: x.vendedor_id });
+    if (data.celular && zapNum(data.celular)) window.open(zapLink(data.celular, data.nome, texto), '_blank');
+    else { try { await navigator.clipboard.writeText(texto); aviso('Sem celular na ficha: a mensagem com o link foi copiada.'); } catch (_) { prompt('Copie a mensagem:', texto); } }
+  };
+}
+function blocoAtendimento(base) {
+  if (!D.avaliacoes) return '';
+  const ids = new Set((D.agenda || []).filter(g => base.some(r => r.id === g.atendimento_id)).map(g => g.id));
+  const L = D.avaliacoes.filter(a => ids.has(a.reuniao_id));
+  if (!L.length) return '';
+  const por = {};
+  L.forEach(a => { const k = a.vendedor_id || '-'; por[k] = por[k] || { env: 0, resp: 0, soma: 0, auto: [] }; const p = por[k]; if (a.enviada_em) p.env++; if (a.nota) { p.resp++; p.soma += a.nota; } if (mediaAuto(a) !== null) p.auto.push(mediaAuto(a)); });
+  const resultado = (a) => { const g = (D.agenda || []).find(y => y.id === a.reuniao_id); const r = g && base.find(y => y.id === g.atendimento_id); return r ? r.resultado : ''; };
+  const coment = L.filter(a => a.comentario || (a.nota && a.nota <= 3)).sort((a, b) => String(b.respondida_em).localeCompare(String(a.respondida_em)));
+  return `<section class="bloco"><h2>Avaliação do atendimento</h2>
+    ${Object.entries(por).map(([k, p]) => `<div class="lin"><span>${esc(nomeTime(k) || 'Sem vendedor')}</span><span>${p.resp ? 'nota ' + (p.soma / p.resp).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : 'sem notas'} · ${p.env ? Math.round(p.resp / p.env * 100) + '% responderam' : 'nada enviado'}${p.auto.length ? ' · auto ' + (p.auto.reduce((s, n) => s + n, 0) / p.auto.length).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : ''}</span></div>`).join('')}
+    ${coment.slice(0, 20).map(a => `<button class="lin" data-agav="${a.reuniao_id}" style="display:block;padding:10px 0;text-align:left;width:100%"><b style="font-weight:600;color:var(--verde)">Nota ${a.nota || '-'}${a.vendedor_id ? ' · ' + esc(nomeTime(a.vendedor_id)) : ''}</b>${resultado(a) ? ` <span class="tag ${resultado(a) === 'Fechou' ? 'ok' : resultado(a) === 'Não fechou' ? 'alerta' : ''}">${esc(resultado(a))}</span>` : ''}${a.comentario ? `<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">"${esc(a.comentario)}"</span>` : ''}</button>`).join('')}
+    <div class="sub">Nota dada pelo cliente depois da reunião; auto = média da autoavaliação do vendedor.</div>
+  </section>`;
 }
 const meuCal = () => ((D.cal || []).find(x => x.user_id === D.meuId) || {}).cal_link || '';
 function blocoCal() {
@@ -2905,6 +2973,7 @@ function telaFormAgenda(P) {
       ${!nova && (ADMIN || x.created_by === D.meuId) ? `<button class="sec grande" type="button" id="excluirAg" style="margin-top:8px;width:100%">${base.status === 'Agendada' ? 'Cancelar reunião' : 'Excluir registro'}</button>` : ''}
       <div class="sub" id="msgAg">${D.tt && D.tt.conectado ? 'Ao agendar, a reunião vai para o TickTick dos participantes conectados.' : 'Conecte o TickTick na tela de Reuniões para a reunião ir para a sua agenda.'}</div>
     </form>`;
+  if (!nova && base.status === 'Realizada') { P.insertAdjacentHTML('beforeend', blocoAvaliacao(base)); ligarAvaliacao(P, base); }
   const f = $('fAg');
   const mostrar = () => { const st = f.elements.status.value; $('agResumo').hidden = st !== 'Realizada'; $('agPub').hidden = !(f.elements.cliente_id && f.elements.cliente_id.value); $('salvarAg').textContent = nova ? (st === 'Agendada' ? 'Agendar' : 'Registrar') : 'Salvar'; };
   $('agSt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.status.value = b.dataset.v; [...$('agSt').children].forEach(y => y.classList.toggle('on', y === b)); mostrar(); };
