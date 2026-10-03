@@ -3,6 +3,14 @@
 // indicações ficam pendurados na ficha. O vendedor é de cada venda, não do cliente.
 
 const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro' };
+const INTERESSES = { viagens: 'Viagens e passagens', gestao: 'Gestão de Milhas' };
+// Lead vira cliente na primeira compra: emissão ligada à ficha, atendimento fechado ou marcação manual (quem comprou antes do app)
+export function ehCliente(D, p) {
+  if (!p) return false;
+  if ((p.papeis || []).includes('cliente') || (p.papeis || []).includes('gestao')) return true;
+  return (D.emissoes || []).some(e => e.pessoa_id === p.id) || (D.reunioes || []).some(r => r.pessoa_id === p.id && r.resultado === 'Fechou');
+}
+const rotulos = (D, p) => [ehCliente(D, p) ? 'Cliente' : 'Lead' + ((p.interesse || []).length ? ' · ' + p.interesse.map(k => INTERESSES[k] || k).join(' e ') : ''), ...(p.papeis || []).filter(k => k === 'gestao' || k === 'passageiro' || k === 'parceiro').map(k => PAPEIS[k])];
 const ORIGENS = ['Site', 'Indicação', 'Instagram', 'WhatsApp', 'Cliente antigo', 'Outro'];
 let VISTA = 'lista', PID = null, BUSCA = '', FILTRO = 'todos', MSG = '';
 
@@ -77,27 +85,48 @@ function telaLista(P, X) {
   const mesAtual = new Date().getMonth();
   const filtros = [['todos', 'Todos'], ['cliente', 'Clientes'], ['gestao', 'Gestão'], ['lead', 'Leads'], ['parceiro', 'Parceiros'], ['aniv', 'Aniversário no mês']];
   const q = norm(BUSCA), qd = so(BUSCA);
-  const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : (p.papeis || []).includes(FILTRO))
+  const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : FILTRO === 'cliente' ? ehCliente(D, p) : FILTRO === 'lead' ? !ehCliente(D, p) : (p.papeis || []).includes(FILTRO))
     .filter(p => !q || norm(p.nome).includes(q) || (qd.length >= 4 && so(p.celular).includes(qd)) || norm(p.email).includes(q))
     .map(p => ({ p, r: resumo(D, p.id) }))
     .sort((a, b) => FILTRO === 'aniv' ? new Date(a.p.nascimento).getDate() - new Date(b.p.nascimento).getDate() : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   const dups = (D.dups || []).length;
   P.innerHTML = `
     <h1 class="titulo">Clientes</h1>
-    <div class="sub">${todas.length} fichas · ${todas.filter(p => (p.papeis || []).includes('cliente')).length} clientes · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
+    <div class="sub">${todas.length} fichas · ${todas.filter(p => ehCliente(D, p)).length} ${todas.filter(p => ehCliente(D, p)).length === 1 ? 'cliente' : 'clientes'} · ${todas.filter(p => !ehCliente(D, p)).length} ${todas.filter(p => !ehCliente(D, p)).length === 1 ? 'lead' : 'leads'} · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
     ${ADMIN ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups ? (dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas') + ' para confirmar ›' : 'Revisar fichas duplicadas ›'}</button>` : ''}
-    <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo contato</button>
+    <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo cadastro</button>
+    <div id="cadOp"></div>
     <input class="busca" id="buscaP" type="search" placeholder="Buscar por nome, telefone ou e-mail" value="${esc(BUSCA)}">
     <div class="chips" id="filP" style="margin-top:10px">${filtros.map(([k, l]) => `<button data-f="${k}" class="${k === FILTRO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${lista.length ? lista.slice(0, 300).map(({ p, r }) => `
       <button class="cli" data-p="${p.id}"><div><div class="nome">${esc(p.nome)}</div>
-        <div class="meta">${(p.papeis || []).map(k => PAPEIS[k]).filter(Boolean).join(' · ') || 'Contato'}${p.celular ? ' · ' + esc(p.celular) : ''}${FILTRO === 'aniv' && p.nascimento ? ' · faz ' + (idade(p.nascimento) + 1) + ' em ' + new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}</div></div>
-        <div class="val">${r.n ? `<b>${brlC(r.total)}</b><span>${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</span>` : ''}</div></button>`).join('') : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo contato para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}</div>
+        <div class="meta">${rotulos(D, p).join(' · ')}${p.celular ? ' · ' + esc(p.celular) : ''}${FILTRO === 'aniv' && p.nascimento ? ' · faz ' + (idade(p.nascimento) + 1) + ' em ' + new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}</div></div>
+        <div class="val">${r.n ? `<b>${brlC(r.total)}</b><span>${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</span>` : ''}</div></button>`).join('') : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo cadastro para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}</div>
     ${lista.length > 300 ? '<div class="sub">Mostrando as 300 primeiras. Use a busca para achar as demais.</div>' : ''}
     <div class="sub">Valores pelas emissões registradas no app.</div>`;
   $('buscaP').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaP').focus(); $('buscaP').setSelectionRange(pos, pos); };
   $('filP').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; telaLista(P, X); } };
-  $('novaP').onclick = () => ir(X, 'nova');
+  $('novaP').onclick = () => {
+    const el = $('cadOp');
+    if (el.innerHTML) { el.innerHTML = ''; return; }
+    el.innerHTML = `<section class="bloco" style="margin-top:8px"><h2>Como cadastrar</h2>
+      <button class="sec" id="cadEu" style="width:100%">Eu preencho a ficha agora</button>
+      <div class="sub" style="margin:12px 0 4px">Ou mande o link para o cliente preencher nome, nascimento, CPF e passaporte:</div>
+      <form id="fCadLink" class="form" autocomplete="off">${X.campo('nome', 'Nome do cliente', '', 'text', 'required')}${X.campo('celular', 'WhatsApp', '', 'tel', 'placeholder="21 99999-9999"')}
+      <button class="zap" type="submit" id="cadLinkB" style="width:100%;margin-top:8px">Criar e gerar o link</button><div class="sub" id="cadMsg"></div></form></section>`;
+    $('cadEu').onclick = () => ir(X, 'nova');
+    $('fCadLink').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const nome = ev.target.elements.nome.value.trim().replace(/\s+/g, ' '), celular = ev.target.elements.celular.value.trim();
+      const igual = (D.pessoas || []).find(x => norm(x.nome) === norm(nome) || (celular && so(celular).length >= 8 && so(x.celular) === so(celular)));
+      if (igual) { $('cadMsg').innerHTML = `Já existe a ficha de <b>${esc(igual.nome)}</b>. Abrindo para você gerar o link nela.`; setTimeout(() => ir(X, 'ficha', igual.id), 900); return; }
+      $('cadLinkB').disabled = true;
+      const { data, error } = await X.sb.from('pessoas').insert({ nome, celular: celular || null, papeis: [] }).select().single();
+      if (error) { $('cadLinkB').disabled = false; $('cadMsg').textContent = 'Não criou a ficha: ' + error.message; return; }
+      D.pessoas.push(data); VISTA = 'ficha'; PID = data.id; history.pushState(null, '', '#crm/' + data.id);
+      gerarLink(P, X, data); scrollTo(0, 0);
+    };
+  };
   if ($('irDups')) $('irDups').onclick = () => ir(X, 'dups');
   P.querySelectorAll('[data-p]').forEach(b => b.onclick = () => ir(X, 'ficha', b.dataset.p));
 }
@@ -134,7 +163,7 @@ function telaFicha(P, X) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Clientes</button>
     <h1 class="titulo" style="margin-top:6px">${esc(p.nome)}</h1>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${(p.papeis || []).map(k => `<span class="tag ${k === 'gestao' ? 'ouro' : k === 'cliente' ? 'ok' : ''}">${PAPEIS[k] || k}</span>`).join('')}${diasAniv !== null && diasAniv <= 7 ? `<span class="tag alerta">${diasAniv === 0 ? 'Aniversário hoje' : 'Aniversário em ' + diasAniv + (diasAniv === 1 ? ' dia' : ' dias')}</span>` : ''}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${rotulos(D, p).map((t, i) => `<span class="tag ${i === 0 && ehCliente(D, p) ? 'ok' : t === 'Gestão' ? 'ouro' : ''}">${esc(t)}</span>`).join('')}${diasAniv !== null && diasAniv <= 7 ? `<span class="tag alerta">${diasAniv === 0 ? 'Aniversário hoje' : 'Aniversário em ' + diasAniv + (diasAniv === 1 ? ' dia' : ' dias')}</span>` : ''}</div>
     <div class="botoes4" style="margin-top:12px">
       ${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">${X.ZAP}WhatsApp</a>` : ''}
       <button class="sec" id="novaCot">Nova cotação</button>
@@ -260,7 +289,7 @@ async function gerarLink(P, X, p) {
 function telaForm(P, X) {
   const { D, $, esc, campo, pode } = X;
   const nova = VISTA === 'nova';
-  const p = nova ? { nome: BUSCA && !/\d{4}/.test(BUSCA) ? BUSCA : '', celular: /\d{8}/.test(so(BUSCA)) ? BUSCA : '', papeis: ['lead'] } : pessoa(D, PID);
+  const p = nova ? { nome: BUSCA && !/\d{4}/.test(BUSCA) ? BUSCA : '', celular: /\d{8}/.test(so(BUSCA)) ? BUSCA : '', papeis: [], interesse: [] } : pessoa(D, PID);
   if (!p) return ir(X, 'lista');
   const doc = nova ? {} : ((D.docs || []).find(d => d.pessoa_id === p.id) || {});
   const verDocs = pode('emissoes');
@@ -293,15 +322,19 @@ function telaForm(P, X) {
       <label class="fl"><span>Indicado por</span><input name="indicado" list="dlInd" value="${esc(ind ? ind.nome : '')}" placeholder="Nome de quem indicou"></label>
       <datalist id="dlInd">${[...parceiros, ...outros.filter(o => !parceiros.includes(o))].slice(0, 1500).map(o => `<option value="${esc(o.nome)}">`).join('')}</datalist>
       ${verDocs && (p.papeis || []).includes('parceiro') ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}
-      <div class="grupo">Papéis</div>
-      <div class="chips" id="papeis" style="flex-wrap:wrap">${Object.entries(PAPEIS).filter(([k]) => k !== 'gestao' && k !== 'parceiro').map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <div class="sub">Gestão e Parceiro são marcados pelo app quando a pessoa entra na Gestão ou é cadastrada como parceira.</div>
+      <div class="grupo">Interesse</div>
+      <div class="chips" id="interP" style="flex-wrap:wrap">${Object.entries(INTERESSES).map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.interesse || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="grupo">Situação</div>
+      <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro']].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="sub">Lead vira cliente sozinho na primeira compra (emissão ou atendimento fechado). Gestão e Parceiro são marcados quando a pessoa entra na Gestão ou é cadastrada como parceira.</div>
       <label class="fl"><span>Anotações</span><textarea name="observacoes" rows="3">${esc(p.observacoes || '')}</textarea></label>
       <button class="zap grande" type="submit" id="salvarP" style="margin-top:14px;width:100%">${nova ? 'Cadastrar' : 'Salvar'}</button>
       <div class="sub" id="msgP"></div>
     </form>`;
   const f = $('fP');
   const papeis = new Set(p.papeis || []);
+  const inter = new Set(p.interesse || []);
+  $('interP').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; inter.has(k) ? inter.delete(k) : inter.add(k); b.classList.toggle('on', inter.has(k)); };
   $('papeis').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; papeis.has(k) ? papeis.delete(k) : papeis.add(k); b.classList.toggle('on', papeis.has(k)); };
   $('voltar').onclick = () => nova ? ir(X, 'lista') : ir(X, 'ficha', p.id);
   // avisa na hora se a pessoa já tem ficha
@@ -325,7 +358,7 @@ function telaForm(P, X) {
     const row = { nome: g('nome').replace(/\s+/g, ' '), celular: g('celular') || null, email: g('email') || null, instagram: g('instagram') || null,
       aceita_comunicacao: f.elements.aceita_comunicacao.checked, nascimento: g('nascimento') || null, sexo: g('sexo') || null,
       origem: g('origem') || null, indicado_por: indP ? indP.id : null, observacoes: g('observacoes') || null,
-      papeis: [...new Set([...papeis, ...(p.papeis || []).filter(k => k === 'gestao' || k === 'parceiro')])] };
+      papeis: [...new Set([...papeis, ...(p.papeis || []).filter(k => k === 'gestao' || k === 'parceiro')])].filter(k => k !== 'lead'), interesse: [...inter] };
     $('salvarP').disabled = true; $('msgP').textContent = 'Salvando...';
     const q = nova ? X.sb.from('pessoas').insert(row).select().single() : X.sb.from('pessoas').update(row).eq('id', p.id).select().single();
     const { data, error } = await q;

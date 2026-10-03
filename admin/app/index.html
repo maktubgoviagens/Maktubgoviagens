@@ -278,7 +278,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .kc .t.alerta{color:var(--alerta)}
 .kc .mv{display:flex;gap:6px;margin-top:8px}
 .kc .mv button{flex:1;padding:7px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--linha);background:var(--branco);cursor:pointer;color:var(--tinta-2)}
-.kc .mv button.av{border-color:var(--verde);color:var(--verde);flex:4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:.02em;font-size:12.5px}
+.kc .mv button.av{border-color:var(--verde);color:var(--verde);flex:4;white-space:normal;text-transform:none;letter-spacing:.02em;font-size:12.5px;line-height:1.3}
 .kc .mv button.vt{flex:0 0 40px}
 .kc .mv button.fe{border-color:rgba(47,107,74,.45);color:var(--ok)}
 .kc .mv button.nf{border-color:rgba(160,86,31,.45);color:var(--alerta)}
@@ -343,9 +343,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=4';
-import * as CRM from '/admin/app/crm.js?v=7';
+import * as CRM from '/admin/app/crm.js?v=9';
 import * as FORN from '/admin/app/fornecedores.js?v=6';
-import * as COT from '/admin/app/cotador.js?v=2';
+import * as COT from '/admin/app/cotador.js?v=3';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -442,7 +442,7 @@ const ABAS_ADMIN = ['empresa', 'receber', 'opmilhas', 'inicio', 'emissoes', 'reu
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
-  ['Gestão de Milhas', [['gestao', 'Clientes da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
+  ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
@@ -512,14 +512,37 @@ function ir(aba, extra) {
   history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
   marcarNav(); tela(); scrollTo(0, 0);
 }
-window.irCotador = () => ir('cotador');
+window.irCotador = () => { COT.preparar(null); ir('cotador'); };
+window.irFornecedores = () => ir('fornecedores', () => FORN.abrir(null));
+// cotação enviada pelo montador: o card do funil anda sozinho
+async function cotacaoEnviada(id) {
+  const r = D.reunioes.find(x => x.id === id); if (!r || r.resultado !== 'Em andamento' || !['Novo lead', 'Em cotação'].includes(r.etapa)) return;
+  const row = { etapa: 'Cotação enviada', proximo_passo: r.proximo_passo || 'Aguardando retorno da cotação', proximo_passo_data: maisDias(2) };
+  const { data, error } = await sb.from('atendimentos').update(row).eq('id', id).select().single();
+  if (!error && data) Object.assign(r, data);
+}
+// primeira compra: o lead vira cliente na ficha
+async function virarCliente(pid) {
+  const p = (D.pessoas || []).find(x => x.id === pid); if (!p || (p.papeis || []).includes('cliente')) return;
+  const papeis = [...new Set([...(p.papeis || []).filter(k => k !== 'lead'), 'cliente'])];
+  const { error } = await sb.from('pessoas').update({ papeis }).eq('id', pid);
+  if (!error) { p.papeis = papeis; aviso(`${String(p.nome).split(' ')[0]} virou cliente.`); }
+}
+// atendimento novo: guarda o interesse do lead (viagens ou gestão)
+async function marcarInteresse(pid, gestao) {
+  const p = (D.pessoas || []).find(x => x.id === pid); if (!p) return;
+  const k = gestao ? 'gestao' : 'viagens'; if ((p.interesse || []).includes(k)) return;
+  const interesse = [...(p.interesse || []), k];
+  const { error } = await sb.from('pessoas').update({ interesse }).eq('id', pid);
+  if (!error) p.interesse = interesse;
+}
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
   const alvo = OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { cotador: 'Cotações', fornecedores: 'Fornecedores', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { cotador: 'Cotações', fornecedores: 'Fornecedores', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -675,7 +698,7 @@ function tela() {
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
-  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
+  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
@@ -717,7 +740,7 @@ function telaInicio(P) {
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
-    ${emDia.length ? `<div class="sub" style="margin-top:8px">Em dia: ${emDia.map(x => x[0].toLowerCase()).join(', ')}.</div>` : ''}
+    ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
     ${blocoMetasAdmin(D.metas, true)}
@@ -751,7 +774,7 @@ function telaInicioColab(P) {
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
-    ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>' : ''}
+    ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Novo atendimento</button>' : ''}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${blocoPosViagem()}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
@@ -882,7 +905,9 @@ function telaFormEmissao(P) {
       ${ADMIN && !daPlanilha ? `<label class="fl"><span>Vendedor</span><select name="vendedor_id"><option value="">Sem vendedor</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === e.vendedor_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
 
       <div class="grupo">Cliente e passageiros</div>
-      ${campo('comprador', 'Comprador', e.comprador, 'text', 'required')}
+      ${campo('comprador', 'Comprador', e.comprador, 'text', 'required list="dlCompr"')}
+      <datalist id="dlCompr">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
+      <input type="hidden" name="pessoa_id" value="${esc(e.pessoa_id || '')}"><div class="sub" id="fichaEm" style="margin-top:0"></div>
       ${campo('sobrenome', 'Sobrenome do passageiro', e.sobrenome)}
       ${campo('passageiros', 'Quantidade de passageiros', e.passageiros, 'number')}
       ${campo('contato', 'Contato (WhatsApp)', e.contato, 'tel')}
@@ -922,6 +947,12 @@ function telaFormEmissao(P) {
       <div class="sub" id="msgEm" style="margin-top:8px"></div>
     </form>`;
   const f = $('fEm');
+  if (f.elements.comprador) f.elements.comprador.addEventListener('change', () => {
+    const p = pessoaPorNome(f.elements.comprador.value);
+    f.elements.pessoa_id.value = p ? p.id : '';
+    if (p) { if (!f.elements.contato.value) f.elements.contato.value = p.celular || ''; const d = (D.docs || []).find(x => x.pessoa_id === p.id); if (d && d.cpf && !f.elements.cpf_nf.value) f.elements.cpf_nf.value = d.cpf; }
+    $('fichaEm').innerHTML = p ? 'Cliente com ficha: a venda entra no histórico dele.' : f.elements.comprador.value.trim() && podeAba('crm') ? 'Sem ficha ainda. Depois de salvar, cadastre em Clientes, Cadastrar cliente.' : '';
+  });
   const financeiros = ['servico', 'data_negociacao', 'vendedor_id', 'parceiro_id', 'milhas', 'milheiro', 'taxas', 'custo_direto', 'valor_receber', 'comissao_manual', 'repasse_manual', 'comissao_pct_app', 'parceiro_pct_app'];
   if (daPlanilha && ADMIN) ligarAjuste(e, travado);
   if (travado || !podeEditar) financeiros.forEach(n => { if (f.elements[n]) f.elements[n].disabled = true; });
@@ -983,6 +1014,7 @@ function telaFormEmissao(P) {
       fornecedor: g('fornecedor') || null, conta: g('conta') || null, forma_pagamento: g('forma_pagamento') || null, parcelas: numOuNulo(g('parcelas')),
       observacoes: g('observacoes') || null
     };
+    if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     ['pago', 'nota_gerada', 'checkin_ida', 'checkin_volta', 'monitorado', 'voado', 'feito_pos'].forEach(n => row[n] = f.elements[n].checked);
     if (ADMIN) { row.vendedor_id = g('vendedor_id') || null; row.comissao_manual = numOuNulo(g('comissao_manual')); row.repasse_manual = numOuNulo(g('repasse_manual')); row.comissao_pct_app = numOuNulo(g('comissao_pct_app')); row.parceiro_pct_app = numOuNulo(g('parceiro_pct_app')); }
     else if (nova) row.vendedor_id = D.meuId;
@@ -995,6 +1027,7 @@ function telaFormEmissao(P) {
     if (error) { $('msgEm').textContent = 'Não salvou: ' + error.message; return; }
     const i = D.emissoes.findIndex(x => x.id === data.id); if (i >= 0) D.emissoes[i] = data; else D.emissoes.unshift(data);
     aviso(nova ? `Emissão registrada. Comissão: ${brl2(data.comissao)}.` : 'Emissão atualizada.');
+    if (data.pessoa_id) virarCliente(data.pessoa_id);
     EM_MES = String(data.data_negociacao).slice(0, 7);
     carregarAgendaEm().then(() => {});
     history.back();
@@ -1248,11 +1281,11 @@ const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', '
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
 const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
-const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Negociação'];
+const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
 const ETAPAS_G = ['Novo lead', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
 const etapasDe = (g) => g ? ETAPAS_G : ETAPAS_V;
-const etapaDe = (r) => r.etapa || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
+const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Cotação enviada' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
 const diasDesde = (ts) => ts ? Math.max(0, Math.floor((Date.now() - new Date(ts)) / 864e5)) : 0;
 const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 const reunioesDe = (id) => (D.areu || []).filter(x => x.atendimento_id === id);
@@ -1307,7 +1340,7 @@ function htmlKCard(r, etapas) {
   const et = etapaDe(r), i = etapas.indexOf(et);
   const atr = r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
   return `<div class="kc ${atr ? 'atr' : ''}">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${esc(r.cliente)}</button>${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     <div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
     ${resumoReunioes(r.id) ? `<div class="t">${esc(resumoReunioes(r.id))}</div>` : ''}
@@ -1319,7 +1352,9 @@ function htmlKCard(r, etapas) {
 async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
-  const { data, error } = await sb.from('atendimentos').update({ etapa }).eq('id', id).select().single();
+  const upd = { etapa };
+  if (etapa === 'Follow-up') { upd.proximo_passo = 'Fazer follow-up'; if (!r.proximo_passo_data || r.proximo_passo_data < hojeISO()) upd.proximo_passo_data = maisDias(2); }
+  const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
 }
@@ -1331,7 +1366,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + (podeAba('cotador') ? '<button class="sec grande" onclick="irCotador()" style="width:100%;margin-top:10px">Montador de cotações ›</button>' : '');
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Montar cotação</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Fornecedores</button>' : ''}</div>` : '');
   if (D.reErro) { P.innerHTML = titulo + '<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'; return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento')
@@ -1342,7 +1377,7 @@ function telaReunioes(P) {
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
     ${pode('gestao') ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
-    <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Nova cotação ou reunião'}</button>
+    <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
     <div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no nome para abrir.</div>
     <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(G))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
@@ -1392,7 +1427,8 @@ function telaFormReuniao(P) {
   const sel = (nome, rot, ops, val) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}${val && !ops.includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select></label>`;
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
-    <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Nova <em>cotação</em>') : esc(r.cliente)}</h1>
+    <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : esc(r.cliente)}</h1>
+    ${!nova && !G && podeAba('cotador') ? '<button class="zap grande" type="button" id="montarCot" style="width:100%;margin-top:10px">Montar cotação para este cliente ›</button>' : ''}
     <form id="fRe" class="form" autocomplete="off">
       <div class="grupo">Reunião</div>
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
@@ -1439,6 +1475,7 @@ function telaFormReuniao(P) {
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
+  if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '' }));
   if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
   f.elements.cliente.addEventListener('change', () => {
     const p = pessoaPorNome(f.elements.cliente.value);
@@ -1475,6 +1512,7 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = 'Não salvou: ' + error.message; return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    if (data.pessoa_id) { if (res === 'Fechou') virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
     if (g('nr_assunto') && D.agenda) {
       const feita = f.elements.nr_feita.checked;
       const nr = await sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: g('nr_assunto'), tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens', data: new Date(g('nr_data')).toISOString(),
@@ -1826,8 +1864,8 @@ function itensMais() {
     ['avisos', 'Avisos no celular, Telegram e WhatsApp', ADMIN ? avisosNovos().length : 0],
     ['comissao', 'Minha comissão', 0]
   ];
-  const naNav = navItens().map(([k]) => k);
-  return L.filter(([k]) => !naNav.includes(k) && podeAba(k));
+  const naNav = navItens().map(([k]) => k), naEmpresa = naNav.includes('empresa') ? itensEmpresa().map(([k]) => k) : [];
+  return L.filter(([k]) => !naNav.includes(k) && !naEmpresa.includes(k) && podeAba(k));
 }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
 function telaMais(P) {
@@ -1842,11 +1880,12 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
+const EMP_GRUPOS = [['Dinheiro', ['financeiro', 'receber', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
     ['fornecedores', 'Fornecedores e indicações'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
-    ['equipe', 'Comissões, parceiros e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
-    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
+    ['equipe', 'Comissões, parceiros e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
+    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Montador de cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
 }
 function telaEmpresa(P) {
@@ -1889,21 +1928,10 @@ function telaEmpresa(P) {
       ${vend.length ? vend.map(v => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between"><b style="color:var(--verde);font-weight:600">${esc(nomeTime(v.k) || 'Sem vendedor')}</b><span>${brlC(v.fat)}</span></div>
         <div class="sub" style="margin-top:2px">${v.n} ${v.n === 1 ? 'venda' : 'vendas'} · ticket ${brlC(v.fat / v.n)} · lucro ${brlC(v.luc)}${v.c.taxa !== null ? ' · conversão ' + pct(v.c.taxa) : ''}${v.nota !== null ? ' · nota ' + v.nota.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' (' + v.nAv + ')' : ''}</div></div>`).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
       <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}` : ''}
-    ${ADMIN && D.posViagem ? `<section class="bloco"><h2>Avaliações no Google</h2>
-      <div class="sub" style="margin-top:0">Link do Perfil da Empresa usado no pedido pós-viagem. No Perfil da Empresa no Google, toque em "Pedir avaliações" e copie o link.</div>
-      <form id="fGoogle" class="form" style="margin-top:6px">${campo('link', 'Link de avaliação', D.cfg && D.cfg.link_avaliacao_google, 'url', 'placeholder="https://g.page/r/..."')}<button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar link</button></form>
-      <div class="sub">${D.posViagem.filter(x => x.situacao === 'pedido').length} pedidos feitos desde o início.</div></section>` : ''}
-    ${it.length ? `<div class="secao">Gestão da empresa</div><div class="pend">${it.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
-      ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>` : ''}`;
+    ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
+    ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}`;
   if ($('empModo')) $('empModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_MODO = b.dataset.m; telaEmpresa(P); } };
-  if ($('fGoogle')) $('fGoogle').onsubmit = async (ev) => {
-    ev.preventDefault(); const v = ev.target.elements.link.value.trim();
-    if (v && !/^https:\/\//.test(v)) { aviso('O link precisa começar com https://'); return; }
-    const { error } = await sb.from('configuracoes').update({ link_avaliacao_google: v || null }).eq('id', 1);
-    if (error) { aviso('Não salvou: ' + error.message); return; }
-    D.cfg = { ...(D.cfg || {}), link_avaliacao_google: v || null }; aviso('Link salvo.');
-  };
   if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
   if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
   P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
@@ -1927,7 +1955,7 @@ function telaEquipe(P) {
       <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${p.user_id === D.meuId ? 'disabled' : ''}><span>Acesso ativo</span></label>
       <button class="sec" data-salvar="${p.user_id}" style="margin-top:8px">Salvar</button>
     </div>`).join('')}</div>
-    <div class="sub">A mudança de percentual vale para as próximas vendas. Vendas já registradas mantêm o percentual da época. Para incluir alguém novo, use Administração completa > Equipe; a pessoa entra como colaborador com 10%.</div>
+    <div class="sub">A mudança de percentual vale para as próximas vendas. Vendas já registradas mantêm o percentual da época. Para incluir alguém novo, use Empresa, Equipe e acessos; a pessoa entra como colaborador com 10%.</div>
 
     <div class="secao">Parceiros de indicação</div>
     <div class="bloco" style="margin-top:0">${D.parceirosAdm.length ? D.parceirosAdm.map(p => `<div class="lin"><span>${esc(p.nome)}${p.ativo ? '' : ' (inativo)'}</span><span>${pct(p.pct)} <button class="mini" data-par="${p.id}">editar</button></span></div>`).join('') : '<div class="vazio">Nenhum parceiro cadastrado.</div>'}</div>
@@ -2222,7 +2250,7 @@ function telaGestao(P) {
       <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
     </div>
     <div class="pend" style="margin-top:10px">
-      <button data-g="clientes"><span>Clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
+      <button data-g="clientes"><span>Carteira de clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
     <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>`;
@@ -2315,7 +2343,7 @@ function telaClientes(P) {
   const totPat = D.progs.reduce((s, p) => s + (Number(p.patrimonio_brl) || 0), 0);
   P.innerHTML = `
     <button class="voltar" id="voltarCli">‹ Gestão</button>
-    <h1 class="titulo" style="margin-top:6px">Clientes da <em>Gestão</em></h1>
+    <h1 class="titulo" style="margin-top:6px">Carteira da <em>Gestão</em></h1>
     <div class="sub">${D.clientes.length} clientes · ${brlC(totPat)} sob gestão · ${brlC(economiaAno())} de economia em ${new Date().getFullYear()}</div>
     <input class="busca" id="busca" type="search" placeholder="Buscar cliente" value="${esc(BUSCA)}">
     <div class="chips" style="margin-top:10px"><button data-f="todos" class="${!['atrasados', 'renovar', 'semcontrato'].includes(FILTRO) ? 'on' : ''}">Todos</button><button data-f="atrasados" class="${FILTRO === 'atrasados' ? 'on' : ''}">Sem atualização há 30+ dias (${semAtualizacao().length})</button><button data-f="renovar" class="${FILTRO === 'renovar' ? 'on' : ''}">Renovação em 90 dias (${renovacoes(90).length})</button><button data-f="semcontrato" class="${FILTRO === 'semcontrato' ? 'on' : ''}">Sem data de entrada (${semContrato().length})</button></div>
@@ -3210,8 +3238,22 @@ async function carregarSite() {
   } catch (e) { SITE = { ok: false, erro: String(e), dias: SITE_DIAS }; }
   return SITE;
 }
+function blocoAvalGoogle() { return ADMIN && D.posViagem ? `<section class="bloco"><h2>Avaliações no Google</h2>
+      <div class="sub" style="margin-top:0">Link do Perfil da Empresa usado no pedido pós-viagem. No Perfil da Empresa no Google, toque em "Pedir avaliações" e copie o link.</div>
+      <form id="fGoogle" class="form" style="margin-top:6px">${campo('link', 'Link de avaliação', D.cfg && D.cfg.link_avaliacao_google, 'url', 'placeholder="https://g.page/r/..."')}<button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar link</button></form>
+      <div class="sub">${D.posViagem.filter(x => x.situacao === 'pedido').length} pedidos feitos desde o início.</div></section>` : ''; }
+function ligarAvalGoogle() {
+  if ($('fGoogle')) $('fGoogle').onsubmit = async (ev) => {
+    ev.preventDefault(); const v = ev.target.elements.link.value.trim();
+    if (v && !/^https:\/\//.test(v)) { aviso('O link precisa começar com https://'); return; }
+    const { error } = await sb.from('configuracoes').update({ link_avaliacao_google: v || null }).eq('id', 1);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    D.cfg = { ...(D.cfg || {}), link_avaliacao_google: v || null }; aviso('Link salvo.');
+  };
+}
 async function telaSite(P) {
-  P.innerHTML = `<h1 class="titulo">Números do <em>site</em></h1><div class="seg" id="sdias">${[[7, '7 dias'], [28, '28 dias'], [90, '90 dias']].map(([d, l]) => `<button data-d="${d}" class="${d === SITE_DIAS ? 'on' : ''}">${l}</button>`).join('')}</div><div id="sconteudo"><div class="vazio">Carregando...</div></div>`;
+  P.innerHTML = `<h1 class="titulo">Números do <em>site</em></h1><div class="seg" id="sdias">${[[7, '7 dias'], [28, '28 dias'], [90, '90 dias']].map(([d, l]) => `<button data-d="${d}" class="${d === SITE_DIAS ? 'on' : ''}">${l}</button>`).join('')}</div><div id="sconteudo"><div class="vazio">Carregando...</div></div>${blocoAvalGoogle()}`;
+  ligarAvalGoogle();
   $('sdias').onclick = (e) => { const b = e.target.closest('button'); if (b) { SITE_DIAS = +b.dataset.d; telaSite(P); } };
   const [, cl] = await Promise.all([carregarSite(), sb.from('clarity_dias').select('*').order('dia', { ascending: false }).limit(90)]);
   const el = $('sconteudo'); if (!el || ABA !== 'site') return;

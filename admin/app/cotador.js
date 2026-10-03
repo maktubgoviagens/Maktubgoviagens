@@ -2,7 +2,10 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-let LISTA = null, ED = null, S = null, MARCA = null;
+let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
+// atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
+export function preparar(pre) { PRE = pre || null; ED = null; S = null; }
+const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d.destino || PRE.destino || ''; if (d.modelo === 'go') { d.para = PRE.cliente || ''; d.nomeZap = String(PRE.cliente || '').split(' ')[0]; } else if (d.modelo === 'corp') d.passageiro = PRE.cliente || ''; else d.cliente = PRE.cliente || ''; return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
 const SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -45,11 +48,12 @@ async function lista(P, X) {
     <div class="sub">Preencha só o que muda; o visual, a economia e as parcelas saem prontos. Nunca mostra o custo.</div>
     <button class="zap grande" id="novoRap" style="width:100%;margin-top:12px">Cotação rápida: print + valor ›</button>
     <div class="botoes4" style="margin-top:8px"><button class="sec" id="novoGo">+ Maktub Go</button><button class="sec" id="novoCorp">+ Corporativo</button></div>
+    ${PRE ? `<div class="config" style="margin-top:10px">Cotação para <b>${esc(PRE.cliente || '')}</b>${PRE.destino ? ' · ' + esc(PRE.destino) : ''}. Ao enviar, o atendimento vai para "Cotação enviada" no funil.</div>` : ''}
     <div class="lista" id="lsC"><div class="vazio">Carregando...</div></div>`;
   $('voltar').onclick = () => X.ir('reunioes');
-  $('novoGo').onclick = () => { S = NOVO_GO(); ir(X, 'novo'); };
-  $('novoCorp').onclick = () => { S = NOVO_CORP(); ir(X, 'novo'); };
-  $('novoRap').onclick = () => { S = NOVO_RAP(); ir(X, 'novo'); };
+  $('novoGo').onclick = () => { S = comPre(NOVO_GO()); PRE = null; ir(X, 'novo'); };
+  $('novoCorp').onclick = () => { S = comPre(NOVO_CORP()); PRE = null; ir(X, 'novo'); };
+  $('novoRap').onclick = () => { S = comPre(NOVO_RAP()); PRE = null; ir(X, 'novo'); };
   const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').order('atualizado_em', { ascending: false }).limit(300);
   if (!$('lsC')) return;
   if (r.error) { $('lsC').innerHTML = '<div class="config">Rode o 1-cotador.sql no Supabase para guardar as cotações. Dá para montar e baixar mesmo sem ele.</div>'; LISTA = []; return; }
@@ -96,7 +100,7 @@ function editor(P, X) {
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
   });
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
-  $('baixarC').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para arrastar no Netlify.'); };
+  $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para arrastar no Netlify.'); };
   $('salvarC').onclick = () => salvar(X);
   $('acervoC').onclick = () => acervo(X);
   if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ajuste o cliente e salve.'); };
@@ -251,7 +255,7 @@ async function acervo(X) {
   const r = await X.sb.from('roteiros').insert(row);
   if (r.error) { await X.sb.storage.from('roteiros').remove([path]); X.aviso('Não guardou: ' + r.error.message); return; }
   if (X.acervoRecarregar) X.acervoRecarregar();
-  X.aviso('Guardada no acervo, na pasta do destino.');
+  enviada(X); X.aviso('Guardada no acervo, na pasta do destino.');
 }
 
 /* ================= geração: Maktub Go ================= */
@@ -480,7 +484,7 @@ function editorRapida(P, X) {
   const pronto = () => { if (!S.prints.length) { X.aviso('Anexe o print do site.'); return false; } if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
   $('rpEnviar').onclick = async () => {
     if (!pronto()) return;
-    const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
+    enviada(X); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [arq] })) { try { await navigator.share({ files: [arq] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     baixar(blob); X.aviso('Imagem baixada. Anexe no WhatsApp.');
   };
@@ -488,6 +492,7 @@ function editorRapida(P, X) {
   $('rpSalvar').onclick = () => salvar(X);
   if (S.prints.length && num(S.por)) imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; });
 }
+function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) { X.cotacaoEnviada(S.reuniao_id); S.reuniao_id = null; } }
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 
