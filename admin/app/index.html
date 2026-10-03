@@ -342,7 +342,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=2';
-import * as CRM from '/admin/app/crm.js?v=3';
+import * as CRM from '/admin/app/crm.js?v=4';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -434,7 +434,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm'];
+const ABAS_ADMIN = ['empresa', 'receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -448,7 +448,7 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
 const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'] };
-const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
+const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
 const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
@@ -464,6 +464,9 @@ function lerHash() {
   if (ABA === 'agenda' && (h[1] || location.hash.includes('ticktick='))) AG_VISTA = 'reunioes';
 }
 const NAV_IC = {
+  crm: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/>',
+  operacao: '<path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/>',
+  empresa: '<path d="M4 20V9l8-5 8 5v11M4 20h16M9 20v-6h6v6"/>',
   inicio: '<path d="M3 11 12 4l9 7M5 10v10h14V10"/>',
   emissoes: '<path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/>',
   reunioes: '<path d="M4 5h16v11H9l-4 4v-4H4Z"/><path d="M8 9h8M8 12h5"/>',
@@ -474,20 +477,30 @@ const NAV_IC = {
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
 function navItens() {
-  if (ADMIN) return [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro']];
-  const L = [['inicio', 'Início'], ['emissoes', 'Emissões'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['agenda', 'Agenda'], ['financeiro', 'Financeiro'], ['comissao', 'Comissão']].filter(([k]) => podeAba(k));
-  return L.length > 6 ? L.filter(([k]) => k !== 'comissao') : L;
+  if (ADMIN) return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']];
+  return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']]
+    .filter(([k]) => k === 'operacao' ? podeAba('emissoes') || podeAba('agenda') : podeAba(k));
 }
+let OP_ULT = 'emissoes';
+const OP_ABAS = ['emissoes', 'agenda'];
+const EMP_ABAS = ['empresa', 'financeiro', 'receber', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
+function segOp(atual) {
+  if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
+  return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('#segOp [data-op]'); if (b && b.dataset.op !== ABA) ir(b.dataset.op); });
 function montarNav() {
   const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
   $('sino').hidden = !ADMIN;
-  $('maisTopo').hidden = !podeAba('mais');
-  $('clientesTopo').hidden = !podeAba('crm');
-  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
+  $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
+  $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
+  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
 function ir(aba, extra) {
+  if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
+  if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
   ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
   if (extra) extra();
@@ -495,11 +508,12 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const naNav = (k) => navItens().some(([x]) => x === k);
+  const alvo = OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -641,7 +655,7 @@ function htmlEvento(e) {
 function tela() {
   if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
-  const ag = checkinsTotal(); $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
+  const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
   if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
@@ -658,6 +672,7 @@ function tela() {
   if (ABA === 'comissao') return telaComissao(P);
   if (ABA === 'financeiro') return telaFinanceiro(P);
   if (ABA === 'mais') return telaMais(P);
+  if (ABA === 'empresa') return telaEmpresa(P);
   if (ABA === 'equipe') return telaEquipe(P);
   if (!ADMIN && ABA === 'inicio') return telaInicioColab(P);
   if (ABA === 'leads') return telaLeads(P);
@@ -677,14 +692,20 @@ function telaInicio(P) {
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago).length, () => ir('receber')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
-    ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')]
-  ];
+    ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')],
+    ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
+    ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
+    ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
+    ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]
+  ].filter(x => x[1] !== undefined);
+  const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
   const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 4);
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     <div class="secao">Precisa de você</div>
-    <div class="pend">${itens.map(([t, n], i) => `<button data-i="${i}"><span>${t}</span><span><b class="${n ? 'tem' : ''}">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>
+    ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
+    ${emDia.length ? `<div class="sub" style="margin-top:8px">Em dia: ${emDia.map(x => x[0].toLowerCase()).join(', ')}.</div>` : ''}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
     ${blocoMetasAdmin(D.metas, true)}
     <div class="secao">A Maktub hoje</div>
@@ -717,6 +738,7 @@ function telaInicioColab(P) {
     </div>
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
     ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>' : ''}
+    ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
@@ -791,7 +813,7 @@ function telaEmissoes(P) {
   if (VER && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
   if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
-  P.innerHTML = `
+  P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${VER ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
     ${infoSinc()}
@@ -1800,6 +1822,66 @@ function telaMais(P) {
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
 }
 
+/* ---------- Empresa: painel e atalhos ---------- */
+let EMP_MODO = 'mes', EMP_TOP = 'fat';
+function itensEmpresa() {
+  return [
+    ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['equipe', 'Comissões, parceiros e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
+    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
+  ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
+}
+function telaEmpresa(P) {
+  const verNum = ADMIN || pode('financeiro');
+  const ano = EM_MES.slice(0, 4);
+  const L = EMP_MODO === 'ano' ? D.emissoes.filter(e => String(e.data_negociacao).slice(0, 4) === ano) : doMes(EM_MES);
+  const fat = soma(L, 'valor_receber'), luc = soma(L, 'lucro_liquido'), tk = L.length ? fat / L.length : 0;
+  const serv = (e) => e.servico_app || e.servico || 'Outro';
+  const pessoaNome = (id) => ((D.pessoas || []).find(p => p.id === id) || {}).nome;
+  const grupo = (fn) => { const g = {}; L.forEach(e => { const k = fn(e); if (!k) return; g[k] = g[k] || { n: 0, fat: 0, luc: 0 }; g[k].n++; g[k].fat += Number(e.valor_receber) || 0; g[k].luc += Number(e.lucro_liquido) || 0; }); return Object.entries(g); };
+  const top = grupo(e => e.pessoa_id || ('nome:' + [e.comprador, e.sobrenome].filter(Boolean).join(' '))).sort((a, b) => b[1][EMP_TOP] - a[1][EMP_TOP]).slice(0, 10);
+  const porServ = grupo(serv).sort((a, b) => b[1].fat - a[1].fat);
+  const reuP = reunioesDoPeriodo(EM_MES, EMP_MODO);
+  const noPer = (d) => d && (EMP_MODO === 'ano' ? String(mesLocal(d)).slice(0, 4) === ano : mesLocal(d) === EM_MES);
+  const vend = grupo(e => e.vendedor_id || '-').sort((a, b) => b[1].fat - a[1].fat).map(([k, x]) => {
+    const c = conversao(reuP.filter(r => (r.responsavel_id || '-') === k));
+    const av = (D.avaliacoes || []).filter(a => (a.vendedor_id || '-') === k && a.nota && noPer(a.respondida_em));
+    return { k, ...x, c, nota: av.length ? av.reduce((t, a) => t + a.nota, 0) / av.length : null, nAv: av.length };
+  });
+  const maxS = Math.max(1, ...porServ.map(([, x]) => x.fat));
+  const it = itensEmpresa();
+  P.innerHTML = `
+    <h1 class="titulo">Empresa</h1>
+    ${verNum ? `
+    <div class="seg" id="empModo" style="margin-top:12px"><button data-m="mes" class="${EMP_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${EMP_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
+    ${EMP_MODO === 'mes' ? seletorMes('empMes') : `<div class="mesnav" id="empMes"><button data-n="-12">‹</button><span>${ano}</span><button data-n="12">›</button></div>`}
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
+      <div class="num destaque"><div class="l">Lucro líquido</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
+      <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
+      <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
+    </div>
+    <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}" style="padding:6px 10px">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}" style="padding:6px 10px">Lucro</button></span></h2>
+      ${top.length ? top.map(([k, x], i) => { const pid = k.startsWith('nome:') ? null : k; return `<button class="lin" ${pid ? `data-pid="${pid}"` : ''} style="font-size:14px"><span>${i + 1}. ${esc(pid ? (pessoaNome(pid) || 'Cliente') : k.slice(5) || 'Sem nome')}</span><span>${brlC(x[EMP_TOP])} · ${x.n}${pid ? '<span class="seta">›</span>' : ''}</span></button>`; }).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
+    </section>
+    <section class="bloco"><h2>Por fonte de receita</h2>
+      ${porServ.length ? porServ.map(([k, x]) => `<div style="padding:8px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span>${esc(k)}</span><span style="color:var(--tinta-2);white-space:nowrap">${brlC(x.fat)} · ${x.n}</span></div><div class="barra" style="display:block;padding:6px 0 0"><div class="t" style="height:8px"><i style="width:${Math.max(2, x.fat / maxS * 100)}%"></i></div></div></div>`).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
+    </section>
+    ${ADMIN ? `<section class="bloco"><h2>Vendedores</h2>
+      ${vend.length ? vend.map(v => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between"><b style="color:var(--verde);font-weight:600">${esc(nomeTime(v.k) || 'Sem vendedor')}</b><span>${brlC(v.fat)}</span></div>
+        <div class="sub" style="margin-top:2px">${v.n} ${v.n === 1 ? 'venda' : 'vendas'} · ticket ${brlC(v.fat / v.n)} · lucro ${brlC(v.luc)}${v.c.taxa !== null ? ' · conversão ' + pct(v.c.taxa) : ''}${v.nota !== null ? ' · nota ' + v.nota.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' (' + v.nAv + ')' : ''}</div></div>`).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
+      <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}` : ''}
+    ${it.length ? `<div class="secao">Gestão da empresa</div><div class="pend">${it.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
+      ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>` : ''}`;
+  if ($('empModo')) $('empModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_MODO = b.dataset.m; telaEmpresa(P); } };
+  if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
+  if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
+  P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
+  P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
+}
+
 /* ---------- equipe, parceiros e regras (administradores) ---------- */
 function telaEquipe(P) {
   P.innerHTML = `
@@ -2711,7 +2793,7 @@ function telaAgenda(P) {
   if (AG_VISTA === 'reunioes') return telaReunioesAgenda(P);
   const E = eventos();
   let ultimo = '';
-  P.innerHTML = `
+  P.innerHTML = `${segOp('agenda')}
     <h1 class="titulo">Agenda da <em>operação</em></h1>
     <div class="seg" id="agVista"><button data-v="tudo" class="on">Compromissos</button><button data-v="reunioes">Reuniões${proximasReunioes().length ? ' · ' + proximasReunioes().length : ''}</button></div>
     <div class="sub">${pode('gestao') ? 'Voos, viagens, reuniões e vencimentos dos próximos 120 dias' : 'Todos os voos da Maktub nos próximos 120 dias'}</div>
@@ -2807,6 +2889,8 @@ function blocoAtendimento(base) {
     <div class="sub">Nota dada pelo cliente depois da reunião; auto = média da autoavaliação do vendedor.</div>
   </section>`;
 }
+const avaliacoesParaPedir = (so) => D.avaliacoes ? (D.agenda || []).filter(x => x.status === 'Realizada' && new Date(x.data) > Date.now() - 14 * 864e5 && (x.pessoa_id || x.atendimento_id || x.cliente_id) && !(avDe(x.id) || {}).enviada_em && (!so || [x.vendedor_id, ...(x.participantes || [])].includes(D.meuId))) : [];
+const aniversariosHoje = () => { const h = new Date(); return (D.pessoas || []).filter(p => p.nascimento && +p.nascimento.slice(5, 7) === h.getMonth() + 1 && +p.nascimento.slice(8, 10) === h.getDate()); };
 const meuCal = () => ((D.cal || []).find(x => x.user_id === D.meuId) || {}).cal_link || '';
 function blocoCal() {
   if (D.cal === null) return '';
@@ -2906,7 +2990,7 @@ function telaReunioesAgenda(P) {
   feitas.forEach(x => { porTipo[x.tipo] = (porTipo[x.tipo] || 0) + 1; (x.participantes || []).forEach(u => { porPessoa[u] = (porPessoa[u] || 0) + 1; }); });
   const pedidos = pode('gestao') ? reunioesAConfirmar() : [];
   const prox = proximasReunioes(), sr = semResumo();
-  P.innerHTML = `
+  P.innerHTML = `${segOp('agenda')}
     <h1 class="titulo">Agenda da <em>operação</em></h1>
     <div class="seg" id="agVista"><button data-v="tudo">Compromissos</button><button data-v="reunioes" class="on">Reuniões${prox.length ? ' · ' + prox.length : ''}</button></div>
     ${meuCal() ? `<button class="zap grande" id="calAg" style="margin-top:10px;width:100%">+ Agendar pelo meu Cal.com</button><button class="sec grande" id="novaAg" style="margin-top:8px;width:100%">Registrar sem o Cal.com</button>` : `<button class="zap grande" id="novaAg" style="margin-top:10px;width:100%">+ Agendar reunião</button>`}

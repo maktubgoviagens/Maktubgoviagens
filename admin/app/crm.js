@@ -42,6 +42,7 @@ export function eventos(D, dias = 120) {
 }
 
 // ---------- tela ----------
+export function filtrar(f) { FILTRO = f; BUSCA = ''; VISTA = 'lista'; PID = null; }
 export function abrir(id) { PID = id; VISTA = id ? 'ficha' : 'lista'; }
 export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } else if (h[1] === 'duplicadas') { VISTA = 'dups'; PID = null; } else if (h[1]) { VISTA = h[2] === 'editar' ? 'editar' : 'ficha'; PID = h[1]; } else { VISTA = 'lista'; PID = null; } }
 
