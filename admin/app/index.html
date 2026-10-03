@@ -2864,15 +2864,27 @@ function ligarAvaliacao(P, x) {
     aviso('Autoavaliação salva.');
   };
   if ($('pedirAval')) $('pedirAval').onclick = async () => {
+    // abre a janela já no toque (o iPhone bloqueia janelas abertas depois de esperar o banco)
+    let w = null; try { w = window.open('', '_blank'); } catch (_) { w = null; }
+    $('pedirAval').disabled = true;
     const { data, error } = await sb.rpc('avaliacao_link', { p_reuniao: x.id });
-    if (error) { aviso('Não gerou o link: ' + error.message); return; }
+    $('pedirAval').disabled = false;
+    if (error) { if (w) w.close(); aviso('Não gerou o link: ' + error.message); return; }
     const url = `${location.origin}/avaliacao/?a=${data.token}`;
     const prim = String(data.nome || '').split(' ')[0];
     const texto = `Oi${prim ? ', ' + prim : ''}! Obrigado pela conversa. Leva 30 segundos e faz diferença pra gente: como foi o atendimento? ${url}`;
     const a = avDe(x.id); if (a) a.enviada_em = a.enviada_em || new Date().toISOString(); else D.avaliacoes.unshift({ reuniao_id: x.id, token: data.token, enviada_em: new Date().toISOString(), vendedor_id: x.vendedor_id });
-    if (data.celular && zapNum(data.celular)) window.open(zapLink(data.celular, data.nome, texto), '_blank');
-    else { try { await navigator.clipboard.writeText(texto); aviso('Sem celular na ficha: a mensagem com o link foi copiada.'); } catch (_) { prompt('Copie a mensagem:', texto); } }
+    const zap = data.celular && zapNum(data.celular) ? zapLink(data.celular, data.nome, texto) : '';
+    if (zap) { if (w) w.location.href = zap; else location.href = zap; return; }
+    if (w) w.close();
+    // sem celular na ficha: mostra a mensagem pronta para copiar
+    $('pedirAval').insertAdjacentHTML('afterend', `<div class="config" id="avMsg" style="margin-top:10px">O cliente não tem celular na ficha. Copie a mensagem e envie pelo WhatsApp:
+      <textarea readonly rows="4" style="width:100%;margin-top:8px;font:inherit;font-size:13px;padding:8px;border:1px solid var(--linha);background:var(--branco)">${esc(texto)}</textarea>
+      <button class="sec" type="button" id="copiarAv" style="margin-top:8px;width:100%">Copiar mensagem</button></div>`);
+    $('pedirAval').remove();
+    $('copiarAv').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Mensagem copiada.'); } catch (_) { const t = $('avMsg').querySelector('textarea'); t.focus(); t.select(); document.execCommand('copy'); aviso('Mensagem copiada.'); } };
   };
+
 }
 function blocoAtendimento(base) {
   if (!D.avaliacoes) return '';
