@@ -188,11 +188,16 @@ function telaFicha(P, X) {
         <div class="sub">Se a pessoa ainda não tem ficha, ela é criada como passageira.</div>
       </form>
     </section>
+    ${X.fornecedores ? (() => { const L = X.fornecedores.doCliente(p.id); const F = X.fornecedores.lista(); return `<section class="bloco"><h2>Hotéis e serviços que usou</h2>
+      ${L.length ? L.map(a => { const f = F.find(x => x.id === a.fornecedor_id) || {}; return `<button class="lin" data-forn="${a.fornecedor_id}" style="width:100%;font-size:14px"><span>${esc(f.nome || 'Fornecedor')}<small style="display:block;color:var(--tinta-3)">${X.fornecedores.TIPOS[f.tipo] || ''}${f.cidade ? ' · ' + esc(f.cidade) : ''}${a.comentario ? ' · ' + esc(String(a.comentario).slice(0, 60)) : ''}</small></span><span>nota ${a.nota}<span class="seta">›</span></span></button>`; }).join('') : '<div class="vazio">Nenhuma avaliação registrada.</div>'}
+      <button class="sec" type="button" id="avaliarForn" style="margin-top:10px;width:100%">Registrar hotel ou serviço</button></section>`; })() : ''}
     <section class="bloco"><h2>Linha do tempo</h2>${linhaTempo(D, X, p)}</section>
     ${p.observacoes ? `<section class="bloco"><h2>Anotações</h2><div style="white-space:pre-wrap;color:var(--tinta-2)">${esc(p.observacoes)}</div></section>` : ''}
     ${ADMIN ? '<button class="sec grande" id="excluirP" style="margin-top:14px;width:100%">Excluir ficha</button>' : ''}`;
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarP').onclick = () => ir(X, 'editar', p.id);
+  if ($('avaliarForn')) $('avaliarForn').onclick = () => X.fornecedores.avaliar({ pessoa_id: p.id });
+  P.querySelectorAll('[data-forn]').forEach(b => b.onclick = () => X.fornecedores.abrir(b.dataset.forn));
   if ($('copiarKit')) $('copiarKit').onclick = async () => {
     const ids = [...P.querySelectorAll('#kitQuem input:checked')].map(c => c.value);
     if (!ids.length) return X.aviso('Marque pelo menos uma pessoa.');
