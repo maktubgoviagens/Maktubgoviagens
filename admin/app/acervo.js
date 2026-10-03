@@ -13,10 +13,29 @@ const NOME_PT = { GRU: 'São Paulo', CGH: 'São Paulo', VCP: 'Campinas', GIG: 'R
   JFK: 'Nova York', EWR: 'Nova York', LGA: 'Nova York', MIA: 'Miami', FLL: 'Fort Lauderdale', MCO: 'Orlando', LAX: 'Los Angeles', LAS: 'Las Vegas',
   EZE: 'Buenos Aires', AEP: 'Buenos Aires', SCL: 'Santiago', MVD: 'Montevidéu', LIM: 'Lima', CUZ: 'Cusco', BOG: 'Bogotá', CTG: 'Cartagena',
   PTY: 'Cidade do Panamá', MEX: 'Cidade do México', CUN: 'Cancún', PUJ: 'Punta Cana', BRC: 'Bariloche', USH: 'Ushuaia', FTE: 'El Calafate',
-  MDZ: 'Mendoza', CPT: 'Cidade do Cabo', JNB: 'Joanesburgo', DXB: 'Dubai', DOH: 'Doha', NRT: 'Tóquio', HND: 'Tóquio', MLE: 'Maldivas' };
+  MDZ: 'Mendoza', CPT: 'Cidade do Cabo', JNB: 'Joanesburgo', DXB: 'Dubai', DOH: 'Doha', NRT: 'Tóquio', HND: 'Tóquio', MLE: 'Maldivas',
+  FLR: 'Florença', NAP: 'Nápoles', PSA: 'Pisa', BLQ: 'Bolonha', VIE: 'Viena', PRG: 'Praga', BUD: 'Budapeste', BER: 'Berlim', DUB: 'Dublin',
+  EDI: 'Edimburgo', NCE: 'Nice', SVQ: 'Sevilha', AGP: 'Málaga', PMI: 'Palma de Maiorca', RAK: 'Marrakech', CMN: 'Casablanca', CAI: 'Cairo',
+  JTR: 'Santorini', JMK: 'Mykonos', CPH: 'Copenhague', ARN: 'Estocolmo', OSL: 'Oslo', KEF: 'Reykjavik', SPU: 'Split', DBV: 'Dubrovnik',
+  KRK: 'Cracóvia', MLA: 'Malta', MSY: 'Nova Orleans', SFO: 'São Francisco', ORD: 'Chicago', IAD: 'Washington', BOS: 'Boston', YYZ: 'Toronto',
+  YUL: 'Montreal', YVR: 'Vancouver', HAV: 'Havana', AUA: 'Aruba', CUR: 'Curaçao', SYD: 'Sydney', BKK: 'Bangkok', SIN: 'Singapura', DPS: 'Bali',
+  ICN: 'Seul', PEK: 'Pequim', PVG: 'Xangai', HKG: 'Hong Kong', TLV: 'Tel Aviv', AUH: 'Abu Dhabi', SJO: 'San José', PDP: 'Punta del Este',
+  COR: 'Córdoba', IGR: 'Puerto Iguazú' };
+// quando o nome da cidade existe em mais de um lugar (Paris, Londres, Roma...), vale o destino turístico, não a cidade pequena de mesmo nome
+const CIDADE_PRINCIPAL = { paris: 'CDG', londres: 'LHR', london: 'LHR', roma: 'FCO', rome: 'FCO', atenas: 'ATH', athens: 'ATH', florenca: 'FLR', florence: 'FLR',
+  firenze: 'FLR', veneza: 'VCE', venice: 'VCE', venezia: 'VCE', napoles: 'NAP', naples: 'NAP', napoli: 'NAP', milao: 'MXP', milan: 'MXP', madri: 'MAD',
+  madrid: 'MAD', barcelona: 'BCN', lisboa: 'LIS', lisbon: 'LIS', santiago: 'SCL', cordoba: 'COR', valencia: 'VLC', 'san jose': 'SJO', 'sao jose': 'SJO',
+  toronto: 'YYZ', orlando: 'MCO', miami: 'MIA', 'nova york': 'JFK', 'new york': 'JFK', washington: 'IAD', 'buenos aires': 'EZE', bariloche: 'BRC',
+  'foz do iguacu': 'IGU', 'sao paulo': 'GRU', 'rio de janeiro': 'GIG', 'belo horizonte': 'CNF', toquio: 'NRT', tokyo: 'NRT', dubai: 'DXB',
+  amsterda: 'AMS', amsterdam: 'AMS', zurique: 'ZRH', zurich: 'ZRH', genebra: 'GVA', geneva: 'GVA', bruxelas: 'BRU', brussels: 'BRU', viena: 'VIE',
+  vienna: 'VIE', praga: 'PRG', prague: 'PRG', berlim: 'BER', berlin: 'BER', munique: 'MUC', munich: 'MUC', porto: 'OPO', bali: 'DPS', malta: 'MLA',
+  santorini: 'JTR', mykonos: 'JMK', aruba: 'AUA', curacao: 'CUR', 'cidade do mexico': 'MEX', 'mexico city': 'MEX', cancun: 'CUN', 'punta cana': 'PUJ' };
 const PAIS_PT = { BR: 'Brasil', PT: 'Portugal', ES: 'Espanha', FR: 'França', IT: 'Itália', GB: 'Reino Unido', DE: 'Alemanha', NL: 'Holanda', CH: 'Suíça',
   US: 'Estados Unidos', AR: 'Argentina', CL: 'Chile', UY: 'Uruguai', PE: 'Peru', CO: 'Colômbia', MX: 'México', PA: 'Panamá', DO: 'Rep. Dominicana',
-  AE: 'Emirados Árabes', QA: 'Catar', JP: 'Japão', ZA: 'África do Sul', GR: 'Grécia', TR: 'Turquia', BE: 'Bélgica', MV: 'Maldivas' };
+  AE: 'Emirados Árabes', QA: 'Catar', JP: 'Japão', ZA: 'África do Sul', GR: 'Grécia', TR: 'Turquia', BE: 'Bélgica', MV: 'Maldivas',
+  AT: 'Áustria', CZ: 'Tchéquia', HU: 'Hungria', IE: 'Irlanda', MA: 'Marrocos', EG: 'Egito', DK: 'Dinamarca', SE: 'Suécia', NO: 'Noruega',
+  IS: 'Islândia', HR: 'Croácia', PL: 'Polônia', MT: 'Malta', CA: 'Canadá', CU: 'Cuba', AW: 'Aruba', CW: 'Curaçao', AU: 'Austrália',
+  TH: 'Tailândia', SG: 'Singapura', ID: 'Indonésia', KR: 'Coreia do Sul', CN: 'China', HK: 'Hong Kong', IL: 'Israel', CR: 'Costa Rica' };
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const PERFIS = ['Casal', 'Lua de mel', 'Família', 'Amigos', 'Sozinho', 'Grupo ou time', 'Corporativo'];
 const sem = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -24,13 +43,22 @@ const sem = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 async function carregarAero() {
   if (AERO) return AERO;
   const r = await fetch('/admin/app/aeroportos.json'); AERO = await r.json();
-  AERO._cidade = {}; Object.entries(AERO).forEach(([k, v]) => { if (k === '_cidade') return; const c = sem(NOME_PT[k] || v[0]); if (!AERO._cidade[c] || v[1] === 'BR') AERO._cidade[c] = k; });
+  // prioridade: cidade principal definida aqui > aeroporto com nome em português > aeroporto no Brasil > o primeiro da base
+  const peso = {}, pos = (c, k, p) => { if (!c || (peso[c] || 0) >= p) return; AERO._cidade[c] = k; peso[c] = p; };
+  AERO._cidade = {};
+  Object.entries(AERO).forEach(([k, v]) => {
+    if (k === '_cidade') return;
+    const p = NOME_PT[k] ? 3 : v[1] === 'BR' ? 2 : 1;
+    pos(sem(v[0]), k, p); if (NOME_PT[k]) pos(sem(NOME_PT[k]), k, p);
+  });
+  Object.entries(CIDADE_PRINCIPAL).forEach(([c, k]) => { if (AERO[k]) { AERO._cidade[c] = k; peso[c] = 9; } });
   return AERO;
 }
 function local(txt) {
   const t = String(txt || '').trim(); if (!t) return null;
   const up = t.toUpperCase(), m = up.match(/\b([A-Z]{3})\b/);
-  let k = /^[A-Z]{3}$/.test(up) && AERO[up] ? up : (m && AERO[m[1]] ? m[1] : AERO._cidade[sem(t)]);
+  // primeiro o código exato (GRU), depois o nome da cidade (San José), por último um código solto no texto (Paris CDG)
+  const k = /^[A-Z]{3}$/.test(up) && AERO[up] ? up : (AERO._cidade[sem(t)] || (m && AERO[m[1]] ? m[1] : null));
   if (!k) return { cidade: t, pais: '', lat: null, lon: null, iata: '' };
   const v = AERO[k];
   return { cidade: NOME_PT[k] || v[0], pais: v[1], lat: v[2], lon: v[3], iata: k };
