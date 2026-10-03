@@ -6,7 +6,8 @@ export const TIPOS = { hotel: 'Hotel', transfer: 'Transfer', passeio: 'Passeio',
 let LISTA = null, AVS = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null;
 
 const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-const media = (L) => L.length ? L.reduce((s, a) => s + a.nota, 0) / L.length : null;
+const media = (L) => { const n = L.filter(a => a.nota); return n.length ? n.reduce((s, a) => s + a.nota, 0) / n.length : null; };
+const periodo = (a) => a.data_uso ? new Date(a.data_uso + 'T12:00:00').toLocaleDateString('pt-BR') + (a.data_fim && a.data_fim !== a.data_uso ? ' a ' + new Date(a.data_fim + 'T12:00:00').toLocaleDateString('pt-BR') : '') : '';
 const fmt1 = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const estrelas = (n) => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
 
@@ -43,13 +44,13 @@ function telaLista(P, X) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Empresa</button>
     <h1 class="titulo" style="margin-top:6px">Fornecedores e <em>indicações</em></h1>
-    <div class="sub">${LISTA.length} fornecedores · ${AVS.length} avaliações de clientes</div>
+    <div class="sub">${LISTA.length} fornecedores · ${AVS.filter(a => a.nota).length} avaliações · ${AVS.filter(a => !a.nota).length} usos esperando nota</div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoF">+ Fornecedor</button><button class="sec" id="avaliarF">Registrar avaliação</button></div>
     <input class="busca" id="buscaF" type="search" placeholder="Buscar por cidade, país ou nome" value="${esc(BUSCA)}">
     <div class="chips" id="tipoF" style="margin-top:10px">${[['todos', 'Todos'], ...Object.entries(TIPOS)].map(([k, l]) => `<button data-t="${k}" class="${k === TIPO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${L.length ? L.map(({ f, av, m, ind, nInd }) => `<button class="cli" data-f="${f.id}"><div><div class="nome">${esc(f.nome)}</div>
       <div class="meta">${TIPOS[f.tipo] || f.tipo}${f.cidade ? ' · ' + esc(f.cidade) : ''}${f.pais ? ', ' + esc(f.pais) : ''}${nInd ? ` · ${Math.round(ind / nInd * 100)}% indicariam` : ''}</div></div>
-      <div class="val">${m !== null ? `<b>${fmt1(m)}</b><span>${av.length} ${av.length === 1 ? 'avaliação' : 'avaliações'}</span>` : '<span>sem avaliação</span>'}</div></button>`).join('')
+      <div class="val">${m !== null ? `<b>${fmt1(m)}</b><span>${av.filter(a => a.nota).length} ${av.filter(a => a.nota).length === 1 ? 'nota' : 'notas'}</span>` : `<span>${av.length ? av.length + (av.length === 1 ? ' uso' : ' usos') + ', sem nota' : 'sem avaliação'}</span>`}</div></button>`).join('')
       : `<div class="vazio">${BUSCA || TIPO !== 'todos' ? 'Nada encontrado com esse filtro.' : 'Nenhum fornecedor ainda. Cadastre o primeiro hotel ou registre a avaliação de um cliente.'}</div>`}</div>
     <div class="sub">Ordenado pela nota média dos clientes. Busque pela cidade para ver as melhores opções de um destino.</div>`;
   $('voltar').onclick = () => X.ir('empresa');
@@ -72,7 +73,7 @@ function ficha(P, X) {
     <h1 class="titulo" style="margin-top:6px">${esc(f.nome)}</h1>
     <div class="sub">${TIPOS[f.tipo] || f.tipo}${f.cidade ? ' · ' + esc(f.cidade) : ''}${f.pais ? ', ' + esc(f.pais) : ''}</div>
     <div class="numeros" style="margin-top:12px">
-      <div class="num destaque"><div class="l">Nota dos clientes</div><div class="v">${m !== null ? fmt1(m) : '-'}</div><div class="d">${m !== null ? estrelas(m) + ' · ' : ''}${av.length} ${av.length === 1 ? 'avaliação' : 'avaliações'}</div></div>
+      <div class="num destaque"><div class="l">Nota dos clientes</div><div class="v">${m !== null ? fmt1(m) : '-'}</div><div class="d">${m !== null ? estrelas(m) + ' · ' : ''}${av.filter(a => a.nota).length} de ${av.length} ${av.length === 1 ? 'uso' : 'usos'} avaliados</div></div>
       <div class="num"><div class="l">Indicariam</div><div class="v">${nInd ? Math.round(ind / nInd * 100) + '%' : '-'}</div><div class="d">${nInd ? `${ind} de ${nInd}` : 'sem resposta'}</div></div>
     </div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="avaliarEste">Registrar avaliação</button><button class="sec" id="editarF">Editar</button></div>
@@ -80,15 +81,16 @@ function ficha(P, X) {
       ${f.contato ? `<div class="lin"><span>Contato</span><span style="white-space:normal;text-align:right">${esc(f.contato)}</span></div>` : ''}
       ${f.site ? `<div class="lin"><span>Site</span><span><a href="${esc(/^https?:\/\//.test(f.site) ? f.site : 'https://' + f.site)}" target="_blank" rel="noopener" style="color:var(--verde)">abrir ›</a></span></div>` : ''}
       ${f.observacoes ? `<div style="white-space:pre-wrap;color:var(--tinta-2);margin-top:8px">${esc(f.observacoes)}</div>` : ''}</section>` : ''}
-    <section class="bloco"><h2>O que os clientes disseram</h2>
-      ${av.length ? av.map(a => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between;gap:8px"><b style="color:var(--verde);font-weight:600">${a.pessoa_id && nomeP(a.pessoa_id) ? `<button data-pid="${a.pessoa_id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(nomeP(a.pessoa_id))} ›</button>` : 'Cliente'}</b><span style="color:var(--dourado);white-space:nowrap">${estrelas(a.nota)}</span></div>
-        <div class="sub" style="margin-top:2px">${a.data_uso ? new Date(a.data_uso + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : ''}${a.indicaria === true ? ' · indicaria' : a.indicaria === false ? ' · não indicaria' : ''}</div>
+    <section class="bloco"><h2>Clientes que usaram</h2>
+      ${av.length ? av.map(a => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between;gap:8px"><b style="color:var(--verde);font-weight:600">${a.pessoa_id && nomeP(a.pessoa_id) ? `<button data-pid="${a.pessoa_id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(nomeP(a.pessoa_id))} ›</button>` : 'Cliente'}</b>${a.nota ? `<span style="color:var(--dourado);white-space:nowrap">${estrelas(a.nota)}</span>` : `<button class="sec" data-avid="${a.id}" style="padding:6px 10px;min-width:0;font-size:11px">Avaliar</button>`}</div>
+        <div class="sub" style="margin-top:2px">${periodo(a)}${a.indicaria === true ? ' · indicaria' : a.indicaria === false ? ' · não indicaria' : ''}${!a.nota ? ' · sem nota' : ''}${a.localizador ? ' · loc. ' + esc(a.localizador) : ''}</div>
         ${a.comentario ? `<div style="white-space:pre-wrap;color:var(--tinta-2);margin-top:4px">${esc(a.comentario)}</div>` : ''}</div>`).join('') : '<div class="vazio">Ninguém avaliou ainda.</div>'}
     </section>`;
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarF').onclick = () => { VISTA = 'editar'; tela(P, X); };
   $('avaliarEste').onclick = () => { PRE = { fornecedor_id: f.id }; ir(X, 'avaliar', f.id); };
   P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => X.abrirCliente(b.dataset.pid));
+  P.querySelectorAll('[data-avid]').forEach(b => b.onclick = () => { const a = AVS.find(x => x.id === b.dataset.avid); PRE = { ...a }; ir(X, 'avaliar', f.id); });
 }
 
 function form(P, X) {
@@ -147,6 +149,7 @@ function formAvaliar(P, X) {
       ${cli ? `<div class="lin"><span>${esc(cli.nome)}</span></div><input type="hidden" name="pessoa_id" value="${cli.id}">`
         : `${campo('cliente', 'Quem usou', '', 'text', 'list="dlCliA"')}<datalist id="dlCliA">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>`}
       ${campo('data_uso', 'Quando usou', pre.data_uso || '', 'date')}
+      ${pre.id ? `<input type="hidden" name="av_id" value="${pre.id}">` : ''}
       <div class="grupo">Avaliação</div>
       <div class="seg" id="notaA">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-n="${n}">${n}</button>`).join('')}</div>
       <div class="seg" id="indA" style="margin-top:10px"><button type="button" data-v="1">Indicaria</button><button type="button" data-v="0">Não indicaria</button></div>
@@ -175,10 +178,11 @@ function formAvaliar(P, X) {
     let pid = g('pessoa_id');
     if (!pid && g('cliente')) { const p = (D.pessoas || []).find(x => norm(x.nome) === norm(g('cliente'))); if (p) pid = p.id; }
     $('salvarA').disabled = true;
-    const { data, error } = await X.sb.from('fornecedor_avaliacoes').insert({ fornecedor_id: fid, pessoa_id: pid || null, data_uso: g('data_uso') || null, nota, indicaria: ind, comentario: g('comentario') || null }).select().single();
+    const row = { fornecedor_id: fid, pessoa_id: pid || null, data_uso: g('data_uso') || null, nota, indicaria: ind, comentario: g('comentario') || null };
+    const { data, error } = g('av_id') ? await X.sb.from('fornecedor_avaliacoes').update(row).eq('id', g('av_id')).select().single() : await X.sb.from('fornecedor_avaliacoes').insert(row).select().single();
     $('salvarA').disabled = false;
     if (error) { $('msgA').textContent = 'Não salvou: ' + error.message; return; }
-    AVS.unshift(data); PRE = null;
+    const i = AVS.findIndex(x => x.id === data.id); if (i >= 0) AVS[i] = data; else AVS.unshift(data); PRE = null;
     X.aviso('Avaliação salva.'); ir(X, 'ficha', fid);
   };
 }
