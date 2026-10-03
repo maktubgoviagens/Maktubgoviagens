@@ -583,6 +583,7 @@ async function carregar(silencioso) {
     ]);
     D.pessoas = px[0].error ? null : (px[0].data || []);
     { const av = await sb.from('avaliacoes').select('*').order('created_at', { ascending: false }).limit(5000); D.avaliacoes = av.error ? null : (av.data || []); }
+    { const pv = await sb.from('pos_viagem').select('*').limit(10000); D.posViagem = pv.error ? null : (pv.data || []); }
     [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
   } else D.pessoas = [];
   $('pagina').classList.remove('carregando');
@@ -696,7 +697,8 @@ function telaInicio(P) {
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
-    ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]
+    ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
+    ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
   const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 4);
@@ -706,6 +708,7 @@ function telaInicio(P) {
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<div class="sub" style="margin-top:8px">Em dia: ${emDia.map(x => x[0].toLowerCase()).join(', ')}.</div>` : ''}
+    ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
     ${blocoMetasAdmin(D.metas, true)}
     <div class="secao">A Maktub hoje</div>
@@ -720,6 +723,7 @@ function telaInicio(P) {
     <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
+  ligarPosViagem(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   ligarAvisos(P);
   carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div>${podeAba('leads') ? `<button class="lin" id="irLeadsSite" style="font-size:14px"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}<span class="seta">›</span></span></button>` : `<div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div>`}<div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div><div class="sub">Cliques no WhatsApp são anônimos: a pessoa aparece direto na conversa do WhatsApp da Maktub.</div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; if ($('irLeadsSite')) $('irLeadsSite').onclick = () => ir('leads'); });
@@ -739,11 +743,13 @@ function telaInicioColab(P) {
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
     ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Nova cotação ou reunião</button>' : ''}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
+    ${blocoPosViagem()}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
   if ($('novaReuniao')) $('novaReuniao').onclick = () => ir('reunioes', () => { RE_ED = 'nova'; });
   ligarCardsReuniao(P);
+  ligarPosViagem(P, () => telaInicioColab(P));
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
 }
@@ -1871,10 +1877,21 @@ function telaEmpresa(P) {
       ${vend.length ? vend.map(v => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between"><b style="color:var(--verde);font-weight:600">${esc(nomeTime(v.k) || 'Sem vendedor')}</b><span>${brlC(v.fat)}</span></div>
         <div class="sub" style="margin-top:2px">${v.n} ${v.n === 1 ? 'venda' : 'vendas'} · ticket ${brlC(v.fat / v.n)} · lucro ${brlC(v.luc)}${v.c.taxa !== null ? ' · conversão ' + pct(v.c.taxa) : ''}${v.nota !== null ? ' · nota ' + v.nota.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' (' + v.nAv + ')' : ''}</div></div>`).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
       <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}` : ''}
+    ${ADMIN && D.posViagem ? `<section class="bloco"><h2>Avaliações no Google</h2>
+      <div class="sub" style="margin-top:0">Link do Perfil da Empresa usado no pedido pós-viagem. No Perfil da Empresa no Google, toque em "Pedir avaliações" e copie o link.</div>
+      <form id="fGoogle" class="form" style="margin-top:6px">${campo('link', 'Link de avaliação', D.cfg && D.cfg.link_avaliacao_google, 'url', 'placeholder="https://g.page/r/..."')}<button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar link</button></form>
+      <div class="sub">${D.posViagem.filter(x => x.situacao === 'pedido').length} pedidos feitos desde o início.</div></section>` : ''}
     ${it.length ? `<div class="secao">Gestão da empresa</div><div class="pend">${it.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
       ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
       <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>` : ''}`;
   if ($('empModo')) $('empModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_MODO = b.dataset.m; telaEmpresa(P); } };
+  if ($('fGoogle')) $('fGoogle').onsubmit = async (ev) => {
+    ev.preventDefault(); const v = ev.target.elements.link.value.trim();
+    if (v && !/^https:\/\//.test(v)) { aviso('O link precisa começar com https://'); return; }
+    const { error } = await sb.from('configuracoes').update({ link_avaliacao_google: v || null }).eq('id', 1);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    D.cfg = { ...(D.cfg || {}), link_avaliacao_google: v || null }; aviso('Link salvo.');
+  };
   if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
   if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
   P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
@@ -2900,6 +2917,50 @@ function blocoAtendimento(base) {
     ${coment.slice(0, 20).map(a => `<button class="lin" data-agav="${a.reuniao_id}" style="display:block;padding:10px 0;text-align:left;width:100%"><b style="font-weight:600;color:var(--verde)">Nota ${a.nota || '-'}${a.vendedor_id ? ' · ' + esc(nomeTime(a.vendedor_id)) : ''}</b>${resultado(a) ? ` <span class="tag ${resultado(a) === 'Fechou' ? 'ok' : resultado(a) === 'Não fechou' ? 'alerta' : ''}">${esc(resultado(a))}</span>` : ''}${a.comentario ? `<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">"${esc(a.comentario)}"</span>` : ''}</button>`).join('')}
     <div class="sub">Nota dada pelo cliente depois da reunião; auto = média da autoavaliação do vendedor.</div>
   </section>`;
+}
+/* ---------- pós-viagem: avaliação no Google ---------- */
+function voltaramDeViagem() {
+  if (!D.posViagem || !D.pessoas) return [];
+  const pedidos = new Set(D.posViagem.map(x => x.emissao_id));
+  const recente = new Set(D.posViagem.filter(x => Date.now() - new Date(x.pedido_em) < 120 * 864e5).map(x => x.pessoa_id));
+  const por = {};
+  D.emissoes.forEach(e => {
+    const fim = e.data_volta || e.data_ida; if (!e.pessoa_id || !fim || (e.servico_app || e.servico) === 'Gestão de Milhas') return;
+    const k = difDias(dia(fim)); if (k > -1 || k < -15) return;
+    if (pedidos.has(e.id) || recente.has(e.pessoa_id)) return;
+    if (!por[e.pessoa_id] || String(fim) > String(por[e.pessoa_id].fim)) por[e.pessoa_id] = { e, fim, k };
+  });
+  return Object.values(por).map(x => ({ ...x, p: D.pessoas.find(y => y.id === x.e.pessoa_id) })).filter(x => x.p).sort((a, b) => b.k - a.k);
+}
+function textoGoogle(p) {
+  const prim = String(p.nome || '').split(' ')[0];
+  return `Oi, ${prim}! Que bom ter você de volta. Esperamos que a viagem tenha sido inesquecível. Se puder, conta pra gente como foi: sua avaliação no Google ajuda muito outras pessoas a conhecerem a Maktub. Leva um minutinho: ${D.cfg && D.cfg.link_avaliacao_google}`;
+}
+function blocoPosViagem() {
+  const L = voltaramDeViagem();
+  if (!L.length) return '';
+  const link = D.cfg && D.cfg.link_avaliacao_google;
+  return `<div class="secao" id="posViagem">Voltaram de viagem</div>
+    ${!link ? `<div class="config">Para pedir avaliações no Google, cadastre o link do Perfil da Empresa em ${ADMIN ? '<button data-ir="empresa" style="color:var(--verde);font-weight:600;text-decoration:underline;background:none;border:0;font:inherit">Empresa</button>' : 'Empresa (só administradores)'}.</div>` : ''}
+    ${L.map(({ e, k, p }) => `<div class="card" style="margin-top:8px"><div class="cab"><div><button class="nome" data-pid="${p.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer">${esc(p.nome)}</button></div><span class="quando">voltou há ${plural(-k, 'dia', 'dias')}</span></div>
+      <div class="info" style="margin-top:4px;color:var(--tinta-2);font-size:13px">${esc([e.origem, e.destino].filter(Boolean).join(' → ') || e.servico_app || e.servico || '')}</div>
+      ${link ? `<div class="botoes4" style="margin-top:10px">${p.celular && zapNum(p.celular) ? `<a class="zap" data-pv="${e.id}" data-pp="${p.id}" href="${esc(zapLink(p.celular, p.nome, textoGoogle(p)))}" target="_blank" rel="noopener">${ZAP}Pedir avaliação</a>` : `<button class="zap" type="button" data-pvcopia="${e.id}" data-pp="${p.id}">Copiar mensagem</button>`}<button class="sec" type="button" data-pvpular="${e.id}" data-pp="${p.id}">Agora não</button></div>` : ''}
+    </div>`).join('')}`;
+}
+async function registrarPosViagem(eid, pid, situacao) {
+  const { data, error } = await sb.from('pos_viagem').insert({ emissao_id: eid, pessoa_id: pid, situacao }).select().single();
+  if (error) { aviso('Não registrou: ' + error.message); return; }
+  D.posViagem.push(data);
+}
+function ligarPosViagem(P, render) {
+  P.querySelectorAll('[data-pv]').forEach(a => a.addEventListener('click', () => { registrarPosViagem(a.dataset.pv, a.dataset.pp, 'pedido').then(() => setTimeout(render, 400)); }));
+  P.querySelectorAll('[data-pvpular]').forEach(b => b.onclick = async () => { await registrarPosViagem(b.dataset.pvpular, b.dataset.pp, 'pular'); render(); });
+  P.querySelectorAll('[data-pvcopia]').forEach(b => b.onclick = async () => {
+    const p = D.pessoas.find(x => x.id === b.dataset.pp), t = textoGoogle(p);
+    try { await navigator.clipboard.writeText(t); aviso('Mensagem copiada. A ficha não tem celular.'); } catch (_) { prompt('Copie a mensagem:', t); }
+    await registrarPosViagem(b.dataset.pvcopia, b.dataset.pp, 'pedido'); render();
+  });
+  P.querySelectorAll('#posViagem ~ .card [data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
 }
 const avaliacoesParaPedir = (so) => D.avaliacoes ? (D.agenda || []).filter(x => x.status === 'Realizada' && new Date(x.data) > Date.now() - 14 * 864e5 && (x.pessoa_id || x.atendimento_id || x.cliente_id) && !(avDe(x.id) || {}).enviada_em && (!so || [x.vendedor_id, ...(x.participantes || [])].includes(D.meuId))) : [];
 const aniversariosHoje = () => { const h = new Date(); return (D.pessoas || []).filter(p => p.nascimento && +p.nascimento.slice(5, 7) === h.getMonth() + 1 && +p.nascimento.slice(8, 10) === h.getDate()); };
