@@ -270,6 +270,8 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .kc{background:var(--branco);border:1px solid var(--linha);padding:10px;margin-bottom:8px}
 .kc.atr{border-left:3px solid var(--alerta)}
 .kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:0;text-align:left;cursor:pointer;width:100%}
+.kzap{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#25d366;color:#fff}
+.kzap svg{width:17px;height:17px;fill:currentColor}
 .kc .i{font-size:12.5px;color:var(--tinta-2);margin-top:3px}
 .kc .t{font-size:11.5px;color:var(--tinta-3);margin-top:4px}
 .kc .t.alerta{color:var(--alerta)}
@@ -323,6 +325,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
     <div><div class="n">Maktub Go</div><div class="s" id="topoS">Operação</div></div>
     <div class="acoes">
       <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
+      <button class="icone" id="clientesTopo" aria-label="Clientes" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/></svg></button>
       <button class="icone" id="recarregar" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
       <button class="icone" id="maisTopo" aria-label="Mais" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="bola" id="bLeads" hidden></span></button>
       <button class="icone" id="sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
@@ -339,6 +342,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=2';
+import * as CRM from '/admin/app/crm.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -372,7 +376,9 @@ const IC = {
   voo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 16l20-6-3-2-7 2-5-5H5l3 6-4 1-2-2H1l1 6Z"/></svg>',
   viagem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h12v13H6zM9 7V4h6v3M9 20v1M15 20v1"/></svg>',
   reuniao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="13" height="12"/><path d="m16 10 5-3v10l-5-3"/></svg>',
-  milhas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>'
+  milhas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>',
+  aniv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 21h16M5 21v-8h14v8M3 13h18M12 13V9M12 6.5c-1-1-1-2.5 0-3.5 1 1 1 2.5 0 3.5Z"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8.5 17h7"/></svg>'
 };
 const adminLink = (cid, view) => `/admin/?cliente=${encodeURIComponent(cid)}&view=${encodeURIComponent(view || 'cadastro')}`;
 
@@ -414,6 +420,7 @@ $('recarregar').onclick = () => { SITE = null; OPM.recarregar(); ACV.recarregar(
 $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
+$('clientesTopo').onclick = () => { CRM.abrir(null); ir('crm'); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
 window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
 $('pagina').addEventListener('click', async (e) => {
@@ -427,7 +434,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos'];
+const ABAS_ADMIN = ['receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -440,14 +447,15 @@ const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas' };
+const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'mais'].filter(podeAba);
+const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = podeAba(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
+  if (ABA === 'crm') CRM.rota(h);
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
   GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
@@ -475,6 +483,7 @@ function montarNav() {
   $('nav').classList.toggle('seis', itens.length > 5);
   $('sino').hidden = !ADMIN;
   $('maisTopo').hidden = !podeAba('mais');
+  $('clientesTopo').hidden = !podeAba('crm');
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'agenda' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
@@ -486,10 +495,11 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 function marcarNav() {
-  const alvo = ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
-  $('topoS').textContent = { opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('clientesTopo').classList.toggle('on', alvo === 'crm');
+  $('topoS').textContent = { crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', inicio: ADMIN ? 'Operação' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -548,10 +558,29 @@ async function carregar(silencioso) {
     ]);
     [D.indic, D.rel, D.extMes, D.atasMes] = gx.map(r => r.data || []);
   }
+  if (podeAba('crm')) {
+    const nada = Promise.resolve({ data: [], error: null });
+    const px = await Promise.all([
+      sb.from('pessoas').select('*').order('nome').limit(10000),
+      pode('emissoes') ? sb.from('pessoas_documentos').select('*').limit(10000) : nada,
+      sb.from('pessoas_vinculos').select('*').limit(10000),
+      pode('emissoes') ? sb.from('emissao_passageiros').select('*').limit(20000) : nada,
+      ADMIN ? sb.from('pessoas_duplicatas').select('*').eq('status', 'pendente').limit(500) : nada
+    ]);
+    D.pessoas = px[0].error ? null : (px[0].data || []);
+    [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
+  } else D.pessoas = [];
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   tela();
 }
+
+function ctxCRM() {
+  return { D, $, esc, sb, aviso, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
+    novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao,
+    abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true) };
+}
+const pessoaPorNome = (n) => { const k = String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); return k ? (D.pessoas || []).find(p => String(p.nome).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim() === k) : null; };
 
 /* ================= cálculos ================= */
 const nomeCli = (id) => (D.clientes.find(c => c.id === id) || {}).nome_completo || 'Cliente';
@@ -597,6 +626,7 @@ function eventos() {
   D.clientes.filter(c => c.gestao_vencimento && diasPara(c.gestao_vencimento) >= -1 && diasPara(c.gestao_vencimento) <= 120).forEach(c => E.push({ cid: c.id, d: dia(c.gestao_vencimento), hora: '', ic: 'milhas', alerta: diasPara(c.gestao_vencimento) <= 30, t: `Vence o contrato da Gestão: ${c.nome_completo}`, s: 'Reunião de renovação', href: '#clientes/' + c.id }));
   (D.agenda || []).filter(x => x.status === 'Agendada').forEach(x => { const d = new Date(x.data), d0 = new Date(d); d0.setHours(0, 0, 0, 0); E.push({ d: d0, hora: d.toTimeString().slice(0, 5), ic: 'reuniao', t: x.titulo + (x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + x.cliente : ''), s: [x.tipo, (x.participantes || []).map(nomeTime).filter(Boolean).join(', ')].filter(Boolean).join(' · '), href: '#agenda/' + x.id }); });
   vencimentos(90).forEach(({ p, d }) => E.push({ cid: p.cliente_id, d, hora: '', ic: 'milhas', alerta: difDias(d) <= 30, t: `${num(p.vencimento_quantidade)} ${p.unidade || 'milhas'} ${p.programa} vencem`, s: nomeCli(p.cliente_id), href: adminLink(p.cliente_id, 'programas_milhas') }));
+  if (podeAba('crm')) CRM.eventos(D).forEach(x => E.push({ d: x.d, hora: '', ic: x.ic, alerta: x.alerta || (x.aniv && difDias(x.d) === 0), t: x.t, s: x.s, href: '#crm/' + x.pid }));
   return E.filter(e => e.d && difDias(e.d) >= -1).sort((a, b) => a.d - b.d || String(a.hora).localeCompare(String(b.hora)));
 }
 function agrupar(lista) { let u = ''; return lista.map(e => { const k = nomeDia(e.d); const h = k !== u ? `<div class="dia">${k}</div>` : ''; u = k; return h + htmlEvento(e); }).join(''); }
@@ -613,6 +643,7 @@ function tela() {
   const ag = checkinsTotal(); $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag;
   if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
+  if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
@@ -1237,7 +1268,7 @@ function htmlKCard(r, etapas) {
   const et = etapaDe(r), i = etapas.indexOf(et);
   const atr = r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
   return `<div class="kc ${atr ? 'atr' : ''}">
-    <button class="n" data-r="${r.id}">${esc(r.cliente)}</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${esc(r.cliente)}</button>${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     <div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
     ${resumoReunioes(r.id) ? `<div class="t">${esc(resumoReunioes(r.id))}</div>` : ''}
@@ -1328,7 +1359,10 @@ function telaFormReuniao(P) {
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : sel('produto', 'Produto', RE_PRODUTOS, r.produto)}
       ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
       <div class="grupo">Cliente</div>
-      ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required')}
+      ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
+      <datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
+      <input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}">
+      <div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>
       ${campo('contato', 'WhatsApp ou e-mail', r.contato)}
       ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}${campo('data_viagem', 'Data da viagem', r.data_viagem, 'date')}`}
       <label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
@@ -1364,6 +1398,13 @@ function telaFormReuniao(P) {
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
+  if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
+  f.elements.cliente.addEventListener('change', () => {
+    const p = pessoaPorNome(f.elements.cliente.value);
+    f.elements.pessoa_id.value = p ? p.id : (f.elements.pessoa_id.value && !nova ? f.elements.pessoa_id.value : '');
+    if (p && !f.elements.contato.value) f.elements.contato.value = p.celular || p.email || '';
+    $('fichaRe').textContent = p ? 'Cliente com ficha: o atendimento vai para a linha do tempo dela.' : '';
+  });
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); };
   mostrar();
   $('voltar').onclick = () => history.back();
@@ -1384,6 +1425,7 @@ function telaFormReuniao(P) {
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
+    if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
@@ -1729,6 +1771,7 @@ function telaReceber(P) {
 /* ---------- mais (administradores) ---------- */
 function itensMais() {
   const L = [
+    ['crm', 'Clientes: fichas, família e cadastro', ADMIN ? (D.dups || []).length : 0],
     ['acessos', 'Equipe e acessos', 0],
     ['leads', 'Leads do site', LE_NOVOS()],
     ['site', 'Números do site', 0],
