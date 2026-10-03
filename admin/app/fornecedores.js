@@ -3,7 +3,7 @@
 // para indicar os melhores aos próximos clientes de cada destino.
 
 export const TIPOS = { hotel: 'Hotel', transfer: 'Transfer', passeio: 'Passeio', ingresso: 'Ingresso', seguro: 'Seguro viagem', locadora: 'Aluguel de carro', trem: 'Trem', restaurante: 'Restaurante', outro: 'Outro' };
-let LISTA = null, AVS = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null, PULADOS = new Set();
+let LISTA = null, AVS = null, JUNTAR = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null, PULADOS = new Set();
 
 const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const media = (L) => { const n = L.filter(a => a.nota); return n.length ? n.reduce((s, a) => s + a.nota, 0) / n.length : null; };
@@ -30,6 +30,8 @@ export async function tela(P, X) {
   if (VISTA === 'novo' || VISTA === 'editar') return form(P, X);
   if (VISTA === 'avaliar') return formAvaliar(P, X);
   if (VISTA === 'lote') return loteGoogle(P, X);
+  if (VISTA === 'duplicados') return telaDuplicados(P, X);
+  if (VISTA === 'juntar') return telaJuntar(P, X);
   if (VISTA === 'ficha' && FID) return ficha(P, X);
   return telaLista(P, X);
 }
@@ -48,6 +50,7 @@ function telaLista(P, X) {
     <div class="sub">${LISTA.length} fornecedores · ${AVS.filter(a => a.nota).length} avaliações · ${AVS.filter(a => !a.nota).length} usos esperando nota</div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoF">+ Fornecedor</button><button class="sec" id="avaliarF">Registrar avaliação</button></div>
     ${LISTA.filter(f => !f.google_place_id).length ? `<button class="sec grande" id="loteG" style="margin-top:8px;width:100%">Ligar ao Google (${LISTA.filter(f => !f.google_place_id).length} sem vínculo) ›</button>` : ''}
+    ${X.admin && duplicados().length ? `<button class="sec grande" id="dupG" style="margin-top:8px;width:100%">${duplicados().length} ${duplicados().length === 1 ? 'possível duplicado' : 'possíveis duplicados'} para juntar ›</button>` : ''}
     <input class="busca" id="buscaF" type="search" placeholder="Buscar por cidade, país ou nome" value="${esc(BUSCA)}">
     <div class="chips" id="tipoF" style="margin-top:10px">${[['todos', 'Todos'], ...Object.entries(TIPOS)].map(([k, l]) => `<button data-t="${k}" class="${k === TIPO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${L.length ? L.map(({ f, av, m, ind, nInd }) => `<button class="cli" data-f="${f.id}"><div><div class="nome">${esc(f.nome)}</div>
@@ -57,6 +60,7 @@ function telaLista(P, X) {
     <div class="sub">Ordenado pela nota média dos clientes. Busque pela cidade para ver as melhores opções de um destino.</div>`;
   $('voltar').onclick = () => X.ir('empresa');
   $('novoF').onclick = () => ir(X, 'novo');
+  if ($('dupG')) $('dupG').onclick = () => { VISTA = 'duplicados'; tela(P, X); scrollTo(0, 0); };
   if ($('loteG')) $('loteG').onclick = () => { PULADOS = new Set(); VISTA = 'lote'; tela(P, X); scrollTo(0, 0); };
   $('avaliarF').onclick = () => { PRE = null; ir(X, 'avaliar'); };
   $('buscaF').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaF').focus(); $('buscaF').setSelectionRange(pos, pos); };
@@ -90,9 +94,11 @@ function ficha(P, X) {
       ${av.length ? av.map(a => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between;gap:8px"><b style="color:var(--verde);font-weight:600">${a.pessoa_id && nomeP(a.pessoa_id) ? `<button data-pid="${a.pessoa_id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(nomeP(a.pessoa_id))} ›</button>` : 'Cliente'}</b>${a.nota ? `<span style="color:var(--dourado);white-space:nowrap">${estrelas(a.nota)}</span>` : `<button class="sec" data-avid="${a.id}" style="padding:6px 10px;min-width:0;font-size:11px">Avaliar</button>`}</div>
         <div class="sub" style="margin-top:2px">${periodo(a)}${a.indicaria === true ? ' · indicaria' : a.indicaria === false ? ' · não indicaria' : ''}${!a.nota ? ' · sem nota' : ''}${a.localizador ? ' · loc. ' + esc(a.localizador) : ''}</div>
         ${a.comentario ? `<div style="white-space:pre-wrap;color:var(--tinta-2);margin-top:4px">${esc(a.comentario)}</div>` : ''}</div>`).join('') : '<div class="vazio">Ninguém avaliou ainda.</div>'}
-    </section>`;
+    </section>
+    ${X.admin ? '<button class="sec" type="button" id="juntarF" style="margin-top:12px;width:100%">É duplicado? Juntar com outro fornecedor</button>' : ''}`;
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarF').onclick = () => { VISTA = 'editar'; tela(P, X); };
+  if ($('juntarF')) $('juntarF').onclick = () => { JUNTAR = null; VISTA = 'juntar'; tela(P, X); scrollTo(0, 0); };
   ligarGoogle(P, X, f);
   // nota com mais de 30 dias: atualiza sozinho
   if (f.google_place_id && (!f.google_em || !f.google_dados || Date.now() - new Date(f.google_em) > 30 * 864e5)) google(X, { acao: 'atualizar', place_id: f.google_place_id, fornecedor_id: f.id }).then(r => { if (r && r.fornecedor && VISTA === 'ficha' && FID === f.id) { Object.assign(f, r.fornecedor); $('blGoogle').innerHTML = '<h2>No Google</h2>' + blocoGoogle(f, esc); ligarGoogle(P, X, f); } });
@@ -226,6 +232,83 @@ function blocoMaktub(f, esc, admin) {
     f.atencao ? `<div class="config" style="margin-top:8px"><b>Atenção:</b> ${esc(f.atencao)}</div>` : '',
   ].join('');
   return itens || '<div class="sub" style="margin-top:0">Ainda sem a ficha interna. Toque em Editar para preencher o que só a Maktub sabe.</div>';
+}
+
+// duplicados: mesmo lugar no Google, ou mesmo nome e cidade
+function duplicados() {
+  const grupos = new Map();
+  for (const f of LISTA) {
+    const k = f.google_place_id ? 'g:' + f.google_place_id : 'n:' + norm(f.nome) + '|' + norm(f.cidade);
+    if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(f);
+  }
+  return [...grupos.values()].filter(g => g.length > 1);
+}
+const usos = (id) => AVS.filter(a => a.fornecedor_id === id).length;
+const resumoF = (f, esc) => `${esc(f.nome)}<small style="display:block;color:var(--tinta-3);white-space:normal">${esc([TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '))} · ${usos(f.id)} ${usos(f.id) === 1 ? 'uso' : 'usos'}${f.google_place_id ? ' · ligado ao Google' : ''}</small>`;
+
+// junta "apagar" dentro de "manter": move as avaliações, completa campos vazios e apaga o duplicado
+async function juntar(X, manter, apagar) {
+  const r1 = await X.sb.from('fornecedor_avaliacoes').update({ fornecedor_id: manter.id }).eq('fornecedor_id', apagar.id);
+  if (r1.error) return 'Não moveu as avaliações: ' + r1.error.message;
+  const extra = {};
+  for (const [k, v] of Object.entries(apagar)) {
+    if (['id', 'created_at', 'updated_at', 'nome', 'observacoes'].includes(k)) continue;
+    const atual = manter[k];
+    if ((atual === null || atual === undefined || atual === '' || (Array.isArray(atual) && !atual.length)) && v !== null && v !== undefined && v !== '') extra[k] = v;
+  }
+  if (apagar.observacoes && apagar.observacoes !== manter.observacoes) extra.observacoes = [manter.observacoes, apagar.observacoes].filter(Boolean).join('\n');
+  if (Object.keys(extra).length) {
+    const r2 = await X.sb.from('fornecedores').update(extra).eq('id', manter.id).select().single();
+    if (r2.error) return 'Não completou os dados: ' + r2.error.message;
+    Object.assign(manter, r2.data);
+  }
+  const r3 = await X.sb.from('fornecedores').delete().eq('id', apagar.id).select();
+  if (r3.error || !r3.data || !r3.data.length) return 'As avaliações foram movidas, mas o duplicado não foi apagado' + (r3.error ? ': ' + r3.error.message : ' (sem permissão para apagar; rode o 1-apagar-fornecedor.sql)') + '.';
+  AVS.forEach(a => { if (a.fornecedor_id === apagar.id) a.fornecedor_id = manter.id; });
+  LISTA = LISTA.filter(x => x.id !== apagar.id);
+  return null;
+}
+
+function telaDuplicados(P, X) {
+  const { $, esc } = X;
+  const G = duplicados();
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Possíveis <em>duplicados</em></h1>
+    <div class="sub">Toque em "Manter este" no cadastro que fica. Os outros do grupo são juntados nele: as avaliações dos clientes passam para ele e os campos vazios são completados.</div>
+    ${G.length ? G.map((g, gi) => `<section class="bloco"><h2>${g[0].google_place_id ? 'Mesmo lugar no Google' : 'Mesmo nome e cidade'}</h2>
+      ${g.map(f => `<div class="lin" style="align-items:center"><span>${resumoF(f, esc)}</span><button class="sec" data-g="${gi}" data-m="${f.id}" style="padding:6px 10px;min-width:0;font-size:11px">Manter este</button></div>`).join('')}</section>`).join('')
+      : '<div class="vazio" style="margin-top:14px">Nenhum duplicado encontrado. Se ainda houver um, abra a ficha e use "Juntar com outro fornecedor".</div>'}
+    <div class="sub" id="msgD"></div>`;
+  $('voltar').onclick = () => { VISTA = 'lista'; tela(P, X); };
+  P.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
+    const g = G[+b.dataset.g], manter = g.find(f => f.id === b.dataset.m);
+    if (!confirm(`Manter "${manter.nome}" e juntar ${g.length - 1} ${g.length === 2 ? 'cadastro' : 'cadastros'} nele? Não dá para desfazer.`)) return;
+    P.querySelectorAll('[data-m]').forEach(x => x.disabled = true);
+    for (const f of g) if (f.id !== manter.id) { const e = await juntar(X, manter, f); if (e) { $('msgD').textContent = e; P.querySelectorAll('[data-m]').forEach(x => x.disabled = false); return; } }
+    X.aviso('Juntado em ' + manter.nome + '.'); telaDuplicados(P, X);
+  });
+}
+
+function telaJuntar(P, X) {
+  const { $, esc } = X;
+  const f = LISTA.find(x => x.id === FID);
+  if (!f) return ir(X, 'lista');
+  const q = norm(JUNTAR || '');
+  const L = LISTA.filter(x => x.id !== f.id).filter(x => q ? norm(x.nome + ' ' + (x.cidade || '')).includes(q) : (x.tipo === f.tipo && (norm(x.nome).split(' ')[0] === norm(f.nome).split(' ')[0] || (f.cidade && norm(x.cidade) === norm(f.cidade))))).slice(0, 30);
+  P.innerHTML = `<button class="voltar" id="voltar">‹ ${esc(f.nome)}</button><h1 class="titulo" style="margin-top:6px">Juntar <em>duplicado</em></h1>
+    <div class="sub">Escolha o cadastro repetido. Ele é juntado em <b>${esc(f.nome)}</b>, que fica: avaliações passam para cá e campos vazios são completados.</div>
+    <input class="busca" id="buscaJ" type="search" placeholder="Buscar pelo nome ou cidade" value="${esc(JUNTAR || '')}">
+    <div class="lista">${L.length ? L.map(x => `<button class="lin" data-j="${x.id}" style="width:100%;font-size:14px;text-align:left"><span>${resumoF(x, esc)}</span><span>juntar ›</span></button>`).join('') : '<div class="vazio">Nenhum parecido. Busque pelo nome.</div>'}</div>
+    <div class="sub" id="msgJ"></div>`;
+  $('voltar').onclick = () => { VISTA = 'ficha'; tela(P, X); };
+  $('buscaJ').oninput = (e) => { JUNTAR = e.target.value; const pos = e.target.selectionStart; telaJuntar(P, X); $('buscaJ').focus(); $('buscaJ').setSelectionRange(pos, pos); };
+  P.querySelectorAll('[data-j]').forEach(b => b.onclick = async () => {
+    const outro = LISTA.find(x => x.id === b.dataset.j);
+    if (!confirm(`Juntar "${outro.nome}" em "${f.nome}"? O cadastro "${outro.nome}" deixa de existir. Não dá para desfazer.`)) return;
+    b.disabled = true;
+    const e = await juntar(X, f, outro);
+    if (e) { $('msgJ').textContent = e; b.disabled = false; return; }
+    X.aviso('Juntado.'); ir(X, 'ficha', f.id);
+  });
 }
 
 function form(P, X) {
