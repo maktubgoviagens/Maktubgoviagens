@@ -12,6 +12,7 @@ const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const idade = (nasc) => { if (!nasc) return null; const n = new Date(nasc + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) a--; return a; };
 const proxAniv = (nasc) => { if (!nasc) return null; const n = new Date(nasc + 'T12:00:00'), h = new Date(); h.setHours(0, 0, 0, 0); let d = new Date(h.getFullYear(), n.getMonth(), n.getDate()); if (d < h) d = new Date(h.getFullYear() + 1, n.getMonth(), n.getDate()); return d; };
 const mascara = (cpf) => { const d = so(cpf); return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '***'; };
+const serv = (e) => e.servico_app || e.servico || 'Outro';
 const fmtCpf = (cpf) => { const d = so(cpf); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : (cpf || ''); };
 
 // ---------- dados que outras telas também usam ----------
@@ -72,7 +73,7 @@ function telaLista(P, X) {
   P.innerHTML = `
     <h1 class="titulo">Clientes</h1>
     <div class="sub">${todas.length} fichas · ${todas.filter(p => (p.papeis || []).includes('cliente')).length} clientes · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
-    ${ADMIN && dups ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas'} para confirmar ›</button>` : ''}
+    ${ADMIN ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups ? (dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas') + ' para confirmar ›' : 'Revisar fichas duplicadas ›'}</button>` : ''}
     <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo contato</button>
     <input class="busca" id="buscaP" type="search" placeholder="Buscar por nome, telefone ou e-mail" value="${esc(BUSCA)}">
     <div class="chips" id="filP" style="margin-top:10px">${filtros.map(([k, l]) => `<button data-f="${k}" class="${k === FILTRO ? 'on' : ''}">${l}</button>`).join('')}</div>
@@ -94,7 +95,7 @@ function linhaTempo(D, X, p) {
   (D.leads || []).filter(l => l.pessoa_id === p.id).forEach(l => L.push({ d: l.created_at, t: 'Pedido pelo site', s: [l.produto, l.tipo, l.destino].filter(Boolean).join(' · ') }));
   (D.reunioes || []).filter(r => r.pessoa_id === p.id).forEach(r => L.push({ d: r.data, t: `${r.tipo || 'Atendimento'} · ${r.resultado === 'Em andamento' ? (r.etapa || 'em andamento') : r.resultado}`, s: [r.trecho || r.produto, r.valor_fechado ? brl2(r.valor_fechado) : r.valor_estimado ? 'cotado ' + brl2(r.valor_estimado) : '', r.responsavel_id ? 'por ' + nomeTime(r.responsavel_id) : ''].filter(Boolean).join(' · '), at: r.id }));
   (D.agenda || []).filter(a => a.pessoa_id === p.id).forEach(a => L.push({ d: a.data, t: `Reunião · ${a.status || ''}`, s: a.titulo || '', ag: a.id }));
-  emissoesDe(D, p.id).forEach(e => L.push({ d: e.data_negociacao, t: `Emissão · ${[e.origem, e.destino].filter(Boolean).join(' → ') || e.servico || ''}`, s: [e.pessoa_id === p.id ? brl2(e.valor_receber) : 'como passageiro', e.data_ida ? 'ida ' + new Date(e.data_ida + 'T12:00:00').toLocaleDateString('pt-BR') : '', e.vendedor_id ? 'por ' + nomeTime(e.vendedor_id) : '', e.pessoa_id === p.id && e.pago === false ? 'a receber' : ''].filter(Boolean).join(' · '), em: e.id }));
+  emissoesDe(D, p.id).forEach(e => L.push({ d: e.data_negociacao, t: `${serv(e)}${[e.origem, e.destino].filter(Boolean).length ? ' · ' + [e.origem, e.destino].filter(Boolean).join(' → ') : ''}`, s: [e.pessoa_id === p.id ? brl2(e.valor_receber) : 'como passageiro', e.data_ida ? 'ida ' + new Date(e.data_ida + 'T12:00:00').toLocaleDateString('pt-BR') : '', e.vendedor_id ? 'por ' + nomeTime(e.vendedor_id) : '', e.pessoa_id === p.id && e.pago === false ? 'a receber' : ''].filter(Boolean).join(' · '), em: e.id }));
   L.sort((a, b) => String(b.d || '').localeCompare(String(a.d || '')));
   return L.length ? L.slice(0, 60).map(x => `<button class="lin" ${x.at ? `data-at="${x.at}"` : x.ag ? `data-ag="${x.ag}"` : x.em ? `data-em="${x.em}"` : ''} style="display:block;padding:10px 0;text-align:left;width:100%">
       <span style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:600;color:var(--verde)">${esc(x.t)}</b><small style="color:var(--tinta-3);white-space:nowrap">${x.d ? new Date(String(x.d).length === 10 ? x.d + 'T12:00:00' : x.d).toLocaleDateString('pt-BR') : ''}</small></span>
@@ -133,6 +134,7 @@ function telaFicha(P, X) {
       <div class="num destaque"><div class="l">Investimento</div><div class="v">${brlC(r.total)}</div><div class="d">${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</div></div>
       <div class="num"><div class="l">Ticket médio</div><div class="v">${r.n ? brlC(r.ticket) : '-'}</div><div class="d">por emissão</div></div>
     </div>
+    ${(() => { const em = (D.emissoes || []).filter(e => e.pessoa_id === p.id); const g = {}; em.forEach(e => { const k = serv(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e.valor_receber) || 0; }); const L = Object.entries(g).sort((a, b) => b[1].v - a[1].v); return L.length ? `<section class="bloco"><h2>O que já comprou</h2>${L.map(([k, x]) => `<div class="lin"><span>${esc(k)}</span><span>${brlC(x.v)} · ${x.n}</span></div>`).join('')}</section>` : ''; })()}
     ${p.cliente_id && pode('gestao') ? `<button class="sec grande" id="irGestao" style="margin-top:10px;width:100%">Abrir carteira da Gestão de Milhas ›</button>` : ''}
     <section class="bloco"><h2>Contato</h2>
       ${lin('Celular', esc(p.celular))}${lin('E-mail', esc(p.email))}${lin('Instagram', esc(p.instagram))}
@@ -320,11 +322,20 @@ function telaDups(P, X) {
     <button class="voltar" id="voltar">‹ Clientes</button>
     <h1 class="titulo" style="margin-top:6px">Fichas <em>duplicadas</em></h1>
     <div class="sub">Mesmo nome, mas com telefone, e-mail ou CPF diferentes. Junte se for a mesma pessoa; se não for, marque como pessoas diferentes.</div>
+    <button class="sec grande" id="buscarDups" style="margin-top:12px;width:100%">Procurar mais possíveis duplicadas</button>
     ${L.length ? L.map(({ d, a, b }) => `<section class="bloco">
+      <div class="sub" style="margin:0 0 8px">${esc(d.motivo || '')}</div>
       <div style="display:flex;gap:12px">${card(a)}${card(b)}</div>
       <div class="botoes4" style="margin-top:10px"><button class="zap" data-j="${d.id}|${a.id}|${b.id}">Juntar na primeira</button><button class="zap" data-j="${d.id}|${b.id}|${a.id}">Juntar na segunda</button><button class="sec" data-s="${d.id}" style="grid-column:1/-1">São pessoas diferentes</button></div>
     </section>`).join('') : '<div class="vazio" style="margin-top:14px">Nada para confirmar.</div>'}`;
   $('voltar').onclick = () => ir(X, 'lista');
+  $('buscarDups').onclick = async () => {
+    $('buscarDups').disabled = true; $('buscarDups').textContent = 'Procurando...';
+    const { data, error } = await X.sb.rpc('pessoas_buscar_duplicadas');
+    if (error) { $('buscarDups').disabled = false; $('buscarDups').textContent = 'Procurar mais possíveis duplicadas'; return X.aviso('Não procurou: ' + error.message); }
+    X.aviso(data ? `${data} ${data === 1 ? 'nova para revisar' : 'novas para revisar'}.` : 'Nenhuma nova encontrada.');
+    await X.recarregar(); ir(X, 'dups');
+  };
   P.querySelectorAll('[data-j]').forEach(btn => btn.onclick = async () => {
     const [dup, manter, remover] = btn.dataset.j.split('|');
     if (!confirm('Juntar as duas fichas? Tudo o que está na outra passa para esta. Isso não pode ser desfeito.')) return;

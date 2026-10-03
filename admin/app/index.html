@@ -342,7 +342,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=2';
-import * as CRM from '/admin/app/crm.js?v=1';
+import * as CRM from '/admin/app/crm.js?v=2';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -726,7 +726,7 @@ function telaInicioColab(P) {
 }
 
 /* ================= operação: emissões, comissão, financeiro, equipe ================= */
-const SERVICOS = ['Passagens (Milhas)', 'Passagens (Consolidadora)', 'Hotéis', 'Passeios', 'Transfer', 'Pacotes', 'Serviços / Consultoria', 'Gestão de Milhas'];
+const SERVICOS = ['Passagens (Milhas)', 'Passagens (Consolidadora)', 'Hotéis', 'Seguro viagem', 'Aluguel de carro', 'Trem', 'Transfer', 'Passeios', 'Ingressos', 'Roteiro', 'Pacotes', 'Serviços / Consultoria', 'Gestão de Milhas'];
 const ehMilhas = (s) => s === 'Passagens (Milhas)';
 const brl2 = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n) => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
@@ -838,7 +838,7 @@ function telaFormEmissao(P) {
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
     <form id="fEm" class="form" autocomplete="off">
       <div class="grupo">Serviço</div>
-      <label class="fl"><span>Tipo de serviço</span><select name="servico">${SERVICOS.map(s => `<option ${s === e.servico ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label class="fl"><span>Tipo de serviço</span><select name="servico">${SERVICOS.map(s => `<option ${s === e.servico ? 'selected' : ''}>${s}</option>`).join('')}${e.servico && !SERVICOS.includes(e.servico) ? `<option selected>${esc(e.servico)}</option>` : ''}</select></label>
       ${campo('data_negociacao', 'Data da venda', e.data_negociacao, 'date', 'required')}
       ${ADMIN && !daPlanilha ? `<label class="fl"><span>Vendedor</span><select name="vendedor_id"><option value="">Sem vendedor</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === e.vendedor_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
 
@@ -1204,7 +1204,7 @@ async function telaMetas(P) {
 
 /* ================= reuniões e conversão ================= */
 const RE_TIPOS = ['Reunião de venda', 'Cotação', 'Diagnóstico da Gestão de Milhas', 'Reunião com cliente', 'Pós-venda', 'Parceria', 'Reunião interna'];
-const RE_PRODUTOS = ['Passagens', 'Viagem completa / pacote', 'Hotelaria', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
+const RE_PRODUTOS = ['Passagens', 'Viagem completa / pacote', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Trem', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
 const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
 const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
