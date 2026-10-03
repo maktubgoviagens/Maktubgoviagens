@@ -49,7 +49,7 @@ function telaLista(P, X) {
     <input class="busca" id="buscaF" type="search" placeholder="Buscar por cidade, país ou nome" value="${esc(BUSCA)}">
     <div class="chips" id="tipoF" style="margin-top:10px">${[['todos', 'Todos'], ...Object.entries(TIPOS)].map(([k, l]) => `<button data-t="${k}" class="${k === TIPO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${L.length ? L.map(({ f, av, m, ind, nInd }) => `<button class="cli" data-f="${f.id}"><div><div class="nome">${esc(f.nome)}</div>
-      <div class="meta">${TIPOS[f.tipo] || f.tipo}${f.cidade ? ' · ' + esc(f.cidade) : ''}${f.pais ? ', ' + esc(f.pais) : ''}${nInd ? ` · ${Math.round(ind / nInd * 100)}% indicariam` : ''}</div></div>
+      <div class="meta">${TIPOS[f.tipo] || f.tipo}${f.cidade ? ' · ' + esc(f.cidade) : ''}${f.pais ? ', ' + esc(f.pais) : ''}${nInd ? ` · ${Math.round(ind / nInd * 100)}% indicariam` : ''}${f.google_nota ? ` · Google ${fmt1(+f.google_nota)}` : ''}</div></div>
       <div class="val">${m !== null ? `<b>${fmt1(m)}</b><span>${av.filter(a => a.nota).length} ${av.filter(a => a.nota).length === 1 ? 'nota' : 'notas'}</span>` : `<span>${av.length ? av.length + (av.length === 1 ? ' uso' : ' usos') + ', sem nota' : 'sem avaliação'}</span>`}</div></button>`).join('')
       : `<div class="vazio">${BUSCA || TIPO !== 'todos' ? 'Nada encontrado com esse filtro.' : 'Nenhum fornecedor ainda. Cadastre o primeiro hotel ou registre a avaliação de um cliente.'}</div>`}</div>
     <div class="sub">Ordenado pela nota média dos clientes. Busque pela cidade para ver as melhores opções de um destino.</div>`;
@@ -77,6 +77,7 @@ function ficha(P, X) {
       <div class="num"><div class="l">Indicariam</div><div class="v">${nInd ? Math.round(ind / nInd * 100) + '%' : '-'}</div><div class="d">${nInd ? `${ind} de ${nInd}` : 'sem resposta'}</div></div>
     </div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="avaliarEste">Registrar avaliação</button><button class="sec" id="editarF">Editar</button></div>
+    <section class="bloco" id="blGoogle"><h2>No Google</h2>${blocoGoogle(f, esc)}</section>
     ${f.contato || f.site || f.observacoes ? `<section class="bloco"><h2>Dados</h2>
       ${f.contato ? `<div class="lin"><span>Contato</span><span style="white-space:normal;text-align:right">${esc(f.contato)}</span></div>` : ''}
       ${f.site ? `<div class="lin"><span>Site</span><span><a href="${esc(/^https?:\/\//.test(f.site) ? f.site : 'https://' + f.site)}" target="_blank" rel="noopener" style="color:var(--verde)">abrir ›</a></span></div>` : ''}
@@ -88,9 +89,44 @@ function ficha(P, X) {
     </section>`;
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarF').onclick = () => { VISTA = 'editar'; tela(P, X); };
+  ligarGoogle(P, X, f);
+  // nota com mais de 30 dias: atualiza sozinho
+  if (f.google_place_id && (!f.google_em || Date.now() - new Date(f.google_em) > 30 * 864e5)) google(X, { acao: 'atualizar', place_id: f.google_place_id, fornecedor_id: f.id }).then(r => { if (r && r.fornecedor && VISTA === 'ficha' && FID === f.id) { Object.assign(f, r.fornecedor); $('blGoogle').innerHTML = '<h2>No Google</h2>' + blocoGoogle(f, esc); ligarGoogle(P, X, f); } });
   $('avaliarEste').onclick = () => { PRE = { fornecedor_id: f.id }; ir(X, 'avaliar', f.id); };
   P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => X.abrirCliente(b.dataset.pid));
   P.querySelectorAll('[data-avid]').forEach(b => b.onclick = () => { const a = AVS.find(x => x.id === b.dataset.avid); PRE = { ...a }; ir(X, 'avaliar', f.id); });
+}
+
+async function google(X, body) {
+  const { data, error } = await X.sb.functions.invoke('google-lugar', { body });
+  if (error || !data || !data.ok) { const msg = (data && data.erro) || (error && error.message) || 'sem resposta'; return { erro: msg }; }
+  return data;
+}
+function blocoGoogle(f, esc) {
+  if (!f.google_place_id) return `<div class="sub" style="margin-top:0">Ainda não ligado ao Google. Busque para trazer a nota, o endereço e o link do Maps.</div>
+    <button class="sec" type="button" id="buscarGoogle" style="margin-top:8px;width:100%">Buscar no Google</button><div id="resGoogle"></div>`;
+  return `${f.google_nota ? `<div style="display:flex;align-items:baseline;gap:8px"><b style="font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--verde)">${fmt1(+f.google_nota)}</b><span style="color:var(--dourado)">${estrelas(+f.google_nota)}</span><span class="sub" style="margin:0">${(f.google_avaliacoes || 0).toLocaleString('pt-BR')} avaliações no Google</span></div>` : '<div class="sub" style="margin-top:0">Sem nota no Google.</div>'}
+    ${f.google_endereco ? `<div class="lin"><span>Endereço</span><span style="white-space:normal;text-align:right">${esc(f.google_endereco)}</span></div>` : ''}
+    ${f.google_maps ? `<div class="lin"><span>Mapa</span><span><a href="${esc(f.google_maps)}" target="_blank" rel="noopener" style="color:var(--verde)">abrir no Google Maps ›</a></span></div>` : ''}
+    <div class="sub">Fonte: Google${f.google_em ? ', atualizado em ' + new Date(f.google_em).toLocaleDateString('pt-BR') : ''}. <button type="button" id="trocarGoogle" style="background:none;border:0;padding:0;color:var(--verde);text-decoration:underline;font:inherit;cursor:pointer">Não é este lugar?</button></div><div id="resGoogle"></div>`;
+}
+function ligarGoogle(P, X, f) {
+  const { $, esc } = X;
+  const buscar = async () => {
+    const el = $('resGoogle'); el.innerHTML = '<div class="vazio">Buscando no Google...</div>';
+    const r = await google(X, { acao: 'buscar', texto: [f.nome, f.cidade, f.pais].filter(Boolean).join(' ') });
+    if (r.erro) { el.innerHTML = `<div class="config">Não deu para buscar: ${esc(r.erro)}</div>`; return; }
+    if (!r.lugares.length) { el.innerHTML = '<div class="vazio">O Google não encontrou. Confira o nome e a cidade em Editar.</div>'; return; }
+    el.innerHTML = `<div class="sub">Toque no lugar certo:</div>${r.lugares.map((l, i) => `<button class="lin" data-gl="${i}" style="width:100%;font-size:14px;text-align:left"><span>${esc(l.nome)}<small style="display:block;color:var(--tinta-3);white-space:normal">${esc(l.endereco || '')}</small></span><span>${l.nota ? fmt1(l.nota) + ' · ' + (l.avaliacoes || 0).toLocaleString('pt-BR') : 'sem nota'}</span></button>`).join('')}`;
+    el.querySelectorAll('[data-gl]').forEach(b => b.onclick = async () => {
+      const l = r.lugares[+b.dataset.gl]; el.innerHTML = '<div class="vazio">Salvando...</div>';
+      const v = await google(X, { acao: 'vincular', place_id: l.place_id, fornecedor_id: f.id });
+      if (v.erro) { el.innerHTML = `<div class="config">Não salvou: ${esc(v.erro)}</div>`; return; }
+      Object.assign(f, v.fornecedor); X.aviso('Ligado ao Google.'); tela(P, X);
+    });
+  };
+  if ($('buscarGoogle')) $('buscarGoogle').onclick = buscar;
+  if ($('trocarGoogle')) $('trocarGoogle').onclick = buscar;
 }
 
 function form(P, X) {
