@@ -28,6 +28,8 @@ const NOVO_CORP = () => ({ modelo: 'corp', codigo: '', passageiro: '', pessoas: 
   bagagem: '1 item pessoal + 1 mala de cabine de até 10 kg por passageiro', print: '', de: '', por: '', forma: 'À vista via Pix',
   rodape: 'Sem bagagem despachada. Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa válida apenas na data de emissão e sujeita à confirmação no momento da compra. Horários locais. Check-in realizado por nossa equipe. Suporte humanizado e pós-venda. Você fala sempre com uma pessoa.' });
 
+const NOVO_RAP = () => ({ modelo: 'rapida', marca: 'Maktub Go', cliente: '', prints: [], de: '', por: '', forma: 'à vista no Pix', parcelas: '', obs: '' });
+
 /* ================= telas ================= */
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
@@ -41,16 +43,18 @@ async function lista(P, X) {
   const { $, sb, esc } = X;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Comercial</button><h1 class="titulo" style="margin-top:6px">Montador de <em>cotações</em></h1>
     <div class="sub">Preencha só o que muda; o visual, a economia e as parcelas saem prontos. Nunca mostra o custo.</div>
-    <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoGo">+ Maktub Go</button><button class="sec" id="novoCorp">+ Corporativo</button></div>
+    <button class="zap grande" id="novoRap" style="width:100%;margin-top:12px">Cotação rápida: print + valor ›</button>
+    <div class="botoes4" style="margin-top:8px"><button class="sec" id="novoGo">+ Maktub Go</button><button class="sec" id="novoCorp">+ Corporativo</button></div>
     <div class="lista" id="lsC"><div class="vazio">Carregando...</div></div>`;
   $('voltar').onclick = () => X.ir('reunioes');
   $('novoGo').onclick = () => { S = NOVO_GO(); ir(X, 'novo'); };
   $('novoCorp').onclick = () => { S = NOVO_CORP(); ir(X, 'novo'); };
+  $('novoRap').onclick = () => { S = NOVO_RAP(); ir(X, 'novo'); };
   const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').order('atualizado_em', { ascending: false }).limit(300);
   if (!$('lsC')) return;
   if (r.error) { $('lsC').innerHTML = '<div class="config">Rode o 1-cotador.sql no Supabase para guardar as cotações. Dá para montar e baixar mesmo sem ele.</div>'; LISTA = []; return; }
   LISTA = r.data || [];
-  $('lsC').innerHTML = LISTA.length ? LISTA.map(c => `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.titulo || 'Sem título')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : 'Maktub Go'}${c.cliente ? ' · ' + esc(c.cliente) : ''}${c.destino ? ' · ' + esc(c.destino) : ''}</div></div><div class="val"><span>${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</span></div></button>`).join('')
+  $('lsC').innerHTML = LISTA.length ? LISTA.map(c => `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.titulo || 'Sem título')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'}${c.cliente ? ' · ' + esc(c.cliente) : ''}${c.destino ? ' · ' + esc(c.destino) : ''}</div></div><div class="val"><span>${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</span></div></button>`).join('')
     : '<div class="vazio">Nenhuma cotação ainda. Comece pelo modelo Maktub Go ou Corporativo.</div>';
   P.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const c = LISTA.find(x => String(x.id) === b.dataset.c); S = JSON.parse(JSON.stringify(c.dados)); S._id = c.id; ir(X, String(c.id)); });
 }
@@ -72,6 +76,7 @@ const btnTira = (acao) => `<button type="button" data-tira="${acao}" style="back
 function editor(P, X) {
   const { $ } = X;
   if (!S) { if (ED !== 'novo' && LISTA) { const c = LISTA.find(x => String(x.id) === ED); if (c) { S = JSON.parse(JSON.stringify(c.dados)); S._id = c.id; } } if (!S) { ED = null; return lista(P, X); } }
+  if (S.modelo === 'rapida') return editorRapida(P, X);
   const corp = S.modelo === 'corp';
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
     <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>
@@ -224,8 +229,8 @@ async function fotoUpload(el, P, X) {
 async function printUpload(el, P, X) { const f = el.files[0]; if (!f) return; S.print = await reduzir(f, 1400) || ''; editor(P, X); }
 
 /* ================= salvar e acervo ================= */
-function tituloDe() { return S.modelo === 'corp' ? `${S.codigo || 'Corporativo'} · ${S.passageiro || ''}`.trim() : [S.titulo, S.sub].filter(Boolean).join(' ').replace(/[,.]\s*$/, '') || S.opcoes[0].nome || 'Cotação'; }
-function clienteDe() { return S.modelo === 'corp' ? S.passageiro : S.para; }
+function tituloDe() { if (S.modelo === 'rapida') return 'Rápida' + (S.cliente ? ' · ' + S.cliente : '') + (S.por ? ' · ' + brl(num(S.por)) : ''); return S.modelo === 'corp' ? `${S.codigo || 'Corporativo'} · ${S.passageiro || ''}`.trim() : [S.titulo, S.sub].filter(Boolean).join(' ').replace(/[,.]\s*$/, '') || S.opcoes[0].nome || 'Cotação'; }
+function clienteDe() { return S.modelo === 'rapida' ? S.cliente : S.modelo === 'corp' ? S.passageiro : S.para; }
 async function salvar(X) {
   const dados = JSON.parse(JSON.stringify(S)); delete dados._id;
   const row = { modelo: S.modelo, titulo: tituloDe(), cliente: clienteDe() || null, destino: S.destino || null, dados, atualizado_em: new Date().toISOString() };
@@ -445,3 +450,85 @@ ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? '
 // usado em testes e para gerar a partir de dados salvos
 export function gerarHTML(dados) { const antes = S; S = dados; try { return gerar({}); } finally { S = antes; } }
 export { NOVO_GO, NOVO_CORP };
+
+/* ================= cotação rápida: print + valor, vira imagem para o WhatsApp ================= */
+function editorRapida(P, X) {
+  const { $ } = X;
+  const de = num(S.de), por = num(S.por), eco = de > por && por ? de - por : 0;
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
+    <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
+    <div class="sub">Anexe o print do site, digite o valor da Maktub e envie a imagem pronta no WhatsApp.</div>
+    <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
+      <label class="fl"><span>1. Print do site (pode ser mais de um)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
+      ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}
+      <div class="duas-col">${inp('de', '2. Valor no site', 'num', 'placeholder="2.100,00"')}${inp('por', '3. Valor com a Maktub', 'num', 'placeholder="1.700,00"')}</div>
+      <div id="rpEco">${eco ? `<div class="config" style="margin:4px 0">Economia de ${brl(eco)} para o cliente.</div>` : de && por && por >= de ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''}</div>
+      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado (opcional)', 'text', 'placeholder="4x de R$ 450,00 sem juros"')}</div>
+      <div class="duas-col">${inp('cliente', 'Cliente (opcional)', 'text', 'placeholder="Victor"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
+      ${inp('obs', 'Observação (opcional)', 'text', 'placeholder="Inclui mala de mão de 10 kg"')}
+    </form>
+    <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar no WhatsApp</button>
+    <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>
+    <div id="rpPrevia" style="margin-top:12px"></div>`;
+  $('voltar').onclick = () => { S = null; ir(X, null); };
+  const f = $('fRap');
+  f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.value);
+    if (k === 'de' || k === 'por') { const a = num(S.de), b = num(S.por); $('rpEco').innerHTML = a > b && b ? `<div class="config" style="margin:4px 0">Economia de ${brl(a - b)} para o cliente.</div>` : a && b ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''; } });
+  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); });
+  $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); editorRapida(P, X); };
+  P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
+  const pronto = () => { if (!S.prints.length) { X.aviso('Anexe o print do site.'); return false; } if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
+  $('rpEnviar').onclick = async () => {
+    if (!pronto()) return;
+    const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [arq] })) { try { await navigator.share({ files: [arq] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+    baixar(blob); X.aviso('Imagem baixada. Anexe no WhatsApp.');
+  };
+  $('rpBaixar').onclick = async () => { if (pronto()) baixar(await imagemRapida()); };
+  $('rpSalvar').onclick = () => salvar(X);
+  if (S.prints.length && num(S.por)) imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; });
+}
+function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
+const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
+
+async function imagemRapida() {
+  const W = 1080, PAD = 40, corp = S.marca === 'Maktub Corporativo';
+  const prints = (await Promise.all(S.prints.map(carregar))).filter(Boolean);
+  const logo = !corp && MARCA && MARCA.rodape ? await carregar(MARCA.rodape) : null;
+  const de = num(S.de), por = num(S.por), eco = de > por ? de - por : 0;
+  const alturas = prints.map(i => Math.round(i.height * (W - PAD * 2) / i.width));
+  const CAB = 150, BOX = 350 + (S.parcelas ? 46 : 0) + (eco ? 100 : 0) + (S.obs ? 44 : 0), ROD = 150;
+  const H = CAB + PAD + alturas.reduce((a, b) => a + b + 20, 0) + BOX + ROD;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const VERDE = '#1B4332', DOUR = '#A88B4A', CREME = '#EBE0C4', PAPEL = '#FAF6EC';
+  const serif = (px, w = '400') => `${w} ${px}px "Cormorant Garamond", Georgia, serif`, sans = (px, w = '500') => `${w} ${px}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
+  const espac = (t, x, y, sp) => { let cx = x; for (const ch of t) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + sp; } return cx - x - sp; };
+  const largEsp = (t, sp) => [...t].reduce((a, ch) => a + g.measureText(ch).width + sp, -sp);
+  const centro = (t, y, sp = 0) => { if (!sp) { g.textAlign = 'center'; g.fillText(t, W / 2, y); g.textAlign = 'left'; } else espac(t, (W - largEsp(t, sp)) / 2, y, sp); };
+  g.fillStyle = PAPEL; g.fillRect(0, 0, W, H);
+  // cabeçalho
+  g.fillStyle = corp ? VERDE : CREME; g.fillRect(0, 0, W, CAB);
+  if (logo) { const lh = 90, lw = logo.width * lh / logo.height; g.drawImage(logo, (W - lw) / 2, (CAB - lh) / 2, lw, lh); }
+  else { g.font = sans(38, '700'); g.fillStyle = corp ? CREME : VERDE; const t1 = 'MAKTUB ', t2 = corp ? 'CORPORATIVO' : 'GO'; const w1 = largEsp(t1, 4), w2 = largEsp(t2, 4); let x = (W - w1 - w2) / 2; espac(t1, x, 92, 4); g.fillStyle = DOUR; espac(t2, x + w1, 92, 4); }
+  // prints
+  let y = CAB + PAD;
+  g.font = sans(20, '600'); g.fillStyle = DOUR; espac('VALOR NO SITE', PAD, y + 4, 3); y += 22;
+  prints.forEach((im, i) => { g.drawImage(im, PAD, y, W - PAD * 2, alturas[i]); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.strokeRect(PAD, y, W - PAD * 2, alturas[i]); y += alturas[i] + 20; });
+  // caixa de valores
+  y += 10; g.fillStyle = VERDE; const bx = PAD, bw = W - PAD * 2, bh = BOX - 40;
+  g.beginPath(); g.roundRect ? g.roundRect(bx, y, bw, bh, 14) : g.rect(bx, y, bw, bh); g.fill();
+  let yy = y + 62;
+  g.fillStyle = DOUR; g.font = sans(20, '600'); centro((S.cliente ? 'COTAÇÃO PARA ' + S.cliente : 'SUA COTAÇÃO').toUpperCase(), yy, 3); yy += 54;
+  if (de > por) { g.fillStyle = 'rgba(235,224,196,.75)'; g.font = sans(28, '400'); const t = 'No site: ' + brl(de); centro(t, yy); const tw = g.measureText(t).width; g.strokeStyle = DOUR; g.lineWidth = 3; g.beginPath(); g.moveTo((W - tw) / 2 + g.measureText('No site: ').width, yy - 9); g.lineTo((W + tw) / 2, yy - 9); g.stroke(); yy += 78; }
+  if (de > por) { g.fillStyle = DOUR; g.font = sans(20, '600'); centro('COM A MAKTUB', yy - 18, 3); yy += 62; }
+  g.fillStyle = '#fff'; g.font = serif(96, '500'); centro(brl(por), yy); yy += 50;
+  g.fillStyle = CREME; g.font = sans(24, '500'); centro(S.forma || '', yy); yy += 6;
+  if (S.parcelas) { yy += 40; g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; centro('ou ' + S.parcelas, yy); }
+  if (eco) { yy += 62; const t = 'Economia de ' + brl(eco); g.font = sans(24, '600'); const tw = g.measureText(t).width + 48; g.strokeStyle = DOUR; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect((W - tw) / 2, yy - 34, tw, 50, 25) : g.rect((W - tw) / 2, yy - 34, tw, 50); g.stroke(); g.fillStyle = CREME; centro(t, yy); }
+  if (S.obs) { yy += 52; g.font = sans(20, '400'); g.fillStyle = 'rgba(235,224,196,.8)'; centro(S.obs, yy); }
+  // rodapé
+  y += bh + 50; g.fillStyle = '#6E6A5E'; g.font = sans(19, '400');
+  const agora = new Date(); centro(`Valores consultados em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Tarifa confirmada só na emissão.`, y);
+  g.fillStyle = VERDE; g.font = sans(22, '600'); centro(`WhatsApp ${ZAP_TXT}  ·  @maktubgo_`, y + 44);
+  return new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.9));
+}
