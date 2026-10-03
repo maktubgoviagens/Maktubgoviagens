@@ -3,7 +3,7 @@
 // para indicar os melhores aos próximos clientes de cada destino.
 
 export const TIPOS = { hotel: 'Hotel', transfer: 'Transfer', passeio: 'Passeio', ingresso: 'Ingresso', seguro: 'Seguro viagem', locadora: 'Aluguel de carro', trem: 'Trem', restaurante: 'Restaurante', outro: 'Outro' };
-let LISTA = null, AVS = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null;
+let LISTA = null, AVS = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null, PULADOS = new Set();
 
 const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const media = (L) => { const n = L.filter(a => a.nota); return n.length ? n.reduce((s, a) => s + a.nota, 0) / n.length : null; };
@@ -29,6 +29,7 @@ export async function tela(P, X) {
   if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Fornecedores</h1><div class="config" style="margin-top:12px">Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
   if (VISTA === 'novo' || VISTA === 'editar') return form(P, X);
   if (VISTA === 'avaliar') return formAvaliar(P, X);
+  if (VISTA === 'lote') return loteGoogle(P, X);
   if (VISTA === 'ficha' && FID) return ficha(P, X);
   return telaLista(P, X);
 }
@@ -46,6 +47,7 @@ function telaLista(P, X) {
     <h1 class="titulo" style="margin-top:6px">Fornecedores e <em>indicações</em></h1>
     <div class="sub">${LISTA.length} fornecedores · ${AVS.filter(a => a.nota).length} avaliações · ${AVS.filter(a => !a.nota).length} usos esperando nota</div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoF">+ Fornecedor</button><button class="sec" id="avaliarF">Registrar avaliação</button></div>
+    ${LISTA.filter(f => !f.google_place_id).length ? `<button class="sec grande" id="loteG" style="margin-top:8px;width:100%">Ligar ao Google (${LISTA.filter(f => !f.google_place_id).length} sem vínculo) ›</button>` : ''}
     <input class="busca" id="buscaF" type="search" placeholder="Buscar por cidade, país ou nome" value="${esc(BUSCA)}">
     <div class="chips" id="tipoF" style="margin-top:10px">${[['todos', 'Todos'], ...Object.entries(TIPOS)].map(([k, l]) => `<button data-t="${k}" class="${k === TIPO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${L.length ? L.map(({ f, av, m, ind, nInd }) => `<button class="cli" data-f="${f.id}"><div><div class="nome">${esc(f.nome)}</div>
@@ -55,6 +57,7 @@ function telaLista(P, X) {
     <div class="sub">Ordenado pela nota média dos clientes. Busque pela cidade para ver as melhores opções de um destino.</div>`;
   $('voltar').onclick = () => X.ir('empresa');
   $('novoF').onclick = () => ir(X, 'novo');
+  if ($('loteG')) $('loteG').onclick = () => { PULADOS = new Set(); VISTA = 'lote'; tela(P, X); scrollTo(0, 0); };
   $('avaliarF').onclick = () => { PRE = null; ir(X, 'avaliar'); };
   $('buscaF').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaF').focus(); $('buscaF').setSelectionRange(pos, pos); };
   $('tipoF').onclick = (e) => { const b = e.target.closest('button'); if (b) { TIPO = b.dataset.t; telaLista(P, X); } };
@@ -127,6 +130,39 @@ function ligarGoogle(P, X, f) {
   };
   if ($('buscarGoogle')) $('buscarGoogle').onclick = buscar;
   if ($('trocarGoogle')) $('trocarGoogle').onclick = buscar;
+}
+
+async function loteGoogle(P, X) {
+  const { $, esc } = X;
+  const pend = LISTA.filter(f => !f.google_place_id && !PULADOS.has(f.id));
+  const total = LISTA.filter(f => !f.google_place_id).length;
+  const sair = () => { VISTA = 'lista'; tela(P, X); scrollTo(0, 0); };
+  if (!pend.length) {
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
+      <div class="vazio" style="margin-top:14px">${total ? `Fim da lista. ${total} ${total === 1 ? 'ficou' : 'ficaram'} sem vínculo; dá para buscar de novo na ficha de cada um, ajustando o nome ou a cidade em Editar.` : 'Todos os fornecedores estão ligados ao Google.'}</div>`;
+    $('voltar').onclick = sair; return;
+  }
+  const f = pend[0];
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
+    <div class="sub">${pend.length} para ligar. Toque no lugar certo ou pule.</div>
+    <section class="bloco"><h2>${esc(TIPOS[f.tipo] || f.tipo)}</h2><div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--verde)">${esc(f.nome)}</div>
+      <div class="sub" style="margin-top:2px">${esc([f.cidade, f.pais].filter(Boolean).join(', ') || 'sem cidade cadastrada')}</div>
+      <div id="resLote" style="margin-top:8px"><div class="vazio">Buscando no Google...</div></div>
+      <button class="sec" type="button" id="pularG" style="margin-top:10px;width:100%">Nenhum é este, pular</button></section>`;
+  $('voltar').onclick = sair;
+  $('pularG').onclick = () => { PULADOS.add(f.id); loteGoogle(P, X); };
+  const r = await google(X, { acao: 'buscar', texto: [f.nome, f.cidade, f.pais].filter(Boolean).join(' ') });
+  if (VISTA !== 'lote' || !$('resLote')) return;
+  const el = $('resLote');
+  if (r.erro) { el.innerHTML = `<div class="config">Não deu para buscar: ${esc(r.erro)}</div>`; return; }
+  if (!r.lugares.length) { el.innerHTML = '<div class="vazio">O Google não encontrou nada com esse nome.</div>'; return; }
+  el.innerHTML = r.lugares.map((l, i) => `<button class="lin" data-gl="${i}" style="width:100%;font-size:14px;text-align:left"><span>${esc(l.nome)}<small style="display:block;color:var(--tinta-3);white-space:normal">${esc(l.endereco || '')}</small></span><span>${l.nota ? fmt1(l.nota) + ' · ' + (l.avaliacoes || 0).toLocaleString('pt-BR') : 'sem nota'}</span></button>`).join('');
+  el.querySelectorAll('[data-gl]').forEach(b => b.onclick = async () => {
+    const l = r.lugares[+b.dataset.gl]; el.innerHTML = '<div class="vazio">Salvando...</div>';
+    const v = await google(X, { acao: 'vincular', place_id: l.place_id, fornecedor_id: f.id });
+    if (v.erro) { el.innerHTML = `<div class="config">Não salvou: ${esc(v.erro)}</div>`; return; }
+    Object.assign(f, v.fornecedor); X.aviso('Ligado: ' + f.nome); loteGoogle(P, X); scrollTo(0, 0);
+  });
 }
 
 function form(P, X) {
