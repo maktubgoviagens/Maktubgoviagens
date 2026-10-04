@@ -343,7 +343,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=4';
-import * as CRM from '/admin/app/crm.js?v=10';
+import * as CRM from '/admin/app/crm.js?v=11';
 import * as FORN from '/admin/app/fornecedores.js?v=6';
 import * as COT from '/admin/app/cotador.js?v=3';
 const EXIGIR_CODIGO = true;
@@ -844,6 +844,7 @@ function calcular(v) {
 }
 
 /* ---------- lista de emissões ---------- */
+const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
 function telaEmissoes(P) {
   if (EM_ED) return telaFormEmissao(P);
   const VER = VER_TODAS();
@@ -858,6 +859,10 @@ function telaEmissoes(P) {
     ${infoSinc()}
     ${seletorMes('emMes')}
     ${VER ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
+    ${ADMIN && semVend().length ? `<details class="bloco" style="margin-top:10px"><summary style="cursor:pointer;color:var(--alerta)">${semVend().length} ${semVend().length === 1 ? 'venda sem vendedor' : 'vendas sem vendedor'} (todos os meses)</summary>
+      <div class="sub" style="margin-top:6px">${semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7))).length} em meses abertos podem ser definidas aqui; meses fechados não mudam. A comissão sai pelo percentual de quem você escolher.</div>
+      <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Passar para</span><select id="loteVend">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteVendB" style="align-self:end">Definir</button></div>
+      <button type="button" class="sec" id="verSemVend" style="width:100%;margin-top:6px">Ver as vendas sem vendedor deste mês</button></details>` : ''}
     <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : 'no mês'}</div></div>
@@ -874,6 +879,20 @@ function telaEmissoes(P) {
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
+  if ($('verSemVend')) $('verSemVend').onclick = () => { EM_VEND = 'sem'; telaEmissoes(P); };
+  if ($('loteVendB')) $('loteVendB').onclick = async () => {
+    const quem = $('loteVend').value, pessoa = (D.equipe || []).find(x => x.user_id === quem);
+    const alvo = semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)));
+    if (!alvo.length) { aviso('As vendas sem vendedor estão todas em meses fechados.'); return; }
+    if (!confirm(`Definir ${nomeTime(quem)} como vendedor de ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'}?${pessoa ? ` A comissão sai a ${pct(pessoa.comissao_pct)}.` : ''}`)) return;
+    $('loteVendB').disabled = true; $('loteVendB').textContent = 'Salvando...';
+    const ids = alvo.map(e => e.id);
+    for (let k = 0; k < ids.length; k += 100) {
+      const { error } = await sb.from('emissoes').update({ vendedor_app: quem }).in('id', ids.slice(k, k + 100));
+      if (error) { aviso('Parou no meio: ' + error.message); break; }
+    }
+    await carregar(true); aviso('Vendedor definido.'); if (ABA === 'emissoes') telaEmissoes(P);
+  };
   $('emServ').onchange = (e) => { EM_SERV = e.target.value; telaEmissoes(P); };
   P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
 }
@@ -1871,7 +1890,7 @@ function itensMais() {
     ['acessos', 'Equipe e acessos', 0],
     ['leads', 'Leads do site', LE_NOVOS()],
     ['site', 'Números do site', 0],
-    ['equipe', 'Comissões, parceiros e regras', 0],
+    ['equipe', 'Comissões e regras', 0],
     ['metas', 'Metas do mês', 0],
     ['custos', 'Salários e despesas fixas', 0],
     ['acervo', 'Acervo de viagens: destinos e roteiros', 0],
@@ -1899,7 +1918,7 @@ const EMP_GRUPOS = [['Dinheiro', ['financeiro', 'receber', 'metas', 'custos', 'e
 function itensEmpresa() {
   return [
     ['fornecedores', 'Fornecedores e indicações'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
-    ['equipe', 'Comissões, parceiros e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
+    ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Montador de cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
 }
@@ -1976,15 +1995,8 @@ function telaEquipe(P) {
     <div class="sub">A mudança de percentual vale para as próximas vendas. Para mudar vendas já registradas, use "Aplicar este percentual às vendas já registradas" em cada pessoa. Para incluir alguém novo, use Empresa, Equipe e acessos; a pessoa entra como colaborador com 10%.</div>
 
     <div class="secao">Parceiros de indicação</div>
-    <div class="bloco" style="margin-top:0">${D.parceirosAdm.length ? D.parceirosAdm.map(p => `<div class="lin"><span>${esc(p.nome)}${p.ativo ? '' : ' (inativo)'}</span><span>${pct(p.pct)} <button class="mini" data-par="${p.id}">editar</button></span></div>`).join('') : '<div class="vazio">Nenhum parceiro cadastrado.</div>'}</div>
-    <form class="bloco form" id="fPar">
-      <h2 id="parTit">Novo parceiro</h2>
-      <input type="hidden" name="id">
-      ${campo('nome', 'Nome', '', 'text', 'required')}
-      <div class="duas-col">${campo('pct', 'Remuneração (%)', '', 'number', 'required')}${campo('whatsapp', 'WhatsApp', '', 'tel')}</div>
-      <label class="fc"><input type="checkbox" name="ativo" checked><span>Ativo</span></label>
-      <button class="zap" type="submit" style="margin-top:8px">Salvar parceiro</button>
-    </form>
+    <div class="bloco" style="margin-top:0"><div class="sub" style="margin-top:0">Parceiros são cadastrados e editados na ficha da pessoa, em Clientes: marque "Parceiro de indicação" e informe o percentual e o Pix. Toque para abrir.</div>
+      ${D.parceirosAdm.filter(p => p.ativo).length ? D.parceirosAdm.filter(p => p.ativo).map(p => { const f = (D.pessoas || []).find(x => x.parceiro_ref === p.id); return `<button class="lin" type="button" data-parf="${f ? f.id : ''}" data-parn="${esc(p.nome)}" style="width:100%"><span>${esc(p.nome)}${f ? '' : ' <small style="color:var(--alerta)">sem ficha</small>'}</span><span>${pct(p.pct)} <span class="seta">›</span></span></button>`; }).join('') : '<div class="vazio">Nenhum parceiro ainda.</div>'}</div>
 
     <div class="secao">Regras de cálculo</div>
     <form class="bloco form" id="fCfg">
@@ -2019,18 +2031,10 @@ function telaEquipe(P) {
     await carregar(true); aviso('Comissão recalculada.'); if (ABA === 'equipe') telaEquipe(P);
   });
   if ($('irAcessos')) $('irAcessos').onclick = (e) => { e.preventDefault(); ir('acessos'); };
-  P.querySelectorAll('[data-par]').forEach(b => b.onclick = () => {
-    const p = D.parceirosAdm.find(x => x.id === b.dataset.par), f = $('fPar');
-    f.elements.id.value = p.id; f.elements.nome.value = p.nome; f.elements.pct.value = p.pct; f.elements.whatsapp.value = p.whatsapp || ''; f.elements.ativo.checked = p.ativo;
-    $('parTit').textContent = 'Editar parceiro'; f.scrollIntoView({ behavior: 'smooth' });
+  P.querySelectorAll('[data-parn]').forEach(b => b.onclick = () => {
+    if (b.dataset.parf) return ir('crm', () => CRM.abrir(b.dataset.parf));
+    CRM.buscar(b.dataset.parn); ir('crm', () => CRM.abrir(null)); aviso('Sem ficha ainda: toque em Novo cadastro e marque Parceiro de indicação.');
   });
-  $('fPar').onsubmit = async (ev) => {
-    ev.preventDefault(); const f = ev.target;
-    const row = { nome: f.elements.nome.value.trim(), pct: Number(f.elements.pct.value || 0), whatsapp: f.elements.whatsapp.value.trim() || null, ativo: f.elements.ativo.checked };
-    const r = f.elements.id.value ? await sb.from('parceiros').update(row).eq('id', f.elements.id.value) : await sb.from('parceiros').insert(row);
-    if (r.error) { aviso('Não salvou: ' + r.error.message); return; }
-    await carregarEquipe(); aviso('Parceiro salvo.'); telaEquipe(P);
-  };
   $('fCfg').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
     const { error } = await sb.from('configuracoes').update({ imposto_pct: Number(f.elements.imposto_pct.value || 6), comissao_desconta_imposto: f.elements.desc.checked, origem_emissoes: f.elements.origem.value, planilha_url: f.elements.planilha_url.value.trim() || null, atualizado_em: new Date().toISOString() }).eq('id', 1);

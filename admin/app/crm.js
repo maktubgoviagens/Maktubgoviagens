@@ -62,6 +62,7 @@ export function eventos(D, dias = 120) {
 
 // ---------- tela ----------
 export function filtrar(f) { FILTRO = f; BUSCA = ''; VISTA = 'lista'; PID = null; }
+export function buscar(t) { BUSCA = t || ''; FILTRO = 'todos'; }
 export function abrir(id) { PID = id; VISTA = id ? 'ficha' : 'lista'; }
 export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } else if (h[1] === 'duplicadas') { VISTA = 'dups'; PID = null; } else if (h[1]) { VISTA = h[2] === 'editar' ? 'editar' : 'ficha'; PID = h[1]; } else { VISTA = 'lista'; PID = null; } }
 
@@ -153,7 +154,7 @@ function telaFicha(P, X) {
   const vinc = (D.vinculos || []).filter(v => v.pessoa_a === p.id || v.pessoa_b === p.id).map(v => ({ v, o: pessoa(D, v.pessoa_a === p.id ? v.pessoa_b : v.pessoa_a) })).filter(x => x.o);
   const ind = p.indicado_por ? pessoa(D, p.indicado_por) : null;
   const indicou = (D.pessoas || []).filter(x => x.indicado_por === p.id);
-  const parc = p.parceiro_ref ? (D.parcAdm || D.parc || []).find(x => x.id === p.parceiro_ref) : null;
+  const parc = p.parceiro_ref ? (D.parceirosAdm || D.parc || []).find(x => x.id === p.parceiro_ref) : null;
   const aniv = proxAniv(p.nascimento), hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const diasAniv = aniv ? Math.round((aniv - hoje) / 864e5) : null;
   const primeiro = String(p.nome).split(' ')[0];
