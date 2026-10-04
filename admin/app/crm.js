@@ -2,6 +2,7 @@
 // Cada pessoa existe uma vez; leads, atendimentos, reuniões, emissões, carteira da Gestão e
 // indicações ficam pendurados na ficha. O vendedor é de cada venda, não do cliente.
 
+const verValor = (X) => X.ADMIN || (X.pode && X.pode('financeiro'));
 const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro' };
 const INTERESSES = { viagens: 'Viagens e passagens', gestao: 'Gestão de Milhas' };
 // Lead vira cliente na primeira compra: emissão ligada à ficha, atendimento fechado ou marcação manual (quem comprou antes do app)
@@ -104,9 +105,9 @@ function telaLista(P, X) {
     <div class="lista">${lista.length ? lista.slice(0, 300).map(({ p, r }) => `
       <button class="cli" data-p="${p.id}"><div><div class="nome">${esc(p.nome)}</div>
         <div class="meta">${rotulos(D, p).join(' · ')}${p.celular ? ' · ' + esc(p.celular) : ''}${FILTRO === 'aniv' && p.nascimento ? ' · faz ' + (idade(p.nascimento) + 1) + ' em ' + new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}</div></div>
-        <div class="val">${r.n ? `<b>${brlC(r.total)}</b><span>${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</span>` : ''}</div></button>`).join('') : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo cadastro para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}</div>
+        <div class="val">${r.n ? `${verValor(X) ? `<b>${brlC(r.total)}</b>` : ''}<span>${r.n} ${r.n === 1 ? 'compra' : 'compras'}</span>` : ''}</div></button>`).join('') : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo cadastro para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}</div>
     ${lista.length > 300 ? '<div class="sub">Mostrando as 300 primeiras. Use a busca para achar as demais.</div>' : ''}
-    <div class="sub">Valores pelas emissões registradas no app.</div>`;
+    ${verValor(X) ? '<div class="sub">Valores pelas emissões registradas no app.</div>' : ''}`;
   $('buscaP').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaP').focus(); $('buscaP').setSelectionRange(pos, pos); };
   $('filP').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; telaLista(P, X); } };
   $('novaP').onclick = () => {
@@ -140,7 +141,7 @@ function linhaTempo(D, X, p) {
   (D.reunioes || []).filter(r => r.pessoa_id === p.id).forEach(r => L.push({ d: r.data, t: `${r.tipo || 'Atendimento'} · ${r.resultado === 'Em andamento' ? (r.etapa || 'em andamento') : r.resultado}`, s: [r.trecho || r.produto, r.valor_fechado ? brl2(r.valor_fechado) : r.valor_estimado ? 'cotado ' + brl2(r.valor_estimado) : '', r.responsavel_id ? 'por ' + nomeTime(r.responsavel_id) : ''].filter(Boolean).join(' · '), at: r.id }));
   (D.agenda || []).filter(a => a.pessoa_id === p.id).forEach(a => L.push({ d: a.data, t: `Reunião · ${a.status || ''}`, s: a.titulo || '', ag: a.id }));
   (D.avaliacoes || []).filter(a => a.pessoa_id === p.id && a.nota).forEach(a => L.push({ d: a.respondida_em, t: `Avaliou o atendimento · nota ${a.nota}`, s: [a.vendedor_id ? nomeTime(a.vendedor_id) : '', a.comentario ? `"${a.comentario}"` : ''].filter(Boolean).join(' · '), ag: a.reuniao_id }));
-  emissoesDe(D, p.id).forEach(e => L.push({ d: e.data_negociacao, t: `${serv(e)}${[e.origem, e.destino].filter(Boolean).length ? ' · ' + [e.origem, e.destino].filter(Boolean).join(' → ') : ''}`, s: [e.pessoa_id === p.id ? brl2(e.valor_receber) : 'como passageiro', e.data_ida ? 'ida ' + new Date(e.data_ida + 'T12:00:00').toLocaleDateString('pt-BR') : '', e.vendedor_id ? 'por ' + nomeTime(e.vendedor_id) : '', e.pessoa_id === p.id && e.pago === false ? 'a receber' : ''].filter(Boolean).join(' · '), em: e.id }));
+  emissoesDe(D, p.id).forEach(e => L.push({ d: e.data_negociacao, t: `${serv(e)}${[e.origem, e.destino].filter(Boolean).length ? ' · ' + [e.origem, e.destino].filter(Boolean).join(' → ') : ''}`, s: [e.pessoa_id === p.id ? (verValor(X) ? brl2(e.valor_receber) : '') : 'como passageiro', e.data_ida ? 'ida ' + new Date(e.data_ida + 'T12:00:00').toLocaleDateString('pt-BR') : '', e.vendedor_id ? 'por ' + nomeTime(e.vendedor_id) : '', e.pessoa_id === p.id && e.pago === false && verValor(X) ? 'a receber' : ''].filter(Boolean).join(' · '), em: e.id }));
   L.sort((a, b) => String(b.d || '').localeCompare(String(a.d || '')));
   return L.length ? L.slice(0, 60).map(x => `<button class="lin" ${x.at ? `data-at="${x.at}"` : x.ag ? `data-ag="${x.ag}"` : x.em ? `data-em="${x.em}"` : ''} style="display:block;padding:10px 0;text-align:left;width:100%">
       <span style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:600;color:var(--verde)">${esc(x.t)}</b><small style="color:var(--tinta-3);white-space:nowrap">${x.d ? new Date(String(x.d).length === 10 ? x.d + 'T12:00:00' : x.d).toLocaleDateString('pt-BR') : ''}</small></span>
@@ -189,10 +190,10 @@ function telaFicha(P, X) {
     ${MSG ? `<div class="config" style="margin-top:10px">${MSG}</div>` : ''}
     ${faltam.length ? `<div class="sub" style="color:var(--alerta)">Falta ${faltam.join(' e ')} para emitir. Mande o link de cadastro para o cliente preencher.</div>` : ''}
     <div class="numeros" style="margin-top:12px">
-      <div class="num destaque"><div class="l">Investimento</div><div class="v">${brlC(r.total)}</div><div class="d">${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</div></div>
-      <div class="num"><div class="l">Ticket médio</div><div class="v">${r.n ? brlC(r.ticket) : '-'}</div><div class="d">por emissão</div></div>
+      ${verValor(X) ? `<div class="num destaque"><div class="l">Investimento</div><div class="v">${brlC(r.total)}</div><div class="d">${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</div></div>` : `<div class="num destaque"><div class="l">Compras</div><div class="v">${r.n}</div><div class="d">${r.ultima ? 'última viagem ' + new Date(r.ultima + 'T12:00:00').toLocaleDateString('pt-BR') : 'nenhuma ainda'}</div></div>`}
+      ${verValor(X) ? `<div class="num"><div class="l">Ticket médio</div><div class="v">${r.n ? brlC(r.ticket) : '-'}</div><div class="d">por emissão</div></div>` : ''}
     </div>
-    ${(() => { const em = (D.emissoes || []).filter(e => e.pessoa_id === p.id); const g = {}; em.forEach(e => { const k = serv(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e.valor_receber) || 0; }); const L = Object.entries(g).sort((a, b) => b[1].v - a[1].v); return L.length ? `<section class="bloco"><h2>O que já comprou</h2>${L.map(([k, x]) => `<div class="lin"><span>${esc(k)}</span><span>${brlC(x.v)} · ${x.n}</span></div>`).join('')}</section>` : ''; })()}
+    ${(() => { const em = (D.emissoes || []).filter(e => e.pessoa_id === p.id); const g = {}; em.forEach(e => { const k = serv(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e.valor_receber) || 0; }); const L = Object.entries(g).sort((a, b) => b[1].v - a[1].v); return L.length ? `<section class="bloco"><h2>O que já comprou</h2>${L.map(([k, x]) => `<div class="lin"><span>${esc(k)}</span><span>${verValor(X) ? brlC(x.v) + ' · ' : ''}${x.n}</span></div>`).join('')}</section>` : ''; })()}
     ${p.cliente_id && pode('gestao') ? `<button class="sec grande" id="irGestao" style="margin-top:10px;width:100%">Abrir carteira da Gestão de Milhas ›</button>` : ''}
     <section class="bloco"><h2>Contato</h2>
       ${lin('Celular', esc(p.celular))}${lin('E-mail', esc(p.email))}${lin('Instagram', esc(p.instagram))}

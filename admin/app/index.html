@@ -357,8 +357,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=12';
-import * as FORN from '/admin/app/fornecedores.js?v=7';
+import * as CRM from '/admin/app/crm.js?v=13';
+import * as FORN from '/admin/app/fornecedores.js?v=8';
 import * as COT from '/admin/app/cotador.js?v=4';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
@@ -454,7 +454,7 @@ function buscaGeral(q) {
   const k = semAc(q).trim(), dig = String(q).replace(/\D/g, ''); if (k.length < 2) return [];
   const G = [];
   if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
-  if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
+  if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => VER_TODAS() || (e.vendedor_app || e.vendedor_id) === D.meuId).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
   if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
   if (podeAba('fornecedores')) G.push(['Fornecedores', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
@@ -961,6 +961,7 @@ function telaFormEmissao(P) {
   const nova = EM_ED === 'nova';
   const e = nova ? { servico: 'Passagens (Milhas)', data_negociacao: new Date().toISOString().slice(0, 10), passageiros: 1, vendedor_id: D.meuId } : D.emissoes.find(x => x.id === EM_ED);
   if (!e) { EM_ED = null; return telaEmissoes(P); }
+  if (!nova && !VER_TODAS() && (e.vendedor_app || e.vendedor_id) !== D.meuId) { EM_ED = null; aviso('Essa venda é de outra pessoa da equipe.'); return telaEmissoes(P); }
   const travado = !nova && mesFechado(String(e.data_negociacao).slice(0, 7));
   if (nova && modoPlanilha()) { EM_ED = null; return telaEmissoes(P); }
   const daPlanilha = modoPlanilha() || e.fonte === 'planilha';

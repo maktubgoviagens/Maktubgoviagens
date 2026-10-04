@@ -174,7 +174,7 @@ function painelBusca(X, el, f, aoLigar, auto) {
 async function carregarFotos(X, f) {
   const el = X.$('fotosG'); if (!el || !f.google_place_id) return;
   let fotos = FOTOS.get(f.google_place_id);
-  if (!fotos) { el.innerHTML = '<div class="sub" style="margin:0 0 8px">Carregando fotos...</div>'; const r = await google(X, { acao: 'fotos', place_id: f.google_place_id, max: 8 }); fotos = r.erro ? [] : r.fotos; if (!r.erro) FOTOS.set(f.google_place_id, fotos); }
+  if (!fotos) { el.innerHTML = '<div class="sub" style="margin:0 0 8px">Carregando fotos...</div>'; const r = await google(X, { acao: 'fotos', place_id: f.google_place_id, max: 8 }); fotos = r.erro ? [] : (r.fotos || []); if (!r.erro) FOTOS.set(f.google_place_id, fotos); }
   if (!X.$('fotosG')) return;
   el.innerHTML = fotos.length ? fotos.map(ft => `<figure><a href="${X.esc(ft.url)}" target="_blank" rel="noopener"><img src="${X.esc(ft.url)}" loading="lazy" alt=""></a><figcaption>${ft.autor ? `Foto: ${ft.autor_link ? `<a href="${X.esc(ft.autor_link)}" target="_blank" rel="noopener">${X.esc(ft.autor)}</a>` : X.esc(ft.autor)}` : 'Google'}</figcaption></figure>`).join('') : '';
 }
