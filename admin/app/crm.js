@@ -3,7 +3,7 @@
 // indicações ficam pendurados na ficha. O vendedor é de cada venda, não do cliente.
 
 const verValor = (X) => X.ADMIN || (X.pode && X.pode('financeiro'));
-const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro' };
+const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro', fornecedor: 'Fornecedor' };
 const INTERESSES = { viagens: 'Viagens e passagens', gestao: 'Gestão de Milhas' };
 // Lead vira cliente na primeira compra: emissão ligada à ficha, atendimento fechado ou marcação manual (quem comprou antes do app)
 export function ehCliente(D, p) {
@@ -11,7 +11,8 @@ export function ehCliente(D, p) {
   if ((p.papeis || []).includes('cliente') || (p.papeis || []).includes('gestao')) return true;
   return (D.emissoes || []).some(e => e.pessoa_id === p.id) || (D.reunioes || []).some(r => r.pessoa_id === p.id && r.resultado === 'Fechou');
 }
-const rotulos = (D, p) => [ehCliente(D, p) ? 'Cliente' : 'Lead' + ((p.interesse || []).length ? ' · ' + p.interesse.map(k => INTERESSES[k] || k).join(' e ') : ''), ...(p.papeis || []).filter(k => k === 'gestao' || k === 'passageiro' || k === 'parceiro').map(k => PAPEIS[k])];
+const ehLead = (D, p) => !ehCliente(D, p) && !(((p.papeis || []).includes('fornecedor') || (p.papeis || []).includes('parceiro')) && !(p.interesse || []).length);
+const rotulos = (D, p) => [ehCliente(D, p) ? 'Cliente' : !ehLead(D, p) ? '' : 'Lead' + ((p.interesse || []).length ? ' · ' + p.interesse.map(k => INTERESSES[k] || k).join(' e ') : ''), ...(p.papeis || []).filter(k => k === 'gestao' || k === 'passageiro' || k === 'parceiro' || k === 'fornecedor').map(k => PAPEIS[k])].filter(Boolean);
 const ORIGENS = ['Site', 'Indicação', 'Instagram', 'WhatsApp', 'Cliente antigo', 'Outro'];
 let VISTA = 'lista', PID = null, BUSCA = '', FILTRO = 'todos', MSG = '';
 
@@ -87,16 +88,16 @@ function telaLista(P, X) {
   const { D, $, esc, brlC, ADMIN } = X;
   const todas = D.pessoas || [];
   const mesAtual = new Date().getMonth();
-  const filtros = [['todos', 'Todos'], ['cliente', 'Clientes'], ['gestao', 'Gestão'], ['lead', 'Leads'], ['parceiro', 'Parceiros'], ['aniv', 'Aniversário no mês']];
+  const filtros = [['todos', 'Todos'], ['cliente', 'Clientes'], ['gestao', 'Gestão'], ['lead', 'Leads'], ['parceiro', 'Parceiros'], ['fornecedor', 'Fornecedores'], ['aniv', 'Aniversário no mês']];
   const q = norm(BUSCA), qd = so(BUSCA);
-  const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : FILTRO === 'cliente' ? ehCliente(D, p) : FILTRO === 'lead' ? !ehCliente(D, p) : (p.papeis || []).includes(FILTRO))
+  const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : FILTRO === 'cliente' ? ehCliente(D, p) : FILTRO === 'lead' ? ehLead(D, p) : (p.papeis || []).includes(FILTRO))
     .filter(p => !q || norm(p.nome).includes(q) || (qd.length >= 4 && so(p.celular).includes(qd)) || norm(p.email).includes(q))
     .map(p => ({ p, r: resumo(D, p.id) }))
     .sort((a, b) => FILTRO === 'aniv' ? new Date(a.p.nascimento).getDate() - new Date(b.p.nascimento).getDate() : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   const dups = (D.dups || []).length;
   P.innerHTML = `
     <h1 class="titulo">Clientes</h1>
-    <div class="sub">${todas.length} fichas · ${todas.filter(p => ehCliente(D, p)).length} ${todas.filter(p => ehCliente(D, p)).length === 1 ? 'cliente' : 'clientes'} · ${todas.filter(p => !ehCliente(D, p)).length} ${todas.filter(p => !ehCliente(D, p)).length === 1 ? 'lead' : 'leads'} · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
+    <div class="sub">${todas.length} fichas · ${todas.filter(p => ehCliente(D, p)).length} ${todas.filter(p => ehCliente(D, p)).length === 1 ? 'cliente' : 'clientes'} · ${todas.filter(p => ehLead(D, p)).length} ${todas.filter(p => ehLead(D, p)).length === 1 ? 'lead' : 'leads'} · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
     ${ADMIN ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups ? (dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas') + ' para confirmar ›' : 'Revisar fichas duplicadas ›'}</button>` : ''}
     <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo cadastro</button>
     <div id="cadOp"></div>
@@ -176,7 +177,8 @@ function telaFicha(P, X) {
   const primeiro = String(p.nome).split(' ')[0];
   const zap = p.celular ? zapLink(p.celular, p.nome, diasAniv === 0 ? `Oi, ${primeiro}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.` : `Oi, ${primeiro}! Aqui é da Maktub Go.`) : '';
   const lin = (l, v) => v ? `<div class="lin"><span>${l}</span><span style="white-space:normal;text-align:right">${v}</span></div>` : '';
-  const faltam = [!p.nascimento && 'nascimento', verDocs && !(doc && doc.cpf) && 'CPF'].filter(Boolean);
+  const soNegocio = !ehCliente(D, p) && !ehLead(D, p) && !(p.papeis || []).includes('passageiro');
+  const faltam = soNegocio ? [] : [!p.nascimento && 'nascimento', verDocs && !(doc && doc.cpf) && 'CPF'].filter(Boolean);
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Clientes</button>
     <h1 class="titulo" style="margin-top:6px">${esc(p.nome)}</h1>
@@ -189,10 +191,12 @@ function telaFicha(P, X) {
     </div>
     ${MSG ? `<div class="config" style="margin-top:10px">${MSG}</div>` : ''}
     ${faltam.length ? `<div class="sub" style="color:var(--alerta)">Falta ${faltam.join(' e ')} para emitir. Mande o link de cadastro para o cliente preencher.</div>` : ''}
-    <div class="numeros" style="margin-top:12px">
+    ${soNegocio ? '' : `<div class="numeros" style="margin-top:12px">
       ${verValor(X) ? `<div class="num destaque"><div class="l">Investimento</div><div class="v">${brlC(r.total)}</div><div class="d">${r.n} ${r.n === 1 ? 'emissão' : 'emissões'}</div></div>` : `<div class="num destaque"><div class="l">Compras</div><div class="v">${r.n}</div><div class="d">${r.ultima ? 'última viagem ' + new Date(r.ultima + 'T12:00:00').toLocaleDateString('pt-BR') : 'nenhuma ainda'}</div></div>`}
       ${verValor(X) ? `<div class="num"><div class="l">Ticket médio</div><div class="v">${r.n ? brlC(r.ticket) : '-'}</div><div class="d">por emissão</div></div>` : ''}
-    </div>
+    </div>`}
+    ${(p.papeis || []).includes('fornecedor') && verValor(X) ? (() => { const k = norm(p.nome), em = (D.emissoes || []).filter(e => norm(e.fornecedor) === k && (+e.custo || 0) > 0), ap = em.filter(e => !e.pago_fornecedor), sm = (L) => L.reduce((t, e) => t + (+e.custo || 0), 0);
+      return `<section class="bloco"><h2>Como fornecedor</h2><div class="lin"><span>Compras da Maktub</span><span>${em.length} · ${brlC(sm(em))}</span></div><div class="lin"><span>A pagar</span><span style="color:${ap.length ? 'var(--alerta)' : 'inherit'}">${ap.length ? ap.length + ' · ' + brlC(sm(ap)) : 'nada'}</span></div>${ap.length && X.irPagar ? '<button class="sec" type="button" id="irPagarF" style="width:100%;margin-top:8px">Ver e pagar ›</button>' : ''}</section>`; })() : ''}
     ${(() => { const em = (D.emissoes || []).filter(e => e.pessoa_id === p.id); const g = {}; em.forEach(e => { const k = serv(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e.valor_receber) || 0; }); const L = Object.entries(g).sort((a, b) => b[1].v - a[1].v); return L.length ? `<section class="bloco"><h2>O que já comprou</h2>${L.map(([k, x]) => `<div class="lin"><span>${esc(k)}</span><span>${verValor(X) ? brlC(x.v) + ' · ' : ''}${x.n}</span></div>`).join('')}</section>` : ''; })()}
     ${p.cliente_id && pode('gestao') ? `<button class="sec grande" id="irGestao" style="margin-top:10px;width:100%">Abrir carteira da Gestão de Milhas ›</button>` : ''}
     <section class="bloco"><h2>Contato</h2>
@@ -241,6 +245,7 @@ function telaFicha(P, X) {
     ${p.observacoes ? `<section class="bloco"><h2>Anotações</h2><div style="white-space:pre-wrap;color:var(--tinta-2)">${esc(p.observacoes)}</div></section>` : ''}
     ${ADMIN ? '<button class="sec grande" id="excluirP" style="margin-top:14px;width:100%">Excluir ficha</button>' : ''}`;
   organizarFicha(P);
+  if ($('irPagarF')) $('irPagarF').onclick = () => X.irPagar();
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarP').onclick = () => ir(X, 'editar', p.id);
   if ($('avaliarForn')) $('avaliarForn').onclick = () => X.fornecedores.avaliar({ pessoa_id: p.id });
@@ -342,7 +347,7 @@ function telaForm(P, X) {
       <div class="grupo">Interesse</div>
       <div class="chips" id="interP" style="flex-wrap:wrap">${Object.entries(INTERESSES).map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.interesse || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="grupo">Situação</div>
-      <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro'], ...(X.ADMIN ? [['parceiro', 'Parceiro de indicação']] : [])].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro'], ...(X.ADMIN ? [['parceiro', 'Parceiro de indicação'], ['fornecedor', 'Fornecedor (compramos dele)']] : [])].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div id="parcCampos" ${(p.papeis || []).includes('parceiro') ? '' : 'hidden'}><div class="duas-col">${campo('parc_pct', 'Remuneração do parceiro (%)', '', 'number', 'placeholder="10"')}${verDocs ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}</div><div class="sub" style="margin-top:0">O percentual vale para as próximas vendas que ele indicar. O WhatsApp é o celular da ficha.</div></div>
       <div class="sub">Lead vira cliente sozinho na primeira compra (emissão ou atendimento fechado). Gestão é marcada quando a pessoa entra na Gestão de Milhas.</div>
       <label class="fl"><span>Anotações</span><textarea name="observacoes" rows="3">${esc(p.observacoes || '')}</textarea></label>

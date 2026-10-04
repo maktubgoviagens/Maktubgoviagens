@@ -357,8 +357,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=13';
-import * as FORN from '/admin/app/fornecedores.js?v=8';
+import * as CRM from '/admin/app/crm.js?v=14';
+import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=4';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
@@ -456,10 +456,10 @@ function buscaGeral(q) {
   if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
   if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => VER_TODAS() || (e.vendedor_app || e.vendedor_id) === D.meuId).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
   if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
-  if (podeAba('fornecedores')) G.push(['Fornecedores', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
+  if (podeAba('fornecedores')) G.push(['Hotéis e serviços', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
 }
-$('buscaTopo').onclick = () => { $('folhaBusca').hidden = false; $('buscaRes').innerHTML = '<div class="sub">Digite pelo menos 2 letras. Busca em clientes, vendas, atendimentos e fornecedores.</div>'; $('buscaG').value = ''; setTimeout(() => $('buscaG').focus(), 50); };
+$('buscaTopo').onclick = () => { $('folhaBusca').hidden = false; $('buscaRes').innerHTML = '<div class="sub">Digite pelo menos 2 letras. Busca em clientes, fornecedores, vendas, atendimentos, hotéis e serviços.</div>'; $('buscaG').value = ''; setTimeout(() => $('buscaG').focus(), 50); };
 $('buscaG').oninput = () => {
   const G = buscaGeral($('buscaG').value), acoes = [];
   $('buscaRes').innerHTML = G.length ? G.map(([t, L]) => `<div class="res-grupo">${t}</div>${L.map(([n, d, fn]) => { acoes.push(fn); return `<button class="folha-item" data-res="${acoes.length - 1}"><span>${esc(n)}<small>${esc(d || '')}</small></span><span class="seta">›</span></button>`; }).join('')}`).join('')
@@ -489,7 +489,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['empresa', 'receber', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
+const ABAS_ADMIN = ['empresa', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -502,9 +502,9 @@ const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -540,7 +540,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['fornecedores', 'empresa', 'financeiro', 'receber', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
+const EMP_ABAS = ['fornecedores', 'empresa', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -594,7 +594,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { cotador: 'Cotações', fornecedores: 'Fornecedores', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -675,7 +675,7 @@ async function carregar(silencioso) {
 
 function ctxCRM() {
   return { D, $, esc, sb, aviso, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
-    novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao,
+    novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true),
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
 }
@@ -754,6 +754,7 @@ function tela() {
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
+  if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
@@ -777,6 +778,7 @@ function telaInicio(P) {
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago).length, () => ir('receber')],
+    ['Fornecedores a pagar', aPagar().length, () => ir('pagar')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
     ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')],
@@ -924,7 +926,7 @@ function telaEmissoes(P) {
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
-        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
+        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
         ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
@@ -1002,7 +1004,7 @@ function telaFormEmissao(P) {
       </div>
       <div id="blocoCusto" hidden>${campo('custo_direto', 'Custo do fornecedor (R$)', ehMilhas(e.servico) ? '' : ((+e.milhas || 0) * (+e.milheiro || 0) / 1000 + (+e.taxas || 0)) || '', 'number')}</div>
       ${campo('valor_receber', 'Valor a receber do cliente (R$)', e.valor_receber, 'number', 'required')}
-      <div class="duas-col">${campo('fornecedor', 'Fornecedor das milhas', e.fornecedor)}${campo('conta', 'Conta usada', e.conta)}</div>
+      <div class="duas-col">${campo('fornecedor', 'Fornecedor', e.fornecedor, 'text', 'list="dlFornP"')}<datalist id="dlFornP">${fornecedoresFichas().map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>${campo('conta', 'Conta usada', e.conta)}</div>
       </div>
       ${ADMIN ? `<div class="duas-col">${campo('comissao_manual', 'Comissão manual (opcional)', e.comissao_manual, 'number')}${campo('repasse_manual', 'Repasse manual (opcional)', e.repasse_manual, 'number')}</div>` : ''}
 
@@ -1132,6 +1134,7 @@ function blocoAjuste(e, travado) {
       <option value="">${e.servico_app ? 'Usar o da planilha' : `Da planilha: ${esc(e.servico || '-')}`}</option>
       ${SERVICOS.map(x => `<option ${x === e.servico_app ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
     <div class="resumo" id="resumoAj"></div>
+    ${pode('financeiro') ? `<div class="grupo">Pagamentos</div><label class="fc"><input type="checkbox" name="pago_fornecedor" ${e.pago_fornecedor ? 'checked' : ''}><span>Pago ao fornecedor${e.fornecedor ? ' (' + esc(e.fornecedor) + ')' : ''}: ${brl2(e.custo)}</span></label><div class="sub" style="margin-top:2px">Recebido do cliente: ${e.pago ? 'sim' : 'ainda não'} (coluna Pago da planilha).</div>` : ''}
     <button class="zap grande" type="submit" id="salvarAj" style="margin-top:12px;width:100%">Salvar comissão e parceiro</button>
     ${travado ? '<div class="sub">Mês fechado: vendedor, percentuais e parceiro estão travados. O tipo de serviço continua editável.</div>' : '<div class="sub">Deixe um percentual em branco para usar o padrão. O que você definir aqui vale só para esta venda e a planilha não apaga.</div>'}
     <div class="sub" id="msgAj"></div>
@@ -1168,6 +1171,7 @@ function ligarAjuste(e, travado) {
     const cpa = num(g('comissao_pct_app')), ppa = num(g('parceiro_pct_app'));
     if ([cpa, ppa].some(x => x != null && (isNaN(x) || x < 0 || x > 100))) { $('msgAj').textContent = 'Os percentuais precisam estar entre 0 e 100.'; return; }
     const row = { servico_app: g('servico_app') || null };
+    if (f.elements.pago_fornecedor && f.elements.pago_fornecedor.checked !== !!e.pago_fornecedor) Object.assign(row, { pago_fornecedor: f.elements.pago_fornecedor.checked, pago_fornecedor_em: f.elements.pago_fornecedor.checked ? new Date().toISOString() : null });
     if (!travado) Object.assign(row, { vendedor_app: g('vendedor_app') || null, parceiro_app: g('parceiro_app') || null, comissao_pct_app: cpa, parceiro_pct_app: ppa });
     $('salvarAj').disabled = true; $('msgAj').textContent = 'Salvando...';
     const { data, error } = await sb.from('emissoes').update(row).eq('id', e.id).select().single();
@@ -1443,7 +1447,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Cotações</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Fornecedores</button>' : ''}</div>` : '');
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Cotações</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Hotéis e serviços</button>' : ''}</div>` : '');
   if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento')
@@ -1915,6 +1919,38 @@ async function telaCustos(P) {
 
 /* ---------- pagamentos a receber (administradores) ---------- */
 let RC_CONF = null;
+/* ---------- pagamentos a fornecedores ---------- */
+const nNome = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const fornecedoresFichas = () => (D.pessoas || []).filter(p => (p.papeis || []).includes('fornecedor')).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+const fichaFornecedor = (nome) => { const k = nNome(nome); return k ? fornecedoresFichas().find(p => nNome(p.nome) === k) || null : null; };
+const devePagar = (e) => (+e.custo || 0) > 0;
+const aPagar = () => D.emissoes.filter(e => devePagar(e) && !e.pago_fornecedor);
+let PG_CONF = null;
+function telaPagar(P) {
+  const L = aPagar().sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
+  const grupos = {}; L.forEach(e => { const f = fichaFornecedor(e.fornecedor), k = f ? 'f:' + f.id : 'n:' + nNome(e.fornecedor); (grupos[k] = grupos[k] || { nome: f ? f.nome : (e.fornecedor || 'Fornecedor não informado'), ficha: f, L: [] }).L.push(e); });
+  const G = Object.entries(grupos).sort((a, b) => soma(b[1].L, 'custo') - soma(a[1].L, 'custo'));
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">A pagar</div><div class="v">${brlC(soma(L, 'custo'))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'} · ${G.length} ${G.length === 1 ? 'fornecedor' : 'fornecedores'}</div></div>
+      <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(e => !e.pago), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
+    </div>
+    <div class="sub">O valor a pagar é o custo de cada venda. Pague venda por venda ou tudo de um fornecedor de uma vez.</div>
+    ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
+      ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
+      ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
+  $('voltar').onclick = () => ir('empresa');
+  const marcar = async (ids, msg) => {
+    for (let i = 0; i < ids.length; i += 100) {
+      const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: new Date().toISOString() }).in('id', ids.slice(i, i + 100));
+      if (error) { aviso('Não salvou: ' + error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : '')); return; }
+    }
+    D.emissoes.forEach(e => { if (ids.includes(e.id)) e.pago_fornecedor = true; }); aviso(msg); telaPagar(P);
+  };
+  P.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { if (PG_CONF !== b.dataset.pg) { PG_CONF = b.dataset.pg; b.textContent = 'Confirmar'; return; } PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
+  P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pgall]; if (!confirm(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`)) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
+  P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
+}
 function telaReceber(P) {
   const L = D.emissoes.filter(e => !e.pago).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Financeiro</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
@@ -1973,10 +2009,10 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['financeiro', 'receber', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Fornecedores e indicações'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));

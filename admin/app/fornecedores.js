@@ -25,8 +25,8 @@ export function avaliacoes() { return AVS || []; }
 
 export async function tela(P, X) {
   const { $ } = X;
-  if (LISTA === null) { P.innerHTML = '<h1 class="titulo">Fornecedores</h1><div class="vazio">Carregando...</div>'; await carregar(X.sb); if (X.aba() !== 'fornecedores') return; }
-  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Fornecedores</h1><div class="config" style="margin-top:12px">${X.admin ? 'Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
+  if (LISTA === null) { P.innerHTML = '<h1 class="titulo">Hotéis e serviços</h1><div class="vazio">Carregando...</div>'; await carregar(X.sb); if (X.aba() !== 'fornecedores') return; }
+  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Hotéis e serviços</h1><div class="config" style="margin-top:12px">${X.admin ? 'Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
   if (VISTA === 'novo' || VISTA === 'editar') return form(P, X);
   if (VISTA === 'avaliar') return formAvaliar(P, X);
   if (VISTA === 'lote') return loteGoogle(P, X);
@@ -46,7 +46,7 @@ function telaLista(P, X) {
     .sort((a, b) => (b.m || 0) - (a.m || 0) || b.av.length - a.av.length || a.f.nome.localeCompare(b.f.nome, 'pt-BR'));
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Empresa</button>
-    <h1 class="titulo" style="margin-top:6px">Fornecedores e <em>indicações</em></h1>
+    <h1 class="titulo" style="margin-top:6px">Hotéis e <em>serviços</em></h1>
     <div class="sub">${LISTA.length} fornecedores · ${AVS.filter(a => a.nota).length} avaliações · ${AVS.filter(a => !a.nota).length} usos esperando nota</div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoF">+ Fornecedor</button><button class="sec" id="avaliarF">Registrar avaliação</button></div>
     ${LISTA.filter(f => !f.google_place_id).length ? `<button class="sec grande" id="loteG" style="margin-top:8px;width:100%">Ligar ao Google (${LISTA.filter(f => !f.google_place_id).length} sem vínculo) ›</button>` : ''}
@@ -76,7 +76,7 @@ function ficha(P, X) {
   const ind = av.filter(a => a.indicaria === true).length, nInd = av.filter(a => a.indicaria !== null && a.indicaria !== undefined).length;
   const nomeP = (id) => ((D.pessoas || []).find(p => p.id === id) || {}).nome;
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Fornecedores</button>
+    <button class="voltar" id="voltar">‹ Hotéis e serviços</button>
     <h1 class="titulo" style="margin-top:6px">${esc(f.nome)}</h1>
     <div class="sub">${TIPOS[f.tipo] || f.tipo}${f.cidade ? ' · ' + esc(f.cidade) : ''}${f.pais ? ', ' + esc(f.pais) : ''}</div>
     <div class="numeros" style="margin-top:12px">
@@ -199,12 +199,12 @@ async function loteGoogle(P, X) {
   const total = LISTA.filter(f => !f.google_place_id).length;
   const sair = () => { VISTA = 'lista'; tela(P, X); scrollTo(0, 0); };
   if (!pend.length) {
-    P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Hotéis e serviços</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
       <div class="vazio" style="margin-top:14px">${total ? `Fim da lista. ${total} ${total === 1 ? 'ficou' : 'ficaram'} sem vínculo; abra a ficha de cada um para buscar com outro nome ou colar o link do Maps.` : 'Todos os fornecedores estão ligados ao Google.'}</div>`;
     $('voltar').onclick = sair; return;
   }
   const f = pend[0];
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Hotéis e serviços</button><h1 class="titulo" style="margin-top:6px">Ligar ao <em>Google</em></h1>
     <div class="sub">${pend.length} para ligar. Toque no lugar certo, ajuste a busca ou pule.</div>
     <section class="bloco"><h2>${esc(TIPOS[f.tipo] || f.tipo)}</h2><div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--verde)">${esc(f.nome)}</div>
       <div class="sub" style="margin-top:2px">${esc([f.cidade, f.pais].filter(Boolean).join(', ') || 'sem cidade cadastrada')}</div>
@@ -272,7 +272,7 @@ async function juntar(X, manter, apagar) {
 function telaDuplicados(P, X) {
   const { $, esc } = X;
   const G = duplicados();
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Fornecedores</button><h1 class="titulo" style="margin-top:6px">Possíveis <em>duplicados</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Hotéis e serviços</button><h1 class="titulo" style="margin-top:6px">Possíveis <em>duplicados</em></h1>
     <div class="sub">Toque em "Manter este" no cadastro que fica. Os outros do grupo são juntados nele: as avaliações dos clientes passam para ele e os campos vazios são completados.</div>
     ${G.length ? G.map((g, gi) => `<section class="bloco"><h2>${g[0].google_place_id ? 'Mesmo lugar no Google' : 'Mesmo nome e cidade'}</h2>
       ${g.map(f => `<div class="lin" style="align-items:center"><span>${resumoF(f, esc)}</span><button class="sec" data-g="${gi}" data-m="${f.id}" style="padding:6px 10px;min-width:0;font-size:11px">Manter este</button></div>`).join('')}</section>`).join('')
@@ -317,7 +317,7 @@ function form(P, X) {
   const f = novo ? { tipo: TIPO !== 'todos' ? TIPO : 'hotel' } : LISTA.find(x => x.id === FID);
   if (!f) return ir(X, 'lista');
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ ${novo ? 'Fornecedores' : esc(f.nome)}</button>
+    <button class="voltar" id="voltar">‹ ${novo ? 'Hotéis e serviços' : esc(f.nome)}</button>
     <h1 class="titulo" style="margin-top:6px">${novo ? 'Novo <em>fornecedor</em>' : 'Editar <em>fornecedor</em>'}</h1>
     <form id="fF" class="form" autocomplete="off">
       <label class="fl"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS).map(([k, l]) => `<option value="${k}" ${k === f.tipo ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
