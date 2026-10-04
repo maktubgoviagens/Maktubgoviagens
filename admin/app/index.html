@@ -1936,6 +1936,7 @@ function telaPagar(P) {
       <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(e => !e.pago), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
     </div>
     <div class="sub">O valor a pagar é o custo de cada venda. Pague venda por venda ou tudo de um fornecedor de uma vez.</div>
+    ${(R => R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Pagos nos últimos 30 dias (${R.length})</summary>${R.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.fornecedor || 'Fornecedor não informado')} · ${esc(e.comprador || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">pago em ${new Date(e.pago_fornecedor_em).toLocaleDateString('pt-BR')}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-desf="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : '')(D.emissoes.filter(e => e.pago_fornecedor && e.pago_fornecedor_em && Date.now() - new Date(e.pago_fornecedor_em) < 30 * 864e5).sort((a, b) => String(b.pago_fornecedor_em).localeCompare(String(a.pago_fornecedor_em))))}
     ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
       ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
       ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
@@ -1945,11 +1946,18 @@ function telaPagar(P) {
       const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: new Date().toISOString() }).in('id', ids.slice(i, i + 100));
       if (error) { aviso('Não salvou: ' + error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : '')); return; }
     }
-    D.emissoes.forEach(e => { if (ids.includes(e.id)) e.pago_fornecedor = true; }); aviso(msg); telaPagar(P);
+    const agora = new Date().toISOString(); D.emissoes.forEach(e => { if (ids.includes(e.id)) { e.pago_fornecedor = true; e.pago_fornecedor_em = agora; } }); aviso(msg); telaPagar(P);
   };
   P.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { if (PG_CONF !== b.dataset.pg) { PG_CONF = b.dataset.pg; b.textContent = 'Confirmar'; return; } PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
   P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pgall]; if (!confirm(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`)) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
   P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
+  P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const { error } = await sb.from('emissoes').update({ pago_fornecedor: false, pago_fornecedor_em: null }).eq('id', b.dataset.desf);
+    if (error) { b.disabled = false; aviso('Não desfez: ' + error.message); return; }
+    const e = D.emissoes.find(x => x.id === b.dataset.desf); if (e) { e.pago_fornecedor = false; e.pago_fornecedor_em = null; }
+    aviso('Voltou para a lista de a pagar.'); telaPagar(P);
+  });
 }
 function telaReceber(P) {
   const L = D.emissoes.filter(e => !e.pago).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
