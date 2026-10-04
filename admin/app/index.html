@@ -239,6 +239,13 @@ button.lin{width:100%;background:none;border:0;border-top:1px solid var(--linha)
 button.lin:first-of-type{border-top:0}
 button.lin .seta{color:var(--dourado);margin-left:6px}
 .icone{position:relative}
+.card.em{margin-bottom:0}
+.emchk{display:flex;gap:6px;margin:-1px 0 12px;background:var(--branco);border:1px solid var(--linha);border-top:0;padding:8px}
+.emchk button{flex:1;display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--linha);padding:8px 10px;font:inherit;font-size:12.5px;color:var(--tinta-2);cursor:pointer;text-align:left}
+.emchk .cx{width:18px;height:18px;border:1.5px solid var(--tinta-3);display:grid;place-items:center;font-size:12px;flex:0 0 18px}
+.emchk button.ok{color:var(--verde);border-color:rgba(47,107,74,.45)}
+.emchk button.ok .cx{background:var(--verde);border-color:var(--verde);color:#fff}
+.emchk button.conf{border-color:var(--alerta);color:var(--alerta)}
 .fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:50%;border:0;background:var(--verde);color:var(--creme);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
 .folha{position:fixed;inset:0;z-index:60}
 .folha-fundo{position:absolute;inset:0;background:rgba(20,30,24,.45)}
@@ -901,6 +908,7 @@ function calcular(v) {
 
 /* ---------- lista de emissões ---------- */
 const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
+let EM_PEND = 'todas';
 function telaEmissoes(P) {
   if (EM_ED) return telaFormEmissao(P);
   const VER = VER_TODAS();
@@ -908,6 +916,7 @@ function telaEmissoes(P) {
   if (!VER) L = L.filter(e => e.vendedor_id === D.meuId);
   if (VER && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
   if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
+  if (EM_PEND === 'forn') L = L.filter(e => devePagar(e) && !e.pago_fornecedor); else if (EM_PEND === 'cli') L = L.filter(e => !e.pago);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${VER ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
@@ -919,6 +928,7 @@ function telaEmissoes(P) {
       <div class="sub" style="margin-top:6px">${semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7))).length} em meses abertos podem ser definidas aqui; meses fechados não mudam. A comissão sai pelo percentual de quem você escolher.</div>
       <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Passar para</span><select id="loteVend">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteVendB" style="align-self:end">Definir</button></div>
       <button type="button" class="sec" id="verSemVend" style="width:100%;margin-top:6px">Ver as vendas sem vendedor deste mês</button></details>` : ''}
+    ${pode('financeiro') ? `<div class="chips" id="emPend" style="margin-top:8px">${[['todas', 'Todas'], ['cli', 'Cliente não pagou'], ['forn', 'Fornecedor a pagar']].map(([k, l]) => `<button data-p="${k}" class="${EM_PEND === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
     <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : 'no mês'}</div></div>
@@ -931,10 +941,13 @@ function telaEmissoes(P) {
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
         ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
         <div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div></div>
-      </button>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
+      </button>${pode('financeiro') ? `<div class="emchk">
+        <button type="button" data-ck-cli="${e.id}" class="${e.pago ? 'ok' : ''}" ${e.pago ? 'disabled' : ''}><span class="cx">${e.pago ? '✓' : ''}</span><span>Recebido do cliente</span></button>
+        ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}</div>` : ''}`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
+  if ($('emPend')) $('emPend').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { EM_PEND = b.dataset.p; telaEmissoes(P); } };
   if ($('verSemVend')) $('verSemVend').onclick = () => { EM_VEND = 'sem'; telaEmissoes(P); };
   if ($('loteVendB')) $('loteVendB').onclick = async () => {
     const quem = $('loteVend').value, pessoa = (D.equipe || []).find(x => x.user_id === quem);
@@ -951,6 +964,23 @@ function telaEmissoes(P) {
   };
   $('emServ').onchange = (e) => { EM_SERV = e.target.value; telaEmissoes(P); };
   P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
+  // checks financeiros direto no card: um toque marca, desmarcar pede confirmação
+  P.querySelectorAll('[data-ck-cli]').forEach(b => b.onclick = async () => {
+    if (!b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo: cliente pagou'; return; }
+    b.disabled = true; const id = b.dataset.ckCli;
+    const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', id);
+    if (error) { b.disabled = false; aviso('Não salvou: ' + error.message); return; }
+    const e = D.emissoes.find(x => x.id === id); if (e) e.pago = true; aviso('Recebido do cliente. Vai para a planilha em até 5 minutos.'); telaEmissoes(P);
+  });
+  P.querySelectorAll('[data-ck-forn]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.ckForn, e = D.emissoes.find(x => x.id === id), novo = !e.pago_fornecedor;
+    if (!novo && !b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo para desmarcar'; return; }
+    b.disabled = true;
+    const row = { pago_fornecedor: novo, pago_fornecedor_em: novo ? new Date().toISOString() : null };
+    const { error } = await sb.from('emissoes').update(row).eq('id', id);
+    if (error) { b.disabled = false; aviso('Não salvou: ' + error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : '')); return; }
+    Object.assign(e, row); aviso(novo ? 'Pago ao fornecedor.' : 'Voltou para a lista de a pagar.'); telaEmissoes(P);
+  });
 }
 
 /* ---------- formulário de emissão ---------- */
