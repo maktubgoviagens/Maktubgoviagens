@@ -26,7 +26,7 @@ export function avaliacoes() { return AVS || []; }
 export async function tela(P, X) {
   const { $ } = X;
   if (LISTA === null) { P.innerHTML = '<h1 class="titulo">Fornecedores</h1><div class="vazio">Carregando...</div>'; await carregar(X.sb); if (X.aba() !== 'fornecedores') return; }
-  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Fornecedores</h1><div class="config" style="margin-top:12px">Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
+  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Fornecedores</h1><div class="config" style="margin-top:12px">${X.admin ? 'Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
   if (VISTA === 'novo' || VISTA === 'editar') return form(P, X);
   if (VISTA === 'avaliar') return formAvaliar(P, X);
   if (VISTA === 'lote') return loteGoogle(P, X);

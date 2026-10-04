@@ -50,6 +50,7 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .nav .bola{position:absolute;top:9px;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:var(--alerta);color:#fff;font-size:10px;line-height:17px;text-align:center;padding:0 4px;font-weight:600}
 
 .pagina{max-width:760px;margin:0 auto;padding:18px 16px calc(var(--barra-h) + 36px + env(safe-area-inset-bottom))}
+body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-inset-bottom))}
 .titulo{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:30px;color:var(--verde);line-height:1.1}
 .titulo em{color:var(--dourado)}
 .sub{font-size:12.5px;color:var(--tinta-3);margin-top:4px}
@@ -238,6 +239,15 @@ button.lin{width:100%;background:none;border:0;border-top:1px solid var(--linha)
 button.lin:first-of-type{border-top:0}
 button.lin .seta{color:var(--dourado);margin-left:6px}
 .icone{position:relative}
+.fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:50%;border:0;background:var(--verde);color:var(--creme);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
+.folha{position:fixed;inset:0;z-index:60}
+.folha-fundo{position:absolute;inset:0;background:rgba(20,30,24,.45)}
+.folha-caixa{position:absolute;left:0;right:0;bottom:0;background:var(--fundo,#f6f3ec);padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;max-height:85vh;overflow:auto}
+.busca-caixa{top:0;bottom:auto;border-radius:0 0 14px 14px;padding-top:calc(14px + env(safe-area-inset-top))}
+.folha-tit{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado);margin:2px 0 10px}
+.folha-item{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);padding:14px;margin-bottom:8px;font:inherit;font-size:15px;color:var(--verde);cursor:pointer}
+.folha-item small{display:block;color:var(--tinta-3);font-size:12px;margin-top:2px}
+.res-grupo{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dourado);margin:14px 0 6px}
 .icone .bola{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;border-radius:9px;background:var(--alerta);color:#fff;font-size:10px;line-height:17px;text-align:center;padding:0 4px;font-weight:600;font-family:Montserrat,sans-serif}
 .nav.seis button{font-size:9.5px;letter-spacing:.03em}
 .av{display:grid;grid-template-columns:30px 1fr;gap:10px;background:var(--branco);border:1px solid var(--linha);padding:12px;margin-bottom:6px;text-decoration:none;color:inherit;width:100%;text-align:left;font:inherit;cursor:pointer}
@@ -327,25 +337,29 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
     <div class="acoes">
       <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
       <button class="icone" id="clientesTopo" aria-label="Clientes" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/></svg></button>
-      <button class="icone" id="recarregar" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
+      <button class="icone" id="buscaTopo" aria-label="Buscar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></button>
+      <button class="icone" id="recarregar" aria-label="Atualizar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
       <button class="icone" id="maisTopo" aria-label="Mais" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="bola" id="bLeads" hidden></span></button>
-      <button class="icone" id="sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
+      <button class="icone" id="sair" aria-label="Sair" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
     </div>
   </header>
   <main class="pagina" id="pagina"></main>
   <nav class="nav" id="nav"></nav>
+  <button class="fab" id="fab" aria-label="Novo" hidden>+</button>
+  <div class="folha" id="folhaMais" hidden><div class="folha-fundo" data-fecha></div><div class="folha-caixa"><div class="folha-tit">Novo</div><div id="folhaItens"></div><button class="sec" data-fecha style="width:100%;margin-top:8px">Fechar</button></div></div>
+  <div class="folha" id="folhaBusca" hidden><div class="folha-fundo" data-fecha></div><div class="folha-caixa busca-caixa"><input class="busca" id="buscaG" type="search" placeholder="Cliente, localizador, destino, hotel..." autocomplete="off" style="margin:0"><div id="buscaRes"></div><button class="sec" data-fecha style="width:100%;margin-top:8px">Fechar</button></div></div>
 </div>
 
 <div class="aviso" id="aviso" hidden></div>
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import * as OPM from '/admin/app/op-milhas.js?v=2';
+import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as CART from '/admin/app/carteira.js?v=1';
-import * as ACV from '/admin/app/acervo.js?v=4';
-import * as CRM from '/admin/app/crm.js?v=11';
-import * as FORN from '/admin/app/fornecedores.js?v=6';
-import * as COT from '/admin/app/cotador.js?v=3';
+import * as ACV from '/admin/app/acervo.js?v=5';
+import * as CRM from '/admin/app/crm.js?v=12';
+import * as FORN from '/admin/app/fornecedores.js?v=7';
+import * as COT from '/admin/app/cotador.js?v=4';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -418,6 +432,44 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   carregar();
 })();
 
+// ---------- busca geral, botão + e sair ----------
+const fechaFolhas = () => { $('folhaMais').hidden = true; $('folhaBusca').hidden = true; };
+document.addEventListener('click', (e) => { if (e.target.closest('[data-fecha]')) fechaFolhas(); if (e.target.closest('[data-sair]')) $('sair').click(); });
+function acoesNovo() {
+  const L = [];
+  if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
+  if (pode('comercial')) L.push(['Novo atendimento', 'Lead ou cliente no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]);
+  if (podeAba('emissoes')) L.push([modoPlanilha() ? 'Registrar venda (planilha)' : 'Registrar venda', modoPlanilha() ? 'Abre a planilha B2C' : 'Nova emissão', () => { if (modoPlanilha()) { if (D.cfg && D.cfg.planilha_url) window.open(D.cfg.planilha_url, '_blank'); } else ir('emissoes', () => { EM_ED = 'nova'; }); }]);
+  if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
+  return L;
+}
+$('fab').onclick = () => {
+  const L = acoesNovo();
+  $('folhaItens').innerHTML = L.map(([t, d], i) => `<button class="folha-item" data-acao="${i}"><span>${t}<small>${d}</small></span><span class="seta">›</span></button>`).join('');
+  $('folhaItens').querySelectorAll('[data-acao]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.acao][2](); scrollTo(0, 0); });
+  $('folhaMais').hidden = false;
+};
+const semAc = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function buscaGeral(q) {
+  const k = semAc(q).trim(), dig = String(q).replace(/\D/g, ''); if (k.length < 2) return [];
+  const G = [];
+  if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
+  if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
+  if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
+  if (podeAba('fornecedores')) G.push(['Fornecedores', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
+  return G.filter(g => g[1].length);
+}
+$('buscaTopo').onclick = () => { $('folhaBusca').hidden = false; $('buscaRes').innerHTML = '<div class="sub">Digite pelo menos 2 letras. Busca em clientes, vendas, atendimentos e fornecedores.</div>'; $('buscaG').value = ''; setTimeout(() => $('buscaG').focus(), 50); };
+$('buscaG').oninput = () => {
+  const G = buscaGeral($('buscaG').value), acoes = [];
+  $('buscaRes').innerHTML = G.length ? G.map(([t, L]) => `<div class="res-grupo">${t}</div>${L.map(([n, d, fn]) => { acoes.push(fn); return `<button class="folha-item" data-res="${acoes.length - 1}"><span>${esc(n)}<small>${esc(d || '')}</small></span><span class="seta">›</span></button>`; }).join('')}`).join('')
+    : ($('buscaG').value.trim().length < 2 ? '<div class="sub">Digite pelo menos 2 letras.</div>' : '<div class="vazio">Nada encontrado.</div>');
+  $('buscaRes').querySelectorAll('[data-res]').forEach(b => b.onclick = () => { fechaFolhas(); acoes[+b.dataset.res](); scrollTo(0, 0); });
+};
+function mostrarFab() {
+  const lista = { inicio: 1, reunioes: !RE_ED, gestao: !GE_FUNIL || !RE_ED, emissoes: !EM_ED, agenda: 1, empresa: 1, crm: CRM.emLista() }[ABA];
+  $('fab').hidden = !lista || !acoesNovo().length; document.body.classList.toggle('com-fab', !$('fab').hidden);
+}
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
 $('recarregar').onclick = () => { SITE = null; OPM.recarregar(); ACV.recarregar(); carregar(); };
 $('sino').onclick = () => ir('avisos');
@@ -690,6 +742,7 @@ function tela() {
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
   if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
+  mostrarFab();
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
   if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)) });
   if (ABA === 'reunioes') return telaReunioes(P);
@@ -820,6 +873,7 @@ function ligarMes(id, render) { $(id).onclick = (e) => { const b = e.target.clos
 
 /* cálculo igual ao do banco (método 1 por padrão) */
 const temManual = (x) => x != null && x !== '';
+const tec = (m) => ADMIN ? m : (String(m).trim().startsWith('<') ? '<div class="config" style="margin-top:12px">Recurso ainda não ativado. Fale com o administrador.</div>' : 'Recurso ainda não ativado. Fale com o administrador.');
 const pctPadraoVend = (id) => +((D.equipe.find(x => x.user_id === id) || {}).comissao_pct || 0);
 const pctPadraoParc = (id) => +((D.parceirosAdm.find(x => x.id === id) || {}).pct || 0);
 const nomeParc = (id) => ((D.parceirosAdm.find(x => x.id === id) || D.parc.find(x => x.id === id) || {}).nome || '');
@@ -874,7 +928,7 @@ function telaEmissoes(P) {
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
         ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
-        <div class="toque">${ADMIN ? 'Toque para ver e definir comissão e parceiro' : 'Toque para ver os detalhes'} ›</div></div>
+        <div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div></div>
       </button>`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
@@ -1180,7 +1234,7 @@ async function telaAvisos(P) {
   const pendente = !s;
   const tg = s && s.telegram_bot ? `https://t.me/${s.telegram_bot}?start=${s.telegram_codigo}` : '';
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Mais</button>
+    <button class="voltar" id="voltar">‹ Empresa</button>
     <h1 class="titulo" style="margin-top:6px">Avisos da <em>Maktub</em></h1>
     <div class="sub">Vendas, pagamentos, leads, reuniões, check-ins, milhas vencendo e o resumo do dia, na hora em que acontecem.</div>
     ${pendente ? '<div class="config" style="margin-top:12px">Os avisos ainda não foram ativados no Supabase. Siga o guia de ativação.</div>' : `
@@ -1192,7 +1246,7 @@ async function telaAvisos(P) {
     </section>`}
     <div class="secao">Histórico ${D.avisos.length ? `<span>${D.avisos.length} mais recentes</span>` : ''}</div>
     <div id="lista">${D.avisos.length ? D.avisos.map(htmlAviso).join('') : '<div class="vazio">Nenhum aviso ainda.</div>'}</div>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   ligarAvisos(P);
   if (D.avisos.length && D.avSit && D.avisos[0].id > (D.avSit.visto_ate || 0)) {
     const ate = D.avisos[0].id;
@@ -1240,15 +1294,15 @@ function blocoMetasColab(m) {
 }
 let MT_MES = mesKey(new Date());
 async function telaMetas(P) {
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   const { data: m, error } = await sb.rpc('metas_progresso', { p_mes: MT_MES + '-01' });
   if (ABA !== 'metas') return;
-  if (error) { P.querySelector('.vazio').textContent = 'Metas ainda não ativadas no Supabase. Rode o 9-funil-e-metas.sql.'; return; }
+  if (error) { P.querySelector('.vazio').textContent = tec('Metas ainda não ativadas no Supabase. Rode o 9-funil-e-metas.sql.'); return; }
   const e = m.empresa || {};
   const v = (x) => x === null || x === undefined ? '' : x;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div>
     <div class="secao">Progresso das metas</div>
     ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
@@ -1275,7 +1329,7 @@ async function telaMetas(P) {
       <div class="sub">Deixe em branco o que não tiver meta. O time vê só a porcentagem das metas da Maktub e a própria meta. Quando uma meta da Maktub é batida, você recebe um aviso.</div>
       <div class="sub" id="msgMeta"></div>
     </form>` : ''}`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   $('mtMes').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { MT_MES = mesMais(MT_MES, +b.dataset.n); telaMetas(P); } };
   if (!ADMIN) return;
   $('abrirMetas').onclick = () => { $('fMeta').hidden = false; $('abrirMetas').hidden = true; $('fMeta').scrollIntoView({ behavior: 'smooth' }); };
@@ -1379,6 +1433,7 @@ async function moverEtapa(id, etapa) {
 }
 // atendimentos da vista atual sem responsável (ou com alguém que saiu da equipe)
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
+let RE_PARTE = 'funil';
 function telaReunioes(P) {
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
@@ -1387,8 +1442,8 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Montar cotação</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Fornecedores</button>' : ''}</div>` : '');
-  if (D.reErro) { P.innerHTML = titulo + '<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'; return; }
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Cotações</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Fornecedores</button>' : ''}</div>` : '');
+  if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento')
     .sort((a, b) => String(a.proximo_passo_data || '9999').localeCompare(String(b.proximo_passo_data || '9999')) || String(b.data).localeCompare(String(a.data)));
@@ -1399,11 +1454,12 @@ function telaReunioes(P) {
   P.innerHTML = `${titulo}
     ${pode('gestao') ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
-    <div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
+    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Funil · ${abertos.length}</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    ${RE_PARTE === 'res' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no nome para abrir.</div>
     <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(G))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
-    <div class="secao">Resultados</div>
-    <div class="seg" id="reModo" style="margin-top:0"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
+`}
+    ${RE_PARTE === 'funil' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
@@ -1421,13 +1477,14 @@ function telaReunioes(P) {
     <div class="secao">Histórico do período</div>
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
-    <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`;
+    <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
+  $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => ir('gestao');
   $('novaR').onclick = () => { RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
-  $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
-  ligarMes('reMes', () => telaReunioes(P));
-  $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
+  if ($('reModo')) $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
+  if ($('reMes')) ligarMes('reMes', () => telaReunioes(P));
+  if ($('reFiltro')) $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
   ligarCardsReuniao(P);
   if ($('loteRespB')) $('loteRespB').onclick = async () => {
     const quem = $('loteResp').value, L = semResp(), ids = L.map(r => r.id);
@@ -1660,13 +1717,13 @@ function mostrarLinkAcesso(el, nome, link) {
   el.querySelector('[data-copiar]').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Mensagem copiada.'); } catch (_) { aviso('Não deu para copiar. Use o botão do WhatsApp.'); } };
 }
 async function telaAcessos(P) {
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('mais');
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => ir('empresa');
   const { data, error } = await sb.rpc('equipe_acessos_listar');
   if (ABA !== 'acessos') return;
-  if (error) { P.querySelector('.vazio').textContent = 'Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'; return; }
+  if (error) { P.querySelector('.vazio').textContent = tec('Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'); return; }
   const L = data || [], admins = L.filter(p => p.papel === 'admin' && p.ativo);
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
     <div class="sub">${admins.map(p => esc(String(p.nome).split(' ')[0])).join(' e ')} ${admins.length === 1 ? 'é administrador' : 'são administradores'}: veem e controlam tudo, inclusive esta tela. Para cada colaborador, você escolhe o que ele vê e faz.</div>
     <button class="zap grande" id="acNovoB" style="margin-top:12px;width:100%">${AC_NOVO ? 'Fechar' : '+ Adicionar pessoa'}</button>
     ${AC_NOVO ? `<form class="bloco form" id="fAc">
@@ -1686,7 +1743,7 @@ async function telaAcessos(P) {
       ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
     </form>`; }).join('')}</div>
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
   P.querySelectorAll('form[data-u]').forEach(f => {
     f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
@@ -1793,13 +1850,13 @@ const mesCurto = (d) => { const k = String(d).slice(0, 7); const [y, m] = k.spli
 const periodoFixa = (x) => 'desde ' + mesCurto(x.desde) + (x.ate ? ' até ' + mesCurto(x.ate) : ' · sem data de término');
 async function telaCustos(P) {
   const hoje = mesKey(new Date());
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('mais');
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => ir('empresa');
   const [sl, fx] = await Promise.all([sb.rpc('salarios_listar'), sb.from('despesas_fixas').select('*').order('desde', { ascending: false })]);
   if (ABA !== 'custos') return;
-  if (sl.error || fx.error) { P.querySelector('.vazio').textContent = 'Rode o 27-dre-e-salarios.sql no Supabase para ativar.'; return; }
+  if (sl.error || fx.error) { P.querySelector('.vazio').textContent = tec('Rode o 27-dre-e-salarios.sql no Supabase para ativar.'); return; }
   const fixas = fx.data || [], ativa = (x) => !x.ate || String(x.ate).slice(0, 7) >= hoje;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1>
     <div class="sub">Tudo aqui entra sozinho no DRE de cada mês. A comissão continua automática.</div>
     <div class="secao">Salário fixo de cada pessoa</div>
     <div class="lista" style="margin-top:0">${(sl.data || []).map(p => `<form class="card form" data-sal="${p.user_id}">
@@ -1823,7 +1880,7 @@ async function telaCustos(P) {
       <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: contador, Supabase, Canva"')}${campo('valor', 'Valor mensal (R$)', '', 'number', 'required')}</div>
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
     ev.preventDefault();
     const { error } = await sb.rpc('salario_definir', { p_user: f.dataset.sal, p_valor: Number(String(f.elements.valor.value || 0).replace(',', '.')), p_desde: (f.elements.desde.value || hoje) + '-01' });
@@ -1907,7 +1964,8 @@ function telaMais(P) {
   P.innerHTML = `<h1 class="titulo">Mais</h1>
     <div class="pend" style="margin-top:14px">${itens.map(([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
       ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>`;
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>
+    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
 }
@@ -1919,7 +1977,7 @@ function itensEmpresa() {
   return [
     ['fornecedores', 'Fornecedores e indicações'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
-    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Montador de cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
+    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
 }
 function telaEmpresa(P) {
@@ -1943,6 +2001,7 @@ function telaEmpresa(P) {
   const it = itensEmpresa();
   P.innerHTML = `
     <h1 class="titulo">Empresa</h1>
+    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
     ${verNum ? `
     <div class="seg" id="empModo" style="margin-top:12px"><button data-m="mes" class="${EMP_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${EMP_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${EMP_MODO === 'mes' ? seletorMes('empMes') : `<div class="mesnav" id="empMes"><button data-n="-12">‹</button><span>${ano}</span><button data-n="12">›</button></div>`}
@@ -1964,7 +2023,8 @@ function telaEmpresa(P) {
       <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}` : ''}
     ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
     ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}`;
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
+    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
   if ($('empModo')) $('empModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_MODO = b.dataset.m; telaEmpresa(P); } };
   if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
   if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
@@ -1976,7 +2036,7 @@ function telaEmpresa(P) {
 /* ---------- equipe, parceiros e regras (administradores) ---------- */
 function telaEquipe(P) {
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Mais</button>
+    <button class="voltar" id="voltar">‹ Empresa</button>
     <h1 class="titulo" style="margin-top:6px">Comissões e <em>regras</em></h1>
     <div class="sub">Quem entra no app e o que cada pessoa vê ficam em <a href="#acessos" id="irAcessos">Equipe e acessos</a>.</div>
     <div class="secao">Comissão de cada pessoa</div>
@@ -2007,7 +2067,7 @@ function telaEquipe(P) {
       <div class="sub">Desligado é o método 1: imposto primeiro, depois comissão, depois parceiro. Só ligue com a confirmação do contador. Vale para as próximas vendas.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar regras</button>
     </form>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
     const c = b.closest('[data-u]'), u = b.dataset.salvar;
     const { error } = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: c.querySelector('[name=papel]').value, p_pct: Number(c.querySelector('[name=pct]').value || 0), p_ativo: c.querySelector('[name=ativo]').checked });
@@ -2170,7 +2230,7 @@ function listaLeads() {
   const assumir = async (id, silencioso) => {
     const r = D.leads.find(x => String(x.id) === String(id)); if (!r || r.responsavel_id) return;
     const { data, error } = await sb.rpc('lead_assumir', { p_id: id });
-    if (error) { if (!silencioso) aviso(/lead_assumir/.test(error.message) ? 'Rode o 28-leads-assumir.sql no Supabase.' : 'Não assumiu: ' + error.message); return; }
+    if (error) { if (!silencioso) aviso(/lead_assumir/.test(error.message) ? tec('Rode o 28-leads-assumir.sql no Supabase.') : 'Não assumiu: ' + error.message); return; }
     Object.assign(r, { responsavel_id: data.responsavel_id, assumido_em: data.assumido_em });
     if (!silencioso) aviso(data.responsavel_id === D.meuId ? 'Lead é seu. Responda agora para não esfriar.' : 'Já tinha sido assumido por ' + (nomeTime(data.responsavel_id) || 'outra pessoa') + '.');
     listaLeads();
@@ -2326,7 +2386,7 @@ function ligarGestao(P) {
   });
   P.querySelectorAll('[data-avisado]').forEach(b => b.onclick = async () => {
     const { error } = await sb.from('programas_milhas').update({ vencimento_avisado_em: hojeISO() }).eq('id', b.dataset.avisado);
-    if (error) { aviso(/vencimento_avisado_em/.test(error.message) ? 'Rode o 24-gestao.sql no Supabase para ativar.' : 'Não salvou: ' + error.message); return; }
+    if (error) { aviso(/vencimento_avisado_em/.test(error.message) ? tec('Rode o 24-gestao.sql no Supabase para ativar.') : 'Não salvou: ' + error.message); return; }
     const p = D.progs.find(x => String(x.id) === b.dataset.avisado); if (p) p.vencimento_avisado_em = hojeISO();
     aviso('Anotado. Sai da lista até o próximo vencimento.'); telaGestao(P);
   });
@@ -2340,7 +2400,7 @@ function ligarGestao(P) {
     if (CONFIRMA !== 'ign' + b.dataset.ignorarEm) { CONFIRMA = 'ign' + b.dataset.ignorarEm; b.textContent = 'Toque de novo'; return; }
     CONFIRMA = null;
     const { error } = await sb.from('emissoes').update({ carteira_status: 'nao_se_aplica' }).eq('id', b.dataset.ignorarEm);
-    if (error) { aviso(/carteira_status/.test(error.message) ? 'Rode o 30-fechou-pela-emissao.sql no Supabase.' : 'Não salvou: ' + error.message); return; }
+    if (error) { aviso(/carteira_status/.test(error.message) ? tec('Rode o 30-fechou-pela-emissao.sql no Supabase.') : 'Não salvou: ' + error.message); return; }
     const e = D.emissoes.find(x => String(x.id) === b.dataset.ignorarEm); if (e) e.carteira_status = 'nao_se_aplica';
     aviso('Certo, sai da lista.'); telaGestao(P);
   });

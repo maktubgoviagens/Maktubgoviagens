@@ -4,6 +4,7 @@
 
 let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
+export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
 export function preparar(pre) { PRE = pre || null; ED = null; S = null; }
 const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d.destino || PRE.destino || ''; if (d.modelo === 'go') { d.para = PRE.cliente || ''; d.nomeZap = String(PRE.cliente || '').split(' ')[0]; } else if (d.modelo === 'corp') d.passageiro = PRE.cliente || ''; else d.cliente = PRE.cliente || ''; return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
@@ -44,7 +45,7 @@ function ir(X, id) { ED = id; history.pushState(null, '', '#cotador' + (id ? '/'
 
 async function lista(P, X) {
   const { $, sb, esc } = X;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Comercial</button><h1 class="titulo" style="margin-top:6px">Montador de <em>cotações</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Comercial</button><h1 class="titulo" style="margin-top:6px"><em>Cotações</em></h1>
     <div class="sub">Preencha só o que muda; o visual, a economia e as parcelas saem prontos. Nunca mostra o custo.</div>
     <button class="zap grande" id="novoRap" style="width:100%;margin-top:12px">Cotação rápida: print + valor ›</button>
     <div class="botoes4" style="margin-top:8px"><button class="sec" id="novoGo">+ Maktub Go</button><button class="sec" id="novoCorp">+ Corporativo</button></div>

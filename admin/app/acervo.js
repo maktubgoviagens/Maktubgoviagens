@@ -84,10 +84,10 @@ function local(txt) {
 
 export async function telaAcervo(P, X) {
   const { $, esc, ir } = X;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Acervo de <em>viagens</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Acervo de <em>viagens</em></h1>
     <div class="seg" id="acvAba"><button data-a="destinos" class="${ACV_ABA === 'destinos' ? 'on' : ''}">Destinos</button><button data-a="roteiros" class="${ACV_ABA === 'roteiros' ? 'on' : ''}">Roteiros e propostas</button></div>
     <div id="acvCorpo"><div class="vazio">Carregando...</div></div>`;
-  $('voltar').onclick = () => ir('mais');
+  $('voltar').onclick = () => ir('empresa');
   $('acvAba').onclick = (e) => { const b = e.target.closest('button'); if (b) { ACV_ABA = b.dataset.a; telaAcervo(P, X); } };
   if (ACV_ABA === 'destinos') return destinos($('acvCorpo'), X);
   return roteiros($('acvCorpo'), X);

@@ -14,9 +14,9 @@ export function calc(o) {
 
 export async function telaOpMilhas(P, X) {
   const { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma } = X;
-  const voltar = () => { OM_ED = null; ir('mais'); };
+  const voltar = () => { OM_ED = null; ir('empresa'); };
   if (!LISTA) {
-    P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Operação de <em>milhas</em></h1><div class="vazio">Carregando...</div>`;
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Operação de <em>milhas</em></h1><div class="vazio">Carregando...</div>`;
     $('voltar').onclick = voltar;
     const { data, error } = await sb.from('operacoes_milhas').select('*').order('data', { ascending: false }).order('criado_em', { ascending: false });
     if (X.aba() !== 'opmilhas') return;
@@ -39,7 +39,7 @@ export async function telaOpMilhas(P, X) {
   const lucroEmp = soma(empresa, 'lucro_liquido');
   const progs = [...new Set([...PROGRAMAS.map(p => p[0]).filter(p => p !== 'Outro'), ...LISTA.map(o => o.programa)])];
 
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Operação de <em>milhas</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Operação de <em>milhas</em></h1>
     <button class="zap grande" id="omNova" style="margin-top:12px;width:100%">+ Lançar compra de milhas</button>
     <div class="mesnav" id="omAno" style="margin-top:12px"><button data-n="-1" aria-label="Ano anterior">‹</button><span>${OM_ANO}</span><button data-n="1" aria-label="Próximo ano">›</button></div>
     <select class="busca" id="omProg" style="margin-top:8px"><option value="todos">Todos os programas</option>${progs.map(p => `<option ${OM_PROG === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>

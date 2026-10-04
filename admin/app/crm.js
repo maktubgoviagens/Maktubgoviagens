@@ -62,6 +62,8 @@ export function eventos(D, dias = 120) {
 
 // ---------- tela ----------
 export function filtrar(f) { FILTRO = f; BUSCA = ''; VISTA = 'lista'; PID = null; }
+export function novo() { VISTA = 'nova'; PID = null; MSG = ''; }
+export function emLista() { return VISTA === 'lista'; }
 export function buscar(t) { BUSCA = t || ''; FILTRO = 'todos'; }
 export function abrir(id) { PID = id; VISTA = id ? 'ficha' : 'lista'; }
 export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } else if (h[1] === 'duplicadas') { VISTA = 'dups'; PID = null; } else if (h[1]) { VISTA = h[2] === 'editar' ? 'editar' : 'ficha'; PID = h[1]; } else { VISTA = 'lista'; PID = null; } }
@@ -69,7 +71,7 @@ export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } e
 export function telaCRM(P, X) {
   const { D } = X;
   if (D.pessoas === null) {
-    P.innerHTML = `<h1 class="titulo">Clientes</h1><div class="config" style="margin-top:12px">A ficha única ainda não foi ativada no Supabase. Rode o <b>30-ficha-unica.sql</b> do guia.</div>`;
+    P.innerHTML = `<h1 class="titulo">Clientes</h1><div class="config" style="margin-top:12px">${X.ADMIN ? 'A ficha única ainda não foi ativada no Supabase. Rode o <b>30-ficha-unica.sql</b> do guia.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`;
     return;
   }
   if (VISTA === 'dups') return telaDups(P, X);
@@ -146,6 +148,19 @@ function linhaTempo(D, X, p) {
     : '<div class="vazio">Nada registrado ainda. Use os botões acima para lançar.</div>';
 }
 
+// ficha no celular: o que se usa sempre fica aberto; o resto abre ao tocar
+const FICHA_RECOLHE = ['Kit de emissão', 'Como chegou', 'Família e acompanhantes', 'Hotéis e serviços que usou', 'O que já comprou', 'Contato'];
+function organizarFicha(P) {
+  const secs = [...P.querySelectorAll(':scope > section.bloco')], titulo = (s) => (s.querySelector(':scope > h2') || {}).textContent || '';
+  const tempo = secs.find(s => titulo(s).startsWith('Linha do tempo')), num = P.querySelector(':scope > .numeros');
+  if (tempo && num) num.after(tempo);
+  secs.filter(s => FICHA_RECOLHE.some(t => titulo(s).startsWith(t))).forEach(s => {
+    const h = s.querySelector(':scope > h2'), d = document.createElement('details');
+    d.className = s.className; d.id = s.id; const sm = document.createElement('summary'); sm.style.cursor = 'pointer'; sm.style.listStyle = 'none';
+    h.style.display = 'flex'; h.style.justifyContent = 'space-between'; h.style.margin = '0'; h.insertAdjacentHTML('beforeend', '<span class="seta" style="font-weight:400">›</span>');
+    sm.appendChild(h); d.appendChild(sm); while (s.firstChild) d.appendChild(s.firstChild); s.replaceWith(d);
+  });
+}
 function telaFicha(P, X) {
   const { D, $, esc, brlC, brl2, zapLink, pode, ADMIN } = X;
   const p = pessoa(D, PID);
@@ -224,6 +239,7 @@ function telaFicha(P, X) {
     <section class="bloco"><h2>Linha do tempo</h2>${linhaTempo(D, X, p)}</section>
     ${p.observacoes ? `<section class="bloco"><h2>Anotações</h2><div style="white-space:pre-wrap;color:var(--tinta-2)">${esc(p.observacoes)}</div></section>` : ''}
     ${ADMIN ? '<button class="sec grande" id="excluirP" style="margin-top:14px;width:100%">Excluir ficha</button>' : ''}`;
+  organizarFicha(P);
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarP').onclick = () => ir(X, 'editar', p.id);
   if ($('avaliarForn')) $('avaliarForn').onclick = () => X.fornecedores.avaliar({ pessoa_id: p.id });
@@ -299,7 +315,7 @@ function telaForm(P, X) {
   const ind = p.indicado_por ? pessoa(D, p.indicado_por) : null;
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ ${nova ? 'Clientes' : esc(p.nome)}</button>
-    <h1 class="titulo" style="margin-top:6px">${nova ? 'Novo <em>contato</em>' : 'Editar <em>ficha</em>'}</h1>
+    <h1 class="titulo" style="margin-top:6px">${nova ? 'Novo <em>cadastro</em>' : 'Editar <em>ficha</em>'}</h1>
     <form id="fP" class="form" autocomplete="off">
       <div class="grupo">Quem é</div>
       ${campo('nome', 'Nome completo, como no documento', p.nome, 'text', 'required')}
