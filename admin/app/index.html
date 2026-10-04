@@ -343,7 +343,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=4';
-import * as CRM from '/admin/app/crm.js?v=9';
+import * as CRM from '/admin/app/crm.js?v=10';
 import * as FORN from '/admin/app/fornecedores.js?v=6';
 import * as COT from '/admin/app/cotador.js?v=3';
 const EXIGIR_CODIGO = true;
@@ -1358,6 +1358,8 @@ async function moverEtapa(id, etapa) {
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
 }
+// atendimentos da vista atual sem responsável (ou com alguém que saiu da equipe)
+const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
 function telaReunioes(P) {
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
@@ -1392,6 +1394,8 @@ function telaReunioes(P) {
     </div>
     ${G ? '' : blocoConv('Conversão por produto', base, r => r.produto)}
     ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
+    ${ADMIN && semResp().length ? `<section class="bloco"><h2>Sem responsável</h2><div class="sub" style="margin-top:0">${semResp().length} ${semResp().length === 1 ? 'atendimento' : 'atendimentos'} de ${G ? 'Gestão de Milhas' : 'viagens'}, de todos os períodos, sem ninguém definido (a maioria veio do Iddas).</div>
+      <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Passar para</span><select id="loteResp">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteRespB" style="align-self:end">Definir para todos</button></div></section>` : ''}
     ${blocoConv('Conversão por origem', base, r => r.origem)}
     ${blocoAtendimento(base)}
     ${(m => m.length ? `<section class="bloco"><h2>Por que não fechou</h2>${m.map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}${base.filter(r => r.resultado === 'Não fechou' && r.motivo_detalhe).map(r => `<button class="lin" data-r="${r.id}" style="display:block;padding:10px 0"><b style="font-weight:600;color:var(--verde)">${esc(r.cliente)}</b> · ${esc(r.motivo_perda || 'sem motivo')}<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">${esc(r.motivo_detalhe)}</span></button>`).join('')}</section>` : '')(Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]))}
@@ -1406,6 +1410,17 @@ function telaReunioes(P) {
   ligarMes('reMes', () => telaReunioes(P));
   $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
   ligarCardsReuniao(P);
+  if ($('loteRespB')) $('loteRespB').onclick = async () => {
+    const quem = $('loteResp').value, L = semResp(), ids = L.map(r => r.id);
+    if (!confirm(`Definir ${nomeTime(quem)} como responsável de ${ids.length} ${ids.length === 1 ? 'atendimento' : 'atendimentos'}?`)) return;
+    $('loteRespB').disabled = true; $('loteRespB').textContent = 'Salvando...';
+    for (let k = 0; k < ids.length; k += 100) {
+      const { error } = await sb.from('atendimentos').update({ responsavel_id: quem }).in('id', ids.slice(k, k + 100));
+      if (error) { aviso('Parou no meio: ' + error.message); break; }
+      L.slice(k, k + 100).forEach(r => { r.responsavel_id = quem; });
+    }
+    aviso('Responsável definido.'); telaReunioes(P);
+  };
   P.querySelectorAll('[data-agav]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.agav));
   P.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => moverEtapa(b.dataset.mv, b.dataset.et));
   const kb = P.querySelector('.kanban'), col = kb && [...kb.children].find(c => c.querySelector('.kc'));
@@ -1434,7 +1449,7 @@ function telaFormReuniao(P) {
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : sel('produto', 'Produto', RE_PRODUTOS, r.produto)}
-      ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
+      ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
       <div class="grupo">Cliente</div>
       ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
       <datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>

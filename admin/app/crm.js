@@ -320,13 +320,13 @@ function telaForm(P, X) {
       <div class="grupo">Como chegou</div>
       <label class="fl"><span>Origem</span><select name="origem"><option value="">-</option>${[...new Set([...ORIGENS, p.origem].filter(Boolean))].map(o => `<option ${norm(o) === norm(p.origem) ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>
       <label class="fl"><span>Indicado por</span><input name="indicado" list="dlInd" value="${esc(ind ? ind.nome : '')}" placeholder="Nome de quem indicou"></label>
-      <datalist id="dlInd">${[...parceiros, ...outros.filter(o => !parceiros.includes(o))].slice(0, 1500).map(o => `<option value="${esc(o.nome)}">`).join('')}</datalist>
-      ${verDocs && (p.papeis || []).includes('parceiro') ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}
+      <datalist id="dlInd">${[...parceiros.map(o => o.nome), ...(D.parc || []).map(x => x.nome).filter(n => !parceiros.some(o => norm(o.nome) === norm(n))), ...outros.filter(o => !parceiros.includes(o)).map(o => o.nome)].slice(0, 1500).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
       <div class="grupo">Interesse</div>
       <div class="chips" id="interP" style="flex-wrap:wrap">${Object.entries(INTERESSES).map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.interesse || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="grupo">Situação</div>
-      <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro']].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <div class="sub">Lead vira cliente sozinho na primeira compra (emissão ou atendimento fechado). Gestão e Parceiro são marcados quando a pessoa entra na Gestão ou é cadastrada como parceira.</div>
+      <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro'], ...(X.ADMIN ? [['parceiro', 'Parceiro de indicação']] : [])].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div id="parcCampos" ${(p.papeis || []).includes('parceiro') ? '' : 'hidden'}><div class="duas-col">${campo('parc_pct', 'Remuneração do parceiro (%)', '', 'number', 'placeholder="10"')}${verDocs ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}</div><div class="sub" style="margin-top:0">O percentual vale para as próximas vendas que ele indicar. O WhatsApp é o celular da ficha.</div></div>
+      <div class="sub">Lead vira cliente sozinho na primeira compra (emissão ou atendimento fechado). Gestão é marcada quando a pessoa entra na Gestão de Milhas.</div>
       <label class="fl"><span>Anotações</span><textarea name="observacoes" rows="3">${esc(p.observacoes || '')}</textarea></label>
       <button class="zap grande" type="submit" id="salvarP" style="margin-top:14px;width:100%">${nova ? 'Cadastrar' : 'Salvar'}</button>
       <div class="sub" id="msgP"></div>
@@ -335,7 +335,8 @@ function telaForm(P, X) {
   const papeis = new Set(p.papeis || []);
   const inter = new Set(p.interesse || []);
   $('interP').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; inter.has(k) ? inter.delete(k) : inter.add(k); b.classList.toggle('on', inter.has(k)); };
-  $('papeis').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; papeis.has(k) ? papeis.delete(k) : papeis.add(k); b.classList.toggle('on', papeis.has(k)); };
+  $('papeis').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; papeis.has(k) ? papeis.delete(k) : papeis.add(k); b.classList.toggle('on', papeis.has(k)); if (k === 'parceiro') $('parcCampos').hidden = !papeis.has(k); };
+  if (X.ADMIN && p.parceiro_ref) X.sb.from('parceiros').select('pct').eq('id', p.parceiro_ref).maybeSingle().then(({ data }) => { if (data && f.elements.parc_pct && !f.elements.parc_pct.value) f.elements.parc_pct.value = data.pct ?? ''; });
   $('voltar').onclick = () => nova ? ir(X, 'lista') : ir(X, 'ficha', p.id);
   // avisa na hora se a pessoa já tem ficha
   const checar = () => {
@@ -353,16 +354,32 @@ function telaForm(P, X) {
     if (nova && checar()) { $('msgP').textContent = 'Essa pessoa já tem ficha. Abra a ficha existente acima.'; return; }
     const cpf = so(g('cpf'));
     if (g('cpf') && cpf.length !== 11) { $('msgP').textContent = 'O CPF precisa ter 11 números.'; return; }
-    const indN = norm(g('indicado')), indP = indN ? (D.pessoas || []).find(o => o.id !== p.id && norm(o.nome) === indN) : null;
-    if (indN && !indP) { $('msgP').textContent = 'Quem indicou ainda não tem ficha. Cadastre essa pessoa primeiro ou deixe o campo em branco.'; return; }
+    const indN = norm(g('indicado'));
+    let indP = indN ? (D.pessoas || []).find(o => o.id !== p.id && norm(o.nome) === indN) : null;
+    if (indN && !indP) {
+      const pc = (D.parc || []).find(x => norm(x.nome) === indN);
+      const ins = await X.sb.from('pessoas').insert({ nome: g('indicado').replace(/\s+/g, ' '), papeis: pc ? ['parceiro'] : [], ...(pc ? { parceiro_ref: pc.id } : {}) }).select().single();
+      if (ins.error) { $('msgP').textContent = 'Não criou a ficha de quem indicou: ' + ins.error.message; return; }
+      indP = ins.data; D.pessoas.push(indP); X.aviso(`Ficha de ${indP.nome} criada${pc ? ' como parceira' : ''}.`);
+    }
     const row = { nome: g('nome').replace(/\s+/g, ' '), celular: g('celular') || null, email: g('email') || null, instagram: g('instagram') || null,
       aceita_comunicacao: f.elements.aceita_comunicacao.checked, nascimento: g('nascimento') || null, sexo: g('sexo') || null,
       origem: g('origem') || null, indicado_por: indP ? indP.id : null, observacoes: g('observacoes') || null,
-      papeis: [...new Set([...papeis, ...(p.papeis || []).filter(k => k === 'gestao' || k === 'parceiro')])].filter(k => k !== 'lead'), interesse: [...inter] };
+      papeis: [...new Set([...papeis, ...(p.papeis || []).filter(k => k === 'gestao' || (k === 'parceiro' && !X.ADMIN))])].filter(k => k !== 'lead'), interesse: [...inter] };
     $('salvarP').disabled = true; $('msgP').textContent = 'Salvando...';
     const q = nova ? X.sb.from('pessoas').insert(row).select().single() : X.sb.from('pessoas').update(row).eq('id', p.id).select().single();
     const { data, error } = await q;
     if (error) { $('salvarP').disabled = false; $('msgP').textContent = 'Não salvou: ' + error.message; return; }
+    if (X.ADMIN) {
+      const eraParc = (p.papeis || []).includes('parceiro'), ehParc = papeis.has('parceiro');
+      if (ehParc) {
+        const prow = { nome: row.nome, whatsapp: row.celular, ativo: true };
+        if (g('parc_pct') !== '') prow.pct = Number(String(g('parc_pct')).replace(',', '.')) || 0;
+        const r = data.parceiro_ref ? await X.sb.from('parceiros').update(prow).eq('id', data.parceiro_ref) : await X.sb.from('parceiros').insert({ pct: 0, ...prow }).select().single();
+        if (r.error) X.aviso('A ficha foi salva, mas o parceiro não: ' + r.error.message);
+        else if (!data.parceiro_ref && r.data) { const u = await X.sb.from('pessoas').update({ parceiro_ref: r.data.id }).eq('id', data.id).select().single(); if (!u.error) Object.assign(data, u.data); }
+      } else if (eraParc && data.parceiro_ref) await X.sb.from('parceiros').update({ ativo: false }).eq('id', data.parceiro_ref);
+    }
     if (verDocs) {
       const d = { pessoa_id: data.id, cpf: cpf ? fmtCpf(cpf) : null, passaporte: g('passaporte') || null, passaporte_validade: g('passaporte_validade') || null,
         nacionalidade: g('nacionalidade') || null, visto: g('visto') || null, visto_validade: g('visto_validade') || null };
