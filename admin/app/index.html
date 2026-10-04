@@ -1969,8 +1969,11 @@ function telaEquipe(P) {
       </div>
       <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${p.user_id === D.meuId ? 'disabled' : ''}><span>Acesso ativo</span></label>
       <button class="sec" data-salvar="${p.user_id}" style="margin-top:8px">Salvar</button>
+      <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Aplicar este percentual às vendas já registradas</summary>
+        <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Vendas a partir de</span><input type="date" name="desde" value="${EM_MES}-01"></label><button class="zap" type="button" data-aplicar="${p.user_id}" style="align-self:end">Aplicar ${pct(p.comissao_pct)}</button></div>
+        <div class="sub" style="margin-top:2px">Recalcula a comissão das vendas dessa pessoa a partir da data. Meses já fechados não mudam.</div></details>
     </div>`).join('')}</div>
-    <div class="sub">A mudança de percentual vale para as próximas vendas. Vendas já registradas mantêm o percentual da época. Para incluir alguém novo, use Empresa, Equipe e acessos; a pessoa entra como colaborador com 10%.</div>
+    <div class="sub">A mudança de percentual vale para as próximas vendas. Para mudar vendas já registradas, use "Aplicar este percentual às vendas já registradas" em cada pessoa. Para incluir alguém novo, use Empresa, Equipe e acessos; a pessoa entra como colaborador com 10%.</div>
 
     <div class="secao">Parceiros de indicação</div>
     <div class="bloco" style="margin-top:0">${D.parceirosAdm.length ? D.parceirosAdm.map(p => `<div class="lin"><span>${esc(p.nome)}${p.ativo ? '' : ' (inativo)'}</span><span>${pct(p.pct)} <button class="mini" data-par="${p.id}">editar</button></span></div>`).join('') : '<div class="vazio">Nenhum parceiro cadastrado.</div>'}</div>
@@ -1998,6 +2001,22 @@ function telaEquipe(P) {
     const { error } = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: c.querySelector('[name=papel]').value, p_pct: Number(c.querySelector('[name=pct]').value || 0), p_ativo: c.querySelector('[name=ativo]').checked });
     if (error) { aviso('Não salvou: ' + error.message); return; }
     await carregarEquipe(); aviso('Salvo.'); telaEquipe(P);
+  });
+  P.querySelectorAll('[data-aplicar]').forEach(b => b.onclick = async () => {
+    const u = b.dataset.aplicar, c = b.closest('[data-u]'), desde = c.querySelector('[name=desde]').value || '0000-01-01';
+    const pessoa = D.equipe.find(x => x.user_id === u), novo = +pessoa.comissao_pct || 0;
+    const minhas = D.emissoes.filter(e => (e.vendedor_app || e.vendedor_id) === u && String(e.data_negociacao) >= desde);
+    const fechadas = minhas.filter(e => mesFechado(String(e.data_negociacao).slice(0, 7))).length;
+    const alvo = minhas.filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)) && +e.comissao_pct !== novo);
+    if (!alvo.length) { aviso(fechadas ? `Nada a mudar: as ${fechadas} vendas desse período estão em meses fechados.` : `Todas as vendas desde ${desde.split('-').reverse().join('/')} já estão com ${pct(novo)}.`); return; }
+    if (!confirm(`Aplicar ${pct(novo)} de comissão a ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'} de ${pessoa.nome} desde ${desde.split('-').reverse().join('/')}?${fechadas ? ` (${fechadas} em meses fechados ficam como estão.)` : ''}`)) return;
+    b.disabled = true; b.textContent = 'Aplicando...';
+    const ids = alvo.map(e => e.id);
+    for (let k = 0; k < ids.length; k += 100) {
+      const { error } = await sb.from('emissoes').update({ comissao_pct_app: novo }).in('id', ids.slice(k, k + 100));
+      if (error) { aviso('Parou no meio: ' + error.message); break; }
+    }
+    await carregar(true); aviso('Comissão recalculada.'); if (ABA === 'equipe') telaEquipe(P);
   });
   if ($('irAcessos')) $('irAcessos').onclick = (e) => { e.preventDefault(); ir('acessos'); };
   P.querySelectorAll('[data-par]').forEach(b => b.onclick = () => {
