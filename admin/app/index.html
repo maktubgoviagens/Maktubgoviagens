@@ -240,8 +240,8 @@ button.lin:first-of-type{border-top:0}
 button.lin .seta{color:var(--dourado);margin-left:6px}
 .icone{position:relative}
 .card.em{margin-bottom:0}
-.emchk{display:flex;gap:6px;margin:-1px 0 12px;background:var(--branco);border:1px solid var(--linha);border-top:0;padding:8px}
-.emchk button{flex:1;display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--linha);padding:8px 10px;font:inherit;font-size:12.5px;color:var(--tinta-2);cursor:pointer;text-align:left}
+.emchk{display:flex;flex-wrap:wrap;gap:6px;margin:-1px 0 12px;background:var(--branco);border:1px solid var(--linha);border-top:0;padding:8px}
+.emchk button{flex:1 1 140px;display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--linha);padding:8px 10px;font:inherit;font-size:12.5px;color:var(--tinta-2);cursor:pointer;text-align:left}
 .emchk .cx{width:18px;height:18px;border:1.5px solid var(--tinta-3);display:grid;place-items:center;font-size:12px;flex:0 0 18px}
 .emchk button.ok{color:var(--verde);border-color:rgba(47,107,74,.45)}
 .emchk button.ok .cx{background:var(--verde);border-color:var(--verde);color:#fff}
@@ -943,7 +943,9 @@ function telaEmissoes(P) {
         <div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div></div>
       </button>${pode('financeiro') ? `<div class="emchk">
         <button type="button" data-ck-cli="${e.id}" class="${e.pago ? 'ok' : ''}" ${e.pago ? 'disabled' : ''}><span class="cx">${e.pago ? '✓' : ''}</span><span>Recebido do cliente</span></button>
-        ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}</div>` : ''}`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
+        ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}
+        <button type="button" data-ck-nota="${e.id}" class="${e.nota_gerada ? 'ok' : ''}"><span class="cx">${e.nota_gerada ? '✓' : ''}</span><span>Nota emitida</span></button>
+        <button type="button" data-nota-pdf="${e.id}" class="${e.nota_arquivo ? 'ok' : ''}"><span class="cx">${e.nota_arquivo ? '↓' : '+'}</span><span>${e.nota_arquivo ? 'Baixar nota' : 'Anexar PDF da nota'}</span></button></div>` : ''}`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
@@ -981,6 +983,43 @@ function telaEmissoes(P) {
     if (error) { b.disabled = false; aviso('Não salvou: ' + error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : '')); return; }
     Object.assign(e, row); aviso(novo ? 'Pago ao fornecedor.' : 'Voltou para a lista de a pagar.'); telaEmissoes(P);
   });
+  P.querySelectorAll('[data-ck-nota]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.ckNota, e = D.emissoes.find(x => x.id === id), novo = !e.nota_gerada;
+    if (!novo && !b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo para desmarcar'; return; }
+    b.disabled = true;
+    const { error } = await sb.from('emissoes').update({ nota_gerada: novo }).eq('id', id);
+    if (error) { b.disabled = false; aviso('Não salvou: ' + error.message); return; }
+    e.nota_gerada = novo; aviso(novo ? 'Nota marcada como emitida. Vai para a planilha em até 5 minutos.' : 'Nota desmarcada no app. Desmarque também na planilha.'); telaEmissoes(P);
+  });
+  P.querySelectorAll('[data-nota-pdf]').forEach(b => b.onclick = () => {
+    const e = D.emissoes.find(x => x.id === b.dataset.notaPdf);
+    if (e.nota_arquivo) notaBaixar(e); else notaAnexar(e, () => telaEmissoes(P));
+  });
+}
+
+/* ---------- PDF da nota fiscal (bucket privado "notas") ---------- */
+async function notaBaixar(e) {
+  const { data, error } = await sb.storage.from('notas').createSignedUrl(e.nota_arquivo, 300, { download: 'Nota fiscal - ' + (e.comprador || 'venda') + '.' + (String(e.nota_arquivo).split('.').pop() || 'pdf') });
+  if (error) { aviso('Não abriu a nota: ' + error.message); return; }
+  location.href = data.signedUrl;
+}
+function notaAnexar(e, depois) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,.pdf,.xml';
+  inp.onchange = async () => {
+    const file = inp.files && inp.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { aviso('Arquivo acima de 10 MB.'); return; }
+    aviso('Enviando a nota...');
+    const ext = /\.xml$/i.test(file.name) ? 'xml' : 'pdf';
+    const path = e.id + '/' + Date.now() + '.' + ext;
+    const up = await sb.storage.from('notas').upload(path, file, { contentType: ext === 'xml' ? 'text/xml' : 'application/pdf', upsert: false });
+    if (up.error) { aviso('Não enviou: ' + up.error.message + (/bucket/i.test(up.error.message) ? ' (rode o notas-e-datas.sql)' : '')); return; }
+    const antigo = e.nota_arquivo;
+    const { error } = await sb.from('emissoes').update({ nota_arquivo: path, nota_gerada: true }).eq('id', e.id);
+    if (error) { await sb.storage.from('notas').remove([path]); aviso('Não salvou: ' + error.message + (/nota_arquivo/.test(error.message) ? ' (rode o notas-e-datas.sql)' : '')); return; }
+    if (antigo) await sb.storage.from('notas').remove([antigo]);
+    e.nota_arquivo = path; e.nota_gerada = true; aviso('Nota anexada e marcada como emitida.'); if (depois) depois();
+  };
+  inp.click();
 }
 
 /* ---------- formulário de emissão ---------- */
@@ -1046,6 +1085,7 @@ function telaFormEmissao(P) {
 
       <div class="grupo">Acompanhamento</div>
       <div class="caixas">${caixa('pago', 'Pago pelo cliente', e.pago)}${caixa('nota_gerada', 'Nota fiscal emitida', e.nota_gerada)}${caixa('checkin_ida', 'Check-in da ida feito', e.checkin_ida)}${caixa('checkin_volta', 'Check-in da volta feito', e.checkin_volta)}${caixa('monitorado', 'Voo monitorado', e.monitorado)}${caixa('voado', 'Voado', e.voado)}${caixa('feito_pos', 'Pós-venda feito', e.feito_pos)}</div>
+      ${!nova ? `<div class="emchk" style="margin:4px 0 12px;border-top:1px solid var(--linha)"><button type="button" id="notaPdf" class="${e.nota_arquivo ? 'ok' : ''}"><span class="cx">${e.nota_arquivo ? '↓' : '+'}</span><span>${e.nota_arquivo ? 'Baixar a nota fiscal' : 'Anexar PDF da nota fiscal'}</span></button>${e.nota_arquivo && (ADMIN || e.vendedor_id === D.meuId) ? `<button type="button" id="notaTroca"><span class="cx">↺</span><span>Trocar o arquivo</span></button>` : ''}</div>` : ''}
       <label class="fl"><span>Observações</span><textarea name="observacoes" rows="3">${esc(e.observacoes || '')}</textarea></label>
 
       ${podeEditar ? `<button class="zap grande" type="submit" id="salvar">${nova ? 'Registrar emissão' : 'Salvar alterações'}</button>` : ''}
@@ -1053,6 +1093,9 @@ function telaFormEmissao(P) {
       <div class="sub" id="msgEm" style="margin-top:8px"></div>
     </form>`;
   const f = $('fEm');
+  const reabrir = () => telaEmissoes(P);
+  if ($('notaPdf')) $('notaPdf').onclick = () => e.nota_arquivo ? notaBaixar(e) : notaAnexar(e, reabrir);
+  if ($('notaTroca')) $('notaTroca').onclick = () => notaAnexar(e, reabrir);
   if (f.elements.comprador) f.elements.comprador.addEventListener('change', () => {
     const p = pessoaPorNome(f.elements.comprador.value);
     f.elements.pessoa_id.value = p ? p.id : '';
@@ -1215,7 +1258,7 @@ function ligarAjuste(e, travado) {
 
 /* ================= avisos ================= */
 const VAPID = 'BC3X1jCIe3UoWoPDk9q857kykbSiRbJQQZ8gNhf2fmHiCFDlWgzNMzrIXhwRPdytmYqcfLgz7zlsPy27HodS7EQ';
-const AV_IC = { venda: '$', pagamento: '$', lead: '@', convite: '+', reuniao: '•', talento: '+', checkin: '✈', milhas: '!', receber: '$', resumo: '≡', fechou: '✓', retorno: '↺', teste: '•', sistema: '•' };
+const AV_IC = { venda: '$', pagamento: '$', lead: '@', convite: '+', reuniao: '•', talento: '+', checkin: '✈', milhas: '!', receber: '$', resumo: '≡', fechou: '✓', retorno: '↺', teste: '•', sistema: '•', alteracao: '↻', nota: '▤' };
 async function carregarAvisos() {
   const [a, s] = await Promise.all([sb.from('avisos').select('*').order('id', { ascending: false }).limit(200), sb.rpc('avisos_situacao')]);
   D.avisos = a.data || []; D.avSit = s.error ? null : s.data;
