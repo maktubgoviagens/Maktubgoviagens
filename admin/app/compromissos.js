@@ -83,6 +83,14 @@ function montar(ctx) {
   return { pessoas: Object.values(pessoas), L: L.sort((a, b) => a.venc - b.venc) };
 }
 
+/* Fechamentos do time pagos (ou a pagar) dentro do mês k: o fechamento do mês anterior. Para o DRE. */
+export async function folha(ctx, k) {
+  if (!C || C.erro) await carregar(ctx);
+  if (!C || C.erro) return null;
+  return montar(ctx).L.filter(x => x.tipo === 'time' && mesMais(x.comp, 1) === k);
+}
+export const MES_CAIXA = mesMais(INICIO, 1);
+
 /* Para o Início: quantos pagamentos vencem nos próximos 3 dias ou já venceram. */
 export function alertas(ctx) {
   if (!C || C.erro) return undefined;
