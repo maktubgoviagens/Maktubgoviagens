@@ -463,7 +463,7 @@ function buscaGeral(q) {
   const k = semAc(q).trim(), dig = String(q).replace(/\D/g, ''); if (k.length < 2) return [];
   const G = [];
   if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
-  if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => VER_TODAS() || (e.vendedor_app || e.vendedor_id) === D.meuId).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
+  if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => VER_LISTA() || (e.vendedor_app || e.vendedor_id) === D.meuId).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
   if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
   if (podeAba('fornecedores')) G.push(['Hotéis e serviços', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
@@ -501,7 +501,7 @@ $('pagina').addEventListener('click', async (e) => {
 const ABAS_ADMIN = ['empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
-  ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
+  ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
@@ -515,6 +515,7 @@ const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda'
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
 const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
+const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = podeAba(h[0]) ? h[0] : 'inicio';
@@ -920,19 +921,19 @@ const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
 let EM_PEND = 'todas';
 function telaEmissoes(P) {
   if (EM_ED) return telaFormEmissao(P);
-  const VER = VER_TODAS();
+  const VER = VER_TODAS(), LST = VER_LISTA(), minha = (e) => e.vendedor_id === D.meuId;
   let L = doMes(EM_MES);
-  if (!VER) L = L.filter(e => e.vendedor_id === D.meuId);
-  if (VER && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
+  if (!LST) L = L.filter(minha);
+  if (LST && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
   if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
   if (EM_PEND === 'forn') L = L.filter(e => devePagar(e) && !e.pago_fornecedor); else if (EM_PEND === 'cli') L = L.filter(e => !e.pago);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `${segOp('emissoes')}
-    <h1 class="titulo">${VER ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
+    <h1 class="titulo">${LST ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
     ${infoSinc()}
     ${seletorMes('emMes')}
-    ${VER ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
+    ${LST ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
     ${ADMIN && semVend().length ? `<details class="bloco" style="margin-top:10px"><summary style="cursor:pointer;color:var(--alerta)">${semVend().length} ${semVend().length === 1 ? 'venda sem vendedor' : 'vendas sem vendedor'} (todos os meses)</summary>
       <div class="sub" style="margin-top:6px">${semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7))).length} em meses abertos podem ser definidas aqui; meses fechados não mudam. A comissão sai pelo percentual de quem você escolher.</div>
       <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Passar para</span><select id="loteVend">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteVendB" style="align-self:end">Definir</button></div>
@@ -940,16 +941,17 @@ function telaEmissoes(P) {
     ${pode('financeiro') ? `<div class="chips" id="emPend" style="margin-top:8px">${[['todas', 'Todas'], ['cli', 'Cliente não pagou'], ['forn', 'Fornecedor a pagar']].map(([k, l]) => `<button data-p="${k}" class="${EM_PEND === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
     <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : 'no mês'}</div></div>
+      <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : LST ? L.filter(minha).length + ' suas no mês' : 'no mês'}</div></div>
       ${VER ? `<div class="num"><div class="l">Lucro líquido</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
-              : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
+              : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
         <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
-        <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}<span>Comissão:</span> ${brl2(e.comissao)}</div>
+        <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}${VER || minha(e) ? `<span>Comissão:</span> ${brl2(e.comissao)}` : ''}</div>
+        ${!VER && LST ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}
         ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
-        <div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div></div>
+        ${VER || minha(e) ? `<div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div>` : ''}</div>
       </button>${pode('financeiro') ? `<div class="emchk">
         <button type="button" data-ck-cli="${e.id}" class="${e.pago ? 'ok' : ''}" ${e.pago ? 'disabled' : ''}><span class="cx">${e.pago ? '✓' : ''}</span><span>Recebido do cliente</span></button>
         ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}
@@ -974,7 +976,7 @@ function telaEmissoes(P) {
     await carregar(true); aviso('Vendedor definido.'); if (ABA === 'emissoes') telaEmissoes(P);
   };
   $('emServ').onchange = (e) => { EM_SERV = e.target.value; telaEmissoes(P); };
-  P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
+  P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const em = D.emissoes.find(x => x.id === b.dataset.e); if (!VER && em && !minha(em)) return; EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
   // checks financeiros direto no card: um toque marca, desmarcar pede confirmação
   P.querySelectorAll('[data-ck-cli]').forEach(b => b.onclick = async () => {
     if (!b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo: cliente pagou'; return; }
