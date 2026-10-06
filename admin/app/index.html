@@ -629,7 +629,8 @@ async function carregar(silencioso) {
   if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
-  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
+  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null;
+  if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
   const G = pode('gestao'), LE = pode('leads');
   if (ADMIN || G || LE || pode('talentos')) {
     const nada = Promise.resolve({ data: [], error: null, count: 0 });
