@@ -40,13 +40,14 @@ export function parcelas(emissoes, uid) {
 /* Carrega salários, dias de pagamento, despesas fixas e o que já foi pago. */
 export async function carregar(ctx) {
   const { sb } = ctx, atual = mk(new Date().toISOString());
-  const [t, p, f] = await Promise.all([
+  const [t, p, f, a] = await Promise.all([
     sb.rpc('compromissos_time', { p_ini: INICIO + '-01', p_fim: mesMais(atual, 4) + '-01' }),
     sb.from('pagamentos_feitos').select('*').order('pago_em', { ascending: false }).limit(500),
-    sb.from('despesas_fixas').select('*')
+    sb.from('despesas_fixas').select('*'),
+    sb.from('despesas').select('*').gte('mes', INICIO + '-01')
   ]);
   if (t.error || p.error) { C = { erro: (t.error || p.error).message }; return C; }
-  C = { time: t.data || [], pagos: p.data || [], fixas: f.error ? [] : (f.data || []) };
+  C = { time: t.data || [], pagos: p.data || [], fixas: f.error ? [] : (f.data || []), avulsas: a.error ? [] : (a.data || []) };
   return C;
 }
 
@@ -72,6 +73,10 @@ function montar(ctx) {
       L.push({ tipo: 'fixa', ref: x.id, comp: k, titulo: x.descricao, desc: (x.categoria || 'Despesa fixa') + ' de ' + nomeMes(k), venc: dataNoMes(k, x.dia_vencimento),
         valor: Number(x.valor) || 0, pago: pago('fixa', x.id, k) });
     }
+  });
+  C.avulsas.forEach(d => {
+    const k = mk(d.mes), v = d.vencimento ? new Date(+d.vencimento.slice(0, 4), +d.vencimento.slice(5, 7) - 1, +d.vencimento.slice(8, 10)) : dataNoMes(k, 31);
+    L.push({ tipo: 'avulsa', ref: d.id, comp: k, titulo: d.descricao, desc: (d.categoria || 'Despesa avulsa') + ' de ' + nomeMes(k), venc: v, valor: Number(d.valor) || 0, pago: pago('avulsa', d.id, k) });
   });
   return { pessoas: Object.values(pessoas), L: L.sort((a, b) => a.venc - b.venc) };
 }
@@ -109,7 +114,7 @@ export async function tela(P, ctx) {
       <div class="duas-col" style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><button class="zap" type="submit">Marcar como pago</button></div>
     </form>`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
-    <div class="sub">Salário e comissão de cada pessoa e as despesas fixas com dia de vencimento. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
+    <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento e despesas avulsas lançadas no DRE. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Próximos 7 dias</div><div class="v">${brl2(vence7.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${vence7.length} ${vence7.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
       <div class="num"><div class="l">Atrasados</div><div class="v">${brl2(atras.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${atras.length} ${atras.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
@@ -125,7 +130,7 @@ export async function tela(P, ctx) {
     <section class="bloco" style="margin-top:0">${pagos.length ? pagos.map(x => `<div class="lin"><span>${esc(x.titulo)} · ${esc(x.desc)}<small style="display:block;color:var(--tinta-3);font-size:12px">pago em ${String(x.pago.pago_em).split('-').reverse().join('/')}</small></span><span>${brl2(x.pago.valor)} <button class="mini" type="button" data-desf="${x.pago.id}">${CONF === x.pago.id ? 'confirmar' : 'desfazer'}</button></span></div>`).join('') : '<div class="vazio">Nenhum pagamento marcado ainda.</div>'}</section>
     <div class="secao">Dia de pagamento de cada pessoa</div>
     <section class="bloco" style="margin-top:0">${pessoas.filter(p => L.some(x => x.ref === p.id)).map(p => `<div class="lin"><span>${esc(p.nome)}</span><span><select data-dia="${p.id}">${Array.from({ length: 28 }, (_, i) => `<option ${i + 1 === p.dia ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></span></div>`).join('') || '<div class="vazio">Ninguém com salário ou comissão.</div>'}
-      <div class="sub">Despesas fixas entram aqui quando têm dia de vencimento, em Salários e despesas fixas.</div></section>`;
+      <div class="sub">Despesas fixas entram aqui quando têm dia de vencimento, em Salários e despesas fixas. Despesas avulsas entram ao serem lançadas no DRE.</div></section>`;
   $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('details[data-det]').forEach(d => d.ontoggle = () => { if (d.open) ABERTO = d.dataset.det; else if (ABERTO === d.dataset.det) ABERTO = null; });
   P.querySelectorAll('form[data-pg]').forEach(f => f.onsubmit = async (ev) => {
