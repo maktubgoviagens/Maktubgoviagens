@@ -367,6 +367,7 @@ import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=4';
+import * as CMP from '/admin/app/compromissos.js?v=2';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -496,7 +497,7 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['empresa', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
+const ABAS_ADMIN = ['empresa', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -509,9 +510,9 @@ const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -547,7 +548,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['fornecedores', 'empresa', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
+const EMP_ABAS = ['fornecedores', 'empresa', 'financeiro', 'compromissos', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -601,7 +602,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -675,10 +676,13 @@ async function carregar(silencioso) {
     if (podeAba('fornecedores')) await FORN.carregar(sb);
     [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
   } else D.pessoas = [];
+  if (podeAba('compromissos')) await CMP.carregar(ctxCMP());
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   tela();
 }
+
+function ctxCMP() { return { D, sb, $, esc, aviso, brl2, ir, aba: () => ABA, aPagar, nomeTime }; }
 
 function ctxCRM() {
   return { D, $, esc, sb, aviso, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
@@ -761,6 +765,7 @@ function tela() {
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
+  if (ABA === 'compromissos') return CMP.tela(P, ctxCMP());
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -785,6 +790,7 @@ function telaInicio(P) {
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
     ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago).length, () => ir('receber')],
+    ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Fornecedores a pagar', aPagar().length, () => ir('pagar')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
@@ -810,7 +816,7 @@ function telaInicio(P) {
     <div class="numeros">
       ${(c => `<div class="num destaque"><div class="l">Conversão do mês</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} reuniões decididas</div></div>`)(conversao(reunioesDoPeriodo(mesKey(new Date()), 'mes')))}
       <div class="num destaque"><div class="l">Lucro líquido do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
-      <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">a pagar ao time</div></div>
+      <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">geradas no mês, pagas 50/50</div></div>
       <div class="num"><div class="l">Leads em 30 dias</div><div class="v">${leads30}</div><div class="d">${(n => n + (n === 1 ? ' fechado' : ' fechados'))(D.leads.filter(r => r.status === 'fechado' && Date.now() - new Date(r.created_at) <= 30 * 864e5).length)}</div></div>
     </div>
     <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
@@ -1708,7 +1714,7 @@ function telaComissao(P) {
     <div class="sub">${pct(D.perfil.comissao_pct)} sobre o lucro de cada venda, depois do imposto</div>
     ${seletorMes('coMes')}
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Comissão do mês</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado, valor final' : 'parcial, mês em aberto'}</div></div>
+      <div class="num destaque"><div class="l">Comissão gerada no mês</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado, valor final' : 'parcial, mês em aberto'}</div></div>
       <div class="num"><div class="l">Emissões no mês</div><div class="v">${L.length}</div><div class="d">com você como vendedor</div></div>
     </div>
     <div id="minhaRem"></div>
@@ -1719,7 +1725,10 @@ function telaComissao(P) {
   const alvo = EM_MES;
   sb.rpc('minha_remuneracao', { p_mes: EM_MES + '-01' }).then(({ data, error }) => {
     const el = $('minhaRem'); if (!el || error || !data || EM_MES !== alvo || !(+data.fixo)) return;
-    el.innerHTML = `<section class="bloco"><h2>Sua remuneração em ${mesNome(EM_MES).toLowerCase()}</h2><div class="lin"><span>Salário fixo</span><span>${brl2(data.fixo)}</span></div><div class="lin"><span>Comissões</span><span>${brl2(data.comissao)}</span></div><div class="lin forte"><span>Total</span><span>${brl2(+data.fixo + +data.comissao)}</span></div></section>`;
+    const [yy, mm] = EM_MES.split('-').map(Number), pg = new Date(yy, mm, data.dia || 5).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const itens = CMP.parcelas(D.emissoes, D.meuId).filter(x => x.comp === EM_MES);
+    el.innerHTML = `<section class="bloco"><h2>Sua remuneração de ${mesNome(EM_MES).toLowerCase()}</h2><div class="sub" style="margin-top:-4px">Paga em ${pg}. Fechamento do mês: salário fixo + 1ª metade das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div><div class="lin"><span>Salário fixo</span><span>${brl2(data.fixo)}</span></div><div class="lin"><span>Comissões (50/50)</span><span>${brl2(data.comissao)}</span></div><div class="lin forte"><span>Total</span><span>${brl2(+data.fixo + +data.comissao)}</span></div>
+      ${itens.length ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Ver as comissões que entram</summary>${itens.map(i => `<div class="lin"><span>${esc(i.nome)}<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(i.tipo)}</small></span><span>${brl2(i.valor)}</span></div>`).join('')}</details>` : ''}</section>`;
   });
 }
 
@@ -1746,7 +1755,7 @@ function telaFinanceiro(P) {
       <div class="num"><div class="l">Vendas</div><div class="v">${brlC(vendas)}</div><div class="d">${L.length} emissões</div></div>
       <div class="num"><div class="l">Lucro bruto</div><div class="v">${brlC(soma(L, 'lucro_bruto'))}</div><div class="d">custo ${brlC(soma(L, 'custo'))}</div></div>
       <div class="num"><div class="l">Imposto</div><div class="v">${brlC(soma(L, 'imposto'))}</div><div class="d">${pct(D.cfg ? D.cfg.imposto_pct : 6)} sobre o lucro</div></div>
-      <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">a pagar ao time</div></div>
+      <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">geradas no mês, pagas 50/50</div></div>
       <div class="num"><div class="l">Parceiros</div><div class="v">${brlC(soma(L, 'repasse'))}</div><div class="d">remuneração de indicações</div></div>
     </div>
     ${pode('dre') ? '<div id="dreBloco"><div class="vazio" style="margin-top:12px">Calculando o DRE...</div></div>' : ''}
@@ -1949,14 +1958,16 @@ async function telaCustos(P) {
         <div class="duas-col">${campo('descricao', 'Descrição', x.descricao, 'text', 'required')}${campo('valor', 'Valor mensal (R$)', x.valor, 'number', 'required step="0.01"')}</div>
         <label class="fl"><span>Categoria</span><select name="categoria">${[...new Set([...CAT_DESP, x.categoria])].map(c => `<option ${c === x.categoria ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <div class="duas-col">${campo('desde', 'Começou em', String(x.desde).slice(0, 7), 'month', 'required')}${campo('ate', 'Último mês (opcional)', x.ate ? String(x.ate).slice(0, 7) : '', 'month')}</div>
+        ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', x.dia_vencimento || '', 'number', 'min="1" max="31"')}
         <div class="sub" style="margin-top:2px">Sem último mês, ela entra em todos os meses daqui para frente. Mudar o valor aqui muda também os meses passados; se o valor mudou de um mês para o outro, encerre esta e cadastre uma nova.</div>
         <div class="duas-col" style="margin-top:8px"><button class="zap" type="submit">Salvar</button><button class="sec" type="button" data-fxcancel>Cancelar</button></div>
         <button class="mini" type="button" data-fxdel="${x.id}" style="margin-top:10px">excluir de todos os meses</button>
-      </form>` : `<button class="lin fxlin" data-fxed="${x.id}"><span>${esc(x.descricao)} · ${esc(x.categoria)}${ativa(x) ? '' : ' <span class="tag">encerrada</span>'}<small>${periodoFixa(x)}</small></span><span>${brl2(x.valor)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Nenhuma despesa fixa cadastrada.</div>'}
+      </form>` : `<button class="lin fxlin" data-fxed="${x.id}"><span>${esc(x.descricao)} · ${esc(x.categoria)}${ativa(x) ? '' : ' <span class="tag">encerrada</span>'}<small>${periodoFixa(x)}${x.dia_vencimento ? ' · vence dia ' + x.dia_vencimento : ''}</small></span><span>${brl2(x.valor)}<b class="seta">›</b></span></button>`).join('') : '<div class="vazio">Nenhuma despesa fixa cadastrada.</div>'}
       ${fixas.length ? '<div class="sub">Toque numa despesa para mudar o mês de início, encerrar ou corrigir.</div>' : ''}</div>
     <form class="bloco form" id="fFixa"><h2>Nova despesa fixa</h2>
       <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: contador, Supabase, Canva"')}${campo('valor', 'Valor mensal (R$)', '', 'number', 'required')}</div>
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
+      ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', '', 'number', 'min="1" max="31"')}
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
   $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
@@ -1967,7 +1978,7 @@ async function telaCustos(P) {
   });
   $('fFixa').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
-    const { error } = await sb.from('despesas_fixas').insert({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: (f.elements.desde.value || hoje) + '-01' });
+    const { error } = await sb.from('despesas_fixas').insert({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: (f.elements.desde.value || hoje) + '-01', dia_vencimento: Number(f.elements.dia_vencimento.value) || null });
     if (error) { aviso('Não salvou: ' + error.message); return; }
     aviso('Despesa fixa adicionada.'); telaCustos(P);
   };
@@ -1977,7 +1988,7 @@ async function telaCustos(P) {
     ev.preventDefault();
     const desde = f.elements.desde.value, ate = f.elements.ate.value;
     if (ate && ate < desde) { aviso('O último mês não pode ser antes do início.'); return; }
-    const { error } = await sb.from('despesas_fixas').update({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: desde + '-01', ate: ate ? ate + '-01' : null }).eq('id', f.dataset.fx);
+    const { error } = await sb.from('despesas_fixas').update({ descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')), desde: desde + '-01', ate: ate ? ate + '-01' : null, dia_vencimento: Number(f.elements.dia_vencimento.value) || null }).eq('id', f.dataset.fx);
     if (error) { aviso('Não salvou: ' + error.message); return; }
     FX_ED = null; aviso('Despesa fixa atualizada. O DRE já considera os novos meses.'); telaCustos(P);
   });
@@ -2090,10 +2101,10 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['compromissos', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
