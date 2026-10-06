@@ -368,7 +368,7 @@ import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=4';
 import * as CMP from '/admin/app/compromissos.js?v=5';
-import * as DRE from '/admin/app/dre.js?v=3';
+import * as DRE from '/admin/app/dre.js?v=4';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -2211,7 +2211,9 @@ function telaEquipe(P) {
     const pessoa = D.equipe.find(x => x.user_id === u), novo = +pessoa.comissao_pct || 0;
     const minhas = D.emissoes.filter(e => (e.vendedor_app || e.vendedor_id) === u && String(e.data_negociacao) >= desde);
     const fechadas = minhas.filter(e => mesFechado(String(e.data_negociacao).slice(0, 7))).length;
-    const alvo = minhas.filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)) && +e.comissao_pct !== novo);
+    const daPl = minhas.filter(e => temManual(e.comissao_manual)).length;
+    const alvo = minhas.filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)) && !temManual(e.comissao_manual) && +e.comissao_pct !== novo);
+    if (!alvo.length && daPl) { aviso(`Nada a mudar: as vendas desse período usam a comissão escrita na planilha (coluna Comissão), que sempre vale.`); return; }
     if (!alvo.length) { aviso(fechadas ? `Nada a mudar: as ${fechadas} vendas desse período estão em meses fechados.` : `Todas as vendas desde ${desde.split('-').reverse().join('/')} já estão com ${pct(novo)}.`); return; }
     if (!confirm(`Aplicar ${pct(novo)} de comissão a ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'} de ${pessoa.nome} desde ${desde.split('-').reverse().join('/')}?${fechadas ? ` (${fechadas} em meses fechados ficam como estão.)` : ''}`)) return;
     b.disabled = true; b.textContent = 'Aplicando...';

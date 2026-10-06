@@ -44,37 +44,43 @@ export async function tela(P, ctx) {
   const margem = lb - imp - rep;
   // Time: a partir de outubro/2026, o que foi pago no mês (fechamento do mês anterior). Antes disso, salário + comissão do próprio mês.
   const meses = C.map(r => mk(r.mes)), TM = {};
+  const item = (t, sub, v) => `<div class="lin" style="font-size:14px"><span>${t}${sub ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${sub}</small>` : ''}</span><span>${brl2(v)}</span></div>`;
+  const grupo = (arr, fn, col) => { const g = {}; arr.forEach(e => { const k = fn(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e[col]) || 0; }); return Object.entries(g).sort((a, b) => b[1].v - a[1].v); };
   for (const k of meses) {
     const r = C.find(x => mk(x.mes) === k) || {};
     if (k >= ctx.mesCaixa) {
       const F = await ctx.folha(k) || [];
-      TM[k] = { v: F.reduce((t, x) => t + (x.pago ? +x.pago.valor || 0 : x.valor), 0), itens: F.map(x => ({ nome: x.titulo, sub: 'fechamento de ' + mesNome(x.comp).split(' ')[0].toLowerCase() + ': fixo ' + brl2(x.fixo) + ' + comissões ' + brl2(x.com) + (x.pago ? ' · pago em ' + diaMes(x.pago.pago_em) : ' · a pagar em ' + String(x.venc.getDate()).padStart(2, '0') + '/' + String(x.venc.getMonth() + 1).padStart(2, '0')), v: x.pago ? +x.pago.valor || 0 : x.valor })) };
+      const pg = (x) => x.pago ? +x.pago.valor || 0 : x.valor, quando = (x) => x.pago ? 'pago em ' + diaMes(x.pago.pago_em) : 'a pagar em ' + String(x.venc.getDate()).padStart(2, '0') + '/' + String(x.venc.getMonth() + 1).padStart(2, '0'), fech = (x) => 'fechamento de ' + mesNome(x.comp).split(' ')[0].toLowerCase();
+      TM[k] = { sal: F.reduce((t, x) => t + Math.min(x.fixo, pg(x)), 0), com: F.reduce((t, x) => t + pg(x) - Math.min(x.fixo, pg(x)), 0),
+        iSal: F.filter(x => x.fixo).map(x => ({ nome: x.titulo, sub: 'salário fixo, ' + fech(x) + ' · ' + quando(x), v: Math.min(x.fixo, pg(x)) })),
+        iCom: F.filter(x => pg(x) - Math.min(x.fixo, pg(x))).map(x => ({ nome: x.titulo, sub: 'comissões 50/50, ' + fech(x) + ' · ' + quando(x), v: pg(x) - Math.min(x.fixo, pg(x)) })) };
     } else {
       const Em = E.filter(e => mk(e.data_negociacao) === k), cm = s(Em, 'comissao');
-      TM[k] = { v: (+r.salarios || 0) + cm, itens: (r.por_pessoa || []).map(p => ({ nome: p.nome, sub: 'salário fixo do mês', v: +p.fixo || 0 })).concat(cm ? [{ nome: 'Comissões do mês', sub: 'regra antiga: comissão das vendas do mês', v: cm }] : []) };
+      TM[k] = { sal: +r.salarios || 0, com: cm, iSal: (r.por_pessoa || []).map(p => ({ nome: p.nome, sub: 'salário fixo do mês', v: +p.fixo || 0 })),
+        iCom: grupo(Em.filter(e => Number(e.comissao)), e => nomeTime(e.vendedor_id) || 'Sem vendedor', 'comissao').map(([n, x]) => ({ nome: n, sub: 'comissão das vendas do mês (regra antiga)', v: x.v })) };
     }
   }
   if (ctx.aba() !== 'dre' || ctx.mes() !== mes) return;
-  const sal = meses.reduce((t, k) => t + TM[k].v, 0), fix = C.reduce((t, r) => t + (+r.fixas || 0), 0), avu = avul.reduce((t, d) => t + (+d.valor || 0), 0);
-  const res = margem - sal - fix - avu;
+  const sal = meses.reduce((t, k) => t + TM[k].sal, 0), comPg = meses.reduce((t, k) => t + TM[k].com, 0), fix = C.reduce((t, r) => t + (+r.fixas || 0), 0), avu = avul.reduce((t, d) => t + (+d.valor || 0), 0);
+  const res = margem - sal - comPg - fix - avu;
   void com;
 
   // ---------- detalhes ----------
-  const item = (t, sub, v) => `<div class="lin" style="font-size:14px"><span>${t}${sub ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${sub}</small>` : ''}</span><span>${brl2(v)}</span></div>`;
-  const grupo = (arr, fn, col) => { const g = {}; arr.forEach(e => { const k = fn(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e[col]) || 0; }); return Object.entries(g).sort((a, b) => b[1].v - a[1].v); };
   const porEmissao = (col, extra) => {
     const L = E.filter(e => Number(e[col])).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
     if (!mesModo) return grupo(L, e => mesNome(mk(e.data_negociacao)), col).map(([k, x]) => item(k, x.n + (x.n === 1 ? ' venda' : ' vendas'), x.v)).join('') || '<div class="vazio">Nada no período.</div>';
     return L.map(e => item(esc(nomeEm(e)), diaMes(e.data_negociacao) + ' · ' + esc(servEm(e)) + (extra ? ' · ' + extra(e) : ''), e[col])).join('') || '<div class="vazio">Nada no período.</div>';
   };
-  const comDet = `<div class="sub" style="margin:4px 0">Informativo, não entra na conta acima.</div>${grupo(E.filter(e => Number(e.comissao)), e => nomeTime(e.vendedor_id) || 'Sem vendedor', 'comissao').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' venda' : ' vendas'), x.v)).join('') || '<div class="vazio">Nenhuma comissão no período.</div>'}${mesModo ? `<div class="sub" style="margin:8px 0 4px">Venda a venda</div>${porEmissao('comissao', e => esc(nomeTime(e.vendedor_id)))}` : ''}`;
+  const lista = (campo, vazio) => { const g = {}; meses.forEach(k => TM[k][campo].forEach(x => { const key = mesModo ? x.nome + '|' + x.sub : x.nome; g[key] = g[key] || { nome: x.nome, sub: mesModo ? x.sub : 'somado no período', v: 0 }; g[key].v += x.v; })); const L2 = Object.values(g); return L2.length ? L2.map(x => item(esc(x.nome), esc(x.sub), x.v)).join('') : `<div class="vazio">${vazio}</div>`; };
+  const comDet = `${grupo(E.filter(e => Number(e.comissao)), e => nomeTime(e.vendedor_id) || 'Sem vendedor', 'comissao').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' venda' : ' vendas'), x.v)).join('') || '<div class="vazio">Nenhuma comissão no período.</div>'}${mesModo ? `<div class="sub" style="margin:8px 0 4px">Venda a venda</div>${porEmissao('comissao', e => esc(nomeTime(e.vendedor_id)))}` : ''}`;
   const det = {
     rec: `<div class="sub" style="margin:4px 0">Por serviço</div>${grupo(E, servEm, 'valor_receber').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' venda' : ' vendas'), x.v)).join('')}<div class="sub" style="margin:8px 0 4px">${mesModo ? 'Venda a venda' : 'Por mês'}</div>${porEmissao('valor_receber')}`,
     cus: porEmissao('custo', e => esc(e.fornecedor || e.cia || 'sem fornecedor')),
     imp: `<div class="sub" style="margin:4px 0">${pct(D.cfg ? D.cfg.imposto_pct : 6)} sobre o lucro de cada venda.</div>${porEmissao('imposto')}`,
     com: comDet,
     rep: porEmissao('repasse'),
-    sal: (() => { const g = {}; meses.forEach(k => TM[k].itens.forEach(x => { const key = mesModo ? x.nome + '|' + x.sub : x.nome; g[key] = g[key] || { nome: x.nome, sub: mesModo ? x.sub : 'somado no período', v: 0 }; g[key].v += x.v; })); const L = Object.values(g); return (L.length ? L.map(x => item(esc(x.nome), esc(x.sub), x.v)).join('') : '<div class="vazio">Nenhum pagamento ao time no período.</div>') + '<div class="sub" style="margin-top:6px">Salário fixo + comissões (50/50) pagos no mês, que são o fechamento do mês anterior. Comissões geradas pelas vendas deste mês, por vendedor:</div>' + comDet; })(),
+    sal: lista('iSal', 'Nenhum salário fixo neste período. Cadastre o salário de cada pessoa, com o mês em que começou a valer, em Salários e despesas fixas.'),
+    cpg: lista('iCom', 'Nenhuma comissão paga neste período.') + '<div class="sub" style="margin:8px 0 4px">Comissões geradas pelas vendas deste período, por vendedor. Informativo, não entra na conta acima.</div>' + comDet,
     fix: (() => { const meses = C.map(r => mk(r.mes)); const L = fixas.map(x => ({ x, n: meses.filter(k => mk(x.desde) <= k && (!x.ate || mk(x.ate) >= k)).length })).filter(o => o.n); return L.length ? L.map(({ x, n }) => item(esc(x.descricao), esc(x.categoria) + (mesModo ? '' : ' · ' + n + (n === 1 ? ' mês' : ' meses')), (+x.valor || 0) * n)).join('') : '<div class="vazio">Nenhuma despesa fixa no período.</div>'; })(),
     avu: avul.length ? (mesModo ? avul.map(d => item(esc(d.descricao), esc(d.categoria), d.valor)).join('') : grupo(avul, d => d.categoria || 'Outros', 'valor').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' lançamento' : ' lançamentos'), x.v)).join('')) : '<div class="vazio">Nenhuma despesa avulsa no período.</div>'
   };
@@ -85,7 +91,7 @@ export async function tela(P, ctx) {
   let porMes = '';
   if (!mesModo) porMes = `<section class="bloco"><h2>Resultado por mês</h2>${C.map(r => {
     const k = mk(r.mes), Em = E.filter(e => mk(e.data_negociacao) === k), av = avul.filter(d => mk(d.mes) === k).reduce((t, d) => t + (+d.valor || 0), 0);
-    const rr = s(Em, 'lucro_bruto') - s(Em, 'imposto') - s(Em, 'repasse') - TM[k].v - (+r.fixas || 0) - av;
+    const rr = s(Em, 'lucro_bruto') - s(Em, 'imposto') - s(Em, 'repasse') - TM[k].sal - TM[k].com - (+r.fixas || 0) - av;
     return Em.length || +r.salarios || +r.fixas || av ? `<button class="lin" data-mesdre="${k}"><span>${mesNome(k)}<small style="display:block;color:var(--tinta-3);font-size:12px">vendas ${brl2(s(Em, 'valor_receber'))}</small></span><span style="color:${rr < 0 ? 'var(--alerta)' : 'var(--verde)'}">${brlS(brl2, rr)}<b class="seta">›</b></span></button>` : '';
   }).join('') || '<div class="vazio">Sem movimento no ano.</div>'}</section>`;
 
@@ -110,7 +116,7 @@ export async function tela(P, ctx) {
       <div class="sub" style="margin:-4px 0 6px">Toque em cada linha para ver o detalhe.</div>
       ${linha('rec', 'Receita das vendas', rec)}${linha('cus', '(−) Custo das emissões', -cus)}${tot('= Lucro bruto', lb)}
       ${linha('imp', '(−) Imposto', -imp)}${linha('rep', '(−) Parceiros', -rep)}${tot('= Margem de contribuição', margem)}
-      ${linha('sal', '(−) Time: salários e comissões pagos', -sal)}${linha('fix', '(−) Despesas fixas', -fix)}${linha('avu', '(−) Despesas avulsas', -avu)}
+      ${linha('sal', '(−) Salários fixos', -sal)}${linha('cpg', '(−) Comissões do time', -comPg)}${linha('fix', '(−) Despesas fixas', -fix)}${linha('avu', '(−) Despesas avulsas', -avu)}
       <div class="lin forte"><span>= Resultado da empresa</span><span style="color:${res < 0 ? 'var(--alerta)' : 'var(--verde)'}">${brlS(brl2, res)}</span></div>
       <div class="sub" style="margin-top:8px">Vendas, custos e impostos contam no mês da venda. O time entra pelo que é pago no mês: o fechamento do mês anterior (salário fixo + comissões 50/50), pago no dia 5. Até setembro/2026, o DRE mostra salário e comissão do próprio mês.</div>
     </section>
