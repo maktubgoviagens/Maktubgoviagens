@@ -6,8 +6,10 @@
 // Venda ainda sem data de ida: a 2ª metade fica aguardando a data (não entra em nenhum pagamento).
 // O pagamento sai no dia de pagamento da pessoa (padrão: dia 5).
 
-// Primeiro mês controlado aqui. Até setembro/2026 tudo já foi pago (pagamento de 05/10/2026).
-export const INICIO = '2026-10';
+// Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
+// Despesas fixas e avulsas: a partir de outubro/2026.
+export const INICIO = '2026-09';
+const INICIO_CONTAS = '2026-10';
 
 let C = null, ABERTO = null, CONF = null;
 
@@ -44,7 +46,7 @@ export async function carregar(ctx) {
     sb.rpc('compromissos_time', { p_ini: INICIO + '-01', p_fim: mesMais(atual, 4) + '-01' }),
     sb.from('pagamentos_feitos').select('*').order('pago_em', { ascending: false }).limit(500),
     sb.from('despesas_fixas').select('*'),
-    sb.from('despesas').select('*').gte('mes', INICIO + '-01')
+    sb.from('despesas').select('*').gte('mes', INICIO_CONTAS + '-01')
   ]);
   if (t.error || p.error) { C = { erro: (t.error || p.error).message }; return C; }
   C = { time: t.data || [], pagos: p.data || [], fixas: f.error ? [] : (f.data || []), avulsas: a.error ? [] : (a.data || []) };
@@ -63,12 +65,12 @@ function montar(ctx) {
     for (let k = INICIO; k <= fim; k = mesMais(k, 1)) {
       const itens = par.filter(x => x.comp === k), fixo = ps.fixo[k] || 0, com = r2(itens.reduce((a, x) => a + x.valor, 0));
       if (!fixo && !com) continue;
-      L.push({ tipo: 'time', ref: ps.id, comp: k, titulo: ps.nome, desc: 'Salário e comissão de ' + nomeMes(k), venc: dataNoMes(mesMais(k, 1), ps.dia),
+      L.push({ tipo: 'time', ref: ps.id, comp: k, titulo: ps.nome, desc: 'Fechamento de ' + nomeMes(k) + ': salário + comissões', venc: dataNoMes(mesMais(k, 1), ps.dia),
         valor: r2(fixo + com), fixo, com, itens, aberto: k >= atual, pago: pago('time', ps.id, k) });
     }
   });
   C.fixas.filter(x => x.dia_vencimento).forEach(x => {
-    for (let k = INICIO; k <= mesMais(atual, 1); k = mesMais(k, 1)) {
+    for (let k = INICIO_CONTAS; k <= mesMais(atual, 1); k = mesMais(k, 1)) {
       if (mk(x.desde) > k || (x.ate && mk(x.ate) < k)) continue;
       L.push({ tipo: 'fixa', ref: x.id, comp: k, titulo: x.descricao, desc: (x.categoria || 'Despesa fixa') + ' de ' + nomeMes(k), venc: dataNoMes(k, x.dia_vencimento),
         valor: Number(x.valor) || 0, pago: pago('fixa', x.id, k) });
@@ -109,9 +111,10 @@ export async function tela(P, ctx) {
       ${x.aberto ? `<div class="sub">${nomeMes(x.comp).replace(/^./, c => c.toUpperCase())} ainda está em aberto: as vendas novas deste mês ainda somam a 1ª metade da comissão delas.</div>` : ''}</details>`;
   const card = (x) => `<form class="card form" data-pg="${chave(x)}">
       <div class="cab"><div class="nome" style="font-size:19px">${esc(x.titulo)}</div>${quando(x.venc)}</div>
-      <div class="lin"><span>${esc(x.desc)} · vence ${dd(x.venc)}</span><span><b>${brl2(x.valor)}</b></span></div>
+      <div class="lin"><span>${esc(x.desc)} · ${x.tipo === 'time' ? 'pagar em' : 'vence'} ${dd(x.venc)}</span><span><b>${brl2(x.valor)}</b></span></div>
       ${detalhe(x)}
-      <div class="duas-col" style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><button class="zap" type="submit">Marcar como pago</button></div>
+      <div class="duas-col" style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><label class="fl"><span>Pago em</span><input name="pago_em" type="date" value="${new Date(Math.min(Date.now(), x.venc.getTime() < Date.now() ? x.venc.getTime() : Date.now()) - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10)}" required></label></div>
+      <button class="zap" type="submit" style="margin-top:8px;width:100%">Marcar como pago</button>
     </form>`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
     <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento e despesas avulsas lançadas no DRE. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
@@ -124,7 +127,7 @@ export async function tela(P, ctx) {
     ${forn.length ? `<div class="pend" style="margin-top:10px"><button data-irpagar><span>Fornecedores a pagar · ${forn.length} ${forn.length === 1 ? 'venda' : 'vendas'}</span><span><b class="tem">${brl2(forn.reduce((a, e) => a + (Number(e.custo) || 0), 0))}</b><span class="seta">›</span></span></button></div>` : ''}
     ${semIda.length ? `<section class="bloco"><h2>Vendas sem data de ida</h2><div class="sub">A 1ª metade da comissão já entra no pagamento. A 2ª metade só entra quando a data de ida for preenchida.</div>${semIda.map(e => `<button class="lin" data-em="${e.id}"><span>${esc(e.comprador || e.produto || e.servico || 'Venda')} · ${esc(ctx.nomeTime(e.vendedor_id))}</span><span>${brl2(Number(e.comissao) - r2(Number(e.comissao) / 2))} aguardando<b class="seta">›</b></span></button>`).join('')}</section>` : ''}
     <div class="secao">Previsão dos próximos meses</div>
-    <section class="bloco" style="margin-top:0">${futuro.length ? futuro.map(x => `<div class="lin"><span>${esc(x.titulo)} · paga em ${dd(x.venc)}<small style="display:block;color:var(--tinta-3);font-size:12px">fixo ${brl2(x.fixo)} + comissões já garantidas ${brl2(x.com)}</small></span><span>${brl2(x.valor)}</span></div>`).join('') : '<div class="vazio">Sem previsão além dos próximos pagamentos.</div>'}
+    <section class="bloco" style="margin-top:0">${futuro.length ? futuro.map(x => `<div class="lin"><span>${esc(x.titulo)} · fechamento de ${nomeMes(x.comp)}, paga em ${dd(x.venc)}<small style="display:block;color:var(--tinta-3);font-size:12px">fixo ${brl2(x.fixo)} + comissões já garantidas ${brl2(x.com)}</small></span><span>${brl2(x.valor)}</span></div>`).join('') : '<div class="vazio">Sem previsão além dos próximos pagamentos.</div>'}
       <div class="sub">Conta o salário atual e as metades de comissão de embarques já vendidos. Vendas novas ainda vão somar.</div></section>
     <div class="secao">Pagos</div>
     <section class="bloco" style="margin-top:0">${pagos.length ? pagos.map(x => `<div class="lin"><span>${esc(x.titulo)} · ${esc(x.desc)}<small style="display:block;color:var(--tinta-3);font-size:12px">pago em ${String(x.pago.pago_em).split('-').reverse().join('/')}</small></span><span>${brl2(x.pago.valor)} <button class="mini" type="button" data-desf="${x.pago.id}">${CONF === x.pago.id ? 'confirmar' : 'desfazer'}</button></span></div>`).join('') : '<div class="vazio">Nenhum pagamento marcado ainda.</div>'}</section>
@@ -138,7 +141,7 @@ export async function tela(P, ctx) {
     const x = L.find(y => chave(y) === f.dataset.pg); if (!x) return;
     const valor = Number(String(f.elements.valor.value).replace(',', '.'));
     if (!(valor >= 0)) { aviso('Valor inválido.'); return; }
-    const { error } = await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor });
+    const { error } = await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: f.elements.pago_em.value || undefined });
     if (error) { aviso('Não salvou: ' + error.message); return; }
     aviso('Marcado como pago.'); tela(P, ctx);
   });
