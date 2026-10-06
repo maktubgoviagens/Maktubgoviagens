@@ -31,9 +31,10 @@ export function parcelas(emissoes, uid) {
     const c = Number(e.comissao) || 0; if (!c) return;
     const mv = mk(e.data_negociacao); if (!mv) return;
     const nome = e.comprador || e.produto || e.servico || 'Venda';
-    const h1 = r2(c / 2), mi = mk(e.data_ida);
+    const viagem = e.data_ida || e.data_volta; // trecho só de volta: vale a data da volta
+    const h1 = r2(c / 2), mi = mk(viagem);
     L.push({ e, nome, comp: mv, valor: h1, tipo: '1ª metade, venda' });
-    if (!e.data_ida) { L.push({ e, nome, comp: null, valor: r2(c - h1), tipo: '2ª metade aguardando a data de ida' }); return; }
+    if (!viagem) { L.push({ e, nome, comp: null, valor: r2(c - h1), tipo: '2ª metade aguardando a data de ida' }); return; }
     L.push({ e, nome, comp: mi > mv ? mi : mv, valor: r2(c - h1), tipo: '2ª metade, embarque ' + mi.split('-').reverse().join('/') });
   });
   return L;
@@ -110,7 +111,7 @@ export async function tela(P, ctx) {
   const aPagar = L.filter(x => !x.pago && (x.comp <= atual || difDias(x.venc) <= 40));
   const futuro = L.filter(x => !x.pago && x.tipo === 'time' && !aPagar.includes(x));
   const pagos = L.filter(x => x.pago).sort((a, b) => String(b.pago.pago_em).localeCompare(String(a.pago.pago_em))).slice(0, 12);
-  const forn = ctx.aPagar(), semIda = ctx.D.emissoes.filter(e => (Number(e.comissao) || 0) > 0 && !e.data_ida && pessoas.some(p => p.id === e.vendedor_id) && mk(e.data_negociacao) >= mesMais(INICIO, -6));
+  const forn = ctx.aPagar(), semIda = ctx.D.emissoes.filter(e => (Number(e.comissao) || 0) > 0 && !e.data_ida && !e.data_volta && pessoas.some(p => p.id === e.vendedor_id) && mk(e.data_negociacao) >= mesMais(INICIO, -6));
   const vence7 = aPagar.filter(x => difDias(x.venc) >= 0 && difDias(x.venc) <= 7), atras = aPagar.filter(x => difDias(x.venc) < 0);
   const chave = (x) => x.tipo + x.ref + x.comp;
   const detalhe = (x) => x.tipo !== 'time' ? '' : `<details ${ABERTO === chave(x) ? 'open' : ''} data-det="${chave(x)}" style="margin-top:6px"><summary class="sub" style="cursor:pointer">Ver a conta</summary>
