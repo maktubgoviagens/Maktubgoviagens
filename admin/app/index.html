@@ -362,6 +362,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
+import * as MKT from '/admin/app/marketing.js?v=1';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
@@ -498,28 +499,34 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
-const ABAS_ADMIN = ['empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
+  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
+/* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
+const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => k !== 'marketing' && k !== 'checkin' && pode(k));
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = podeAba(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
+  if (soMarketing()) ABA = 'marketing';
+  if (ABA === 'marketing') MKT.rota(h);
   if (ABA === 'crm') CRM.rota(h);
   if (ABA === 'fornecedores') FORN.rota(h);
   if (ABA === 'cotador') COT.rota(h);
@@ -541,16 +548,18 @@ const NAV_IC = {
   agenda: '<rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   financeiro: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   comissao: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.5M12 6.5v1.5M12 16v1.5"/>',
+  marketing: '<path d="M3 10v4h3l6 4V6L6 10H3ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
 function navItens() {
   if (ADMIN) return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']];
-  return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']]
+  if (soMarketing()) return [];
+  return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['marketing', 'Marketing'], ['empresa', 'Empresa']]
     .filter(([k]) => k === 'operacao' ? podeAba('emissoes') || podeAba('agenda') : podeAba(k));
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
+const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -559,6 +568,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('#segOp [
 function montarNav() {
   const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
+  $('nav').hidden = !itens.length; $('buscaTopo').hidden = soMarketing();
   $('sino').hidden = !ADMIN;
   $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
@@ -566,6 +576,7 @@ function montarNav() {
 }
 
 function ir(aba, extra) {
+  if (soMarketing()) aba = 'marketing';
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
@@ -600,16 +611,17 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
 async function carregar(silencioso) {
   if (!silencioso) $('pagina').classList.add('carregando');
+  if (soMarketing()) { await MKT.carregar(sb); $('pagina').classList.remove('carregando'); D.atual = new Date(); return tela(); }
   const hoje = HOJE(), iso = (d) => d.toISOString().slice(0, 10);
   const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
   const inicioAno = `${hoje.getFullYear()}-01-01`, desde = `${hoje.getFullYear() - 1}-01-01`;
@@ -680,6 +692,7 @@ async function carregar(silencioso) {
     [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
   } else D.pessoas = [];
   if (podeAba('compromissos')) await CMP.carregar(ctxCMP());
+  if (podeAba('marketing')) await MKT.carregar(sb);
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   tela();
@@ -752,6 +765,7 @@ function htmlEvento(e) {
 
 /* ================= telas ================= */
 function tela() {
+  if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
@@ -804,6 +818,8 @@ function telaInicio(P) {
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
     ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
+    ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
+    ['Reels para repostar no TikTok', MKT.pend().tiktok, () => ir('marketing', () => MKT.abrir('painel'))],
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
@@ -1822,7 +1838,7 @@ async function telaAcessos(P) {
     ${AC_NOVO ? `<form class="bloco form" id="fAc">
       <div class="duas-col">${campo('nome', 'Nome', '', 'text', 'required')}${campo('email', 'E-mail de login', '', 'email', 'required')}</div>
       <div class="duas-col"><label class="fl"><span>Perfil</span><select name="papel"><option value="colaborador">Colaborador</option><option value="admin">Administrador</option></select></label>${campo('pct', 'Comissão (%)', 10, 'number')}</div>
-      <div id="acPerms"><div class="grupo">O que pode ver e fazer</div>${htmlPerms(permPadrao(), 'n')}</div>
+      <div id="acPerms"><div class="grupo">O que pode ver e fazer</div><button class="sec" type="button" data-somkt="n" style="width:100%;margin:6px 0">Liberar só o marketing</button>${htmlPerms(permPadrao(), 'n')}</div>
       <button class="zap" type="submit" id="acSalvar" style="margin-top:10px;width:100%">Adicionar e liberar o acesso</button>
       <div class="sub" id="acMsg">Depois de adicionar, aparece o botão para mandar pelo WhatsApp o link em que a pessoa cria a senha.</div>
     </form>` : ''}
@@ -1830,7 +1846,7 @@ async function telaAcessos(P) {
       <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:2px 0 0">${esc(p.email || '')}</div></div><div style="text-align:right">${eu ? '<span class="tag">você</span> ' : ''}<span class="tag ${adm ? 'ouro' : ''}">${adm ? 'Administrador' : 'Colaborador'}</span>${p.ativo ? '' : ' <span class="tag alerta">sem acesso</span>'}</div></div>
       <div class="sub" style="margin-top:4px">${p.ultimo_acesso ? 'Último acesso em ' + new Date(p.ultimo_acesso).toLocaleDateString('pt-BR') : 'Ainda não entrou no app'}</div>
       <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Perfil</span><select name="papel" ${eu ? 'disabled' : ''}><option value="colaborador" ${!adm ? 'selected' : ''}>Colaborador</option><option value="admin" ${adm ? 'selected' : ''}>Administrador</option></select></label>${campo('pct', 'Comissão (%)', p.comissao_pct, 'number')}</div>
-      <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div>${htmlPerms(p.permissoes, 'p')}</div>
+      <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div><button class="sec" type="button" data-somkt="p" style="width:100%;margin:6px 0">Liberar só o marketing</button>${htmlPerms(p.permissoes, 'p')}</div>
       <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${eu ? 'disabled' : ''}><span>Acesso ativo</span></label>
       <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar ${esc(String(p.nome).split(' ')[0])}</button>
       ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
@@ -1838,6 +1854,7 @@ async function telaAcessos(P) {
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
   $('voltar').onclick = () => ir('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
+  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing'; }); aviso('Só o marketing marcado. Salve para valer.'); });
   P.querySelectorAll('form[data-u]').forEach(f => {
     f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
     f.onsubmit = async (ev) => {
@@ -2107,13 +2124,13 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
     ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
-    ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
-  ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao'));
+    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
+  ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
   const verNum = ADMIN || pode('financeiro');
