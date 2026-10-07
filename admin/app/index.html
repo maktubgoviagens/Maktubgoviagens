@@ -110,7 +110,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .ciclo .top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--verde)}
 .ciclo .top b{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}
 .ciclo small{display:block;margin-top:8px;font-size:12.5px;color:var(--tinta-3);line-height:1.45}
-.fseg button{font-size:10.5px;letter-spacing:.05em;padding:11px 2px}
+.fseg{overflow-x:auto;scrollbar-width:none}.fseg::-webkit-scrollbar{display:none}.fseg button{font-size:10px;letter-spacing:.02em;padding:11px 5px;flex:1 0 auto;white-space:nowrap}
 .botoes4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .botoes4 .zap,.botoes4 .sec{min-width:0;padding:12px 6px;font-size:11px}
 .lanc{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--linha);font-size:14px}
@@ -263,6 +263,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .av .ic svg{width:16px;height:16px}
 .av .t{font-size:14.5px;color:var(--verde);line-height:1.3}
 .av .d{font-size:12.5px;color:var(--tinta-3);margin-top:2px;white-space:pre-line}
+.gt{border-top:1px solid var(--linha);padding:10px 0}.gt:first-child{border-top:0;padding-top:0}.gt label{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;cursor:pointer}.gt input[type=checkbox]{width:20px;height:20px;margin-top:1px;accent-color:var(--verde);flex:none}.gt.ok label span{color:var(--tinta-3);text-decoration:line-through}.gtm{font-size:12px;color:var(--tinta-3);margin:3px 0 0 30px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.gte{margin:8px 0 0 30px;display:flex;gap:8px;align-items:center}.gte input{padding:8px;border:1px solid var(--linha);font-size:15px}details.bloco summary{cursor:pointer;font-size:14px;color:var(--verde)}
 .av .q{font-size:11px;color:var(--tinta-3);margin-top:4px}
 .canal{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--linha);font-size:14px}
 .canal:first-of-type{border-top:0}
@@ -525,6 +526,7 @@ function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = podeAba(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
+  if (CLI && h[2]) FI_ABA = h[2];
   if (soMarketing()) ABA = 'marketing';
   if (ABA === 'marketing') MKT.rota(h);
   if (ABA === 'crm') CRM.rota(h);
@@ -672,9 +674,11 @@ async function carregar(silencioso) {
       sb.from('convites').select('*').order('created_at', { ascending: false }).limit(300),
       sb.from('relatorios_mensais').select('cliente_id,publicado').eq('mes', mesMais(k0, -1) + '-01'),
       sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', k0 + '-01'),
-      sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', k0 + '-01')
+      sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', k0 + '-01'),
+      sb.from('gestao_tarefas').select('*').limit(5000)
     ]);
-    [D.indic, D.rel, D.extMes, D.atasMes] = gx.map(r => r.data || []);
+    [D.indic, D.rel, D.extMes, D.atasMes, D.gtar] = gx.map(r => r.data || []);
+    if (gx[4].error) D.gtar = null;
   }
   if (podeAba('crm')) {
     const nada = Promise.resolve({ data: [], error: null });
@@ -2435,7 +2439,9 @@ function pendGestao() {
     ['Emissões para lançar na carteira', emissoesGestao().length],
     ['Milhas de clientes vencendo', vencendo().length],
     ['Renovações em 90 dias', renovacoes(90).length],
-    ['Clientes sem data de entrada', semContrato().length]
+    ['Clientes sem data de entrada', semContrato().length],
+    ['Saldos para atualizar', saldosDoDia().length],
+    ['Tarefas da Gestão para hoje', tarefasParaHoje().length]
   ];
 }
 const pilula = (ok, txt) => `<span class="tag ${ok ? 'ok' : 'alerta'}">${ok ? '✓ ' : ''}${txt}</span>`;
@@ -2452,7 +2458,8 @@ function telaGestao(P) {
   const mi = D.progs.reduce((t, p) => t + (Number(p.saldo) || 0), 0);
   const leads = D.reunioes.filter(r => ehGestao(r) && r.resultado === 'Em andamento');
   const c = conversao(reunioesDoPeriodo(mesKey(new Date()), 'ano').filter(ehGestao));
-  const total = ags.length + sols.length + ind.length + ret.length + venc.length + renov.filter(x => diasPara(x.gestao_vencimento) <= 30).length + semc.length;
+  const impl = implantacoesAbertas();
+  const total = ags.length + sols.length + ind.length + ret.length + venc.length + renov.filter(x => diasPara(x.gestao_vencimento) <= 30).length + semc.length + saldosDoDia().length + tarefasParaHoje().length;
   const grupo = (titulo, html) => html ? `<div class="secao">${titulo}</div>${html}` : '';
   P.innerHTML = `
     <h1 class="titulo">Gestão de <em>Milhas</em></h1>
@@ -2463,6 +2470,10 @@ function telaGestao(P) {
       <div class="barra2"><i class="${emDia === D.clientes.length && emDia ? 'ok' : ''}" style="width:${D.clientes.length ? emDia / D.clientes.length * 100 : 0}%"></i></div>
       <small>Saldos lançados, reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
     </button>
+
+    ${grupo('Tarefas de hoje', htmlTarefasHoje())}
+
+    ${grupo('Implantações em andamento', impl.length ? `<div class="pend">${impl.map(({ c, total, feitas }) => `<button data-ficha="${c.id}" data-fa="tarefas"><span>${esc(c.nome_completo)}${c.onboard_data ? `<small style="display:block;font-size:12px;color:var(--tinta-3)">onboard ${dataHora(c.onboard_data)}</small>` : ''}</span><span><span style="font-size:13px;color:var(--tinta-2)">${feitas} de ${total}</span><span class="seta">›</span></span></button>`).join('')}</div>` : '')}
 
     ${grupo('Pedidos de reunião dos clientes', ags.map(a => `<article class="card" style="margin-bottom:8px">
       <div class="cab"><div><div class="nome">${esc(nomeCli(a.cliente_id))}</div><span class="tag ouro">pediu pelo painel</span></div><span class="quando">${quando(a.created_at)}</span></div>
@@ -2512,6 +2523,7 @@ function ligarGestao(P) {
   $('geCiclo') && ($('geCiclo').onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); });
   P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
+  P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
     const a = D.ags.find(x => String(x.id) === b.dataset.conf); if (!a) return;
     const pref = a.data_preferida ? a.data_preferida + 'T' + ({ 'Manhã': '10:00', 'Tarde': '15:00', 'Noite': '19:00' }[a.periodo] || '10:00') : '';
@@ -2573,7 +2585,7 @@ function telaCiclo(P) {
       <div class="num ${falta('carta') ? 'alerta' : ''}"><div class="l">Sem carta de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('carta')}</div></div>
     </div>
     <div class="lista">${L.length ? L.map(({ c, x }) => `<article class="card">
-      <div class="cab"><div class="nome">${esc(c.nome_completo)}</div><span class="quando">${x.feitos} de 3</span></div>
+      <div class="cab"><div class="nome">${esc(c.nome_completo)}</div><span class="quando">${x.feitos} de 3${c.dia_saldos ? ' · saldos dia ' + c.dia_saldos : ''}</span></div>
       <div style="margin-top:6px">${htmlCiclo(c, x)}</div>
       ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-ficha="${c.id}" data-fa="carteira">Lançar saldos</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
     </article>`).join('') : '<div class="vazio">Nenhum cliente na Gestão.</div>'}</div>`;
@@ -2623,18 +2635,18 @@ function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
-  const abas = [['resumo', 'Resumo'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  const abas = [['resumo', 'Resumo'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
   if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
     <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
-    <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}</div>
+    <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}${(() => { const T = tarefasDe(c.id), f = T.filter(t => t.feito).length; return T.length && f < T.length ? ' ' + pilula(false, `Implantação ${f} de ${T.length}`) : ''; })()}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
   $('voltar').onclick = () => history.back();
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
-  ({ resumo: fiResumo, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+  ({ resumo: fiResumo, tarefas: fiTarefas, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
 function fiResumo(el, c) {
@@ -2713,6 +2725,7 @@ async function depoisDaCarteira(c, msg) {
   D.extMes = (D.extMes || []).concat([{ cliente_id: c.id, created_at: agora }]);
   const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).gte('data', new Date().getFullYear() + '-01-01');
   if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []);
+  await gtMarcarChave(c, 'carteira');
   FI_FORM = null; aviso(msg); telaFicha($('pagina'), c.id);
 }
 function formCarteira(c) {
@@ -2923,13 +2936,13 @@ function fiReunioes(el, c) {
     ${pedidos.length ? `<div class="secao">Pedidos do cliente</div>${pedidos.map(a => `<article class="card" style="margin-bottom:8px"><div class="cab"><div class="nome" style="font-size:19px">Pediu reunião</div><span class="quando">${quando(a.created_at)}</span></div>
       <div class="info">${[['Preferência', [a.data_preferida ? dataBR(a.data_preferida) : '', a.periodo].filter(Boolean).join(' · ')], ['Pauta', a.pauta]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
       <div class="acoes"><button class="zap" data-conf="${a.id}">Confirmar e marcar</button></div></article>`).join('')}` : ''}
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" id="agendaCli" style="flex:1">+ Agendar</button><button class="sec" id="novaReuCli" style="flex:1">+ Resumo para o painel</button></div>
-    <div class="secao">Agenda interna</div>
-    ${(D.agenda || []).filter(x => x.cliente_id === c.id).slice(0, 8).map(htmlReuniaoAgenda).join('') || '<div class="vazio">Nenhuma reunião na agenda.</div>'}
-    <div class="secao">O que o cliente vê no painel</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" id="novaReuCli" style="flex:1">+ Registrar reunião</button><button class="sec" id="agendaCli" style="flex:1">+ Agendar</button></div>
+    <div class="secao">Histórico: o que foi feito em cada reunião</div>
     <div id="reuCli"><div class="vazio">Carregando...</div></div>
-    <div class="sub">Reunião marcada como realizada na agenda, com "publicar no painel", aparece aqui sozinha.</div>`;
-  carregarReunioesCliente(c);
+    <div class="sub">Tudo aqui fica no histórico do cliente e aparece no painel dele. Reunião marcada como realizada na agenda, com "publicar no painel", entra aqui sozinha.</div>
+    <div class="secao">Agenda (marcadas e realizadas)</div>
+    ${(D.agenda || []).filter(x => x.cliente_id === c.id).slice(0, 8).map(htmlReuniaoAgenda).join('') || '<div class="vazio">Nenhuma reunião na agenda.</div>'}`;
+  carregarReunioesCliente(c).then(() => { if (FI_ONB && CLI === c.id) { FI_ONB = false; formReuniaoCliente(c, { titulo: 'Reunião de onboard', data_reuniao: hojeISO() }); } });
   $('novaReuCli').onclick = () => formReuniaoCliente(c, null);
   $('agendaCli').onclick = () => meuCal() ? abrirCal({ cliente_id: c.id, nome: c.nome_completo, tipo: 'Cliente da Gestão' }) : abrirReuniao('nova', { tipo: 'Cliente da Gestão', cliente_id: c.id, titulo: 'Reunião com ' + c.nome_completo });
   el.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
@@ -3019,6 +3032,218 @@ async function fiDocs(el, c) {
   });
 }
 
+/* ---------- tarefas da Gestão: implantação, cartões e rotina mensal ---------- */
+const GT_SQL = 'Rode o 36-tarefas-da-gestao.sql no Supabase para ativar as tarefas.';
+const tarefasDe = (cid) => (D.gtar || []).filter(t => String(t.cliente_id) === String(cid)).sort((a, b) => a.ordem - b.ordem || a.id - b.id);
+const diaHoje = () => new Date().getDate();
+function saldosDoDia() {
+  return (D.clientes || []).filter(c => c.dia_saldos && diaHoje() >= c.dia_saldos && !cicloCliente(c).saldos);
+}
+function tarefasParaHoje() {
+  return (D.gtar || []).filter(t => !t.feito && t.prazo && diasPara(t.prazo) <= 0 && D.clientes.some(c => String(c.id) === String(t.cliente_id)))
+    .sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
+}
+function implantacoesAbertas() {
+  return (D.clientes || []).map(c => { const L = tarefasDe(c.id); return { c, total: L.length, feitas: L.filter(t => t.feito).length }; })
+    .filter(x => x.total && x.feitas < x.total);
+}
+function htmlTarefasHoje() {
+  const sd = saldosDoDia(), th = tarefasParaHoje();
+  const s = sd.map(c => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(c.nome_completo)}</div><span class="tag ${diaHoje() === c.dia_saldos ? 'ouro' : 'alerta'}">${diaHoje() === c.dia_saldos ? 'hoje é o dia dos saldos' : 'saldos atrasados'}</span></div><span class="quando">todo dia ${c.dia_saldos}</span></div>
+      <div class="acoes"><button class="zap" data-ficha="${c.id}" data-fa="carteira">Atualizar saldos</button></div></article>`).join('');
+  const t = th.map(x => { const dv = diasPara(x.prazo); return `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(nomeCli(x.cliente_id))}</div><span class="tag ${dv < 0 ? 'alerta' : 'ouro'}">${dv < 0 ? 'atrasada desde ' + dataCurta(dia(x.prazo)) : 'para hoje'}</span>${x.grupo === 'cliente' ? ' <span class="tag">cobrar do cliente</span>' : ''}</div></div>
+      <div class="info"><div>${esc(x.titulo)}</div></div>
+      <div class="acoes"><button class="zap" data-gt-ok="${x.id}">Feito</button><button class="sec" data-ficha="${x.cliente_id}" data-fa="tarefas">Abrir tarefas</button></div></article>`; }).join('');
+  return s + t;
+}
+async function gtMarcar(id, feito) {
+  const upd = { feito, feito_em: feito ? new Date().toISOString() : null, feito_por: feito ? (D.meuId || null) : null };
+  const { error } = await sb.from('gestao_tarefas').update(upd).eq('id', id);
+  if (error) { aviso(/gestao_tarefas/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return false; }
+  const t = (D.gtar || []).find(x => String(x.id) === String(id)); if (t) Object.assign(t, upd);
+  return true;
+}
+async function gtMarcarChave(c, chave) {
+  const t = tarefasDe(c.id).find(x => x.chave === chave && !x.feito);
+  if (t) await gtMarcar(t.id, true);
+}
+async function gtRecarregar(c) {
+  const { data, error } = await sb.from('gestao_tarefas').select('*').eq('cliente_id', c.id);
+  if (error) return false;
+  D.gtar = (D.gtar || []).filter(t => String(t.cliente_id) !== String(c.id)).concat(data || []);
+  return true;
+}
+const dtLocal = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+function textoPreOnboard(c, modelo) {
+  const nome = String(c.nome_completo || '').split(' ')[0] || 'tudo bem';
+  const quando = c.onboard_data ? new Date(c.onboard_data).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) + ', às ' + new Date(c.onboard_data).toTimeString().slice(0, 5) : '';
+  return String(modelo || '').split('\n').filter(l => quando || !l.includes('{data_onboard}')).join('\n')
+    .replace(/\{nome\}/g, nome).replace(/\{data_onboard\}/g, quando).replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function fiTarefas(el, c) {
+  if (D.gtar === null) { el.innerHTML = `<div class="vazio" style="margin-top:14px">${esc(GT_SQL)}</div>`; return; }
+  const L = tarefasDe(c.id);
+  const ck = (t) => {
+    const dv = t.prazo ? diasPara(t.prazo) : null;
+    const extra = t.chave === 'enviar_check' && !t.feito ? '<button class="mini" data-gt-ir="gtTexto">ver texto</button>'
+      : t.chave === 'ata_onboard' && !t.feito ? '<button class="mini" data-gt-ata="1">registrar</button>'
+      : t.chave === 'cartoes' ? '<button class="mini" data-gt-ir="gtCartoes">cartões</button>'
+      : t.chave === 'dia_saldos' && !t.feito ? '<button class="mini" data-gt-ir="gtRotina">definir</button>' : '';
+    return `<div class="gt ${t.feito ? 'ok' : ''}">
+      <label><input type="checkbox" data-gt="${t.id}" ${t.feito ? 'checked' : ''}><span>${esc(t.titulo)}</span></label>
+      <div class="gtm">${t.feito ? (t.feito_em ? 'feito em ' + dataCurta(new Date(t.feito_em)) : 'feito') : t.prazo ? `<span style="${dv < 0 ? 'color:var(--alerta)' : dv === 0 ? 'color:var(--dourado)' : ''}">${dv < 0 ? 'atrasada · ' : dv === 0 ? 'hoje · ' : ''}prazo ${dataCurta(dia(t.prazo))}</span>` : 'sem prazo'}
+        ${extra}<button class="mini" data-gt-ed="${t.id}">prazo</button></div>
+      <div class="gte" id="gte${t.id}" hidden><input type="date" value="${esc(t.prazo || '')}" data-gt-pz="${t.id}"><button class="mini" data-gt-del="${t.id}">excluir tarefa</button></div>
+    </div>`;
+  };
+  const feitas = L.filter(t => t.feito).length;
+  const cli = L.filter(t => t.grupo === 'cliente'), eq = L.filter(t => t.grupo !== 'cliente');
+  el.innerHTML = `
+    ${L.length ? `
+      <div class="meta" style="margin-top:14px"><div class="top"><span>Implantação</span><b>${feitas} de ${L.length}</b></div><div class="barra2"><i class="${feitas === L.length ? 'ok' : ''}" style="width:${feitas / L.length * 100}%"></i></div><small>${feitas === L.length ? 'Implantação concluída.' : 'Tudo do cliente precisa estar pronto antes do onboard.'}</small></div>
+      <section class="bloco"><h2>Reunião de onboard</h2>
+        ${c.onboard_data ? `<div class="lin" style="border-top:0"><span>Marcada para</span><span>${dataHora(c.onboard_data)}</span></div>` : '<div class="sub" style="margin-top:0">Ainda sem data. Com a data, as tarefas do cliente ganham prazo na véspera.</div>'}
+        <label class="fl"><span>${c.onboard_data ? 'Mudar a data' : 'Data e hora do onboard'}</span><input type="datetime-local" id="gtOnb" value="${esc(dtLocal(c.onboard_data))}"></label>
+        <button class="sec" id="gtOnbOk" style="margin-top:8px;width:100%">Salvar data do onboard</button></section>
+      <div class="secao">Antes do onboard · com o cliente</div>
+      <div class="bloco" style="margin-top:0">${cli.map(ck).join('') || '<div class="vazio">Nenhuma tarefa do cliente.</div>'}</div>
+      <div class="secao">Equipe</div>
+      <div class="bloco" style="margin-top:0">${eq.map(ck).join('') || '<div class="vazio">Nenhuma tarefa da equipe.</div>'}</div>
+      <details class="bloco" id="gtNova"><summary>+ Adicionar tarefa</summary>
+        ${campo('gt_titulo', 'Tarefa', '', 'text', 'placeholder="Ex.: enviar acesso ao painel"')}
+        ${selG('gt_grupo', 'De quem é', [['equipe', 'Equipe'], ['cliente', 'Cliente (antes do onboard)']], 'equipe')}
+        ${campo('gt_prazo', 'Prazo (opcional)', '', 'date')}
+        <button class="zap" id="gtAdd" style="margin-top:10px;width:100%">Adicionar</button></details>
+    ` : `
+      <section class="bloco" style="margin-top:14px"><h2>Implantação</h2>
+        <div class="sub" style="margin-top:0">Cria o check da implantação: grupo, checklist pré-onboard, cadastros do cliente nos programas, cartões e limites, onboard, cofre, painel, carteira, canais de aviso e viagens. As tarefas da equipe ganham prazo de 30 dias da data de entrada, como no contrato.</div>
+        <label class="fl"><span>Data e hora do onboard (opcional)</span><input type="datetime-local" id="gtOnb"></label>
+        <button class="zap" id="gtIni" style="margin-top:10px;width:100%">Começar a implantação</button></section>`}
+
+    <div class="secao" id="gtTexto">Texto do checklist pré-onboard</div>
+    <section class="bloco" style="margin-top:0">
+      <textarea id="gtMsg" rows="14" style="width:100%;padding:11px 12px;border:1px solid var(--linha);font:inherit;font-size:14px;line-height:1.45">Carregando...</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="zap" id="gtZap" style="flex:1">Abrir no WhatsApp</button><button class="sec" id="gtCopiar" style="flex:1">Copiar</button></div>
+      <div class="sub">Ao copiar ou abrir no WhatsApp, a tarefa "Enviar o checklist" é marcada. Os links dos programas levam ao site oficial de cada um; o do LATAM Pass abre direto o cadastro.</div>
+      <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Editar o texto padrão (vale para todos os clientes)</summary>
+        <div class="sub">Use {nome} para o primeiro nome e {data_onboard} para a data do onboard. A linha com {data_onboard} some quando o cliente ainda não tem data.</div>
+        <textarea id="gtModelo" rows="12" style="width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--linha);font:inherit;font-size:13.5px"></textarea>
+        <button class="sec" id="gtModeloOk" style="margin-top:8px;width:100%">Salvar texto padrão</button></details>
+    </section>
+
+    <div class="secao" id="gtCartoes">Cartões do cliente</div>
+    <section class="bloco" style="margin-top:0"><div id="gtCartLista"><div class="vazio">Carregando...</div></div>
+      <details style="margin-top:8px" ${L.length && !L.some(t => t.chave === 'cartoes' && t.feito) ? 'open' : ''}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary>
+        ${campo('ca_banco', 'Banco', '', 'text', 'placeholder="Ex.: Itaú"')}
+        ${campo('ca_cartao', 'Cartão (categoria)', '', 'text', 'placeholder="Ex.: Azul Infinite"')}
+        ${campo('ca_limite', 'Limite (R$)', '', 'text', 'inputmode="decimal" placeholder="Ex.: 25000"')}
+        ${campo('ca_obs', 'Observação interna (opcional)', '', 'text', 'placeholder="Ex.: anuidade isenta, titular"')}
+        <div class="sub">O cartão aparece no painel do cliente; o limite e a observação ficam só com a equipe. Não anote número do cartão nem senha.</div>
+        <button class="zap" id="gtCartAdd" style="margin-top:10px;width:100%">Salvar cartão</button></details></section>
+
+    <div class="secao" id="gtRotina">Rotina mensal</div>
+    <section class="bloco" style="margin-top:0">
+      <label class="fl" style="margin-top:0"><span>Dia fixo de atualização dos saldos</span><select id="gtDia"><option value="">Sem dia fixo</option>${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}" ${Number(c.dia_saldos) === i + 1 ? 'selected' : ''}>Todo dia ${i + 1}</option>`).join('')}</select></label>
+      <div class="sub">${c.dia_saldos ? (cicloCliente(c).saldos ? 'Saldos deste mês já lançados.' : diaHoje() >= c.dia_saldos ? '<span style="color:var(--alerta)">Saldos deste mês ainda não lançados.</span>' : 'Próxima atualização: dia ' + c.dia_saldos + '.') : 'Sem dia fixo, o cliente entra só no aviso geral de conferência do dia 5.'} No dia, chega aviso no app e no Telegram às 9h, e de novo 3 dias depois se nada for lançado.</div>
+      <button class="sec" id="gtDiaOk" style="margin-top:8px;width:100%">Salvar dia fixo</button></section>`;
+
+  const P = $('pagina'), de = () => telaFicha(P, c.id);
+  el.querySelectorAll('[data-gt]').forEach(b => b.onchange = async () => { if (await gtMarcar(b.dataset.gt, b.checked)) de(); else b.checked = !b.checked; });
+  el.querySelectorAll('[data-gt-ed]').forEach(b => b.onclick = () => { const x = $('gte' + b.dataset.gtEd); x.hidden = !x.hidden; });
+  el.querySelectorAll('[data-gt-pz]').forEach(i => i.onchange = async () => {
+    const { error } = await sb.from('gestao_tarefas').update({ prazo: i.value || null }).eq('id', i.dataset.gtPz);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    const t = D.gtar.find(x => String(x.id) === i.dataset.gtPz); if (t) t.prazo = i.value || null; aviso('Prazo salvo.'); de();
+  });
+  el.querySelectorAll('[data-gt-del]').forEach(b => b.onclick = async () => {
+    if (CONFIRMA !== 'gtd' + b.dataset.gtDel) { CONFIRMA = 'gtd' + b.dataset.gtDel; b.textContent = 'toque de novo'; return; }
+    CONFIRMA = null;
+    const { error } = await sb.from('gestao_tarefas').delete().eq('id', b.dataset.gtDel);
+    if (error) { aviso('Não excluiu: ' + error.message); return; }
+    D.gtar = D.gtar.filter(x => String(x.id) !== b.dataset.gtDel); de();
+  });
+  el.querySelectorAll('[data-gt-ir]').forEach(b => b.onclick = () => $(b.dataset.gtIr).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  el.querySelectorAll('[data-gt-ata]').forEach(b => b.onclick = () => { FI_ABA = 'reunioes'; FI_ONB = true; de(); });
+
+  const iniciar = async () => {
+    const v = $('gtOnb').value;
+    const { error } = await sb.rpc('gestao_implantacao_iniciar', { p_cliente: String(c.id), p_onboard: v ? new Date(v).toISOString() : null });
+    if (error) { aviso(/gestao_implantacao_iniciar|gestao_tarefas/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
+    if (v) c.onboard_data = new Date(v).toISOString();
+    await gtRecarregar(c); aviso(v ? 'Onboard salvo. Prazos do cliente na véspera.' : 'Implantação criada.'); de();
+  };
+  if ($('gtIni')) $('gtIni').onclick = iniciar;
+  if ($('gtOnbOk')) $('gtOnbOk').onclick = () => { if (!$('gtOnb').value) { aviso('Escolha a data e a hora.'); return; } iniciar(); };
+  if ($('gtAdd')) $('gtAdd').onclick = async () => {
+    const box = $('gtNova'), q = (n) => box.querySelector(`[name=${n}]`).value.trim();
+    if (!q('gt_titulo')) { aviso('Escreva a tarefa.'); return; }
+    const { data, error } = await sb.from('gestao_tarefas').insert({ cliente_id: c.id, titulo: q('gt_titulo'), grupo: q('gt_grupo'), prazo: q('gt_prazo') || null, ordem: q('gt_grupo') === 'cliente' ? 39 : 90 }).select().single();
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    D.gtar.push(data); aviso('Tarefa adicionada.'); de();
+  };
+
+  // texto padrão
+  const tx = await sb.from('gestao_textos').select('texto').eq('chave', 'pre_onboard').maybeSingle();
+  if (CLI !== c.id || FI_ABA !== 'tarefas' || !$('gtMsg')) return;
+  const modelo = tx.data ? tx.data.texto : '';
+  $('gtMsg').value = tx.error ? GT_SQL : textoPreOnboard(c, modelo);
+  $('gtModelo').value = modelo;
+  const enviado = async () => { if (L.some(t => t.chave === 'enviar_check' && !t.feito)) { await gtMarcarChave(c, 'enviar_check'); setTimeout(de, 400); } };
+  $('gtZap').onclick = () => { window.open('https://wa.me/?text=' + encodeURIComponent($('gtMsg').value), '_blank', 'noopener'); enviado(); };
+  $('gtCopiar').onclick = async () => { try { await navigator.clipboard.writeText($('gtMsg').value); aviso('Texto copiado.'); } catch (e) { $('gtMsg').select(); document.execCommand('copy'); aviso('Texto copiado.'); } enviado(); };
+  $('gtModeloOk').onclick = async () => {
+    const t = $('gtModelo').value.trim(); if (!t) { aviso('O texto padrão não pode ficar vazio.'); return; }
+    const { error } = await sb.from('gestao_textos').upsert({ chave: 'pre_onboard', texto: t, atualizado_em: new Date().toISOString() });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    $('gtMsg').value = textoPreOnboard(c, t); aviso('Texto padrão salvo para todos os clientes.');
+  };
+
+  // rotina
+  $('gtDiaOk').onclick = async () => {
+    const v = $('gtDia').value ? Number($('gtDia').value) : null;
+    const { error } = await sb.from('clientes').update({ dia_saldos: v }).eq('id', c.id);
+    if (error) { aviso(/dia_saldos/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
+    c.dia_saldos = v; if (v) await gtMarcarChave(c, 'dia_saldos');
+    aviso(v ? 'Saldos todo dia ' + v + '.' : 'Dia fixo removido.'); de();
+  };
+
+  // cartões
+  const desenharCartoes = async () => {
+    const r = await sb.from('cartoes').select('*').eq('cliente_id', c.id).order('ordem');
+    const box = $('gtCartLista'); if (!box || CLI !== c.id) return;
+    if (r.error) { box.innerHTML = `<div class="vazio">${esc(r.error.message)}</div>`; return; }
+    c._ncart = (r.data || []).length;
+    const C = r.data || [], tot = C.reduce((s, x) => s + (Number(x.limite) || 0), 0);
+    box.innerHTML = C.length ? C.map(x => `<div class="lin"><span><b style="font-weight:600">${esc(x.banco)}</b>${x.categoria ? ' · ' + esc(x.categoria) : ''}${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span><span>${x.limite !== null && x.limite !== undefined ? brl(x.limite) : 'sem limite'} <button class="mini" data-ca-del="${x.id}">excluir</button></span></div>`).join('')
+      + `<div class="lin" style="font-weight:600"><span>${plural(C.length, 'cartão', 'cartões')}</span><span>${brl(tot)} de limite</span></div>`
+      : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>';
+    box.querySelectorAll('[data-ca-del]').forEach(b => b.onclick = async () => {
+      if (CONFIRMA !== 'ca' + b.dataset.caDel) { CONFIRMA = 'ca' + b.dataset.caDel; b.textContent = 'confirmar'; return; }
+      CONFIRMA = null;
+      const { error } = await sb.from('cartoes').delete().eq('id', b.dataset.caDel);
+      if (error) { aviso('Não excluiu: ' + error.message); return; }
+      desenharCartoes();
+    });
+  };
+  desenharCartoes();
+  $('gtCartAdd').onclick = async () => {
+    const q = (n) => el.querySelector(`[name=${n}]`).value.trim();
+    if (!q('ca_banco')) { aviso('Informe o banco.'); return; }
+    const lim = q('ca_limite') ? Number(q('ca_limite').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')) : null;
+    if (q('ca_limite') && !isFinite(lim)) { aviso('Limite inválido.'); return; }
+    if (/\d{12,}/.test(q('ca_cartao').replace(/\s/g, '') + q('ca_obs').replace(/\s/g, ''))) { aviso('Parece um número de cartão. Não guarde o número aqui.'); return; }
+    const { error } = await sb.from('cartoes').insert({ cliente_id: c.id, banco: q('ca_banco'), categoria: q('ca_cartao') || null, limite: lim, observacao_interna: q('ca_obs') || null, ordem: (c._ncart || 0) + 1 });
+    if (error) { aviso(/limite|observacao_interna/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
+    ['ca_banco', 'ca_cartao', 'ca_limite', 'ca_obs'].forEach(n => { el.querySelector(`[name=${n}]`).value = ''; });
+    aviso('Cartão salvo.');
+    if (L.some(t => t.chave === 'cartoes' && !t.feito)) { await gtMarcarChave(c, 'cartoes'); de(); } else desenharCartoes();
+  };
+}
+let FI_ONB = false;
+
 /* ---------- contrato e reuniões do cliente da Gestão ---------- */
 function htmlContrato(c) {
   if (!('gestao_inicio' in c)) return '<div class="vazio">O contrato é ativado pelo 10-contrato-gestao.sql.</div>';
@@ -3040,7 +3265,7 @@ function ligarContrato(c) {
     const v = B.querySelector('[name=ct_inicio]').value; if (!v) { aviso('Escolha a data de entrada.'); return; }
     const { data, error } = await sb.rpc('gestao_definir_inicio', { p_cliente: c.id, p_inicio: v });
     if (error) { aviso('Não salvou: ' + error.message); return; }
-    atualiza(data); aviso(`Contrato até ${dataBR(data.gestao_vencimento)}.`);
+    atualiza(data); gtMarcarChave(c, 'data_entrada'); aviso(`Contrato até ${dataBR(data.gestao_vencimento)}.`);
   };
   if ($('ctRenovar')) $('ctRenovar').onclick = async () => {
     if (CONFIRMA !== 'renov' + c.id) { CONFIRMA = 'renov' + c.id; $('ctRenovar').textContent = 'Toque de novo para confirmar a renovação'; return; }
@@ -3069,7 +3294,7 @@ function formReuniaoCliente(c, x) {
   const el = $('reuCli'); if (!el) return;
   const nota = x && c._notas ? (c._notas[String(x.id)] || '') : '';
   el.innerHTML = `<form class="bloco form" id="fReuCli" style="margin-top:0">
-    <h2>${x ? 'Editar reunião' : 'Nova reunião'}</h2>
+    <h2>${x && x.id ? 'Editar reunião' : 'Nova reunião'}</h2>
     ${campo('titulo', 'Assunto da reunião', x ? x.titulo : '', 'text', 'required placeholder="Ex.: reunião mensal, reunião de renovação"')}
     ${campo('data_reuniao', 'Data', x ? x.data_reuniao : hojeISO(), 'date', 'required')}
     <label class="fl"><span>Resumo da reunião (o cliente vê no painel e no relatório)</span><textarea name="resumo" rows="4" placeholder="O que foi apresentado e o que ficou combinado.">${esc(x ? x.resumo || '' : '')}</textarea></label>
@@ -3082,7 +3307,7 @@ function formReuniaoCliente(c, x) {
   $('fReuCli').onsubmit = async (ev) => {
     ev.preventDefault(); const f = ev.target;
     const row = { titulo: f.elements.titulo.value.trim(), data_reuniao: f.elements.data_reuniao.value, resumo: f.elements.resumo.value.trim() || null };
-    const q = x ? sb.from('reunioes').update(row).eq('id', x.id).select().single() : sb.from('reunioes').insert({ ...row, cliente_id: c.id }).select().single();
+    const q = x && x.id ? sb.from('reunioes').update(row).eq('id', x.id).select().single() : sb.from('reunioes').insert({ ...row, cliente_id: c.id }).select().single();
     const { data, error } = await q;
     if (error) { aviso('Não salvou: ' + error.message); return; }
     const interno = f.elements.interno.value.trim();
@@ -3091,7 +3316,9 @@ function formReuniaoCliente(c, x) {
                          : await sb.from('reunioes_internas').delete().eq('reuniao_id', String(data.id));
       if (r2.error) aviso('A reunião foi salva, mas a anotação interna não: ' + r2.error.message);
     }
-    aviso('Reunião salva.'); carregarReunioesCliente(c);
+    if (/onboard|embarque/i.test(row.titulo) && tarefasDe(c.id).some(t => t.chave === 'ata_onboard' && !t.feito)) { await gtMarcarChave(c, 'ata_onboard'); aviso('Reunião salva e tarefa do onboard marcada.'); }
+    else aviso('Reunião salva.');
+    carregarReunioesCliente(c);
   };
 }
 
