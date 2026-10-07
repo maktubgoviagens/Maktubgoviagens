@@ -617,7 +617,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Carteira da Gestão', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', clientes: 'Clientes', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -2514,6 +2514,7 @@ function telaGestao(P) {
     </div>
     <div class="pend" style="margin-top:10px">
       <button data-g="clientes"><span>Carteira de clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
+      <button data-g="implantacao"><span>Implantação e tarefas<small style="display:block;font-size:12px;color:var(--tinta-3)">Check do onboard, texto pré-onboard, cartões e dia dos saldos, na ficha de cada cliente</small></span><span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b><span class="seta">›</span></span></button>
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
     <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>`;
@@ -2521,7 +2522,7 @@ function telaGestao(P) {
 }
 function ligarGestao(P) {
   $('geCiclo') && ($('geCiclo').onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); });
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
@@ -2600,7 +2601,7 @@ function abrirFicha(id, aba) {
 /* ---------- clientes ---------- */
 function telaClientes(P) {
   setTimeout(() => { if ($('voltarCli')) $('voltarCli').onclick = () => ir('gestao'); });
-  const ordem = FILTRO === 'atrasados' ? semAtualizacao() : FILTRO === 'renovar' ? renovacoes(90) : FILTRO === 'semcontrato' ? semContrato() : D.clientes;
+  const ordem = FILTRO === 'implantacao' ? implantacoesAbertas().map(x => x.c) : FILTRO === 'atrasados' ? semAtualizacao() : FILTRO === 'renovar' ? renovacoes(90) : FILTRO === 'semcontrato' ? semContrato() : D.clientes;
   const lista = ordem.filter(c => !BUSCA || String(c.nome_completo || '').toLowerCase().includes(BUSCA.toLowerCase()))
     .map(c => ({ c, pat: patrimonio(c.id), mi: milhas(c.id), v: progsDe(c.id).filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => dia(p.vencimento_data)).filter(d => difDias(d) >= 0).sort((a, b) => a - b)[0] }))
     .sort((a, b) => FILTRO === 'renovar' ? String(a.c.gestao_vencimento).localeCompare(String(b.c.gestao_vencimento)) : b.pat - a.pat);
@@ -2610,7 +2611,7 @@ function telaClientes(P) {
     <h1 class="titulo" style="margin-top:6px">Carteira da <em>Gestão</em></h1>
     <div class="sub">${D.clientes.length} clientes · ${brlC(totPat)} sob gestão · ${brlC(economiaAno())} de economia em ${new Date().getFullYear()}</div>
     <input class="busca" id="busca" type="search" placeholder="Buscar cliente" value="${esc(BUSCA)}">
-    <div class="chips" style="margin-top:10px"><button data-f="todos" class="${!['atrasados', 'renovar', 'semcontrato'].includes(FILTRO) ? 'on' : ''}">Todos</button><button data-f="atrasados" class="${FILTRO === 'atrasados' ? 'on' : ''}">Sem atualização há 30+ dias (${semAtualizacao().length})</button><button data-f="renovar" class="${FILTRO === 'renovar' ? 'on' : ''}">Renovação em 90 dias (${renovacoes(90).length})</button><button data-f="semcontrato" class="${FILTRO === 'semcontrato' ? 'on' : ''}">Sem data de entrada (${semContrato().length})</button></div>
+    <div class="chips" style="margin-top:10px"><button data-f="todos" class="${!['atrasados', 'renovar', 'semcontrato', 'implantacao'].includes(FILTRO) ? 'on' : ''}">Todos</button><button data-f="implantacao" class="${FILTRO === 'implantacao' ? 'on' : ''}">Em implantação (${implantacoesAbertas().length})</button><button data-f="atrasados" class="${FILTRO === 'atrasados' ? 'on' : ''}">Sem atualização há 30+ dias (${semAtualizacao().length})</button><button data-f="renovar" class="${FILTRO === 'renovar' ? 'on' : ''}">Renovação em 90 dias (${renovacoes(90).length})</button><button data-f="semcontrato" class="${FILTRO === 'semcontrato' ? 'on' : ''}">Sem data de entrada (${semContrato().length})</button></div>
     <div class="lista">${lista.length ? lista.map(({ c, pat, mi, v }) => {
       const g = D.gestores.find(x => x.id === c.gestor_id);
       const dias = c.ultima_atualizacao ? Math.floor((Date.now() - new Date(c.ultima_atualizacao)) / 864e5) : null;
