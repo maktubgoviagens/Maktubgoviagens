@@ -494,12 +494,27 @@ $('pagina').addEventListener('click', async (e) => {
   e.preventDefault();
   if (!pode('checkin')) { aviso('Seu acesso não inclui marcar check-in.'); return; }
   const feito = !b.classList.contains('feito');
+  if (feito && !(await perguntarBilhete(b.dataset.tr))) return;
   const { error } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: b.dataset.tr, p_feito: feito });
   if (error) { aviso('Não salvou: ' + error.message); return; }
   const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + b.dataset.tr] = feito;
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
+/* check-in só fecha depois de confirmar que o bilhete foi enviado ao cliente */
+function perguntarBilhete(tr) {
+  return new Promise((ok) => {
+    const el = document.createElement('div');
+    el.className = 'folha';
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="folha-tit">Check-in ${tr === 'volta' ? 'da volta' : 'da ida'}</div>
+      <div style="font-size:17px;color:var(--verde);margin:4px 0 14px">Você já enviou o bilhete para o cliente?</div>
+      <div class="botoes4"><button class="zap" type="button" data-r="1">Sim, já enviei</button><button class="sec" type="button" data-r="0">Ainda não</button></div></div>`;
+    const fim = (r) => { el.remove(); if (!r) aviso('Check-in não marcado. Envie o bilhete ao cliente e marque de novo.'); ok(r); };
+    el.querySelector('.folha-fundo').onclick = () => fim(false);
+    el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
+    document.body.appendChild(el);
+  });
+}
 const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
@@ -1141,10 +1156,12 @@ function telaFormEmissao(P) {
   const podeMarcar = daPlanilha && (ADMIN || e.vendedor_id === D.meuId);
   if (!podeEditar) [...f.elements].forEach(x => { if (!(daPlanilha && (/^checkin_/.test(x.name) || (podeMarcar && MARCAS.includes(x.name))))) x.disabled = true; });
   if (!pode('checkin')) ['checkin_ida', 'checkin_volta'].forEach(n => { if (f.elements[n]) f.elements[n].disabled = true; });
+  if (!daPlanilha) ['checkin_ida', 'checkin_volta'].forEach(n => { const cx = f.elements[n]; if (cx && !cx.disabled) cx.addEventListener('change', async () => { if (cx.checked && !(await perguntarBilhete(n.slice(8)))) cx.checked = false; }); });
   if (daPlanilha) MARCAS.forEach(n => {
     const cx = f.elements[n]; if (!cx || cx.disabled) return;
     cx.onchange = async () => {
       const ck = /^checkin_/.test(n);
+      if (ck && cx.checked && !(await perguntarBilhete(n.slice(8)))) { cx.checked = false; return; }
       const { error } = ck ? await sb.rpc('marcar_checkin', { p_id: e.id, p_trecho: n.slice(8), p_feito: cx.checked })
                            : await sb.from('emissoes').update({ [n]: cx.checked }).eq('id', e.id);
       if (error) { cx.checked = !cx.checked; aviso('Não salvou: ' + error.message); return; }
@@ -3442,7 +3459,7 @@ function blocoAtendimento(base) {
 function voltaramDeViagem() {
   if (!D.posViagem || !D.pessoas) return [];
   const pedidos = new Set(D.posViagem.map(x => x.emissao_id));
-  const recente = new Set(D.posViagem.filter(x => Date.now() - new Date(x.pedido_em) < 120 * 864e5).map(x => x.pessoa_id));
+  const recente = new Set(D.posViagem.filter(x => x.situacao === 'avaliou' || Date.now() - new Date(x.pedido_em) < 120 * 864e5).map(x => x.pessoa_id));
   const por = {};
   D.emissoes.forEach(e => {
     const fim = e.data_volta || e.data_ida; if (!e.pessoa_id || !fim || (e.servico_app || e.servico) === 'Gestão de Milhas') return;
@@ -3464,7 +3481,7 @@ function blocoPosViagem() {
     ${!link ? `<div class="config">Para pedir avaliações no Google, cadastre o link do Perfil da Empresa em ${ADMIN ? '<button data-ir="empresa" style="color:var(--verde);font-weight:600;text-decoration:underline;background:none;border:0;font:inherit">Empresa</button>' : 'Empresa (só administradores)'}.</div>` : ''}
     ${L.map(({ e, k, p }) => `<div class="card" style="margin-top:8px"><div class="cab"><div><button class="nome" data-pid="${p.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer">${esc(p.nome)}</button></div><span class="quando">voltou há ${plural(-k, 'dia', 'dias')}</span></div>
       <div class="info" style="margin-top:4px;color:var(--tinta-2);font-size:13px">${esc([e.origem, e.destino].filter(Boolean).join(' → ') || e.servico_app || e.servico || '')}</div>
-      ${link ? `<div class="botoes4" style="margin-top:10px">${p.celular && zapNum(p.celular) ? `<a class="zap" data-pv="${e.id}" data-pp="${p.id}" href="${esc(zapLink(p.celular, p.nome, textoGoogle(p)))}" target="_blank" rel="noopener">${ZAP}Pedir avaliação</a>` : `<button class="zap" type="button" data-pvcopia="${e.id}" data-pp="${p.id}">Copiar mensagem</button>`}<button class="sec" type="button" data-pvpular="${e.id}" data-pp="${p.id}">Agora não</button></div>` : ''}
+      ${link ? `<div class="botoes4" style="margin-top:10px">${p.celular && zapNum(p.celular) ? `<a class="zap" data-pv="${e.id}" data-pp="${p.id}" href="${esc(zapLink(p.celular, p.nome, textoGoogle(p)))}" target="_blank" rel="noopener">${ZAP}Pedir avaliação</a>` : `<button class="zap" type="button" data-pvcopia="${e.id}" data-pp="${p.id}">Copiar mensagem</button>`}<button class="sec" type="button" data-pvpular="${e.id}" data-pp="${p.id}">Agora não</button><button class="sec" type="button" data-pvja="${e.id}" data-pp="${p.id}" style="grid-column:1/-1">Já avaliou no Google</button></div>` : ''}
       ${podeAba('fornecedores') ? `<button type="button" data-pvforn="${p.id}" data-pvdata="${esc(e.data_volta || e.data_ida || '')}" style="margin-top:8px;background:none;border:0;padding:0;color:var(--verde);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer">Registrar o que achou do hotel e dos serviços</button>` : ''}
     </div>`).join('')}`;
 }
@@ -3476,6 +3493,7 @@ async function registrarPosViagem(eid, pid, situacao) {
 function ligarPosViagem(P, render) {
   P.querySelectorAll('[data-pv]').forEach(a => a.addEventListener('click', () => { registrarPosViagem(a.dataset.pv, a.dataset.pp, 'pedido').then(() => setTimeout(render, 400)); }));
   P.querySelectorAll('[data-pvpular]').forEach(b => b.onclick = async () => { await registrarPosViagem(b.dataset.pvpular, b.dataset.pp, 'pular'); render(); });
+  P.querySelectorAll('[data-pvja]').forEach(b => b.onclick = async () => { await registrarPosViagem(b.dataset.pvja, b.dataset.pp, 'avaliou'); aviso('Marcado: este cliente não entra mais nos pedidos de avaliação.'); render(); });
   P.querySelectorAll('[data-pvcopia]').forEach(b => b.onclick = async () => {
     const p = D.pessoas.find(x => x.id === b.dataset.pp), t = textoGoogle(p);
     try { await navigator.clipboard.writeText(t); aviso('Mensagem copiada. A ficha não tem celular.'); } catch (_) { prompt('Copie a mensagem:', t); }
