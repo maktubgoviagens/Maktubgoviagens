@@ -50,7 +50,8 @@ export function pend() {
 export function rota(h) { VIEW = h[1] || null; ED = null; ED_EST = null; PRE = null; }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; }
 
-const precisaTikTok = (p) => p.formato === 'reels' && p.status === 'publicado' && !p.tiktok_feito;
+// posts só no Instagram: sem controle de repost no TikTok
+const precisaTikTok = () => false;
 const atrasado = (p) => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista < hoje();
 const cfg = () => EST.find(e => e.chave === 'config');
 const exigir = () => !(cfg() && cfg().valores && cfg().valores.aprovacao === false);
@@ -185,7 +186,7 @@ function vPainel() {
       <div class="num destaque"><div class="l">Publicados no mês</div><div class="v">${pub.length}${m.posts ? `<small style="font-size:.55em;color:var(--tinta-3)"> / ${m.posts}</small>` : ''}</div><div class="d">${m.posts ? Math.round(pub.length / m.posts * 100) + '% da meta' : 'meta não definida'}</div></div>
       <div class="num destaque"><div class="l">Reels no mês</div><div class="v">${reels.length}${m.reels ? `<small style="font-size:.55em;color:var(--tinta-3)"> / ${m.reels}</small>` : ''}</div><div class="d">${m.reels ? Math.round(reels.length / m.reels * 100) + '% da meta' : 'meta não definida'}</div></div>
       <div class="num ${aprov.length ? 'alerta' : ''}"><div class="l">Para aprovar</div><div class="v">${aprov.length}</div><div class="d">${exigir() ? 'aprovação obrigatória' : 'aprovação opcional'}</div></div>
-      <div class="num ${tt.length ? 'alerta' : ''}"><div class="l">Repost no TikTok</div><div class="v">${tt.length}</div><div class="d">reels publicados sem repost</div></div>
+      <div class="num ${atras.length ? 'alerta' : ''}"><div class="l">Atrasados</div><div class="v">${atras.length}</div><div class="d">passaram da data prevista</div></div>
     </div>
     <div class="secao">Para você aprovar</div>
     ${aprov.length ? aprov.map(cardAprovar).join('') : '<div class="vazio">Nada esperando aprovação.</div>'}
@@ -207,7 +208,7 @@ function linha(p) {
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${corP(p)}"></i><span class="t">${esc(p.titulo)}<small>${esc(det)}</small></span>${tag}</button>`;
 }
 function links(p) {
-  const L = [[p.link_arquivo, 'Ver a arte'], [p.link_post, 'Ver no Instagram'], [p.link_tiktok, 'Ver no TikTok']].filter(x => x[0]);
+  const L = [[p.link_arquivo, 'Ver a arte'], [p.link_post, 'Ver no Instagram']].filter(x => x[0]);
   return L.length ? `<div class="mk-links">${L.map(([u, t]) => `<a href="${X.esc(u)}" target="_blank" rel="noopener">${t} ›</a>`).join('')}</div>` : '';
 }
 function cardAprovar(p) {
@@ -259,7 +260,7 @@ function vProducao() {
     <div class="secao" style="margin-top:16px">Produção</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no post para abrir.</div>
     <div class="kanban" style="margin-top:8px">${cols.map(s => { const L = col(s); return `<div class="kcol"><h3>${nome[s]} <small>${L.length}</small></h3>${L.map(p => kcard(p)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
-    <div class="sub">Publicados aparecem por 21 dias, ou até o reels ser repostado no TikTok.</div>`;
+    <div class="sub">Publicados aparecem por 21 dias.</div>`;
 }
 function kcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
@@ -374,9 +375,6 @@ function formPost(P) {
       ${campo('link_arquivo', 'Link da arte ou do vídeo (Canva ou Drive)', p.link_arquivo, 'url', 'placeholder="https://"')}
       <div id="mkPub">${campo('link_post', 'Link do post no Instagram', p.link_post, 'url', 'placeholder="https://www.instagram.com/..."')}
         ${campo('publicado_em', 'Publicado em', p.publicado_em || (p.status === 'publicado' ? hoje() : ''), 'date')}</div>
-      <div id="mkTT" class="bloco mk-tt" style="margin-top:12px"><h2 style="color:var(--dourado-claro)">TikTok</h2>
-        <label class="fc"><input type="checkbox" name="tiktok_feito" ${p.tiktok_feito ? 'checked' : ''}><span>Reels repostado no TikTok</span></label>
-        <label class="fl"><span style="color:rgba(249,246,241,.7)">Link no TikTok</span><input name="link_tiktok" type="url" value="${esc(p.link_tiktok || '')}" placeholder="https://www.tiktok.com/..."></label></div>
       <label class="fl"><span>Observações internas</span><textarea name="obs" rows="2">${esc(p.obs || '')}</textarea></label>
       <button class="zap grande" type="submit" id="mkSalvar" style="margin-top:16px;width:100%">${nova ? 'Salvar' : 'Salvar alterações'}</button>
       ${!nova ? '<button class="sec grande" type="button" id="mkExcluir" style="margin-top:10px;width:100%">Excluir post</button>' : ''}
@@ -386,7 +384,6 @@ function formPost(P) {
   const mostrar = () => {
     const st = el.status.value, fmt = f.querySelector('[name=formato]:checked').value;
     document.getElementById('mkPub').hidden = st !== 'publicado';
-    document.getElementById('mkTT').hidden = !(fmt === 'reels' && st === 'publicado');
     if (st === 'publicado' && !el.publicado_em.value) el.publicado_em.value = hoje();
   };
   mostrar(); f.addEventListener('change', mostrar);
@@ -396,7 +393,7 @@ function formPost(P) {
     const v = (n) => (el[n].value || '').trim() || null;
     const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, data_prevista: v('data_prevista'), hora: v('hora'),
       pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
-      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, tiktok_feito: el.tiktok_feito.checked, link_tiktok: v('link_tiktok'), obs: v('obs') };
+      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs') };
     if (!reg.titulo) { msg('Escreva o título do post.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);

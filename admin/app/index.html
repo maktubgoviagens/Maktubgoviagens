@@ -838,7 +838,6 @@ function telaInicio(P) {
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
     ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
     ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
-    ['Reels para repostar no TikTok', MKT.pend().tiktok, () => ir('marketing', () => MKT.abrir('painel'))],
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
