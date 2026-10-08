@@ -174,6 +174,7 @@ function vPainel() {
   const atras = LISTA.filter(atrasado).sort(porData);
   const prox = LISTA.filter(p => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista >= hoje() && p.data_prevista <= maisDias(hoje(), 7)).sort(porData);
   const tt = LISTA.filter(precisaTikTok);
+  const aFazer = LISTA.filter(p => ['producao', 'aprovacao', 'agendado'].includes(p.status));
   const noMes = LISTA.filter(p => p.status !== 'ideia' && mesK(diaPost(p)) === k);
   const porPilar = pilares().map(pl => [pl, noMes.filter(p => p.pilar_id === pl.id).length]);
   const semPilar = noMes.filter(p => !p.pilar_id).length;
@@ -185,7 +186,7 @@ function vPainel() {
       <div class="num destaque"><div class="l">Publicados no mês</div><div class="v">${pub.length}${m.posts ? `<small style="font-size:.55em;color:var(--tinta-3)"> / ${m.posts}</small>` : ''}</div><div class="d">${m.posts ? Math.round(pub.length / m.posts * 100) + '% da meta' : 'meta não definida'}</div></div>
       <div class="num destaque"><div class="l">Reels no mês</div><div class="v">${reels.length}${m.reels ? `<small style="font-size:.55em;color:var(--tinta-3)"> / ${m.reels}</small>` : ''}</div><div class="d">${m.reels ? Math.round(reels.length / m.reels * 100) + '% da meta' : 'meta não definida'}</div></div>
       <div class="num ${aprov.length ? 'alerta' : ''}"><div class="l">Para aprovar</div><div class="v">${aprov.length}</div><div class="d">${exigir() ? 'aprovação obrigatória' : 'aprovação opcional'}</div></div>
-      <div class="num ${tt.length ? 'alerta' : ''}"><div class="l">Repost no TikTok</div><div class="v">${tt.length}</div><div class="d">reels publicados sem repost</div></div>
+      <div class="num"><div class="l">Postagens a fazer</div><div class="v">${aFazer.length}</div><div class="d">em produção, aprovação ou agendadas</div></div>
     </div>
     <div class="secao">Para você aprovar</div>
     ${aprov.length ? aprov.map(cardAprovar).join('') : '<div class="vazio">Nada esperando aprovação.</div>'}
