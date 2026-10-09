@@ -293,6 +293,10 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .kcol{flex:0 0 80%;max-width:330px;scroll-snap-align:start;background:var(--creme-2);padding:10px;min-height:120px}
 .kcol h3{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--verde);font-weight:600;display:flex;justify-content:space-between;margin:2px 2px 8px}
 .kcol h3 small{font-size:10px;color:var(--tinta-3);letter-spacing:.06em}
+.kcol.alvo{outline:2px dashed var(--dourado);outline-offset:-2px;background:#efe6cf}
+.kc.levando{opacity:.35}
+.kfant{position:fixed;z-index:80;pointer-events:none;box-shadow:0 12px 28px rgba(0,0,0,.25);transform:rotate(2deg);opacity:.95;margin:0}
+.kc[data-kid]{-webkit-touch-callout:none}
 .kc{background:var(--branco);border:1px solid var(--linha);padding:10px;margin-bottom:8px}
 .kc.atr{border-left:3px solid var(--alerta)}
 .kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:0;text-align:left;cursor:pointer;width:100%}
@@ -1546,7 +1550,7 @@ function ligarCardsReuniao(P) {
 function htmlKCard(r, etapas) {
   const et = etapaDe(r), i = etapas.indexOf(et);
   const atr = r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
-  return `<div class="kc ${atr ? 'atr' : ''}">
+  return `<div class="kc ${atr ? 'atr' : ''}" data-kid="${r.id}">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     <div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
@@ -1590,8 +1594,8 @@ function telaReunioes(P) {
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
     <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Funil · ${abertos.length}</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
     ${RE_PARTE === 'res' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
-    <div class="kdica">Arraste para o lado para ver as etapas. Toque no nome para abrir.</div>
-    <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(G))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
+    <div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>
+    <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(G))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
 `}
     ${RE_PARTE === 'funil' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
@@ -3832,10 +3836,13 @@ function htmlClarity(dias) {
     ${Object.keys(disp).length ? `<section class="bloco"><h2>Aparelho</h2>${barras(Object.entries(disp).sort((a, b) => b[1] - a[1]).map(([kk, v]) => [DISP[kk] || kk, v]), 'ouro')}</section>` : ''}
     ${Object.keys(pags).length ? `<section class="bloco"><h2>Páginas mais visitadas (Clarity)</h2>${barras(Object.entries(pags).sort((a, b) => b[1] - a[1]).slice(0, 8))}</section>` : ''}`;
 }
-/* Kanban: arrastar para o lado com o dedo (celular) ou com o mouse (computador). O app controla o movimento lateral
-   e o navegador continua rolando a página para cima e para baixo; ao soltar, encaixa na coluna seguinte ou anterior. */
+/* Kanban:
+   - deslizar o funil para o lado (dedo ou mouse) passa de etapa em etapa;
+   - arrastar um card até outra coluna muda a etapa dele. No celular, segura o card um instante e arrasta;
+     no computador, clica no card e arrasta. */
 (() => {
-  let kb = null, x0 = 0, s0 = 0, i0 = 0, moveu = false, tipo = '';
+  let kb = null, x0 = 0, y0 = 0, s0 = 0, i0 = 0, moveu = false, tipo = '';
+  let card = null, segura = null, fant = null, dx0 = 0, dy0 = 0, alvo = null, rolar = 0, px = 0, py = 0;
   const colAtual = k => {
     const base = k.getBoundingClientRect().left + 16; let i = 0, d = Infinity;
     [...k.children].forEach((c, j) => { const dd = Math.abs(c.getBoundingClientRect().left - base); if (dd < d) { d = dd; i = j; } });
@@ -3843,33 +3850,83 @@ function htmlClarity(dias) {
   };
   const irPara = (k, i) => {
     const cols = k.children; i = Math.max(0, Math.min(cols.length - 1, i));
-    const alvo = cols[i]; if (!alvo) return;
-    k.scrollTo({ left: k.scrollLeft + alvo.getBoundingClientRect().left - k.getBoundingClientRect().left - 16, behavior: 'smooth' });
+    const a = cols[i]; if (!a) return;
+    k.scrollTo({ left: k.scrollLeft + a.getBoundingClientRect().left - k.getBoundingClientRect().left - 16, behavior: 'smooth' });
+  };
+  const bloquearClique = () => {
+    const bloq = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    window.addEventListener('click', bloq, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', bloq, { capture: true }), 60);
+  };
+  const pegarCard = () => {
+    clearTimeout(segura); segura = null;
+    const r = card.getBoundingClientRect();
+    dx0 = px - r.left; dy0 = py - r.top;
+    fant = card.cloneNode(true); fant.classList.add('kfant'); fant.style.width = r.width + 'px';
+    document.body.appendChild(fant); card.classList.add('levando'); kb.classList.add('arrastando');
+    if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+    moverFant();
+    const passo = () => { if (!fant) return; if (rolar) kb.scrollLeft += rolar; marcarAlvo(); requestAnimationFrame(passo); };
+    requestAnimationFrame(passo);
+  };
+  const moverFant = () => { if (fant) { fant.style.left = (px - dx0) + 'px'; fant.style.top = (py - dy0) + 'px'; } };
+  const marcarAlvo = () => {
+    const el = document.elementFromPoint(px, py), c = el && el.closest('.kcol[data-ket]');
+    const novo = c && kb.contains(c) ? c : null;
+    if (novo !== alvo) { if (alvo) alvo.classList.remove('alvo'); alvo = novo; if (alvo) alvo.classList.add('alvo'); }
+    const r = kb.getBoundingClientRect(), borda = 48;
+    rolar = px < r.left + borda ? -12 : px > r.right - borda ? 12 : 0;
+  };
+  const limparCard = () => {
+    clearTimeout(segura); segura = null;
+    if (fant) fant.remove(); fant = null;
+    if (card) card.classList.remove('levando');
+    if (alvo) alvo.classList.remove('alvo');
+    card = null; alvo = null; rolar = 0;
   };
   document.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const k = e.target.closest('.kanban'); if (!k) return;
     if (e.target.closest('input,select,textarea')) return;
-    kb = k; x0 = e.clientX; s0 = k.scrollLeft; i0 = colAtual(k); moveu = false; tipo = e.pointerType;
+    kb = k; x0 = px = e.clientX; y0 = py = e.clientY; s0 = k.scrollLeft; i0 = colAtual(k); moveu = false; tipo = e.pointerType;
+    card = e.target.closest('.kc[data-kid]');
+    if (card && tipo !== 'mouse') segura = setTimeout(pegarCard, 380);
   });
   document.addEventListener('pointermove', e => {
     if (!kb) return;
-    const dx = e.clientX - x0;
+    px = e.clientX; py = e.clientY;
+    if (fant) { moverFant(); e.preventDefault(); return; }
+    const dx = px - x0, dy = py - y0;
+    if (!moveu && Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    if (segura) { clearTimeout(segura); segura = null; card = null; }
+    if (card && tipo === 'mouse') { moveu = true; pegarCard(); e.preventDefault(); return; }
     if (!moveu && Math.abs(dx) < 8) return;
     if (!moveu) { moveu = true; kb.classList.add('arrastando'); }
     kb.scrollLeft = s0 - dx;
     if (tipo === 'mouse') e.preventDefault();
   }, { passive: false });
+  // enquanto leva um card no celular, a página não rola
+  document.addEventListener('touchmove', e => {
+    if (!fant) return;
+    e.preventDefault();
+    const t = e.touches[0]; if (t) { px = t.clientX; py = t.clientY; moverFant(); }
+  }, { passive: false });
+  document.addEventListener('contextmenu', e => { if (fant || segura) e.preventDefault(); });
   const fim = e => {
     if (!kb) return;
     const k = kb; kb = null;
+    if (fant) {
+      const id = card.dataset.kid, et = alvo && alvo.dataset.ket, origem = card.closest('.kcol');
+      k.classList.remove('arrastando'); limparCard(); bloquearClique();
+      if (e.type === 'pointerup' && et && origem && origem.dataset.ket !== et) moverEtapa(id, et);
+      return;
+    }
+    limparCard();
     if (!moveu) return;
     k.classList.remove('arrastando');
-    const dx = (e && e.type === 'pointerup') ? e.clientX - x0 : 0;
+    const dx = e.type === 'pointerup' ? e.clientX - x0 : 0;
     irPara(k, Math.abs(dx) > 40 ? i0 + (dx < 0 ? 1 : -1) : colAtual(k));
-    const bloq = ev => { ev.stopPropagation(); ev.preventDefault(); };
-    window.addEventListener('click', bloq, { capture: true, once: true });
-    setTimeout(() => window.removeEventListener('click', bloq, { capture: true }), 60);
+    bloquearClique();
   };
   document.addEventListener('pointerup', fim);
   document.addEventListener('pointercancel', fim);
