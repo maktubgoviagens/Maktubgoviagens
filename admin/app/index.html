@@ -283,6 +283,13 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .tag.ok{border-color:rgba(47,107,74,.45);color:var(--ok)}
 .kanban{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:16px;margin:0 -16px;padding:2px 16px 10px;scrollbar-width:none}
 .kanban::-webkit-scrollbar{display:none}
+@media (hover:hover) and (pointer:fine){
+.kanban{cursor:grab;scrollbar-width:thin;scrollbar-color:var(--dourado) transparent}
+.kanban::-webkit-scrollbar{display:block;height:6px}
+.kanban::-webkit-scrollbar-thumb{background:var(--dourado);border-radius:3px}
+.kanban.arrastando{cursor:grabbing;scroll-snap-type:none;user-select:none}
+.kanban.arrastando *{cursor:grabbing}
+}
 .kcol{flex:0 0 80%;max-width:330px;scroll-snap-align:start;background:var(--creme-2);padding:10px;min-height:120px}
 .kcol h3{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--verde);font-weight:600;display:flex;justify-content:space-between;margin:2px 2px 8px}
 .kcol h3 small{font-size:10px;color:var(--tinta-3);letter-spacing:.06em}
@@ -3825,6 +3832,39 @@ function htmlClarity(dias) {
     ${Object.keys(disp).length ? `<section class="bloco"><h2>Aparelho</h2>${barras(Object.entries(disp).sort((a, b) => b[1] - a[1]).map(([kk, v]) => [DISP[kk] || kk, v]), 'ouro')}</section>` : ''}
     ${Object.keys(pags).length ? `<section class="bloco"><h2>Páginas mais visitadas (Clarity)</h2>${barras(Object.entries(pags).sort((a, b) => b[1] - a[1]).slice(0, 8))}</section>` : ''}`;
 }
+/* Kanban: no computador (mouse), clicar e arrastar move as colunas para o lado. No celular o deslize já é nativo. */
+(() => {
+  let kb = null, x0 = 0, s0 = 0, moveu = false;
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const k = e.target.closest('.kanban'); if (!k) return;
+    if (e.target.closest('input,select,textarea')) return;
+    kb = k; x0 = e.clientX; s0 = k.scrollLeft; moveu = false;
+  });
+  document.addEventListener('pointermove', e => {
+    if (!kb) return;
+    const dx = e.clientX - x0;
+    if (!moveu && Math.abs(dx) < 6) return;
+    if (!moveu) { moveu = true; kb.classList.add('arrastando'); }
+    kb.scrollLeft = s0 - dx; e.preventDefault();
+  });
+  const fim = () => {
+    if (!kb) return;
+    const k = kb; kb = null;
+    if (!moveu) return;
+    k.classList.remove('arrastando');
+    const cols = [...k.children], base = k.getBoundingClientRect().left + 16;
+    let alvo = cols[0], d = Infinity;
+    cols.forEach(c => { const dd = Math.abs(c.getBoundingClientRect().left - base); if (dd < d) { d = dd; alvo = c; } });
+    if (alvo) k.scrollTo({ left: k.scrollLeft + alvo.getBoundingClientRect().left - base, behavior: 'smooth' });
+    const bloq = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    window.addEventListener('click', bloq, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', bloq, { capture: true }), 50);
+  };
+  document.addEventListener('pointerup', fim);
+  document.addEventListener('pointercancel', fim);
+  /* Rodinha do mouse em cima do funil (com Shift ou trackpad lateral) já rola de lado; sem Shift, rola a página normalmente. */
+})();
 </script>
 </body>
 </html>
