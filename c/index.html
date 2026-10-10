@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1B4332">
+<title>Sua cotação | Maktub Go</title>
+<link rel="icon" href="/ativos/simbolo-verde.png">
+<style>body{margin:0;background:#F3F1EA;color:#1B4332;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}img{width:64px;opacity:.9}p{font-size:15px;line-height:1.5;max-width:340px}a{color:#A88B4A;font-weight:700}</style>
+</head>
+<body>
+<div id="msg"><img src="/ativos/simbolo-verde.png" alt="Maktub Go"><p>Carregando a sua cotação...</p></div>
+<script>
+(function () {
+  var k = new URLSearchParams(location.search).get('k') || '';
+  var erro = function () {
+    document.getElementById('msg').innerHTML = '<img src="/ativos/simbolo-verde.png" alt="Maktub Go"><p>Não encontramos esta cotação. Fale com a gente no <a href="https://wa.me/5521976275225">WhatsApp (21) 97627-5225</a>.</p>';
+  };
+  if (!/^[a-z0-9]{8,40}$/i.test(k)) return erro();
+  fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/ver_cotacao', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE' },
+    body: JSON.stringify({ p_token: k })
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (html) {
+    if (!html || typeof html !== 'string') return erro();
+    document.open(); document.write(html); document.close();
+  }).catch(erro);
+})();
+</script>
+</body>
+</html>

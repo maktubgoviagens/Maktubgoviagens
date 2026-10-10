@@ -27,7 +27,7 @@ const OPCAO = (n) => ({ nome: '', resumo: '', embarque: '', retorno: '', hotelar
   sites: '', cartao: '', parcelas: '10', pix: '5', incluso: 'Check-in dos voos feito por nós\nTime com vocês do embarque ao retorno', cta: n ? `Quero seguir com a Opção ${n}` : 'Quero seguir com essa viagem' });
 const NOVO_GO = () => ({ modelo: 'go', kicker: 'Proposta de experiência', titulo: '', sub: '', linha: '', para: '', pessoas: '2', nomeZap: '', carta: '', consulta: hoje(), destino: '',
   opcoes: [OPCAO(0)], avisos: 'Tarifas com cobrança de multa para alterações e cancelamentos.\nAlterações podem ser feitas pela companhia aérea.\nValores podem ser alterados, pois as tarifas são flutuantes.', porque: '' });
-const NOVO_CORP = () => ({ modelo: 'corp', codigo: '', passageiro: '', pessoas: '1', validade: hoje(), cia: '', destino: '',
+const NOVO_CORP = () => ({ modelo: 'corp', marca: 'Maktub Corporativo', codigo: '', passageiro: '', pessoas: '1', validade: hoje(), cia: '', destino: '',
   voos: [{ rotulo: 'Ida', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '' }, { rotulo: 'Volta', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '' }],
   bagagem: '1 item pessoal + 1 mala de cabine de até 10 kg por passageiro', print: '', de: '', por: '', forma: 'À vista via Pix',
   rodape: 'Sem bagagem despachada. Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa válida apenas na data de emissão e sujeita à confirmação no momento da compra. Horários locais. Check-in realizado por nossa equipe. Suporte humanizado e pós-venda. Você fala sempre com uma pessoa.' });
@@ -87,6 +87,7 @@ function editor(P, X) {
     <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
+    <button class="zap grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="salvarC">Salvar rascunho</button><button class="sec" id="acervoC">Guardar no acervo</button></div>
     ${S._id ? '<button class="sec" id="duplicarC" style="width:100%;margin-top:6px">Duplicar para outro cliente</button>' : ''}
     <div class="sub" id="msgC"></div>`;
@@ -94,7 +95,7 @@ function editor(P, X) {
   const f = $('fCot');
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
     const m = k.match(/^opcoes\.(\d+)\.(sites|cartao|parcelas|pix)$/); if (m && $('rv' + m[1])) $('rv' + m[1]).innerHTML = resumoValores(S.opcoes[+m[1]]); });
-  f.addEventListener('change', (e) => { if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
+  f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && e.target.dataset.k) set(e.target.dataset.k, e.target.value); if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
   f.addEventListener('click', (e) => {
     const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]');
     if (m) { mais(m.dataset.mais); editor(P, X); }
@@ -104,6 +105,7 @@ function editor(P, X) {
   $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para arrastar no Netlify.'); };
   $('salvarC').onclick = () => salvar(X);
   $('acervoC').onclick = () => acervo(X);
+  $('linkC').onclick = () => gerarLink(X);
   if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ajuste o cliente e salve.'); };
 }
 
@@ -209,6 +211,7 @@ function formCorp() {
     ${duas(inp('passageiro', 'Passageiro', 'text', 'placeholder="Victor"'), inp('pessoas', 'Pessoas', 'num'))}
     ${duas(inp('cia', 'Companhia', 'text', 'placeholder="LATAM"'), inp('destino', 'Destino (acervo)', 'text', 'placeholder="Santiago"'))}
     ${inp('rota', 'Título da rota', 'text', 'placeholder="Rio de Janeiro ⇄ Santiago"')}
+    ${sel('marca', 'Marca no topo', ['Maktub Corporativo', 'Maktub Go'])}
     <div class="grupo">${multi ? 'Opção 1' : 'Voos'}</div>
     ${multi ? inp('nome1', 'Nome da Opção 1', 'text', 'placeholder="Ida direta, volta com 1 parada"') : ''}
     ${voosCorp('')}
@@ -256,6 +259,18 @@ async function salvar(X) {
   // fotos de hotel entram no banco de fotos do fornecedor
   if (S.modelo === 'go') for (const o of S.opcoes) for (const ht of o.hoteis) { const urls = linhas(ht.fotos).filter(u => /^https?:/.test(u)); const f = ht.fornecedor_id && X.fornecedores && X.fornecedores.lista().find(x => x.id === ht.fornecedor_id); if (f && urls.length) { const todas = [...new Set([...(f.fotos_maktub || []), ...urls])].slice(0, 30); if (todas.length !== (f.fotos_maktub || []).length) { const u = await X.sb.from('fornecedores').update({ fotos_maktub: todas }).eq('id', f.id); if (!u.error) f.fotos_maktub = todas; } } }
   X.aviso('Rascunho salvo.'); return true;
+}
+async function gerarLink(X) {
+  const b = X.$('linkC'); b.disabled = true; b.textContent = 'Gerando...';
+  const r = await X.sb.from('cotacoes_link').insert({ html: gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }).select('token').single();
+  b.disabled = false; b.textContent = 'Gerar link para o cliente';
+  if (r.error) { X.aviso(/cotacoes_link/.test(r.error.message) ? 'Falta rodar o SQL do link no Supabase.' : 'Não gerou o link: ' + r.error.message); return; }
+  const url = `https://www.maktubgo.com.br/c/?k=${r.data.token}`;
+  const zap = `https://wa.me/?text=${encodeURIComponent(url)}`;
+  X.$('linkBox').innerHTML = `<div class="config" style="margin-top:8px;word-break:break-all"><b>Link pronto:</b><br><a href="${url}" target="_blank" rel="noopener">${url}</a></div><div class="botoes4" style="margin-top:6px"><button class="sec" id="copiarL">Copiar link</button><a class="sec" style="text-align:center;text-decoration:none" href="${zap}" target="_blank" rel="noopener">Enviar no WhatsApp</a></div>`;
+  X.$('copiarL').onclick = async () => { try { await navigator.clipboard.writeText(url); X.aviso('Link copiado.'); } catch (e) { X.aviso(url); } };
+  try { await navigator.clipboard.writeText(url); X.aviso('Link gerado e copiado.'); } catch (e) {}
+  enviada(X);
 }
 async function acervo(X) {
   const html = gerar(X), nome = (tituloDe() || 'cotacao').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase().slice(0, 60);
@@ -428,7 +443,7 @@ document.querySelectorAll('.opt').forEach(function(b){b.addEventListener('click'
 function gerarCorp() {
   const filtra = (l) => (l || []).filter(v => v.ocod || v.dcod), pax = +S.pessoas || 1;
   const OPS = [{ nome: S.nome1 || '', voos: filtra(S.voos), de: num(S.de), por: num(S.por) }].concat((S.extras || []).map(o => ({ nome: o.nome || '', voos: filtra(o.voos), de: num(o.de), por: num(o.por) })));
-  const multi = OPS.length > 1;
+  const multi = OPS.length > 1, GO = S.marca === 'Maktub Go';
   const voos = OPS[0].voos;
   const ida = voos[0], vol = voos[1];
   const trecho = ida ? `${(ida.ocod || '').toUpperCase()} ${vol ? '⇄' : '→'} ${(ida.dcod || '').toUpperCase()}` : '';
@@ -440,7 +455,7 @@ function gerarCorp() {
   const resumo = (o, n) => `<div class="resumo"><div class="rot">${n ? 'Opção ' + n : 'Resumo da cotação'}</div><div class="p">VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}</div>${o.de > o.por ? `<div class="de">De <s>${brl(o.de)}</s></div>` : ''}<div class="por">${o.de > o.por ? 'Por ' : ''}${brl(o.por)}</div><div class="forma">${h(S.forma)}</div>${o.de > o.por ? `<div class="eco">Economia de ${brl(o.de - o.por)}</div>` : ''}<hr><small>Tarifas e disponibilidade confirmadas somente no momento da emissão.</small></div>
 <a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(zapTxt(n))}" target="_blank" rel="noopener">${n ? 'QUERO A OPÇÃO ' + n : 'FALE COM O ESPECIALISTA'} · WHATSAPP ${ZAP_TXT}</a>`;
   const dataCab = (iso) => { const d = dt(iso); return d ? `${SEMANA[d.getDay()]} · ${iso.split('-').reverse().join('/')}`.toUpperCase() : ''; };
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(S.codigo || 'Cotação')} · Maktub Corporativo</title>
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(S.codigo || 'Cotação')} · ${GO ? 'Maktub Go' : 'Maktub Corporativo'}</title>
 <style>:root{--v:#1B4332;--v2:#245a3b;--d:#A88B4A;--c:#F3F1EA;--b:#F3EAD2;--t:#1f2a24;--s:#5b625d;--l:#d9d2bf}
 *{box-sizing:border-box;margin:0;padding:0}body{background:var(--c);color:var(--t);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5}
 .w{max-width:760px;margin:0 auto;padding:0 18px}header{background:var(--v);color:#fff;padding:24px 0}header .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
@@ -454,23 +469,26 @@ h1{font-size:24px;color:var(--v);letter-spacing:.02em;margin-top:26px}.subt{colo
 .print img{max-width:100%;display:block;margin-top:10px;border-radius:4px}.resumo{background:var(--v);color:#fff;border-radius:10px;padding:22px 18px;margin-top:20px}.resumo .p{font-size:11px;letter-spacing:.1em;font-weight:700;margin-top:8px;color:#EBE0C4}
 .de{margin-top:12px;color:#EBE0C4}.de s{text-decoration-color:var(--d)}.por{font-size:32px;font-weight:800;margin-top:4px}.forma{font-weight:700;color:#EBE0C4;font-size:13px}.resumo hr{border:0;border-top:1px solid var(--d);margin:14px 0 10px}.resumo small{color:#EBE0C4;font-size:11.5px}
 .opcao{margin-top:34px;padding-top:18px;border-top:2px solid var(--d);color:var(--s);font-size:13px;font-weight:700}.opcao span{display:inline-block;background:var(--d);color:#fff;border-radius:4px;padding:3px 10px;margin-right:10px;font-size:11px;letter-spacing:.12em}
+header.go{background:#F3EAD2;color:var(--v)}header.go .slog,header.go .cont,header.go .cont a{color:var(--v)}header.go .marca{color:var(--v)}.logo{height:58px;display:block}
+.abas{margin-top:22px}.abas .lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:8px}.aba{font:inherit;text-align:left;cursor:pointer;background:#fff;border:1px solid var(--l);border-radius:8px;padding:12px 14px;color:var(--t)}.aba .n{display:block;font-size:11px;letter-spacing:.12em;font-weight:700;color:var(--d);text-transform:uppercase}.aba .t{display:block;font-size:12.5px;color:var(--s);margin-top:2px;min-height:18px}.aba .v{display:block;font-size:19px;font-weight:800;color:var(--v);margin-top:4px}.aba[aria-selected="true"]{background:var(--v);border-color:var(--v)}.aba[aria-selected="true"] .t{color:#EBE0C4}.aba[aria-selected="true"] .v{color:#fff}
 .eco{display:inline-block;margin-top:10px;border:1px solid var(--d);border-radius:20px;padding:4px 14px;font-size:12.5px;font-weight:700;color:#EBE0C4}
 .cta{display:block;text-align:center;background:var(--d);color:var(--v);font-weight:800;letter-spacing:.08em;padding:16px;border-radius:8px;margin-top:16px;text-decoration:none;font-size:13px}
 .cond{color:var(--s);font-size:11.5px;margin:16px 0 26px}footer{background:var(--v);color:#EBE0C4;padding:22px 0}footer .w{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}footer b{display:block;letter-spacing:.06em}footer .g{color:var(--d);font-size:12px}footer .r{text-align:right;font-size:12px}
 @media (max-width:560px){.faixa .w{grid-template-columns:1fr 1fr}.voo .corpo{grid-template-columns:1fr auto 1fr}.cia{grid-column:1/-1;padding:0}.cont{text-align:left}}</style></head><body>
-<header><div class="w"><div><div class="marca">MAKTUB <b>CORPORATIVO</b></div><div class="slog">Viagens a trabalho, resolvidas.</div></div><div class="cont"><a href="mailto:${EMAIL}">${EMAIL}</a><b><a href="https://wa.me/${ZAP}">${ZAP_TXT}</a></b></div></div></header>
-<div class="faixa"><div class="w"><div><div class="l">COTAÇÃO</div><div class="v">${h(S.codigo)}</div></div><div><div class="l">PASSAGEIRO</div><div class="v">${S.passageiro ? h(S.passageiro) + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}</div></div><div><div class="l">TRECHO</div><div class="v">${h(trecho)}</div></div><div><div class="l">VALIDADE</div><div class="v">${val}</div></div></div></div>
+<header class="${GO ? 'go' : ''}"><div class="w"><div>${GO && MARCA && MARCA.rodape ? `<img class="logo" src="${MARCA.rodape}" alt="Maktub Go">` : `<div class="marca">MAKTUB <b>${GO ? 'GO' : 'CORPORATIVO'}</b></div>`}<div class="slog">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</div></div><div class="cont"><a href="mailto:${EMAIL}">${EMAIL}</a><b><a href="https://wa.me/${ZAP}">${ZAP_TXT}</a></b></div></div></header>
+<div class="faixa"><div class="w">${S.codigo ? `<div><div class="l">COTAÇÃO</div><div class="v">${h(S.codigo)}</div></div>` : ''}<div><div class="l">PASSAGEIRO</div><div class="v">${S.passageiro ? h(S.passageiro) + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}</div></div><div><div class="l">TRECHO</div><div class="v">${h(trecho)}</div></div><div><div class="l">VALIDADE</div><div class="v">${val}</div></div></div></div>
 <div class="w">
 ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotação válida somente em ${val}. Após essa data, os valores precisam ser consultados novamente.</div></div>` : ''}
+${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
-  return `${multi ? `<div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
+  return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
 ${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span>${v.duracao ? `<span class="chip">Duração ${h(v.duracao)}</span>` : ''}</div></div></div>`).join('')}
-${multi ? resumo(o, n) : ''}`; }).join('')}
+${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
 ${multi ? '' : resumo(OPS[0], 0)}
 <p class="cond">${h(S.bagagem ? 'Inclui ' + S.bagagem.charAt(0).toLowerCase() + S.bagagem.slice(1) + '. ' : '')}${h(S.rodape)}</p></div>
-<footer><div class="w"><div><b>MAKTUB CORPORATIVO</b><span class="g">Viagens a trabalho, resolvidas.</span></div><div class="r">${EMAIL} · ${ZAP_TXT}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer></body></html>`;
+<footer><div class="w"><div><b>${GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO'}</b><span class="g">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</span></div><div class="r">${EMAIL} · ${ZAP_TXT}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer>${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.offsetTop-10,behavior:'smooth'})}})</script>` : ''}</body></html>`;
 }
 // usado em testes e para gerar a partir de dados salvos
 export function gerarHTML(dados) { const antes = S; S = dados; try { return gerar({}); } finally { S = antes; } }
