@@ -89,6 +89,7 @@ function editor(P, X) {
     <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
+    ${S.modelo === 'corp' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ian-santiago"></label>` : ''}
     <button class="zap grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="salvarC">Salvar rascunho</button><button class="sec" id="acervoC">Guardar no acervo</button></div>
     ${S._id ? '<button class="sec" id="duplicarC" style="width:100%;margin-top:6px">Duplicar para outro cliente</button>' : ''}
@@ -289,12 +290,23 @@ async function colar(P, X, modo) {
   const faltaPor = [S.por].concat(S.extras.map(o => o.por)).some(x => !x);
   X.aviso(faltaPor ? 'Preenchido. Confira e digite o valor da Maktub (Por) de cada opção.' : 'Preenchido. Confira e gere o link.');
 }
+const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'viagens', 'index', 'sitemap', 'robots'];
+const limparSlug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+function sugerirSlug() { const n = String(clienteDe() || '').trim().split(/\s+/)[0]; return limparSlug([n, S.destino].filter(Boolean).join(' ')); }
 async function gerarLink(X) {
+  const campo = X.$('slugC'); let slug = campo ? limparSlug(campo.value) : '';
+  if (campo) { campo.value = slug; S.slug = slug; }
+  if (slug && slug.length < 3) { X.aviso('O nome do link precisa de pelo menos 3 letras.'); return; }
+  if (RESERVADOS.includes(slug)) { X.aviso('Esse nome já é uma página do site. Escolha outro.'); return; }
   const b = X.$('linkC'); b.disabled = true; b.textContent = 'Gerando...';
-  const r = await X.sb.from('cotacoes_link').insert({ html: gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }).select('token').single();
+  const row = { html: gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
+  const r = await X.sb.from('cotacoes_link').insert(row).select('token,slug').single();
   b.disabled = false; b.textContent = 'Gerar link para o cliente';
-  if (r.error) { X.aviso(/cotacoes_link/.test(r.error.message) ? 'Falta rodar o SQL do link no Supabase.' : 'Não gerou o link: ' + r.error.message); return; }
-  const url = `https://www.maktubgo.com.br/c/?k=${r.data.token}`;
+  if (r.error) {
+    if (r.error.code === '23505') { X.aviso(`O nome "${slug}" já foi usado em outro link. Mude o nome (ex.: ${slug}-2) e gere de novo.`); return; }
+    X.aviso(/slug/.test(r.error.message) ? 'Falta rodar o SQL do nome do link no Supabase.' : /cotacoes_link/.test(r.error.message) ? 'Falta rodar o SQL do link no Supabase.' : 'Não gerou o link: ' + r.error.message); return;
+  }
+  const url = r.data.slug ? `https://www.maktubgo.com.br/${r.data.slug}` : `https://www.maktubgo.com.br/c/?k=${r.data.token}`;
   const zap = `https://wa.me/?text=${encodeURIComponent(url)}`;
   X.$('linkBox').innerHTML = `<div class="config" style="margin-top:8px;word-break:break-all"><b>Link pronto:</b><br><a href="${url}" target="_blank" rel="noopener">${url}</a></div><div class="botoes4" style="margin-top:6px"><button class="sec" id="copiarL">Copiar link</button><a class="sec" style="text-align:center;text-decoration:none" href="${zap}" target="_blank" rel="noopener">Enviar no WhatsApp</a></div>`;
   X.$('copiarL').onclick = async () => { try { await navigator.clipboard.writeText(url); X.aviso('Link copiado.'); } catch (e) { X.aviso(url); } };

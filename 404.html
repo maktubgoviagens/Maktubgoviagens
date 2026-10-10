@@ -8,6 +8,22 @@
 <meta name="description" content="Página não encontrada no site da Maktub Go. Volte ao início ou fale com a gente pelo WhatsApp.">
 <meta name="theme-color" content="#1a3826">
 <link rel="icon" href="/ativos/simbolo-verde.png">
+<script>
+/* Link de cotação com nome (maktubgo.com.br/nome-escolhido): busca a cotação; se não existir, mostra esta página normal. */
+(function () {
+  var m = location.pathname.match(/^\/([a-z0-9-]{3,40})\/?$/i); if (!m) return;
+  var raiz = document.documentElement; raiz.style.visibility = 'hidden';
+  var mostrar = function () { raiz.style.visibility = ''; };
+  fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/ver_cotacao', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE' },
+    body: JSON.stringify({ p_token: m[1].toLowerCase() })
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (html) {
+    if (!html || typeof html !== 'string') return mostrar();
+    document.open(); document.write(html); document.close();
+  }).catch(mostrar);
+  setTimeout(mostrar, 6000);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">

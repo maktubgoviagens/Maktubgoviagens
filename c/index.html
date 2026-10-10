@@ -17,7 +17,7 @@
   var erro = function () {
     document.getElementById('msg').innerHTML = '<img src="/ativos/simbolo-verde.png" alt="Maktub Go"><p>Não encontramos esta cotação. Fale com a gente no <a href="https://wa.me/5521976275225">WhatsApp (21) 97627-5225</a>.</p>';
   };
-  if (!/^[a-z0-9]{8,40}$/i.test(k)) return erro();
+  if (!/^[a-z0-9-]{3,40}$/i.test(k)) return erro();
   fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/ver_cotacao', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE' },
