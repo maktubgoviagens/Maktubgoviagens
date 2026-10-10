@@ -110,6 +110,7 @@ function editor(P, X) {
 function mais(a) {
   const [o, tipo] = a.split('|');
   if (tipo === 'opcao') { S.opcoes.push(OPCAO(S.opcoes.length + 1)); if (S.opcoes.length === 2 && S.opcoes[0].cta === 'Quero seguir com essa viagem') S.opcoes[0].cta = 'Quero seguir com a Opção 1'; return; }
+  if (tipo === 'corpop') { if (S.extras.length >= 2) return; const ant = S.extras.length ? S.extras[S.extras.length - 1] : S; S.extras.push({ nome: '', voos: JSON.parse(JSON.stringify(ant.voos)), de: '', por: '' }); return; }
   const l = get(o);
   if (tipo === 'dia') l.push({ data: '', titulo: '', destaque: false });
   if (tipo === 'voo') l.push({ ...VOO(), rotulo: 'Trecho ' + (l.length + 1) });
@@ -191,30 +192,40 @@ function resumoValores(o) {
   return `<div class="config" style="margin:6px 0">${p.parc}x de ${brl(p.vparc)} no cartão${p.pix ? ` · ${brl(p.pix)} no Pix` : ''}${p.sites ? (p.economia ? ` · economia de ${brl(p.economia)} sobre os sites` : ' · atenção: valor da Maktub não está abaixo dos sites') : ' · sem ancoragem: a economia não vai aparecer'}</div>`;
 }
 
+function voosCorp(pre) {
+  return `${get(pre + 'voos').map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(pre + 'voos#' + j)}
+      ${duas(inp(`${pre}voos.${j}.rotulo`, 'Rótulo'), inp(`${pre}voos.${j}.data`, 'Data', 'date'))}
+      ${duas(inp(`${pre}voos.${j}.ocod`, 'Origem (código)', 'text', 'placeholder="GIG" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.onome`, 'Aeroporto', 'text', 'placeholder="Galeão"'))}
+      ${duas(inp(`${pre}voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="SCL" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.dnome`, 'Aeroporto', 'text', 'placeholder="Santiago"'))}
+      ${duas(inp(`${pre}voos.${j}.saida`, 'Saída', 'time'), inp(`${pre}voos.${j}.chegada`, 'Chegada', 'time'))}
+      ${duas(sel(`${pre}voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`${pre}voos.${j}.duracao`, 'Duração', 'text', 'placeholder="4h40"'))}</div>`).join('')}
+    ${btnMais(pre + 'voos|vooc', '+ Trecho')}`;
+}
 function formCorp() {
+  if (!S.extras) S.extras = [];
+  const multi = S.extras.length > 0;
   return `<div class="grupo">Cotação</div>
     ${duas(inp('codigo', 'Código', 'text', `placeholder="MC-${hoje().slice(8, 10)}${hoje().slice(5, 7)}-001"`), inp('validade', 'Válida somente em', 'date'))}
     ${duas(inp('passageiro', 'Passageiro', 'text', 'placeholder="Victor"'), inp('pessoas', 'Pessoas', 'num'))}
-    ${duas(inp('cia', 'Companhia', 'text', 'placeholder="GOL"'), inp('destino', 'Destino (acervo)', 'text', 'placeholder="Brasília"'))}
-    ${inp('rota', 'Título da rota', 'text', 'placeholder="Rio de Janeiro ⇄ Brasília"')}
-    <div class="grupo">Voos</div>
-    ${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
-      ${duas(inp(`voos.${j}.rotulo`, 'Rótulo'), inp(`voos.${j}.data`, 'Data', 'date'))}
-      ${duas(inp(`voos.${j}.ocod`, 'Origem (código)', 'text', 'placeholder="SDU" style="text-transform:uppercase"'), inp(`voos.${j}.onome`, 'Aeroporto', 'text', 'placeholder="Santos Dumont"'))}
-      ${duas(inp(`voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="BSB" style="text-transform:uppercase"'), inp(`voos.${j}.dnome`, 'Aeroporto', 'text', 'placeholder="Brasília"'))}
-      ${duas(inp(`voos.${j}.saida`, 'Saída', 'time'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
-      ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`voos.${j}.duracao`, 'Duração', 'text', 'placeholder="1h40"'))}</div>`).join('')}
-    ${btnMais('voos|vooc', '+ Trecho')}
+    ${duas(inp('cia', 'Companhia', 'text', 'placeholder="LATAM"'), inp('destino', 'Destino (acervo)', 'text', 'placeholder="Santiago"'))}
+    ${inp('rota', 'Título da rota', 'text', 'placeholder="Rio de Janeiro ⇄ Santiago"')}
+    <div class="grupo">${multi ? 'Opção 1' : 'Voos'}</div>
+    ${multi ? inp('nome1', 'Nome da Opção 1', 'text', 'placeholder="Ida direta, volta com 1 parada"') : ''}
+    ${voosCorp('')}
+    ${duas(inp('de', 'De (valor no site)', 'num', 'placeholder="1.670,93"'), inp('por', 'Por (valor Maktub)', 'num', 'placeholder="1.655,00"'))}
+    ${S.extras.map((o, i) => `<div class="grupo">Opção ${i + 2} ${btnTira('extras#' + i)}</div>
+    ${inp(`extras.${i}.nome`, `Nome da Opção ${i + 2}`, 'text', 'placeholder="Ida e volta em voo direto"')}
+    ${voosCorp(`extras.${i}.`)}
+    ${duas(inp(`extras.${i}.de`, 'De (valor no site)', 'num', 'placeholder="2.154,06"'), inp(`extras.${i}.por`, 'Por (valor Maktub)', 'num', 'placeholder="2.100,00"'))}`).join('')}
+    ${S.extras.length < 2 ? btnMais('extras|corpop', `+ Opção ${S.extras.length + 2} (copia os voos da anterior)`) : '<div class="sub">Máximo de 3 opções por cotação.</div>'}
+    <div class="grupo">Pagamento e condições</div>
     ${inp('bagagem', 'Bagagem incluída')}
-    <div class="grupo">Valores</div>
-    <label class="fl"><span>Print do site da companhia (ancoragem)</span><input type="file" accept="image/*" data-print="1"></label>
-    ${S.print ? `<img src="${S.print}" style="max-width:100%;border:1px solid var(--linha);margin:6px 0"><button type="button" data-tira="_print#0" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px">remover print</button>` : ''}
-    ${duas(inp('de', 'De (valor no site)', 'num', 'placeholder="2.042,45"'), inp('por', 'Por (valor Maktub)', 'num', 'placeholder="1.700,00"'))}
     ${inp('forma', 'Forma de pagamento')}
+    <label class="fl"><span>Print do site da companhia (opcional)</span><input type="file" accept="image/*" data-print="1"></label>
+    ${S.print ? `<img src="${S.print}" style="max-width:100%;border:1px solid var(--linha);margin:6px 0"><button type="button" data-tira="_print#0" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px">remover print</button>` : ''}
     ${inp('rodape', 'Condições', 'area', 'rows="4"')}`;
 }
 
-/* ================= hotel, fotos e print ================= */
 function escolherHotel(X, el) {
   const base = el.dataset.hotel, f = (X.fornecedores ? X.fornecedores.lista() : []).find(x => x.nome === el.value);
   if (!f) return;
@@ -415,13 +426,19 @@ document.querySelectorAll('.opt').forEach(function(b){b.addEventListener('click'
 
 /* ================= geração: Maktub Corporativo ================= */
 function gerarCorp() {
-  const voos = S.voos.filter(v => v.ocod || v.dcod), pax = +S.pessoas || 1;
-  const de = num(S.de), por = num(S.por);
+  const filtra = (l) => (l || []).filter(v => v.ocod || v.dcod), pax = +S.pessoas || 1;
+  const OPS = [{ nome: S.nome1 || '', voos: filtra(S.voos), de: num(S.de), por: num(S.por) }].concat((S.extras || []).map(o => ({ nome: o.nome || '', voos: filtra(o.voos), de: num(o.de), por: num(o.por) })));
+  const multi = OPS.length > 1;
+  const voos = OPS[0].voos;
   const ida = voos[0], vol = voos[1];
   const trecho = ida ? `${(ida.ocod || '').toUpperCase()} ${vol ? '⇄' : '→'} ${(ida.dcod || '').toUpperCase()}` : '';
   const cidade = (v, q) => (q === 'o' ? v.onome : v.dnome) || '';
+  const titDe = (vs) => { const a = vs[0], b = vs[1]; return S.rota ? h(S.rota).toUpperCase() : a ? `${h(a.onome).toUpperCase() || h(a.ocod)} ${b ? '⇄' : '→'} ${h(a.dnome).toUpperCase() || h(a.dcod)}` : 'Cotação'; };
   const tit = S.rota ? h(S.rota).toUpperCase() : ida ? `${h(cidade(ida, 'o')).toUpperCase() || h(ida.ocod)} ${vol ? '⇄' : '→'} ${h(cidade(ida, 'd')).toUpperCase() || h(ida.dcod)}` : 'Cotação';
   const val = S.validade ? S.validade.split('-').reverse().join('/') : '';
+  const zapTxt = (n) => `Olá, Maktub! Sobre a cotação ${S.codigo || ''}${S.passageiro ? ' de ' + S.passageiro : ''}: quero seguir com ${n ? 'a Opção ' + n : 'a emissão'}.`;
+  const resumo = (o, n) => `<div class="resumo"><div class="rot">${n ? 'Opção ' + n : 'Resumo da cotação'}</div><div class="p">VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}</div>${o.de > o.por ? `<div class="de">De <s>${brl(o.de)}</s></div>` : ''}<div class="por">${o.de > o.por ? 'Por ' : ''}${brl(o.por)}</div><div class="forma">${h(S.forma)}</div>${o.de > o.por ? `<div class="eco">Economia de ${brl(o.de - o.por)}</div>` : ''}<hr><small>Tarifas e disponibilidade confirmadas somente no momento da emissão.</small></div>
+<a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(zapTxt(n))}" target="_blank" rel="noopener">${n ? 'QUERO A OPÇÃO ' + n : 'FALE COM O ESPECIALISTA'} · WHATSAPP ${ZAP_TXT}</a>`;
   const dataCab = (iso) => { const d = dt(iso); return d ? `${SEMANA[d.getDay()]} · ${iso.split('-').reverse().join('/')}`.toUpperCase() : ''; };
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(S.codigo || 'Cotação')} · Maktub Corporativo</title>
 <style>:root{--v:#1B4332;--v2:#245a3b;--d:#A88B4A;--c:#F3F1EA;--b:#F3EAD2;--t:#1f2a24;--s:#5b625d;--l:#d9d2bf}
@@ -436,21 +453,24 @@ h1{font-size:24px;color:var(--v);letter-spacing:.02em;margin-top:26px}.subt{colo
 .chips{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}.chip{background:var(--b);border-radius:16px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--v)}
 .print img{max-width:100%;display:block;margin-top:10px;border-radius:4px}.resumo{background:var(--v);color:#fff;border-radius:10px;padding:22px 18px;margin-top:20px}.resumo .p{font-size:11px;letter-spacing:.1em;font-weight:700;margin-top:8px;color:#EBE0C4}
 .de{margin-top:12px;color:#EBE0C4}.de s{text-decoration-color:var(--d)}.por{font-size:32px;font-weight:800;margin-top:4px}.forma{font-weight:700;color:#EBE0C4;font-size:13px}.resumo hr{border:0;border-top:1px solid var(--d);margin:14px 0 10px}.resumo small{color:#EBE0C4;font-size:11.5px}
+.opcao{margin-top:34px;padding-top:18px;border-top:2px solid var(--d);color:var(--s);font-size:13px;font-weight:700}.opcao span{display:inline-block;background:var(--d);color:#fff;border-radius:4px;padding:3px 10px;margin-right:10px;font-size:11px;letter-spacing:.12em}
+.eco{display:inline-block;margin-top:10px;border:1px solid var(--d);border-radius:20px;padding:4px 14px;font-size:12.5px;font-weight:700;color:#EBE0C4}
 .cta{display:block;text-align:center;background:var(--d);color:var(--v);font-weight:800;letter-spacing:.08em;padding:16px;border-radius:8px;margin-top:16px;text-decoration:none;font-size:13px}
 .cond{color:var(--s);font-size:11.5px;margin:16px 0 26px}footer{background:var(--v);color:#EBE0C4;padding:22px 0}footer .w{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}footer b{display:block;letter-spacing:.06em}footer .g{color:var(--d);font-size:12px}footer .r{text-align:right;font-size:12px}
 @media (max-width:560px){.faixa .w{grid-template-columns:1fr 1fr}.voo .corpo{grid-template-columns:1fr auto 1fr}.cia{grid-column:1/-1;padding:0}.cont{text-align:left}}</style></head><body>
 <header><div class="w"><div><div class="marca">MAKTUB <b>CORPORATIVO</b></div><div class="slog">Viagens a trabalho, resolvidas.</div></div><div class="cont"><a href="mailto:${EMAIL}">${EMAIL}</a><b><a href="https://wa.me/${ZAP}">${ZAP_TXT}</a></b></div></div></header>
-<div class="faixa"><div class="w"><div><div class="l">COTAÇÃO</div><div class="v">${h(S.codigo)}</div></div><div><div class="l">PASSAGEIRO</div><div class="v">${h(S.passageiro)} · ${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}</div></div><div><div class="l">TRECHO</div><div class="v">${h(trecho)}</div></div><div><div class="l">VALIDADE</div><div class="v">${val}</div></div></div></div>
+<div class="faixa"><div class="w"><div><div class="l">COTAÇÃO</div><div class="v">${h(S.codigo)}</div></div><div><div class="l">PASSAGEIRO</div><div class="v">${S.passageiro ? h(S.passageiro) + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}</div></div><div><div class="l">TRECHO</div><div class="v">${h(trecho)}</div></div><div><div class="l">VALIDADE</div><div class="v">${val}</div></div></div></div>
 <div class="w">
 ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotação válida somente em ${val}. Após essa data, os valores precisam ser consultados novamente.</div></div>` : ''}
-<div class="tit"><div><h1>${tit}</h1><div class="subt">${[h(S.cia), vol ? 'ida e volta' : 'só ida', voos.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${voos.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
-${voos.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span>${v.duracao ? `<span class="chip">Duração ${h(v.duracao)}</span>` : ''}</div></div></div>`).join('')}
+${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
+  return `${multi ? `<div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
+${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span>${v.duracao ? `<span class="chip">Duração ${h(v.duracao)}</span>` : ''}</div></div></div>`).join('')}
+${multi ? resumo(o, n) : ''}`; }).join('')}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
-<div class="resumo"><div class="rot">Resumo da cotação</div><div class="p">VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}</div>${de > por ? `<div class="de">De <s>${brl(de)}</s></div>` : ''}<div class="por">${de > por ? 'Por ' : ''}${brl(por)}</div><div class="forma">${h(S.forma)}</div><hr><small>Tarifas e disponibilidade confirmadas somente no momento da emissão.</small></div>
-<a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(`Olá, Maktub! Sobre a cotação ${S.codigo || ''}${S.passageiro ? ' de ' + S.passageiro : ''}: quero seguir com a emissão.`)}" target="_blank" rel="noopener">FALE COM O ESPECIALISTA · WHATSAPP ${ZAP_TXT}</a>
+${multi ? '' : resumo(OPS[0], 0)}
 <p class="cond">${h(S.bagagem ? 'Inclui ' + S.bagagem.charAt(0).toLowerCase() + S.bagagem.slice(1) + '. ' : '')}${h(S.rodape)}</p></div>
-<footer><div class="w"><div><b>MAKTUB CORPORATIVO</b><span class="g">Viagens a trabalho, resolvidas.</span></div><div class="r">${EMAIL} · ${ZAP_TXT}<br><span class="g">Cotação ${h(S.codigo)}</span></div></div></footer></body></html>`;
+<footer><div class="w"><div><b>MAKTUB CORPORATIVO</b><span class="g">Viagens a trabalho, resolvidas.</span></div><div class="r">${EMAIL} · ${ZAP_TXT}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer></body></html>`;
 }
 // usado em testes e para gerar a partir de dados salvos
 export function gerarHTML(dados) { const antes = S; S = dados; try { return gerar({}); } finally { S = antes; } }
@@ -462,9 +482,9 @@ function editorRapida(P, X) {
   const de = num(S.de), por = num(S.por), eco = de > por && por ? de - por : 0;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
-    <div class="sub">Anexe o print do site, digite o valor da Maktub e envie a imagem pronta no WhatsApp.</div>
+    <div class="sub">Digite o valor do site e o da Maktub e envie a imagem pronta no WhatsApp. O print é opcional.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      <label class="fl"><span>1. Print do site (pode ser mais de um)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
+      <label class="fl"><span>1. Print do site (opcional)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
       ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}
       <div class="duas-col">${inp('de', '2. Valor no site', 'num', 'placeholder="2.100,00"')}${inp('por', '3. Valor com a Maktub', 'num', 'placeholder="1.700,00"')}</div>
       <div id="rpEco">${eco ? `<div class="config" style="margin:4px 0">Economia de ${brl(eco)} para o cliente.</div>` : de && por && por >= de ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''}</div>
@@ -482,7 +502,7 @@ function editorRapida(P, X) {
   f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); });
   $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
-  const pronto = () => { if (!S.prints.length) { X.aviso('Anexe o print do site.'); return false; } if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
+  const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
   $('rpEnviar').onclick = async () => {
     if (!pronto()) return;
     enviada(X); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
@@ -491,7 +511,7 @@ function editorRapida(P, X) {
   };
   $('rpBaixar').onclick = async () => { if (pronto()) baixar(await imagemRapida()); };
   $('rpSalvar').onclick = () => salvar(X);
-  if (S.prints.length && num(S.por)) imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; });
+  if (num(S.por)) imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; });
 }
 function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) { X.cotacaoEnviada(S.reuniao_id); S.reuniao_id = null; } }
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
@@ -518,7 +538,7 @@ async function imagemRapida() {
   else { g.font = sans(38, '700'); g.fillStyle = corp ? CREME : VERDE; const t1 = 'MAKTUB ', t2 = corp ? 'CORPORATIVO' : 'GO'; const w1 = largEsp(t1, 4), w2 = largEsp(t2, 4); let x = (W - w1 - w2) / 2; espac(t1, x, 92, 4); g.fillStyle = DOUR; espac(t2, x + w1, 92, 4); }
   // prints
   let y = CAB + PAD;
-  g.font = sans(20, '600'); g.fillStyle = DOUR; espac('VALOR NO SITE', PAD, y + 4, 3); y += 22;
+  if (prints.length) { g.font = sans(20, '600'); g.fillStyle = DOUR; espac('VALOR NO SITE', PAD, y + 4, 3); y += 22; }
   prints.forEach((im, i) => { g.drawImage(im, PAD, y, W - PAD * 2, alturas[i]); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.strokeRect(PAD, y, W - PAD * 2, alturas[i]); y += alturas[i] + 20; });
   // caixa de valores
   y += 10; g.fillStyle = VERDE; const bx = PAD, bw = W - PAD * 2, bh = BOX - 40;
