@@ -2,6 +2,7 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
+import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=1';
 let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
@@ -38,6 +39,7 @@ const NOVO_RAP = () => ({ modelo: 'rapida', marca: 'Maktub Go', cliente: '', pri
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
   if (!MARCA) { try { MARCA = (await import('/admin/app/cot-marca.js?v=1')).MARCA; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
+  carregarAero();
   if (ED) return editor(P, X);
   return lista(P, X);
 }
@@ -94,9 +96,12 @@ function editor(P, X) {
   $('voltar').onclick = () => { S = null; ir(X, null); };
   const f = $('fCot');
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
-    const m = k.match(/^opcoes\.(\d+)\.(sites|cartao|parcelas|pix)$/); if (m && $('rv' + m[1])) $('rv' + m[1]).innerHTML = resumoValores(S.opcoes[+m[1]]); });
+    const m = k.match(/^opcoes\.(\d+)\.(sites|cartao|parcelas|pix)$/); if (m && $('rv' + m[1])) $('rv' + m[1]).innerHTML = resumoValores(S.opcoes[+m[1]]);
+    const vk = S.modelo === 'corp' && k.match(/^(.*voos\.\d+)\.(ocod|dcod|saida|chegada|data|tipo)$/);
+    if (vk) { const v = get(vk[1]); completarVoo(v); ['onome', 'dnome', 'duracao'].forEach(c => { const el = f.querySelector(`[data-k="${vk[1]}.${c}"]`); if (el && el !== e.target && el.value !== (v[c] || '')) el.value = v[c] || ''; }); } });
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && e.target.dataset.k) set(e.target.dataset.k, e.target.value); if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
   f.addEventListener('click', (e) => {
+    const cb = e.target.closest('[data-colar]'); if (cb) { colar(P, X, cb.dataset.colar); return; }
     const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]');
     if (m) { mais(m.dataset.mais); editor(P, X); }
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
@@ -206,7 +211,10 @@ function voosCorp(pre) {
 function formCorp() {
   if (!S.extras) S.extras = [];
   const multi = S.extras.length > 0;
-  return `<div class="grupo">Cotação</div>
+  return `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>Copie a tela da companhia (do horário até o subtotal) e cole aqui. Ou escreva curto, uma linha por voo:<br><span style="font-family:monospace;font-size:12px">02/12 GIG 12:20 SCL 17:00 direto<br>09/12 SCL 14:10 GIG 21:25 1 parada<br>site 1.670,93 maktub 1.655</span><br>Para várias opções, comece cada uma com "Opção 1", "Opção 2".</div>
+    <label class="fl"><textarea id="colaTxt" rows="5" placeholder="Cole aqui"></textarea></label>
+    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">Preencher</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    <div class="grupo">Cotação</div>
     ${duas(inp('codigo', 'Código', 'text', `placeholder="MC-${hoje().slice(8, 10)}${hoje().slice(5, 7)}-001"`), inp('validade', 'Válida somente em', 'date'))}
     ${duas(inp('passageiro', 'Passageiro', 'text', 'placeholder="Victor"'), inp('pessoas', 'Pessoas', 'num'))}
     ${duas(inp('cia', 'Companhia', 'text', 'placeholder="LATAM"'), inp('destino', 'Destino (acervo)', 'text', 'placeholder="Santiago"'))}
@@ -259,6 +267,27 @@ async function salvar(X) {
   // fotos de hotel entram no banco de fotos do fornecedor
   if (S.modelo === 'go') for (const o of S.opcoes) for (const ht of o.hoteis) { const urls = linhas(ht.fotos).filter(u => /^https?:/.test(u)); const f = ht.fornecedor_id && X.fornecedores && X.fornecedores.lista().find(x => x.id === ht.fornecedor_id); if (f && urls.length) { const todas = [...new Set([...(f.fotos_maktub || []), ...urls])].slice(0, 30); if (todas.length !== (f.fotos_maktub || []).length) { const u = await X.sb.from('fornecedores').update({ fotos_maktub: todas }).eq('id', f.id); if (!u.error) f.fotos_maktub = todas; } } }
   X.aviso('Rascunho salvo.'); return true;
+}
+async function colar(P, X, modo) {
+  const txt = X.$('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
+  const r = await lerColado(txt);
+  if (!r.opcoes.length || !r.opcoes.some(o => o.voos.length)) { X.aviso('Não encontrei voos no texto. Confira se tem horário e código do aeroporto (ex.: 12:20 GIG).'); return; }
+  if (!S.extras) S.extras = [];
+  const ops = modo === 'nova' && (S.voos || []).some(v => v.ocod) ? r.opcoes.map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por })) : null;
+  if (ops) { S.extras = S.extras.concat(ops).slice(0, 2); }
+  else {
+    const [p1, ...resto] = r.opcoes;
+    S.voos = p1.voos.length ? p1.voos : S.voos; S.de = p1.de || S.de; S.por = p1.por || S.por; S.nome1 = p1.nome || S.nome1 || '';
+    S.extras = resto.slice(0, 2).map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por }));
+  }
+  if (r.cliente && !S.passageiro) S.passageiro = r.cliente;
+  if (r.cia && !S.cia) S.cia = r.cia;
+  const v0 = (S.voos || [])[0];
+  if (v0 && !S.rota) { const a = cidadeDe(v0.ocod) || v0.ocod, b = cidadeDe(v0.dcod) || v0.dcod; S.rota = `${a} ${S.voos.length > 1 ? '⇄' : '→'} ${b}`; }
+  if (v0 && !S.destino) S.destino = cidadeDe(v0.dcod) || '';
+  editor(P, X);
+  const faltaPor = [S.por].concat(S.extras.map(o => o.por)).some(x => !x);
+  X.aviso(faltaPor ? 'Preenchido. Confira e digite o valor da Maktub (Por) de cada opção.' : 'Preenchido. Confira e gere o link.');
 }
 async function gerarLink(X) {
   const b = X.$('linkC'); b.disabled = true; b.textContent = 'Gerando...';
