@@ -33,7 +33,14 @@ const NOVO_CORP = () => ({ modelo: 'corp', marca: 'Maktub Corporativo', codigo: 
   bagagem: '1 item pessoal + 1 mala de cabine de até 10 kg por passageiro', print: '', de: '', por: '', forma: 'À vista via Pix',
   rodape: 'Sem bagagem despachada. Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa válida apenas na data de emissão e sujeita à confirmação no momento da compra. Horários locais. Check-in realizado por nossa equipe. Suporte humanizado e pós-venda. Você fala sempre com uma pessoa.' });
 
-const NOVO_RAP = () => ({ modelo: 'rapida', marca: 'Maktub Go', cliente: '', prints: [], de: '', por: '', forma: 'à vista no Pix', parcelas: '', obs: '' });
+const padraoRap = () => { try { return JSON.parse(localStorage.getItem('cotRapPadrao') || '{}'); } catch (e) { return {}; } };
+const NOVO_RAP = () => { const p = padraoRap(); return { modelo: 'rapida', marca: p.marca || 'Maktub Go', cliente: '', prints: [], voos: [], cia: '', de: '', por: '', forma: p.forma || 'à vista no Pix', parcelas: '', obs: '' }; };
+// seções recolhidas que a pessoa abriu continuam abertas quando o formulário redesenha
+const ABERTOS = new Set();
+const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) ? 'open' : ''} style="margin-top:8px;border-top:1px solid var(--linha);padding-top:6px"><summary class="sub" style="cursor:pointer;margin:0">${titulo}</summary>${corpo}</details>`;
+const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>${ajuda}<br><span style="font-family:monospace;font-size:12px">${exemplo}</span></div>
+    <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>`;
+const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões' };
 
 /* ================= telas ================= */
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
@@ -89,20 +96,21 @@ function editor(P, X) {
     <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
-    ${S.modelo === 'corp' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ian-santiago"></label>` : ''}
+    ${S.modelo !== 'rapida' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="${corp ? 'ian-santiago' : 'veronica-lisboa'}"></label>` : ''}
     <button class="zap grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="salvarC">Salvar rascunho</button><button class="sec" id="acervoC">Guardar no acervo</button></div>
     ${S._id ? '<button class="sec" id="duplicarC" style="width:100%;margin-top:6px">Duplicar para outro cliente</button>' : ''}
     <div class="sub" id="msgC"></div>`;
   $('voltar').onclick = () => { S = null; ir(X, null); };
   const f = $('fCot');
+  f.addEventListener('toggle', (e) => { const d = e.target.dataset && e.target.dataset.d; if (d) { if (e.target.open) ABERTOS.add(d); else ABERTOS.delete(d); } }, true);
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
     const m = k.match(/^opcoes\.(\d+)\.(sites|cartao|parcelas|pix)$/); if (m && $('rv' + m[1])) $('rv' + m[1]).innerHTML = resumoValores(S.opcoes[+m[1]]);
     const vk = S.modelo === 'corp' && k.match(/^(.*voos\.\d+)\.(ocod|dcod|saida|chegada|data|tipo)$/);
     if (vk) { const v = get(vk[1]); completarVoo(v); ['onome', 'dnome', 'duracao'].forEach(c => { const el = f.querySelector(`[data-k="${vk[1]}.${c}"]`); if (el && el !== e.target && el.value !== (v[c] || '')) el.value = v[c] || ''; }); } });
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && e.target.dataset.k) set(e.target.dataset.k, e.target.value); if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
   f.addEventListener('click', (e) => {
-    const cb = e.target.closest('[data-colar]'); if (cb) { colar(P, X, cb.dataset.colar); return; }
+    const cb = e.target.closest('[data-colar]'); if (cb) { (S.modelo === 'go' ? colarGo : colar)(P, X, cb.dataset.colar); return; }
     const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]');
     if (m) { mais(m.dataset.mais); editor(P, X); }
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
@@ -130,63 +138,114 @@ function mais(a) {
 function formGo(X) {
   const { esc } = X;
   const hoteis = (X.fornecedores ? X.fornecedores.lista() : []).filter(f => f.tipo === 'hotel');
+  const multi = S.opcoes.length > 1;
   const op = S.opcoes.map((o, i) => {
     const b = `opcoes.${i}`;
-    return `<div class="grupo">${S.opcoes.length > 1 ? `Opção ${i + 1} ${btnTira('opcoes#' + i)}` : 'A viagem'}</div>
-      ${duas(inp(b + '.nome', S.opcoes.length > 1 ? 'Nome da opção' : 'Nome da viagem', 'text', 'placeholder="Ex.: Navegando por Portugal"'), inp(b + '.resumo', 'Resumo curto', 'text', 'placeholder="Lisboa e Fátima · 6 noites"'))}
-      ${duas(inp(b + '.embarque', 'Embarque', 'date'), inp(b + '.retorno', 'Retorno', 'date'))}
-      ${inp(b + '.hotelaria', 'Hotelaria (resumo)', 'text', 'placeholder="6 noites em Lisboa"')}
-      <details ${o.dias.length ? 'open' : ''}><summary class="sub" style="cursor:pointer">Sugestão de roteiro (${o.dias.length} ${o.dias.length === 1 ? 'dia' : 'dias'})</summary>
-        ${o.dias.map((d, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px"><b>Dia ${j + 1}</b>${btnTira(`${b}.dias#${j}`)}${duas(inp(`${b}.dias.${j}.data`, 'Data', 'date'), inp(`${b}.dias.${j}.titulo`, 'Título do dia'))}${inp(`${b}.dias.${j}.destaque`, 'Dia em destaque', 'check')}</div>`).join('')}
-        ${btnMais(`${b}.dias|dia`, '+ Dia')}</details>
-      <div class="sub" style="margin-top:10px"><b>Voos</b></div>
-      ${o.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(`${b}.voos#${j}`)}
+    const vs = o.voos.filter(v => v.origem || v.destino);
+    const resumoVoos = vs.length ? vs.map(v => `<div style="font-size:13px;padding:3px 0"><b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.origem)} ${h(v.saida)} → ${h(v.destino)} ${h(v.chegada)}${v.mais1 ? ' (+1)' : ''} · ${h(v.tipo)}</div>`).join('') : '<div class="sub" style="margin:0">Nenhum voo ainda. Cole a tela da companhia acima ou preencha abaixo.</div>';
+    return `<div class="grupo">${multi ? `Opção ${i + 1} ${btnTira('opcoes#' + i)}` : 'A viagem'}</div>
+      ${multi ? inp(b + '.nome', 'Nome da opção', 'text', 'placeholder="Ex.: Voo direto + hotel no centro"') : ''}
+      <div class="sub" style="margin-top:6px"><b>Voos</b></div>
+      ${resumoVoos}
+      ${dobra(b + '.voos', `Editar voos (${vs.length})`, `${o.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(`${b}.voos#${j}`)}
         ${duas(inp(`${b}.voos.${j}.rotulo`, 'Rótulo', 'text', 'placeholder="Ida, Volta, Entre países"'), inp(`${b}.voos.${j}.data`, 'Data', 'date'))}
         ${duas(inp(`${b}.voos.${j}.origem`, 'Saída de', 'text', 'placeholder="Uberlândia"'), inp(`${b}.voos.${j}.saida`, 'Horário', 'time'))}
         ${duas(inp(`${b}.voos.${j}.destino`, 'Chegada em', 'text', 'placeholder="Lisboa"'), inp(`${b}.voos.${j}.chegada`, 'Horário', 'time'))}
         ${duas(sel(`${b}.voos.${j}.tipo`, 'Tipo', ['Voo direto', 'Com 1 conexão', 'Com 2 conexões', 'Com 3 conexões']), sel(`${b}.voos.${j}.periodo`, 'Período', ['', 'Voo diurno', 'Voo noturno']))}
         ${inp(`${b}.voos.${j}.mais1`, 'Chega no dia seguinte (+1)', 'check')}</div>`).join('')}
-      ${btnMais(`${b}.voos|voo`, '+ Trecho')}
-      ${inp(b + '.bagagem', 'Bagagem', 'text', 'placeholder="Para cada um: 1 mala despachada, 1 mala de bordo de 10 kg e 1 mochila, ida e volta"')}
+        ${btnMais(`${b}.voos|voo`, '+ Trecho')}
+        ${inp(b + '.bagagem', 'Bagagem', 'text', 'placeholder="Para cada um: 1 mala despachada, 1 mala de bordo de 10 kg e 1 mochila, ida e volta"')}`)}
       <div class="sub" style="margin-top:10px"><b>Hotelaria</b></div>
       ${o.hoteis.map((ht, j) => { const c = `${b}.hoteis.${j}`; return `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(`${b}.hoteis#${j}`)}
-        <label class="fl"><span>Hotel (da base de fornecedores ou novo)</span><input data-k="${c}.nome" data-hotel="${c}" list="dlHot" value="${h(ht.nome)}"></label>
-        ${duas(inp(c + '.cidade', 'Cidade'), inp(c + '.estrelas', 'Estrelas', 'num'))}
+        <label class="fl"><span>Hotel (escolha da base ou digite)</span><input data-k="${c}.nome" data-hotel="${c}" list="dlHot" value="${h(ht.nome)}"></label>
         ${duas(inp(c + '.entrada', 'Check-in', 'date'), inp(c + '.saida', 'Check-out', 'date'))}
+        ${dobra(c, 'Detalhes do hotel (cidade, fotos, descrição)', `${duas(inp(c + '.cidade', 'Cidade'), inp(c + '.estrelas', 'Estrelas', 'num'))}
         ${inp(c + '.descricao', 'Descrição para o cliente', 'area', 'placeholder="O que faz esse hotel especial para eles"')}
         ${inp(c + '.itens', 'O que está incluso (uma linha cada)', 'area', 'placeholder="Quarto standard\nCafé da manhã incluso"')}
         ${inp(c + '.fotos', 'Fotos (um link por linha)', 'area', 'placeholder="https://site-do-hotel/foto.jpg"')}
         <label class="fl"><span>Ou envie fotos do celular</span><input type="file" accept="image/*" multiple data-foto="${c}.fotos"></label>
         <div class="sub" style="margin:0">Use fotos do site do hotel, enviadas pelo hotel ou da equipe. Fotos do Google não podem ir para material de cliente.</div>
-        ${inp(c + '.nota', 'Observação', 'text')}</div>`; }).join('')}
+        ${inp(c + '.nota', 'Observação', 'text')}`)}</div>`; }).join('')}
       ${btnMais(`${b}.hoteis|hotel`, '+ Hotel')}
-      <details ${o.carro.opcoes.length ? 'open' : ''}><summary class="sub" style="cursor:pointer">Aluguel de carro (${o.carro.opcoes.length ? o.carro.opcoes.length + ' opções' : 'sem carro'})</summary>
+      <div class="sub" style="margin-top:10px"><b>Investimento</b> (para ${h(S.pessoas || '?')} ${+S.pessoas === 1 ? 'pessoa' : 'pessoas'})</div>
+      ${duas(inp(b + '.sites', 'Valor nos sites', 'num', 'placeholder="3.799,00"'), inp(b + '.cartao', o.carro.opcoes.length ? 'Maktub: voos + hotel no cartão' : 'Valor Maktub no cartão', 'num', 'placeholder="3.388,00"'))}
+      ${duas(inp(b + '.parcelas', 'Parcelas sem juros', 'num'), inp(b + '.pix', 'Desconto no Pix (%)', 'num', 'placeholder="5"'))}
+      <div id="rv${i}">${resumoValores(o)}</div>
+      ${dobra(b + '.mais', 'Mais desta opção (roteiro, carro, datas, incluso)', `${multi ? '' : inp(b + '.nome', 'Nome da viagem', 'text', 'placeholder="Ex.: Navegando por Portugal"')}
+        ${inp(b + '.resumo', 'Resumo curto', 'text', 'placeholder="Em branco: usa as noites de hotel"')}
+        ${duas(inp(b + '.embarque', 'Embarque', 'date'), inp(b + '.retorno', 'Retorno', 'date'))}
+        ${inp(b + '.hotelaria', 'Hotelaria (resumo)', 'text', 'placeholder="Em branco: calcula pelas datas do hotel"')}
+        <div class="sub" style="margin-top:8px"><b>Sugestão de roteiro</b> (${o.dias.length} ${o.dias.length === 1 ? 'dia' : 'dias'})</div>
+        ${o.dias.map((d, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px"><b>Dia ${j + 1}</b>${btnTira(`${b}.dias#${j}`)}${duas(inp(`${b}.dias.${j}.data`, 'Data', 'date'), inp(`${b}.dias.${j}.titulo`, 'Título do dia'))}${inp(`${b}.dias.${j}.destaque`, 'Dia em destaque', 'check')}</div>`).join('')}
+        ${btnMais(`${b}.dias|dia`, '+ Dia')}
+        <div class="sub" style="margin-top:8px"><b>Aluguel de carro</b> (${o.carro.opcoes.length ? o.carro.opcoes.length + ' opções' : 'sem carro'})</div>
         ${inp(b + '.carro.intro', 'Retirada e devolução', 'area', 'placeholder="Retirada e devolução no Aeroporto de Porto Alegre. Retirada em 18/02 às 11:00 e devolução em 21/02 às 11:00, com 3 diárias."')}
         ${o.carro.opcoes.map((c, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(`${b}.carro.opcoes#${j}`)}${duas(inp(`${b}.carro.opcoes.${j}.grupo`, 'Grupo', 'text', 'placeholder="SUV"'), inp(`${b}.carro.opcoes.${j}.valor`, 'Valor total (R$)', 'num'))}${inp(`${b}.carro.opcoes.${j}.modelos`, 'Modelos', 'text', 'placeholder="Volkswagen Nivus ou Fiat Pulse"')}${inp(`${b}.carro.opcoes.${j}.desc`, 'Detalhe', 'text', 'placeholder="Câmbio automático · mais espaço para a serra"')}</div>`).join('')}
-        ${btnMais(`${b}.carro.opcoes|carro`, '+ Opção de carro')}</details>
-      <div class="sub" style="margin-top:10px"><b>Investimento</b> (para ${h(S.pessoas || '?')} ${+S.pessoas === 1 ? 'pessoa' : 'pessoas'})</div>
-      ${inp(b + '.sites', 'Ancoragem: valor nos sites (pagante ou REX, o mais caro)', 'num', 'placeholder="3.799,00"')}
-      ${duas(inp(b + '.cartao', o.carro.opcoes.length ? 'Total voos + hotel no cartão' : 'Total no cartão', 'num', 'placeholder="3.388,00"'), inp(b + '.parcelas', 'Parcelas sem juros', 'num'))}
-      ${inp(b + '.pix', 'Desconto no Pix (%)', 'num', 'placeholder="5"')}
-      <div id="rv${i}">${resumoValores(o)}</div>
-      ${inp(b + '.incluso', 'Incluso (uma linha cada)', 'area')}
-      ${inp(b + '.cta', 'Texto do botão')}`;
+        ${btnMais(`${b}.carro.opcoes|carro`, '+ Opção de carro')}
+        ${inp(b + '.incluso', 'Incluso (uma linha cada)', 'area')}
+        ${inp(b + '.cta', 'Texto do botão')}`)}`;
   }).join('');
-  return `<div class="grupo">Capa</div>
-    ${inp('kicker', 'Rótulo de cima')}
-    ${inp('titulo', 'Título', 'text', 'placeholder="Um sonho em família,"')}
-    ${inp('sub', 'Complemento em itálico', 'text', 'placeholder="e a Maktub vai te levar."')}
-    ${inp('linha', 'Linha de datas ou rota', 'text', 'placeholder="Maio de 2027 · Portugal"')}
-    ${duas(inp('para', 'Desenhada para', 'text', 'placeholder="Verônica e Helena"'), inp('pessoas', 'Pessoas', 'num'))}
-    ${duas(inp('nomeZap', 'Quem fala no WhatsApp', 'text', 'placeholder="Verônica"'), inp('destino', 'Destino principal (acervo)', 'text', 'placeholder="Lisboa"'))}
-    ${inp('carta', 'Texto de abertura (opcional)', 'area', 'placeholder="Proposta inicial para vocês terem clareza do investimento..."')}
+  return `${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, datas e valores entram sozinhos. Ou escreva curto, uma linha por voo:', '02/12 GIG 22:10 LIS 12:05 direto<br>15/12 LIS 10:20 GIG 17:40 direto<br>site 9.800 maktub 8.900<br>Várias opções: comece cada uma com "Opção 1", "Opção 2".')}
+    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">Preencher</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    <div class="grupo">Cliente</div>
+    ${duas(inp('para', 'Para quem', 'text', 'placeholder="Verônica e Helena"'), inp('pessoas', 'Pessoas', 'num'))}
+    ${inp('destino', 'Destino', 'text', 'placeholder="Em branco: usa a cidade do voo de ida"')}
+    ${dobra('capa', 'Personalizar capa e abertura (opcional)', `<div class="sub" style="margin:4px 0">Em branco, sai sozinho: título "${h(S.destino || 'Lisboa')} te espera, e a Maktub vai te levar.", linha com mês e destino, e o WhatsApp com o primeiro nome do cliente.</div>
+      ${inp('kicker', 'Rótulo de cima')}
+      ${inp('titulo', 'Título', 'text', 'placeholder="Um sonho em família,"')}
+      ${inp('sub', 'Complemento em itálico', 'text', 'placeholder="e a Maktub vai te levar."')}
+      ${inp('linha', 'Linha de datas ou rota', 'text', 'placeholder="Maio de 2027 · Portugal"')}
+      ${inp('nomeZap', 'Quem fala no WhatsApp', 'text', 'placeholder="Verônica"')}
+      ${inp('carta', 'Texto de abertura', 'area', 'placeholder="Proposta inicial para vocês terem clareza do investimento..."')}`)}
     <datalist id="dlHot">${hoteis.map(f => `<option value="${esc(f.nome)}">${esc(f.cidade || '')}</option>`).join('')}</datalist>
     ${op}
     ${btnMais('x|opcao', '+ Outra opção para o cliente escolher')}
-    <div class="grupo">Fechamento</div>
-    ${inp('porque', 'Frase de "Por que a Maktub" (opcional)', 'area', 'placeholder="Primeira viagem internacional não precisa ser motivo de preocupação..."')}
-    ${inp('consulta', 'Valores consultados em', 'date')}
-    ${inp('avisos', 'Condições (uma linha cada)', 'area', 'rows="5"')}`;
+    ${dobra('fecho', 'Fechamento e condições', `${inp('porque', 'Frase de "Por que a Maktub" (opcional)', 'area', 'placeholder="Primeira viagem internacional não precisa ser motivo de preocupação..."')}
+      ${inp('consulta', 'Valores consultados em', 'date')}
+      ${inp('avisos', 'Condições (uma linha cada)', 'area', 'rows="5"')}`)}`;
+}
+
+/* o que ficou em branco sai pronto na hora de gerar, sem mudar o que foi digitado */
+function autoGo(src) {
+  const d = JSON.parse(JSON.stringify(src));
+  d.opcoes.forEach(o => {
+    const ds = o.voos.filter(v => v.origem || v.destino).map(v => v.data).filter(Boolean).sort();
+    if (!o.embarque && ds.length) o.embarque = ds[0];
+    if (!o.retorno && ds.length > 1) o.retorno = ds[ds.length - 1];
+    o.hoteis.forEach(x => { if (x.nome) { if (!x.entrada) x.entrada = o.embarque || ''; if (!x.saida) x.saida = o.retorno || ''; } });
+    if (!o.hotelaria) { const t = o.hoteis.filter(x => x.nome).map(x => { const n = noites(x.entrada, x.saida); return n > 0 ? `${n} ${n === 1 ? 'noite' : 'noites'}${x.cidade ? ' em ' + x.cidade : ''}` : ''; }).filter(Boolean); if (t.length) o.hotelaria = t.join(' + '); }
+    if (!o.resumo) o.resumo = o.hotelaria || '';
+  });
+  const o0 = d.opcoes[0];
+  if (!d.destino) { const v = o0.voos.find(v => v.destino); if (v) d.destino = v.destino; }
+  if (!d.titulo) { d.titulo = `${d.destino || 'Sua viagem'} te espera,`; if (!d.sub) d.sub = 'e a Maktub vai te levar.'; }
+  if (!d.linha && o0.embarque) { const x = dt(o0.embarque); const m = MES[x.getMonth()]; d.linha = `${m.charAt(0).toUpperCase() + m.slice(1)} de ${x.getFullYear()}${d.destino ? ' · ' + d.destino : ''}`; }
+  if (!d.nomeZap) d.nomeZap = String(d.para || '').trim().split(/\s+/)[0] || '';
+  return d;
+}
+
+/* colar e preencher no Maktub Go: os voos da companhia viram os cards da proposta */
+async function colarGo(P, X, modo) {
+  const txt = X.$('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
+  const r = await lerColado(txt);
+  if (!r.opcoes.length) { X.aviso('Não encontrei voos nem valores. Confira se tem horário e código do aeroporto (ex.: 22:10 GIG).'); return; }
+  const conv = (v) => ({ ...VOO(), rotulo: v.rotulo, data: v.data, origem: cidadeDe(v.ocod) || v.ocod, saida: v.saida, destino: cidadeDe(v.dcod) || v.dcod, chegada: v.chegada,
+    mais1: !!(v.saida && v.chegada && v.chegada < v.saida), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
+  const aplicar = (o, p) => {
+    if (p.voos.length) o.voos = p.voos.map(conv);
+    if (p.de) o.sites = p.de; if (p.por) o.cartao = p.por; if (p.nome && !o.nome) o.nome = p.nome;
+    const ds = o.voos.map(v => v.data).filter(Boolean).sort();
+    if (ds.length) { o.embarque = ds[0]; o.retorno = ds.length > 1 ? ds[ds.length - 1] : o.retorno; }
+  };
+  const temVoo = S.opcoes[0].voos.some(v => v.origem);
+  if (modo === 'nova' && temVoo) r.opcoes.forEach(p => { const o = OPCAO(S.opcoes.length + 1); aplicar(o, p); S.opcoes.push(o); });
+  else r.opcoes.forEach((p, i) => { if (!S.opcoes[i]) S.opcoes.push(OPCAO(i + 1)); aplicar(S.opcoes[i], p); });
+  if (S.opcoes.length > 1) S.opcoes.forEach((o, i) => { if (/^Quero seguir com (essa viagem|a Opção \d+)$/.test(o.cta)) o.cta = `Quero seguir com a Opção ${i + 1}`; });
+  if (r.cliente && !S.para) S.para = r.cliente;
+  if (!S.destino) { const v = S.opcoes[0].voos.find(v => v.destino); if (v) S.destino = v.destino; }
+  editor(P, X);
+  const falta = S.opcoes.some(o => !num(o.cartao));
+  X.aviso(falta ? 'Voos preenchidos. Digite o valor Maktub de cada opção e, se tiver, escolha o hotel.' : 'Preenchido. Confira, escolha o hotel e gere o link.');
 }
 
 function precos(o) {
@@ -243,6 +302,8 @@ function escolherHotel(X, el) {
   if (!f) return;
   const ht = get(base);
   Object.assign(ht, { fornecedor_id: f.id, cidade: ht.cidade || f.cidade || '', estrelas: ht.estrelas || f.estrelas || '' });
+  const op = S.opcoes && S.opcoes[+base.split('.')[1]];
+  if (op) { const ds = op.voos.map(v => v.data).filter(Boolean).sort(); if (!ht.entrada) ht.entrada = op.embarque || ds[0] || ''; if (!ht.saida) ht.saida = op.retorno || (ds.length > 1 ? ds[ds.length - 1] : ''); }
   if (!ht.itens && f.cafe) ht.itens = f.cafe === 'incluso' ? 'Café da manhã incluso' : 'Café da manhã não incluso';
   if (!ht.fotos && f.fotos_maktub && f.fotos_maktub.length) ht.fotos = f.fotos_maktub.join('\n');
   editor(X.$('pagina'), X);
@@ -401,7 +462,7 @@ footer .prop{margin-top:10px;font-size:10.5px;max-width:560px;margin-left:auto;m
 @media (max-width:560px){.difs{grid-template-columns:1fr}.rota .cid{font-size:19px}.rota .hora{font-size:24px}.galeria img{height:200px;flex-basis:86%;max-width:86%}section{padding:44px 0}.opt .t{font-size:17px}.opt .s{display:none}.resumo>div{min-width:100px}.resumo .v{font-size:18px}}
 @media print{.seletor,.cta,.cta-leg{display:none}.painel{display:block!important;break-before:page}}`;
 
-function gerar(X) { return S.modelo === 'corp' ? gerarCorp(X) : gerarGo(X); }
+function gerar(X) { if (S.modelo === 'corp') return gerarCorp(X); const antes = S; S = autoGo(S); try { return gerarGo(X); } finally { S = antes; } }
 
 function gerarGo(X) {
   const M = MARCA, multi = S.opcoes.length > 1, pax = +S.pessoas || 0;
@@ -540,16 +601,21 @@ export { NOVO_GO, NOVO_CORP };
 /* ================= cotação rápida: print + valor, vira imagem para o WhatsApp ================= */
 function editorRapida(P, X) {
   const { $ } = X;
+  if (!S.voos) S.voos = [];
   const de = num(S.de), por = num(S.por), eco = de > por && por ? de - por : 0;
+  const vs = S.voos.filter(v => v.ocod);
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
-    <div class="sub">Digite o valor do site e o da Maktub e envie a imagem pronta no WhatsApp. O print é opcional.</div>
+    <div class="sub">Cole a tela da companhia ou digite os dois valores e envie a imagem pronta no WhatsApp.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      <label class="fl"><span>1. Print do site (opcional)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
+      ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Os voos entram na imagem e o valor do site vem sozinho.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
+      <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
+      ${vs.length ? `<div class="config" style="margin:6px 0">${vs.map(v => `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}</div>`).join('')}<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-top:4px">tirar voos da imagem</button></div>` : ''}
+      <label class="fl"><span>Print do site (opcional)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
       ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}
-      <div class="duas-col">${inp('de', '2. Valor no site', 'num', 'placeholder="2.100,00"')}${inp('por', '3. Valor com a Maktub', 'num', 'placeholder="1.700,00"')}</div>
+      <div class="duas-col">${inp('de', 'Valor no site', 'num', 'placeholder="2.100,00"')}${inp('por', 'Valor com a Maktub', 'num', 'placeholder="1.700,00"')}</div>
       <div id="rpEco">${eco ? `<div class="config" style="margin:4px 0">Economia de ${brl(eco)} para o cliente.</div>` : de && por && por >= de ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''}</div>
-      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado (opcional)', 'text', 'placeholder="4x de R$ 450,00 sem juros"')}</div>
+      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
       <div class="duas-col">${inp('cliente', 'Cliente (opcional)', 'text', 'placeholder="Victor"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
       ${inp('obs', 'Observação (opcional)', 'text', 'placeholder="Inclui mala de mão de 10 kg"')}
     </form>
@@ -560,7 +626,17 @@ function editorRapida(P, X) {
   const f = $('fRap');
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.value);
     if (k === 'de' || k === 'por') { const a = num(S.de), b = num(S.por); $('rpEco').innerHTML = a > b && b ? `<div class="config" style="margin:4px 0">Economia de ${brl(a - b)} para o cliente.</div>` : a && b ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''; } });
-  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); });
+  const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
+  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); });
+  $('rpColar').onclick = async () => {
+    const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
+    const r = await lerColado(txt), o = r.opcoes[0];
+    if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
+    if (o.voos.length) S.voos = o.voos; if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
+    editorRapida(P, X); X.aviso(num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
+    if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
+  };
+  if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
   $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
@@ -584,8 +660,10 @@ async function imagemRapida() {
   const logo = !corp && MARCA && MARCA.rodape ? await carregar(MARCA.rodape) : null;
   const de = num(S.de), por = num(S.por), eco = de > por ? de - por : 0;
   const alturas = prints.map(i => Math.round(i.height * (W - PAD * 2) / i.width));
-  const CAB = 150, BOX = 350 + (S.parcelas ? 46 : 0) + (eco ? 100 : 0) + (S.obs ? 44 : 0), ROD = 150;
-  const H = CAB + PAD + alturas.reduce((a, b) => a + b + 20, 0) + BOX + ROD;
+  const vs = (S.voos || []).filter(v => v.ocod), VH = vs.length ? 44 + vs.length * 104 : 0;
+  const np = String(S.parcelas || '').trim(), parc = /^\d{1,2}$/.test(np) && +np > 1 ? `${+np}x de ${brl(por / +np)} sem juros` : np;
+  const CAB = 150, BOX = 350 + (parc ? 46 : 0) + (eco ? 100 : 0) + (S.obs ? 44 : 0), ROD = 150;
+  const H = CAB + PAD + VH + alturas.reduce((a, b) => a + b + 20, 0) + BOX + ROD;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   const VERDE = '#1B4332', DOUR = '#A88B4A', CREME = '#EBE0C4', PAPEL = '#FAF6EC';
   const serif = (px, w = '400') => `${w} ${px}px "Cormorant Garamond", Georgia, serif`, sans = (px, w = '500') => `${w} ${px}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
@@ -597,8 +675,21 @@ async function imagemRapida() {
   g.fillStyle = corp ? VERDE : CREME; g.fillRect(0, 0, W, CAB);
   if (logo) { const lh = 90, lw = logo.width * lh / logo.height; g.drawImage(logo, (W - lw) / 2, (CAB - lh) / 2, lw, lh); }
   else { g.font = sans(38, '700'); g.fillStyle = corp ? CREME : VERDE; const t1 = 'MAKTUB ', t2 = corp ? 'CORPORATIVO' : 'GO'; const w1 = largEsp(t1, 4), w2 = largEsp(t2, 4); let x = (W - w1 - w2) / 2; espac(t1, x, 92, 4); g.fillStyle = DOUR; espac(t2, x + w1, 92, 4); }
-  // prints
+  // voos
   let y = CAB + PAD;
+  if (vs.length) {
+    g.font = sans(20, '600'); g.fillStyle = DOUR; espac(('VOOS' + (S.cia ? ' · ' + S.cia : '')).toUpperCase(), PAD, y + 4, 3); y += 26;
+    vs.forEach(v => {
+      g.fillStyle = '#fff'; g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 88, 10) : g.rect(PAD, y, W - PAD * 2, 88); g.fill(); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.stroke();
+      const d = dt(v.data);
+      g.font = sans(18, '600'); g.fillStyle = DOUR; espac(`${String(v.rotulo || '').toUpperCase()}${d ? ' · ' + SEMANA[d.getDay()].slice(0, 3).toUpperCase() + ' ' + ddmm(v.data) : ''}`, PAD + 24, y + 30, 2);
+      g.textAlign = 'right'; g.font = sans(18, '500'); g.fillStyle = '#6E6A5E'; g.fillText([v.tipo, v.duracao].filter(Boolean).join(' · '), W - PAD - 24, y + 30); g.textAlign = 'left';
+      g.font = sans(34, '600'); g.fillStyle = VERDE; g.fillText(`${v.saida} ${String(v.ocod).toUpperCase()}   →   ${v.chegada} ${String(v.dcod).toUpperCase()}`, PAD + 24, y + 72);
+      y += 104;
+    });
+    y += 18;
+  }
+  // prints
   if (prints.length) { g.font = sans(20, '600'); g.fillStyle = DOUR; espac('VALOR NO SITE', PAD, y + 4, 3); y += 22; }
   prints.forEach((im, i) => { g.drawImage(im, PAD, y, W - PAD * 2, alturas[i]); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.strokeRect(PAD, y, W - PAD * 2, alturas[i]); y += alturas[i] + 20; });
   // caixa de valores
@@ -610,7 +701,7 @@ async function imagemRapida() {
   if (de > por) { g.fillStyle = DOUR; g.font = sans(20, '600'); centro('COM A MAKTUB', yy - 18, 3); yy += 62; }
   g.fillStyle = '#fff'; g.font = serif(96, '500'); centro(brl(por), yy); yy += 50;
   g.fillStyle = CREME; g.font = sans(24, '500'); centro(S.forma || '', yy); yy += 6;
-  if (S.parcelas) { yy += 40; g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; centro('ou ' + S.parcelas, yy); }
+  if (parc) { yy += 40; g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; centro('ou ' + parc, yy); }
   if (eco) { yy += 62; const t = 'Economia de ' + brl(eco); g.font = sans(24, '600'); const tw = g.measureText(t).width + 48; g.strokeStyle = DOUR; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect((W - tw) / 2, yy - 34, tw, 50, 25) : g.rect((W - tw) / 2, yy - 34, tw, 50); g.stroke(); g.fillStyle = CREME; centro(t, yy); }
   if (S.obs) { yy += 52; g.font = sans(20, '400'); g.fillStyle = 'rgba(235,224,196,.8)'; centro(S.obs, yy); }
   // rodapé
