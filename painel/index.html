@@ -2157,6 +2157,10 @@
         console.error('Erro ao buscar cliente:', cliErr);
       }
  
+      // Equipe da Maktub sem painel de cliente: vai direto para o app da operação
+      if (!cliente) {
+        try { const { data: time } = await supabase.rpc('is_time'); if (time === true) { window.location.replace('/admin/app/'); return; } } catch (_) {}
+      }
       // Se não há registro na tabela clientes, mostrar empty state
       if (!cliente) {
         $('loadingScreen').classList.add('hide');
