@@ -113,8 +113,18 @@
     .secure-note{display:flex;gap:10px;align-items:flex-start;margin-top:28px;font-size:12px;color:var(--text-muted);line-height:1.55}
     .secure-note svg{width:16px;height:16px;flex-shrink:0;margin-top:2px;stroke:var(--gold);fill:none;stroke-width:1.5}
   </style>
-  <link rel="manifest" href="/painel/manifest.webmanifest" />
+  <link rel="manifest" id="manifesto" href="/painel/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/ativos/app-icon-180.png" />
+  <script>
+    /* Vindo do app da operação: salvar na tela de início instala o app da operação, e não o painel do cliente */
+    (function () {
+      var n = new URLSearchParams(location.search).get('next') || '';
+      if (!/^\/admin\//.test(n)) return;
+      document.getElementById('manifesto').href = '/admin/app/manifest.webmanifest';
+      var t = document.createElement('meta'); t.name = 'apple-mobile-web-app-title'; t.content = 'Maktub Op'; document.head.appendChild(t);
+      var c = document.createElement('meta'); c.name = 'apple-mobile-web-app-capable'; c.content = 'yes'; document.head.appendChild(c);
+    })();
+  </script>
 </head>
 <body>
  
