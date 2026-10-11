@@ -4,7 +4,7 @@
   "description": "Leads, clientes, agenda e números da Maktub Go na palma da mão.",
   "id": "/admin/app/",
   "start_url": "/admin/app/",
-  "scope": "/admin/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1a3826",
