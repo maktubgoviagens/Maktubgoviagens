@@ -374,7 +374,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=2';
+import * as MKT from '/admin/app/marketing.js?v=3';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
@@ -520,6 +520,25 @@ $('pagina').addEventListener('click', async (e) => {
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
+/* vídeos que a pessoa foi escalada para gravar (marketing) */
+async function recarregarGravar() { const r = await sb.rpc('marketing_minhas_gravacoes'); D.gravar = r.error ? [] : (r.data || []); return D.gravar; }
+function blocoGravar() {
+  const L = D.gravar || []; if (!L.length) return '';
+  const dd = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
+  const fmt = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };
+  return `<div class="secao">Para você gravar</div>${L.map(p => { const prazo = p.gravacao_data || p.data_prevista; const atr = prazo && prazo < hojeISO(); return `<div class="card ${atr ? 'novo' : ''}" style="margin-bottom:8px">
+    <div class="cab"><div><div class="nome">${esc(p.titulo)}</div><span class="tag">${esc(fmt[p.formato] || 'Post')}</span>${prazo ? ` <span class="tag ${atr ? 'alerta' : 'ouro'}">gravar até ${dd(prazo)}</span>` : ''}</div></div>
+    ${p.obs || p.legenda ? `<div class="info"><div>${esc(String(p.obs || p.legenda).slice(0, 220))}</div></div>` : ''}
+    <div class="acoes">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Ver roteiro ou arte</a>` : ''}<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button></div></div>`; }).join('')}`;
+}
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-gravado]'); if (!b) return;
+  b.disabled = true;
+  const { data, error } = await sb.rpc('marketing_marcar_gravado', { p_id: String(b.dataset.gravado) });
+  if (error || !data) { b.disabled = false; aviso('Não marcou: ' + (error ? error.message : 'esse vídeo não está com você.')); return; }
+  aviso('Gravação marcada. O marketing já vê no app.');
+  await recarregarGravar(); if (podeAba('marketing')) await MKT.carregar(sb); tela();
+});
 /* registro de ações que não mudam o banco (vai para o log de atividades; se o log não estiver ativo, ignora) */
 function logEvento(tabela, registro, rotulo, detalhe) {
   try { sb.from('log_atividades').insert({ acao: 'evento', tabela, registro: registro ? String(registro) : null, rotulo: rotulo || null, detalhe }).then(() => {}, () => {}); } catch (_) {}
@@ -546,7 +565,7 @@ const PERMS = [
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
-  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0]]],
+  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Aprova posts e vídeos, vê o painel e o calendário e escolhe quem grava cada vídeo', 0]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
@@ -558,15 +577,17 @@ const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'in
 const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
-const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => k !== 'marketing' && k !== 'checkin' && pode(k));
-function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA }; }
+const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'checkin', 'leads', 'talentos'];
+const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && pode(k));
+const MKT_ABAS = () => ['marketing', ...(pode('leads') || pode('talentos') ? ['leads'] : [])];
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
   ABA = podeAba(h[0]) ? h[0] : 'inicio';
   CLI = ABA === 'clientes' && h[1] ? h[1] : null;
   if (CLI && h[2]) FI_ABA = h[2];
-  if (soMarketing()) ABA = 'marketing';
+  if (soMarketing() && !MKT_ABAS().includes(ABA)) ABA = 'marketing';
   if (ABA === 'marketing') MKT.rota(h);
   if (ABA === 'crm') CRM.rota(h);
   if (ABA === 'fornecedores') FORN.rota(h);
@@ -594,7 +615,7 @@ const NAV_IC = {
 };
 function navItens() {
   if (ADMIN) return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']];
-  if (soMarketing()) return [];
+  if (soMarketing()) { const a = MKT_ABAS(); return a.length > 1 ? [['marketing', 'Marketing'], ['leads', 'Leads do site']] : []; }
   return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['marketing', 'Marketing'], ['empresa', 'Empresa']]
     .filter(([k]) => k === 'operacao' ? podeAba('emissoes') || podeAba('agenda') : podeAba(k));
 }
@@ -613,11 +634,11 @@ function montarNav() {
   $('sino').hidden = !ADMIN;
   $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
-  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
+  $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
 function ir(aba, extra) {
-  if (soMarketing()) aba = 'marketing';
+  if (soMarketing() && !MKT_ABAS().includes(aba)) aba = 'marketing';
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
@@ -663,7 +684,16 @@ function marcarNav() {
 async function carregar(silencioso, manterTela) {
   ULT_CARGA = Date.now();
   if (!silencioso) $('pagina').classList.add('carregando');
-  if (soMarketing()) { await MKT.carregar(sb); $('pagina').classList.remove('carregando'); D.atual = new Date(); return manterTela ? null : tela(); }
+  if (soMarketing()) {
+    const nada = Promise.resolve({ data: [], error: null });
+    const LE = pode('leads');
+    const q = await Promise.all([MKT.carregar(sb), sb.rpc('time_nomes'),
+      LE ? sb.from('leads').select('*').order('created_at', { ascending: false }).limit(1000) : nada,
+      LE ? sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false }).limit(500) : nada,
+      pode('talentos') ? sb.from('banco_talentos').select('*').order('created_at', { ascending: false }).limit(300) : nada, recarregarGravar()]);
+    D.time = q[1].data || []; D.leads = q[2].data || []; D.sols = q[3].data || []; D.tal = q[4].data || []; D.talErro = q[4].error || null;
+    $('pagina').classList.remove('carregando'); D.atual = new Date(); return manterTela ? null : tela();
+  }
   const hoje = HOJE(), iso = (d) => d.toISOString().slice(0, 10);
   const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
   const inicioAno = `${hoje.getFullYear()}-01-01`, desde = `${hoje.getFullYear() - 1}-01-01`;
@@ -737,6 +767,7 @@ async function carregar(silencioso, manterTela) {
   } else D.pessoas = [];
   if (podeAba('compromissos')) await CMP.carregar(ctxCMP());
   if (podeAba('marketing')) await MKT.carregar(sb);
+  await recarregarGravar();
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   if (!manterTela) tela();
@@ -811,6 +842,7 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false;
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
+  if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
   if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
@@ -873,6 +905,7 @@ function telaInicio(P) {
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    ${blocoGravar()}
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
@@ -904,6 +937,7 @@ function telaInicioColab(P) {
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     ${botaoLancar('nova')}
+    ${blocoGravar()}
     <div class="numeros" style="margin-top:12px">
       <div class="num destaque"><div class="l">Sua comissão em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'} no mês</div></div>
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
@@ -2422,6 +2456,7 @@ function listaLeads() {
         <div class="acoes">${r.whatsapp ? `<a class="zap" href="https://wa.me/${zapNum(r.whatsapp)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}</div>
       </article>`).join('') : '<div class="vazio">Nenhum cadastro no período.</div>';
   }
+  if (!podeAba('reunioes') && !pode('gestao')) el.querySelectorAll('[data-reu]').forEach(b => b.remove());
   el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => abrirAtendimento('nova', JSON.parse(b.dataset.reu)));
   el.querySelectorAll('select[data-t]').forEach(s => s.onchange = async () => {
     const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);

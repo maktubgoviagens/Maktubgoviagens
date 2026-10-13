@@ -140,13 +140,13 @@ export function tela(P, ctx) {
     P.innerHTML = `<h1 class="titulo">Marketing</h1>${X.tec('<div class="config" style="margin-top:12px">O marketing ainda não foi ativado no Supabase. Rode o marketing.sql do guia.</div>')}${X.so ? sairBtn() : ''}`;
     return;
   }
-  const vistas = X.ADMIN ? ['painel', 'calendario', 'producao', 'estrategia'] : ['semana', 'producao', 'ideias', 'estrategia'];
+  const vistas = X.COORD ? ['painel', 'calendario', 'producao', 'estrategia'] : ['semana', 'producao', 'ideias', 'estrategia'];
   if (!vistas.includes(VIEW)) VIEW = vistas[0];
   if (!MES) MES = mesK(hoje());
   if (ED) return formPost(P);
   if (ED_EST) return formEst(P);
   const nomes = { painel: 'Painel', calendario: 'Calendário', producao: 'Produção', estrategia: 'Estratégia', semana: 'Semana', ideias: 'Ideias' };
-  const seg = `<div class="seg" id="mkSeg" style="margin-top:${X.ADMIN ? 12 : 16}px">${vistas.map(v => `<button data-v="${v}" class="${VIEW === v ? 'on' : ''}">${nomes[v]}</button>`).join('')}</div>`;
+  const seg = `<div class="seg" id="mkSeg" style="margin-top:${X.COORD ? 12 : 16}px">${vistas.map(v => `<button data-v="${v}" class="${VIEW === v ? 'on' : ''}">${nomes[v]}</button>`).join('')}</div>`;
   let html = '';
   if (VIEW === 'painel') html = vPainel();
   if (VIEW === 'calendario') html = vCalendario();
@@ -154,7 +154,7 @@ export function tela(P, ctx) {
   if (VIEW === 'estrategia') html = vEstrategia();
   if (VIEW === 'semana') html = vSemana();
   if (VIEW === 'ideias') html = vIdeias();
-  const topo = X.ADMIN
+  const topo = X.COORD
     ? `${X.so ? '' : '<button class="voltar" id="mkVoltar">‹ Empresa</button>'}<h1 class="titulo" style="margin-top:6px">Marketing <em>da Maktub</em></h1>${seg}`
     : (VIEW === 'semana' ? '' : `<h1 class="titulo">Estúdio de <em>conteúdo</em></h1>`) + (VIEW === 'semana' ? '' : seg);
   P.innerHTML = topo + html + (X.so ? sairBtn() : '');
@@ -188,6 +188,7 @@ function vPainel() {
     <div class="secao">Para você aprovar</div>
     ${aprov.length ? aprov.map(cardAprovar).join('') : '<div class="vazio">Nada esperando aprovação.</div>'}
     ${atras.length ? `<div class="secao">Atrasados</div><div class="mk-lista">${atras.map(linha).join('')}</div>` : ''}
+    ${gravPend().length ? `<div class="secao">Gravações pendentes</div><div class="mk-lista">${gravPend().map(linhaGrav).join('')}</div>` : ''}
     <div class="secao">Próximos 7 dias <button data-v="calendario">Calendário ›</button></div>
     ${prox.length ? `<div class="mk-lista">${prox.map(linha).join('')}</div>` : '<div class="vazio">Nada programado para os próximos dias.</div>'}
     <section class="bloco"><h2>Pilares em ${mesNome(k).split(' ')[0].toLowerCase()}</h2>
@@ -195,6 +196,11 @@ function vPainel() {
       ${pilares().length && porPilar.some(x => !x[1]) ? `<div class="sub">Sem post no mês: ${porPilar.filter(x => !x[1]).map(x => esc(x[0].titulo)).join(', ')}.</div>` : ''}
     </section>
     <div class="pend" style="margin-top:12px"><button data-v="producao"><span>Banco de ideias</span><span>${ideias ? `<b>${ideias}</b>` : ''}<span class="seta">›</span></span></button></div>`;
+}
+const gravPend = () => LISTA.filter(p => p.gravacao_por && !p.gravado_em && p.status !== 'publicado').sort((a, b) => String(a.gravacao_data || a.data_prevista || '9999').localeCompare(String(b.gravacao_data || b.data_prevista || '9999')));
+function linhaGrav(p) {
+  const { esc } = X, prazo = p.gravacao_data || p.data_prevista, atr = prazo && prazo < hoje();
+  return `<button class="mk-lin" data-p="${p.id}"><i style="background:${atr ? 'var(--alerta)' : 'var(--dourado)'}"></i><span class="t">${esc(p.titulo)}<small>${esc(primeiro(nomeT(p.gravacao_por)) || 'Equipe')}${prazo ? ' · até ' + dm(prazo) : ''}${atr ? ' · atrasado' : ''}</small></span><span class="seta">›</span></button>`;
 }
 const porData = (a, b) => String(a.data_prevista || '9999').localeCompare(String(b.data_prevista || '9999'));
 function linha(p) {
@@ -247,7 +253,7 @@ function vCalendario() {
 /* ---------- produção (kanban) ---------- */
 function vProducao() {
   const { esc } = X;
-  const cols = X.ADMIN ? ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'] : ['producao', 'aprovacao', 'agendado', 'publicado'];
+  const cols = X.COORD ? ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'] : ['producao', 'aprovacao', 'agendado', 'publicado'];
   const limite = maisDias(hoje(), -21);
   const col = (s) => LISTA.filter(p => p.status === s && (s !== 'publicado' || (p.publicado_em || '') >= limite)).sort(s === 'publicado' ? (a, b) => String(b.publicado_em).localeCompare(String(a.publicado_em)) : porData);
   const nome = { ideia: 'Ideias', producao: 'Em produção', aprovacao: exigir() ? 'Aprovação' : 'Revisão', agendado: 'Aprovado e agendado', publicado: 'Publicado' };
@@ -267,8 +273,8 @@ function kcard(p) {
 // botão de próxima etapa de cada post
 function acao(p) {
   if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">Produzir</button>`;
-  if (p.status === 'producao') return exigir() && !X.ADMIN ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.ADMIN ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
-  if (p.status === 'aprovacao') return X.ADMIN || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>';
+  if (p.status === 'producao') return exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
+  if (p.status === 'aprovacao') return X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>';
   if (p.status === 'agendado') return `<button data-publicar="${p.id}">Marcar publicado</button>`;
   return '';
 }
@@ -298,6 +304,7 @@ function vSemana() {
       <div class="mk-semana">${dias.map(d => { const L = naSemana(d), dd = new Date(d + 'T12:00:00'); return `<button data-sdia="${d}" class="${d === h ? 'hj' : ''} ${d === DIA ? 'sel' : ''}"><span class="d">${SEMANA[dd.getDay()]}</span><span class="n">${dd.getDate()}</span><span class="mk-dots">${L.slice(0, 4).map(p => `<i style="background:${corP(p)}"></i>`).join('')}</span></button>`; }).join('')}</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
+    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você gravar</div>${L.map(p => vcard(p) + `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei: ${X.esc(p.titulo)}</button>`).join('')}` : '')(gravPend().filter(p => p.gravacao_por === X.meuId))}
     ${ajustes.length ? `<div class="mk-dia" style="color:var(--alerta)">Ajustes pedidos</div>${ajustes.map(vcard).join('')}` : ''}
     ${atras.length ? `<div class="mk-dia" style="color:var(--alerta)">Atrasados</div>${atras.map(vcard).join('')}` : ''}
     ${(c => c || `<div class="mk-dia">${DIA ? (DIA === h ? 'Hoje' : SEMANA[new Date(DIA + 'T12:00:00').getDay()] + ' ' + dm(DIA)) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">Nada programado.</div>`)(mostrar.map(d => { const L = naSemana(d).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))); const dd = new Date(d + 'T12:00:00'); return L.length ? `<div class="mk-dia">${d === h ? 'Hoje' : d === maisDias(h, 1) ? 'Amanhã' : SEMANA[dd.getDay()] + ' ' + dm(d)}</div>${L.map(vcard).join('')}` : ''; }).join(''))}
@@ -327,14 +334,14 @@ function vEstrategia() {
   const camp = campanhas().sort((a, b) => String(b.inicio || '').localeCompare(String(a.inicio || '')));
   const ativa = (c) => c.ativo && (!c.fim || c.fim >= hoje());
   return `
-    ${X.ADMIN ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação da Isadora ou do Matheus antes de ser agendado ou publicado</span></label></section>` : ''}
+    ${X.ADMIN ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação da coordenação do marketing ou dos sócios antes de ser agendado ou publicado</span></label></section>` : ''}
     <div class="secao">Metas do mês</div>
     <div class="mesnav" id="mkMes"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="numeros" style="margin-top:8px">
       <div class="num destaque"><div class="l">Posts publicados</div><div class="v">${pub.length}${m.posts ? ' / ' + m.posts : ''}</div><div class="d">${m.posts ? Math.round(pub.length / m.posts * 100) + '% da meta' : 'sem meta'}</div></div>
       <div class="num destaque"><div class="l">Reels publicados</div><div class="v">${reels.length}${m.reels ? ' / ' + m.reels : ''}</div><div class="d">${m.reels ? Math.round(reels.length / m.reels * 100) + '% da meta' : 'sem meta'}</div></div>
     </div>
-    ${X.ADMIN ? `<form class="bloco form" id="mkMeta"><div class="duas-col">${X.campo('posts', 'Meta de posts no mês', m.posts ?? '', 'number', 'min="0"')}${X.campo('reels', 'Meta de reels no mês', m.reels ?? '', 'number', 'min="0"')}</div><button class="sec" type="submit" style="width:100%;margin-top:10px">Salvar metas de ${mesNome(k).split(' ')[0].toLowerCase()}</button><div class="sub">O realizado conta sozinho pelos posts marcados como publicados. Os reels também contam nos posts.</div></form>` : `<div class="sub">Metas definidas pela Isadora e pelo Matheus. O realizado conta sozinho pelos posts publicados.</div>`}
+    ${X.COORD ? `<form class="bloco form" id="mkMeta"><div class="duas-col">${X.campo('posts', 'Meta de posts no mês', m.posts ?? '', 'number', 'min="0"')}${X.campo('reels', 'Meta de reels no mês', m.reels ?? '', 'number', 'min="0"')}</div><button class="sec" type="submit" style="width:100%;margin-top:10px">Salvar metas de ${mesNome(k).split(' ')[0].toLowerCase()}</button><div class="sub">O realizado conta sozinho pelos posts marcados como publicados. Os reels também contam nos posts.</div></form>` : `<div class="sub">Metas definidas pela Isadora e pelo Matheus. O realizado conta sozinho pelos posts publicados.</div>`}
     <div class="secao">Pilares de conteúdo <button data-novo-est="pilar">+ Pilar</button></div>
     ${pilares().length ? `<div class="mk-pilares">${pilares().map(pl => { const n = LISTA.filter(p => p.pilar_id === pl.id && p.status === 'publicado' && mesK(p.publicado_em) === k).length; return `<button class="mk-pilar" data-est="${pl.id}" style="--c:${pl.cor || CORES[0]}"><b>${esc(pl.titulo)}</b><small>${n} publicado${n === 1 ? '' : 's'} no mês${pl.descricao ? ' · ' + esc(pl.descricao.slice(0, 40)) + (pl.descricao.length > 40 ? '...' : '') : ''}</small></button>`; }).join('')}</div>` : '<div class="vazio">Os pilares são os temas fixos da Maktub. Cada post fica ligado a um, e o painel mostra se algum tema está sendo esquecido.</div>'}
     <div class="secao">Campanhas <button data-novo-est="campanha">+ Campanha</button></div>
@@ -346,10 +353,10 @@ function vEstrategia() {
 /* ---------- formulário do post ---------- */
 function formPost(P) {
   const { esc, campo } = X, nova = ED === 'nova';
-  const base = nova ? { titulo: '', formato: 'reels', status: 'producao', responsavel_id: X.ADMIN ? null : X.meuId } : LISTA.find(x => x.id === ED);
+  const base = nova ? { titulo: '', formato: 'reels', status: 'producao', responsavel_id: X.COORD ? null : X.meuId } : LISTA.find(x => x.id === ED);
   if (!base) { ED = null; return tela(P, X); }
   const p = { ...base, ...(PRE || {}) };
-  const pode = (s) => X.ADMIN || !exigir() || ['ideia', 'producao', 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
+  const pode = (s) => X.COORD || !exigir() || ['ideia', 'producao', 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
   const marketing = TIME.filter(t => t.user_id);
   P.innerHTML = `<button class="voltar" id="mkVoltarF">‹ Marketing</button><h1 class="titulo" style="margin-top:6px">${nova ? (p.status === 'ideia' ? 'Nova <em>ideia</em>' : 'Novo <em>post</em>') : 'Editar <em>post</em>'}</h1>
     ${!nova && base.ajuste && base.status === 'producao' ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
@@ -363,7 +370,9 @@ function formPost(P) {
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
         <label class="fl"><span>Campanha</span><select name="campanha_id"><option value="">Nenhuma</option>${campanhas().filter(c => c.ativo || c.id === p.campanha_id).map(c => `<option value="${c.id}" ${p.campanha_id === c.id ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</select></label>
       </div>
-      <label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      <label class="fl"><span>Responsável pela produção</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      <div class="duas-col"><label class="fl"><span>Quem grava</span><select name="gravacao_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.gravacao_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}</div>
+      ${p.gravacao_por ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. A pessoa vê no Início do app dela e marca quando gravar.'}</div>` : ''}
       <label class="fl"><span>Legenda</span><textarea name="legenda" rows="5">${esc(p.legenda || '')}</textarea></label>
       ${campo('link_arquivo', 'Link da arte ou do vídeo (Canva ou Drive)', p.link_arquivo, 'url', 'placeholder="https://"')}
       <div id="mkPub">${campo('link_post', 'Link do post no Instagram', p.link_post, 'url', 'placeholder="https://www.instagram.com/..."')}
@@ -385,7 +394,7 @@ function formPost(P) {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
     const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, data_prevista: v('data_prevista'), hora: v('hora'),
-      pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
+      pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_por: v('gravacao_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
       link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs') };
     if (!reg.titulo) { msg('Escreva o título do post.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
