@@ -4,8 +4,15 @@
 // Sem mídia no app: as artes ficam no Canva ou no Drive e aqui entra só o link.
 
 const FMT = { reels: ['Reels', '#8a6520'], carrossel: ['Carrossel', '#2f6b4a'], feed: ['Feed', '#a0561f'], stories: ['Stories', '#2e5e6e'] };
-const ST = { ideia: 'Ideia', producao: 'Em produção', aprovacao: 'Aprovação', agendado: 'Aprovado', publicado: 'Publicado' };
-const ST_TAG = { ideia: '', producao: '', aprovacao: 'alerta', agendado: 'ouro', publicado: 'ok' };
+const ST = { ideia: 'Ideia', producao: 'Roteiro', gravacao: 'Gravar', edicao: 'Edição', aprovacao: 'Aprovação', agendado: 'Aprovado', publicado: 'Publicado' };
+const ST_TAG = { ideia: '', producao: '', gravacao: 'ouro', edicao: '', aprovacao: 'alerta', agendado: 'ouro', publicado: 'ok' };
+/* dois caminhos: vídeo (roteiro, gravação, edição) e arte (criação direto para aprovação) */
+const ETAPAS_VIDEO = ['ideia', 'producao', 'gravacao', 'edicao', 'aprovacao', 'agendado', 'publicado'];
+const ETAPAS_ARTE = ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'];
+const ehVideo = (p) => p.video === true || p.video === false ? p.video : p.formato === 'reels';
+const stNome = (p, s = p.status) => s === 'producao' ? (ehVideo(p) ? 'Roteiro' : 'Criação') : ST[s] || s;
+const EM_PRODUCAO = ['producao', 'gravacao', 'edicao'];
+const voltaAjuste = (p) => ehVideo(p) ? 'edicao' : 'producao';
 const CORES = ['#1a3826', '#8a6520', '#a0561f', '#2e5e6e', '#6b3a4a', '#5f6b2f', '#7a6a55'];
 const DOCS = [
   ['doc-posicionamento', 'Posicionamento', 'Como a Maktub quer ser vista e o que a diferencia.'],
@@ -171,7 +178,7 @@ function vPainel() {
   const aprov = LISTA.filter(p => p.status === 'aprovacao').sort(porData);
   const atras = LISTA.filter(atrasado).sort(porData);
   const prox = LISTA.filter(p => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista >= hoje() && p.data_prevista <= maisDias(hoje(), 7)).sort(porData);
-  const aFazer = LISTA.filter(p => ['producao', 'aprovacao', 'agendado'].includes(p.status));
+  const aFazer = LISTA.filter(p => [...EM_PRODUCAO, 'aprovacao', 'agendado'].includes(p.status));
   const noMes = LISTA.filter(p => p.status !== 'ideia' && mesK(diaPost(p)) === k);
   const porPilar = pilares().map(pl => [pl, noMes.filter(p => p.pilar_id === pl.id).length]);
   const semPilar = noMes.filter(p => !p.pilar_id).length;
@@ -206,7 +213,7 @@ const porData = (a, b) => String(a.data_prevista || '9999').localeCompare(String
 function linha(p) {
   const { esc } = X, pl = est(p.pilar_id);
   const det = [fmtN(p), diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).join(' · ');
-  const tag = `<span class="tag ${atrasado(p) ? 'alerta' : ST_TAG[p.status]}">${atrasado(p) ? 'Atrasado' : ST[p.status]}</span>`;
+  const tag = `<span class="tag ${atrasado(p) ? 'alerta' : ST_TAG[p.status]}">${atrasado(p) ? 'Atrasado' : stNome(p)}</span>`;
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${corP(p)}"></i><span class="t">${esc(p.titulo)}<small>${esc(det)}</small></span>${tag}</button>`;
 }
 function links(p) {
@@ -253,10 +260,10 @@ function vCalendario() {
 /* ---------- produção (kanban) ---------- */
 function vProducao() {
   const { esc } = X;
-  const cols = X.COORD ? ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'] : ['producao', 'aprovacao', 'agendado', 'publicado'];
+  const cols = X.COORD ? ETAPAS_VIDEO : ETAPAS_VIDEO.slice(1);
   const limite = maisDias(hoje(), -21);
   const col = (s) => LISTA.filter(p => p.status === s && (s !== 'publicado' || (p.publicado_em || '') >= limite)).sort(s === 'publicado' ? (a, b) => String(b.publicado_em).localeCompare(String(a.publicado_em)) : porData);
-  const nome = { ideia: 'Ideias', producao: 'Em produção', aprovacao: exigir() ? 'Aprovação' : 'Revisão', agendado: 'Aprovado e agendado', publicado: 'Publicado' };
+  const nome = { ideia: 'Ideias', producao: 'Roteiro ou criação', gravacao: 'Gravar', edicao: 'Edição', aprovacao: exigir() ? 'Aprovação' : 'Revisão', agendado: 'Aprovado e agendado', publicado: 'Publicado' };
   return `
     <div style="display:flex;gap:8px;margin-top:12px"><button class="zap grande" data-novo="producao">+ Novo post</button></div>
     <div class="secao" style="margin-top:16px">Produção</div>
@@ -266,14 +273,16 @@ function vProducao() {
 }
 function kcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)};margin-top:0;margin-bottom:8px"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span>${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}${p.ajuste && p.status === 'producao' ? '<span class="st" style="color:var(--alerta)">ajuste pedido</span>' : ''}
+  return `<div class="mk-vcard" style="--c:${corP(p)};margin-top:0;margin-bottom:8px"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span>${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}${p.ajuste && EM_PRODUCAO.includes(p.status) ? '<span class="st" style="color:var(--alerta)">ajuste pedido</span>' : ''}${p.status === 'gravacao' && p.gravacao_por ? `<span class="st">grava: ${X.esc(primeiro(nomeT(p.gravacao_por)))}</span>` : ''}
     <b style="font-size:18px">${esc(p.titulo)}</b><small>${[diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ')}</small></button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
 }
 // botão de próxima etapa de cada post
 function acao(p) {
-  if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">Produzir</button>`;
-  if (p.status === 'producao') return exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
+  if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">${ehVideo(p) ? 'Fazer roteiro' : 'Criar arte'}</button>`;
+  if (p.status === 'producao' && ehVideo(p)) return `<button data-gravar="${p.id}">Pronto para gravar</button>`;
+  if (p.status === 'gravacao') return `<button data-gravado="${p.id}">Já gravado</button>`;
+  if (p.status === 'producao' || p.status === 'edicao') return exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
   if (p.status === 'aprovacao') return X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>';
   if (p.status === 'agendado') return `<button data-publicar="${p.id}">Marcar publicado</button>`;
   return '';
@@ -290,7 +299,7 @@ function vSemana() {
   const ativos = LISTA.filter(p => !['ideia'].includes(p.status));
   const naSemana = (d) => ativos.filter(p => diaPost(p) === d);
   const hora = new Date().getHours();
-  const ajustes = LISTA.filter(p => p.status === 'producao' && p.ajuste);
+  const ajustes = LISTA.filter(p => EM_PRODUCAO.includes(p.status) && p.ajuste);
   const atras = LISTA.filter(atrasado);
   const mostrar = DIA && dias.includes(DIA) ? [DIA] : dias;
   return `
@@ -312,9 +321,9 @@ function vSemana() {
 }
 function vcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${ST[p.status]}</span>
+  return `<div class="mk-vcard" style="--c:${corP(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span>
     <b>${esc(p.titulo)}</b><small>${[p.hora ? 'às ' + p.hora : '', pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
-    ${p.ajuste && p.status === 'producao' ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
+    ${p.ajuste && EM_PRODUCAO.includes(p.status) ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
 }
 
@@ -356,15 +365,16 @@ function formPost(P) {
   const base = nova ? { titulo: '', formato: 'reels', status: 'producao', responsavel_id: X.COORD ? null : X.meuId } : LISTA.find(x => x.id === ED);
   if (!base) { ED = null; return tela(P, X); }
   const p = { ...base, ...(PRE || {}) };
-  const pode = (s) => X.COORD || !exigir() || ['ideia', 'producao', 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
+  const pode = (s) => X.COORD || !exigir() || ['ideia', ...EM_PRODUCAO, 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
   const marketing = TIME.filter(t => t.user_id);
   P.innerHTML = `<button class="voltar" id="mkVoltarF">‹ Marketing</button><h1 class="titulo" style="margin-top:6px">${nova ? (p.status === 'ideia' ? 'Nova <em>ideia</em>' : 'Novo <em>post</em>') : 'Editar <em>post</em>'}</h1>
-    ${!nova && base.ajuste && base.status === 'producao' ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
+    ${!nova && base.ajuste && EM_PRODUCAO.includes(base.status) ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
     ${!nova && base.aprovado_em ? `<div class="sub">Aprovado por ${esc(primeiro(nomeT(base.aprovado_por)) || 'administrador')} em ${new Date(base.aprovado_em).toLocaleDateString('pt-BR')}.</div>` : ''}
     <form class="bloco form" id="mkF">
       ${campo('titulo', 'Título ou tema do post', p.titulo, 'text', 'required maxlength="160"')}
       <div class="fl"><span>Formato</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <label class="fl"><span>Etapa</span><select name="status">${Object.entries(ST).map(([k, n]) => `<option value="${k}" ${p.status === k ? 'selected' : ''} ${pode(k) ? '' : 'disabled'}>${k === 'agendado' ? 'Aprovado e agendado' : n}${pode(k) ? '' : ' (precisa de aprovação)'}</option>`).join('')}</select></label>
+      <label class="fc" style="margin:2px 0 10px"><input type="checkbox" name="video" ${ehVideo(p) ? 'checked' : ''}><span>Tem gravação de vídeo (roteiro, gravação e edição)</span></label>
+      <label class="fl"><span>Etapa</span><select name="status"></select></label>
       <div class="duas-col">${campo('data_prevista', 'Data de publicação', p.data_prevista, 'date')}${campo('hora', 'Horário', p.hora, 'time')}</div>
       <div class="duas-col">
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
@@ -383,6 +393,16 @@ function formPost(P) {
       <div class="sub" id="mkMsg"></div>
     </form>`;
   const f = document.getElementById('mkF'), el = f.elements;
+  let fmtAnt = p.formato;
+  const etapas = () => {
+    const vid = el.video.checked, atual = el.status.value || p.status;
+    const L = vid ? ETAPAS_VIDEO : ETAPAS_ARTE;
+    const sel = L.includes(atual) ? atual : (atual === 'gravacao' || atual === 'edicao' ? 'producao' : L[0]);
+    el.status.innerHTML = L.map(k => `<option value="${k}" ${sel === k ? 'selected' : ''} ${pode(k) ? '' : 'disabled'}>${k === 'agendado' ? 'Aprovado e agendado' : stNome({ video: vid }, k)}${pode(k) ? '' : ' (precisa de aprovação)'}</option>`).join('');
+  };
+  etapas();
+  f.querySelectorAll('[name=formato]').forEach(r => r.addEventListener('change', () => { const novo = f.querySelector('[name=formato]:checked').value; if ((novo === 'reels') !== (fmtAnt === 'reels')) el.video.checked = novo === 'reels'; fmtAnt = novo; etapas(); }));
+  el.video.addEventListener('change', etapas);
   const mostrar = () => {
     const st = el.status.value, fmt = f.querySelector('[name=formato]:checked').value;
     document.getElementById('mkPub').hidden = st !== 'publicado';
@@ -393,10 +413,11 @@ function formPost(P) {
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
-    const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, data_prevista: v('data_prevista'), hora: v('hora'),
+    const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, video: el.video.checked, data_prevista: v('data_prevista'), hora: v('hora'),
       pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_por: v('gravacao_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
       link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs') };
     if (!reg.titulo) { msg('Escreva o título do post.'); return; }
+    if (reg.status === 'gravacao' && !reg.gravacao_por) { msg('Escolha quem grava antes de mandar para a gravação.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);
     if (!r) return;
@@ -485,12 +506,15 @@ function ligar(P) {
   q('[data-p]').forEach(b => b.onclick = () => { ED = b.dataset.p; PRE = null; rerender(); scrollTo(0, 0); });
   q('[data-novo]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: b.dataset.novo }; rerender(); scrollTo(0, 0); });
   q('[data-novo-dia]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: 'producao', data_prevista: b.dataset.novoDia }; rerender(); scrollTo(0, 0); });
-  q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para a produção.', aprovacao: 'Enviado para aprovação. Isadora e Matheus recebem o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
+  q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', aprovacao: 'Enviado para aprovação. A coordenação recebe o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
+  q('[data-gravar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const pp = LISTA.find(x => x.id === b.dataset.gravar); if (!pp) return;
+    if (!pp.gravacao_por) { ED = pp.id; PRE = { status: 'gravacao' }; rerender(); scrollTo(0, 0); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
+    mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${primeiro(nomeT(pp.gravacao_por))}.`); });
   q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
   q('[data-publicar]').forEach(b => b.onclick = () => { ED = b.dataset.publicar; PRE = { status: 'publicado' }; rerender(); scrollTo(0, 0); X.aviso('Cole o link do post e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
-  q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; mudar(b.dataset.ajok, { status: 'producao', ajuste: t }, 'Devolvido para a produção com o ajuste.'); });
+  q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; { const pp = LISTA.find(x => x.id === b.dataset.ajok) || {}; mudar(b.dataset.ajok, { status: voltaAjuste(pp), ajuste: t }, ehVideo(pp) ? 'Devolvido para a edição com o ajuste.' : 'Devolvido para a criação com o ajuste.'); } });
   q('[data-dia]').forEach(b => b.onclick = () => { DIA = b.dataset.dia; rerender(); });
   q('[data-sdia]').forEach(b => b.onclick = () => { DIA = b.dataset.sdia === DIA || !b.dataset.sdia ? null : b.dataset.sdia; rerender(); });
   q('[data-est]').forEach(b => b.onclick = () => { ED_EST = { id: b.dataset.est }; rerender(); scrollTo(0, 0); });
