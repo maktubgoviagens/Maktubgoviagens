@@ -34,7 +34,7 @@ const NOVO_CORP = () => ({ modelo: 'corp', marca: 'Maktub Corporativo', codigo: 
   rodape: 'Sem bagagem despachada. Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa válida apenas na data de emissão e sujeita à confirmação no momento da compra. Horários locais. Check-in realizado por nossa equipe. Suporte humanizado e pós-venda. Você fala sempre com uma pessoa.' });
 
 const padraoRap = () => { try { return JSON.parse(localStorage.getItem('cotRapPadrao') || '{}'); } catch (e) { return {}; } };
-const NOVO_RAP = () => { const p = padraoRap(); return { modelo: 'rapida', marca: p.marca || 'Maktub Go', cliente: '', prints: [], voos: [], cia: '', de: '', por: '', forma: p.forma || 'à vista no Pix', parcelas: '', obs: '' }; };
+const NOVO_RAP = () => { const p = padraoRap(); return { modelo: 'rapida', marca: p.marca || 'Maktub Go', cliente: '', pessoas: '1', prints: [], voos: [], cia: '', bagagem: '1 item pessoal + 1 mala de cabine de até 10 kg por passageiro', de: '', por: '', forma: p.forma || 'À vista via Pix', parcelas: '', obs: '' }; };
 // seções recolhidas que a pessoa abriu continuam abertas quando o formulário redesenha
 const ABERTOS = new Set();
 const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) ? 'open' : ''} style="margin-top:8px;border-top:1px solid var(--linha);padding-top:6px"><summary class="sub" style="cursor:pointer;margin:0">${titulo}</summary>${corpo}</details>`;
@@ -56,7 +56,7 @@ async function lista(P, X) {
   const { $, sb, esc } = X;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Comercial</button><h1 class="titulo" style="margin-top:6px"><em>Cotações</em></h1>
     <div class="sub">Preencha só o que muda; o visual, a economia e as parcelas saem prontos. Nunca mostra o custo.</div>
-    <button class="zap grande" id="novoRap" style="width:100%;margin-top:12px">Cotação rápida: print + valor ›</button>
+    <button class="zap grande" id="novoRap" style="width:100%;margin-top:12px">Cotação rápida: cole e envie ›</button>
     <div class="botoes4" style="margin-top:8px"><button class="sec" id="novoGo">+ Maktub Go</button><button class="sec" id="novoCorp">+ Corporativo</button></div>
     ${PRE ? `<div class="config" style="margin-top:10px">Cotação para <b>${esc(PRE.cliente || '')}</b>${PRE.destino ? ' · ' + esc(PRE.destino) : ''}. Ao enviar, o atendimento vai para "Cotação enviada" no funil.</div>` : ''}
     <div class="lista" id="lsC"><div class="vazio">Carregando...</div></div>`;
@@ -353,14 +353,14 @@ async function colar(P, X, modo) {
 }
 const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'viagens', 'index', 'sitemap', 'robots'];
 const limparSlug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
-function sugerirSlug() { const n = String(clienteDe() || '').trim().split(/\s+/)[0]; return limparSlug([n, S.destino].filter(Boolean).join(' ')); }
+function sugerirSlug() { const n = String(clienteDe() || '').trim().split(/\s+/)[0]; const dest = S.destino || (S.modelo === 'rapida' && rapVoos()[0] ? (cidadeDe(rapVoos()[0].dcod) || rapVoos()[0].dnome || '') : ''); return limparSlug([n, dest].filter(Boolean).join(' ')); }
 async function gerarLink(X) {
   const campo = X.$('slugC'); let slug = campo ? limparSlug(campo.value) : '';
   if (campo) { campo.value = slug; S.slug = slug; }
   if (slug && slug.length < 3) { X.aviso('O nome do link precisa de pelo menos 3 letras.'); return; }
   if (RESERVADOS.includes(slug)) { X.aviso('Esse nome já é uma página do site. Escolha outro.'); return; }
   const b = X.$('linkC'); b.disabled = true; b.textContent = 'Gerando...';
-  const row = { html: gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
+  const row = { html: S.modelo === 'rapida' ? gerarHTML(rapParaCorp()) : gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
   const r = await X.sb.from('cotacoes_link').insert(row).select('token,slug').single();
   b.disabled = false; b.textContent = 'Gerar link para o cliente';
   if (r.error) {
@@ -599,47 +599,76 @@ export function gerarHTML(dados) { const antes = S; S = dados; try { return gera
 export { NOVO_GO, NOVO_CORP };
 
 /* ================= cotação rápida: print + valor, vira imagem para o WhatsApp ================= */
+/* cotação rápida: mesmo visual da corporativa (voos, bagagem, valor total), em imagem para o WhatsApp ou em link.
+   A economia só aparece quando faz sentido: liga sozinha a partir de 10% abaixo do site, e dá para ligar ou desligar. */
+const ECO_MIN = 0.10;
+const RAP_BAGAGEM = '1 item pessoal + 1 mala de cabine de até 10 kg por passageiro';
+const RAP_RODAPE = 'Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa sujeita à confirmação no momento da emissão. Horários locais. Check-in realizado por nossa equipe.';
+const ecoAuto = () => { const a = num(S.de), b = num(S.por); return a > b && b > 0 && (a - b) / a >= ECO_MIN; };
+const mostraEco = () => { const a = num(S.de), b = num(S.por); if (!(a > b && b > 0)) return false; return S.eco === true || S.eco === false ? S.eco : ecoAuto(); };
+const parcTxt = () => { const np = String(S.parcelas || '').trim(), por = num(S.por); return /^\d{1,2}$/.test(np) && +np > 1 ? `${+np}x de ${brl(por / +np)} sem juros` : np; };
+const rapVoos = () => (S.voos || []).filter(v => v.ocod);
+function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
+// a rápida vira uma cotação corporativa de uma opção para gerar o link
+function rapParaCorp() {
+  const v0 = rapVoos()[0];
+  return { modelo: 'corp', marca: S.marca, codigo: '', passageiro: S.cliente || '', pessoas: S.pessoas || '1', validade: hoje(), cia: S.cia || '', rota: rapRota(),
+    destino: v0 ? (cidadeDe(v0.dcod) || v0.dnome || '') : '', voos: rapVoos(), bagagem: S.bagagem || '', print: mostraEco() ? (S.prints[0] || '') : '',
+    de: mostraEco() ? S.de : '', por: S.por, forma: [S.forma, parcTxt() ? 'ou ' + parcTxt() : ''].filter(Boolean).join(' · '), rodape: [S.obs, RAP_RODAPE].filter(Boolean).join(' ') };
+}
 function editorRapida(P, X) {
   const { $ } = X;
-  if (!S.voos) S.voos = [];
-  const de = num(S.de), por = num(S.por), eco = de > por && por ? de - por : 0;
-  const vs = S.voos.filter(v => v.ocod);
+  if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
+  if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
+  const vs = rapVoos();
+  const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
+    const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
-    <div class="sub">Cole a tela da companhia ou digite os dois valores e envie a imagem pronta no WhatsApp.</div>
+    <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Os voos entram na imagem e o valor do site vem sozinho.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
+      ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
-      ${vs.length ? `<div class="config" style="margin:6px 0">${vs.map(v => `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}</div>`).join('')}<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-top:4px">tirar voos da imagem</button></div>` : ''}
-      <label class="fl"><span>Print do site (opcional)</span><input type="file" accept="image/*" multiple id="rpPrint"></label>
-      ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}
-      <div class="duas-col">${inp('de', 'Valor no site', 'num', 'placeholder="2.100,00"')}${inp('por', 'Valor com a Maktub', 'num', 'placeholder="1.700,00"')}</div>
-      <div id="rpEco">${eco ? `<div class="config" style="margin:4px 0">Economia de ${brl(eco)} para o cliente.</div>` : de && por && por >= de ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''}</div>
+      ${vs.length ? `<div class="config" style="margin:6px 0">${vs.map(v => `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}</div>`).join('')}<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-top:4px">tirar voos</button></div>` : '<div class="config" style="margin:6px 0">Sem voos colados, a cotação sai só com o valor.</div>'}
+      <div class="duas-col">${inp('cliente', 'Passageiro', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
+      <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
+      ${inp('bagagem', 'Bagagem incluída')}
+      <div class="duas-col">${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}${inp('de', 'Valor no site (opcional)', 'num', 'placeholder="2.100,00"')}</div>
+      <div id="rpEco">${avisoEco()}</div>
       <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
-      <div class="duas-col">${inp('cliente', 'Cliente (opcional)', 'text', 'placeholder="Victor"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
-      ${inp('obs', 'Observação (opcional)', 'text', 'placeholder="Inclui mala de mão de 10 kg"')}
+      ${inp('obs', 'Observação (opcional)', 'text', 'placeholder="Assento marcado incluso"')}
+      ${dobra('rpPrintD', 'Print do site (opcional, aparece só com a comparação ligada)', `<label class="fl"><input type="file" accept="image/*" multiple id="rpPrint"></label>
+      ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}`)}
     </form>
-    <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar no WhatsApp</button>
+    <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>
+    <label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="victor-santiago"></label>
+    <button class="sec grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
     <div id="rpPrevia" style="margin-top:12px"></div>`;
   $('voltar').onclick = () => { S = null; ir(X, null); };
   const f = $('fRap');
+  const ligarEco = () => { const ck = $('rpEcoCk'); if (ck) ck.onchange = () => { S.eco = ck.checked; previa(); }; };
+  let tm = null; const previa = () => { clearTimeout(tm); tm = setTimeout(() => { if (!num(S.por) || !$('rpPrevia')) return; imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; }); }, 400); };
+  let slugManual = !!S.slug; $('slugC').addEventListener('input', () => { slugManual = true; });
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.value);
-    if (k === 'de' || k === 'por') { const a = num(S.de), b = num(S.por); $('rpEco').innerHTML = a > b && b ? `<div class="config" style="margin:4px 0">Economia de ${brl(a - b)} para o cliente.</div>` : a && b ? '<div class="config" style="margin:4px 0">Atenção: o valor da Maktub não está abaixo do site.</div>' : ''; } });
+    if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
+    if (k === 'de' || k === 'por') { S.eco = undefined; $('rpEco').innerHTML = avisoEco(); ligarEco(); } previa(); });
+  ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
-  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); });
+  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
   $('rpColar').onclick = async () => {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    if (o.voos.length) S.voos = o.voos; if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
-    editorRapida(P, X); X.aviso(num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
+    if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); } if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
+    S.eco = undefined; editorRapida(P, X); X.aviso(num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
-  $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); editorRapida(P, X); };
+  $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
-  const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor com a Maktub.'); return false; } return true; };
+  P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
+  const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor total com a Maktub.'); return false; } return true; };
   $('rpEnviar').onclick = async () => {
     if (!pronto()) return;
     enviada(X); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
@@ -648,65 +677,95 @@ function editorRapida(P, X) {
   };
   $('rpBaixar').onclick = async () => { if (pronto()) baixar(await imagemRapida()); };
   $('rpSalvar').onclick = () => salvar(X);
-  if (num(S.por)) imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; });
+  $('linkC').onclick = () => { if (pronto()) gerarLink(X); };
+  previa();
 }
 function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) { X.cotacaoEnviada(S.reuniao_id); S.reuniao_id = null; } }
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 
 async function imagemRapida() {
-  const W = 1080, PAD = 40, corp = S.marca === 'Maktub Corporativo';
-  const prints = (await Promise.all(S.prints.map(carregar))).filter(Boolean);
-  const logo = !corp && MARCA && MARCA.rodape ? await carregar(MARCA.rodape) : null;
-  const de = num(S.de), por = num(S.por), eco = de > por ? de - por : 0;
-  const alturas = prints.map(i => Math.round(i.height * (W - PAD * 2) / i.width));
-  const vs = (S.voos || []).filter(v => v.ocod), VH = vs.length ? 44 + vs.length * 104 : 0;
-  const np = String(S.parcelas || '').trim(), parc = /^\d{1,2}$/.test(np) && +np > 1 ? `${+np}x de ${brl(por / +np)} sem juros` : np;
-  const CAB = 150, BOX = 350 + (parc ? 46 : 0) + (eco ? 100 : 0) + (S.obs ? 44 : 0), ROD = 150;
-  const H = CAB + PAD + VH + alturas.reduce((a, b) => a + b + 20, 0) + BOX + ROD;
-  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-  const VERDE = '#1B4332', DOUR = '#A88B4A', CREME = '#EBE0C4', PAPEL = '#FAF6EC';
-  const serif = (px, w = '400') => `${w} ${px}px "Cormorant Garamond", Georgia, serif`, sans = (px, w = '500') => `${w} ${px}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
+  const W = 1080, PAD = 44, corp = S.marca === 'Maktub Corporativo', GO = !corp;
+  const eco = mostraEco(), de = num(S.de), por = num(S.por), pax = Math.max(1, parseInt(S.pessoas) || 1);
+  const prints = eco ? (await Promise.all((S.prints || []).map(carregar))).filter(Boolean) : [];
+  const logo = GO && MARCA && MARCA.rodape ? await carregar(MARCA.rodape) : null;
+  const vs = rapVoos(), parc = parcTxt();
+  const c = document.createElement('canvas'); c.width = W; c.height = 4200; const g = c.getContext('2d');
+  const VERDE = '#1B4332', VERDE2 = '#245a3b', DOUR = '#A88B4A', CREME = '#EBE0C4', BEGE = '#F3EAD2', PAPEL = '#F3F1EA', CINZA = '#5b625d', LINHA = '#d9d2bf';
+  const sans = (px, w = '500') => `${w} ${px}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
   const espac = (t, x, y, sp) => { let cx = x; for (const ch of t) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + sp; } return cx - x - sp; };
   const largEsp = (t, sp) => [...t].reduce((a, ch) => a + g.measureText(ch).width + sp, -sp);
-  const centro = (t, y, sp = 0) => { if (!sp) { g.textAlign = 'center'; g.fillText(t, W / 2, y); g.textAlign = 'left'; } else espac(t, (W - largEsp(t, sp)) / 2, y, sp); };
-  g.fillStyle = PAPEL; g.fillRect(0, 0, W, H);
-  // cabeçalho
-  g.fillStyle = corp ? VERDE : CREME; g.fillRect(0, 0, W, CAB);
-  if (logo) { const lh = 90, lw = logo.width * lh / logo.height; g.drawImage(logo, (W - lw) / 2, (CAB - lh) / 2, lw, lh); }
-  else { g.font = sans(38, '700'); g.fillStyle = corp ? CREME : VERDE; const t1 = 'MAKTUB ', t2 = corp ? 'CORPORATIVO' : 'GO'; const w1 = largEsp(t1, 4), w2 = largEsp(t2, 4); let x = (W - w1 - w2) / 2; espac(t1, x, 92, 4); g.fillStyle = DOUR; espac(t2, x + w1, 92, 4); }
-  // voos
-  let y = CAB + PAD;
-  if (vs.length) {
-    g.font = sans(20, '600'); g.fillStyle = DOUR; espac(('VOOS' + (S.cia ? ' · ' + S.cia : '')).toUpperCase(), PAD, y + 4, 3); y += 26;
+  const centro = (t, y) => { g.textAlign = 'center'; g.fillText(t, W / 2, y); g.textAlign = 'left'; };
+  const caixa = (x, y, w, hh, r, cor, borda) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, hh, r) : g.rect(x, y, w, hh); if (cor) { g.fillStyle = cor; g.fill(); } if (borda) { g.strokeStyle = borda; g.lineWidth = 2; g.stroke(); } };
+  const corta = (t, max) => { t = String(t || ''); if (g.measureText(t).width <= max) return t; while (t && g.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
+  const quebra = (t, max) => { const out = []; let l = ''; String(t || '').split(/\s+/).forEach(p => { const n = l ? l + ' ' + p : p; if (g.measureText(n).width > max && l) { out.push(l); l = p; } else l = n; }); if (l) out.push(l); return out; };
+  g.fillStyle = PAPEL; g.fillRect(0, 0, W, c.height);
+  // cabeçalho, como na corporativa
+  const CAB = 170; g.fillStyle = GO ? BEGE : VERDE; g.fillRect(0, 0, W, CAB);
+  if (logo) { const lh = 92, lw = logo.width * lh / logo.height; g.drawImage(logo, PAD, (CAB - lh) / 2 - 10, lw, lh); }
+  else { g.font = sans(36, '700'); g.fillStyle = GO ? VERDE : CREME; const w1 = espac('MAKTUB ', PAD, 82, 4); g.fillStyle = DOUR; espac(GO ? 'GO' : 'CORPORATIVO', PAD + w1 + 4, 82, 4); }
+  g.font = sans(22, '400'); g.fillStyle = GO ? VERDE : CREME; g.fillText(GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.', PAD, logo ? CAB - 26 : 122);
+  g.textAlign = 'right'; g.font = sans(20, '400'); g.fillText(EMAIL, W - PAD, 76); g.font = sans(24, '700'); g.fillText(ZAP_TXT, W - PAD, 112); g.textAlign = 'left';
+  // faixa: passageiro, trecho e validade
+  let y = CAB; const FX = 110; g.fillStyle = VERDE2; g.fillRect(0, y, W, FX);
+  const v0 = vs[0], trecho = v0 ? `${String(v0.ocod).toUpperCase()} ${vs.length > 1 ? '⇄' : '→'} ${String(v0.dcod).toUpperCase()}` : '';
+  const cols = [['PASSAGEIRO', `${S.cliente ? String(S.cliente).trim() + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}`], ...(trecho ? [['TRECHO', trecho]] : []), ['VALIDADE', new Date().toLocaleDateString('pt-BR')]];
+  const pesos = cols.length === 3 ? [0.48, 0.27, 0.25] : [0.6, 0.4], cx = pesos.map((_, i) => PAD + pesos.slice(0, i).reduce((a, b) => a + b, 0) * (W - PAD * 2));
+  cols.forEach(([l, v], i) => { const x = cx[i], cw = pesos[i] * (W - PAD * 2); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(l, x, y + 44, 2); g.font = sans(24, '700'); g.fillStyle = '#fff'; g.fillText(corta(v, cw - 16), x, y + 82); });
+  y += FX + 50;
+  // título com a rota
+  if (v0) {
+    g.font = sans(40, '700'); g.fillStyle = VERDE; g.fillText(corta(rapRota().toUpperCase(), W - PAD * 2), PAD, y); y += 38;
+    g.font = sans(22, '400'); g.fillStyle = CINZA; g.fillText([S.cia, vs.length > 1 ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · '), PAD, y); y += 34;
+    // cartões dos voos
     vs.forEach(v => {
-      g.fillStyle = '#fff'; g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 88, 10) : g.rect(PAD, y, W - PAD * 2, 88); g.fill(); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.stroke();
-      const d = dt(v.data);
-      g.font = sans(18, '600'); g.fillStyle = DOUR; espac(`${String(v.rotulo || '').toUpperCase()}${d ? ' · ' + SEMANA[d.getDay()].slice(0, 3).toUpperCase() + ' ' + ddmm(v.data) : ''}`, PAD + 24, y + 30, 2);
-      g.textAlign = 'right'; g.font = sans(18, '500'); g.fillStyle = '#6E6A5E'; g.fillText([v.tipo].filter(Boolean).join(' · '), W - PAD - 24, y + 30); g.textAlign = 'left';
-      g.font = sans(34, '600'); g.fillStyle = VERDE; g.fillText(`${v.saida} ${String(v.ocod).toUpperCase()}   →   ${v.chegada} ${String(v.dcod).toUpperCase()}`, PAD + 24, y + 72);
-      y += 104;
+      const CH = 196; caixa(PAD, y, W - PAD * 2, CH, 12, '#fff', LINHA);
+      g.save(); g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 56, [12, 12, 0, 0]) : g.rect(PAD, y, W - PAD * 2, 56); g.fillStyle = VERDE; g.fill(); g.restore();
+      const d = dt(v.data); g.font = sans(20, '700'); g.fillStyle = '#fff'; espac(String(v.rotulo || '').toUpperCase(), PAD + 24, y + 36, 2);
+      g.textAlign = 'right'; g.fillText(d ? `${SEMANA[d.getDay()].toUpperCase()} · ${v.data.split('-').reverse().join('/')}` : '', W - PAD - 24, y + 36); g.textAlign = 'left';
+      const yb = y + 56, meio = W / 2, colW = (W - PAD * 2) / 2 - 70;
+      g.font = sans(52, '700'); g.fillStyle = VERDE; g.fillText(v.saida || '', PAD + 24, yb + 70); g.fillText(v.chegada || '', meio + 50, yb + 70);
+      g.font = sans(40, '400'); g.fillStyle = DOUR; centro('→', yb + 64);
+      g.font = sans(21, '700'); g.fillStyle = CINZA;
+      g.fillText(corta(`${String(v.ocod).toUpperCase()} · ${v.onome || cidadeDe(v.ocod) || ''}`, colW), PAD + 24, yb + 104);
+      g.fillText(corta(`${String(v.dcod).toUpperCase()} · ${v.dnome || cidadeDe(v.dcod) || ''}`, colW), meio + 50, yb + 104);
+      const chip = (v.tipo || 'Direto').toUpperCase(); g.font = sans(17, '700'); const tw = largEsp(chip, 1.5) + 32;
+      caixa(W - PAD - 24 - tw, yb + 84 - 26, tw, 34, 17, BEGE); g.fillStyle = VERDE; espac(chip, W - PAD - 24 - tw + 16, yb + 84 - 3, 1.5);
+      y += CH + 18;
     });
-    y += 18;
+    y += 6;
   }
-  // prints
-  if (prints.length) { g.font = sans(20, '600'); g.fillStyle = DOUR; espac('VALOR NO SITE', PAD, y + 4, 3); y += 22; }
-  prints.forEach((im, i) => { g.drawImage(im, PAD, y, W - PAD * 2, alturas[i]); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.strokeRect(PAD, y, W - PAD * 2, alturas[i]); y += alturas[i] + 20; });
-  // caixa de valores
-  y += 10; g.fillStyle = VERDE; const bx = PAD, bw = W - PAD * 2, bh = BOX - 40;
-  g.beginPath(); g.roundRect ? g.roundRect(bx, y, bw, bh, 14) : g.rect(bx, y, bw, bh); g.fill();
-  let yy = y + 62;
-  g.fillStyle = DOUR; g.font = sans(20, '600'); centro((S.cliente ? 'COTAÇÃO PARA ' + S.cliente : 'SUA COTAÇÃO').toUpperCase(), yy, 3); yy += 54;
-  if (de > por) { g.fillStyle = 'rgba(235,224,196,.75)'; g.font = sans(28, '400'); const t = 'No site: ' + brl(de); centro(t, yy); const tw = g.measureText(t).width; g.strokeStyle = DOUR; g.lineWidth = 3; g.beginPath(); g.moveTo((W - tw) / 2 + g.measureText('No site: ').width, yy - 9); g.lineTo((W + tw) / 2, yy - 9); g.stroke(); yy += 78; }
-  if (de > por) { g.fillStyle = DOUR; g.font = sans(20, '600'); centro('COM A MAKTUB', yy - 18, 3); yy += 62; }
-  g.fillStyle = '#fff'; g.font = serif(96, '500'); centro(brl(por), yy); yy += 50;
-  g.fillStyle = CREME; g.font = sans(24, '500'); centro(S.forma || '', yy); yy += 6;
-  if (parc) { yy += 40; g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; centro('ou ' + parc, yy); }
-  if (eco) { yy += 62; const t = 'Economia de ' + brl(eco); g.font = sans(24, '600'); const tw = g.measureText(t).width + 48; g.strokeStyle = DOUR; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect((W - tw) / 2, yy - 34, tw, 50, 25) : g.rect((W - tw) / 2, yy - 34, tw, 50); g.stroke(); g.fillStyle = CREME; centro(t, yy); }
-  if (S.obs) { yy += 52; g.font = sans(20, '400'); g.fillStyle = 'rgba(235,224,196,.8)'; centro(S.obs, yy); }
-  // rodapé
-  y += bh + 50; g.fillStyle = '#6E6A5E'; g.font = sans(19, '400');
-  const agora = new Date(); centro(`Valores consultados em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Tarifa confirmada só na emissão.`, y);
-  g.fillStyle = VERDE; g.font = sans(22, '600'); centro(`WhatsApp ${ZAP_TXT}  ·  @maktubgo_`, y + 44);
-  return new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.9));
+  // bagagem
+  if (S.bagagem) { g.font = sans(24, '700'); const ls = quebra(S.bagagem, W - PAD * 2 - 48); const BH = 70 + ls.length * 32; caixa(PAD, y, W - PAD * 2, BH, 12, '#fff', LINHA);
+    g.font = sans(17, '700'); g.fillStyle = DOUR; espac('BAGAGEM INCLUÍDA', PAD + 24, y + 40, 2); g.font = sans(24, '700'); g.fillStyle = VERDE; ls.forEach((l, i) => g.fillText(l, PAD + 24, y + 76 + i * 32)); y += BH + 22; }
+  // print do site, só quando a comparação está ligada
+  prints.forEach((im) => { const hh = Math.round(im.height * (W - PAD * 2 - 48) / im.width); caixa(PAD, y, W - PAD * 2, hh + 74, 12, '#fff', LINHA); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(('VALOR NO SITE' + (S.cia ? ' DA ' + S.cia : '')).toUpperCase(), PAD + 24, y + 40, 2); g.drawImage(im, PAD + 24, y + 56, W - PAD * 2 - 48, hh); y += hh + 96; });
+  // resumo com o valor total
+  const linhasR = [['rot'], ['p'], ...(eco ? [['de']] : []), ['por'], ['forma'], ...(parc ? [['parc']] : []), ...(eco ? [['eco']] : []), ...(S.obs ? [['obs']] : []), ['hr'], ['small']];
+  const alt = { rot: 30, p: 40, de: 50, por: 92, forma: 48, parc: 40, eco: 68, obs: 52, hr: 34, small: 32 };
+  const RH = linhasR.reduce((a, [k]) => a + alt[k] - 10, 0) + 74;
+  caixa(PAD, y, W - PAD * 2, RH, 16, VERDE); let yy = y + 40; const X0 = PAD + 32;
+  linhasR.forEach(([k]) => {
+    yy += alt[k] - 10;
+    if (k === 'rot') { g.font = sans(18, '700'); g.fillStyle = DOUR; espac('RESUMO DA COTAÇÃO', X0, yy, 2.5); }
+    if (k === 'p') { g.font = sans(19, '700'); g.fillStyle = CREME; espac(`VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}`, X0, yy, 1.5); }
+    if (k === 'de') { g.font = sans(24, '400'); g.fillStyle = 'rgba(235,224,196,.8)'; const t = 'No site ' + brl(de); g.fillText(t, X0, yy); const a = g.measureText('No site ').width, tw = g.measureText(t).width; g.strokeStyle = DOUR; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X0 + a, yy - 8); g.lineTo(X0 + tw, yy - 8); g.stroke(); }
+    if (k === 'por') { g.font = sans(64, '800'); g.fillStyle = '#fff'; g.fillText(brl(por), X0, yy); }
+    if (k === 'forma') { g.font = sans(23, '700'); g.fillStyle = CREME; g.fillText(S.forma || '', X0, yy); }
+    if (k === 'parc') { g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; g.fillText('ou ' + parc, X0, yy); }
+    if (k === 'eco') { const t = 'Economia de ' + brl(de - por); g.font = sans(21, '700'); const tw = g.measureText(t).width + 36; caixa(X0, yy - 32, tw, 44, 22, null, DOUR); g.fillStyle = CREME; g.fillText(t, X0 + 18, yy - 3); }
+    if (k === 'obs') { g.font = sans(21, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; g.fillText(corta(S.obs, W - PAD * 2 - 64), X0, yy); }
+    if (k === 'hr') { g.strokeStyle = DOUR; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X0, yy - 12); g.lineTo(W - PAD - 32, yy - 12); g.stroke(); }
+    if (k === 'small') { g.font = sans(18, '400'); g.fillStyle = CREME; g.fillText('Tarifas e disponibilidade confirmadas somente no momento da emissão.', X0, yy - 6); }
+  });
+  y += RH + 30;
+  // condições e contato
+  g.font = sans(18, '400'); g.fillStyle = CINZA; const agora = new Date();
+  quebra(`Valores consultados em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. ${RAP_RODAPE}`, W - PAD * 2).forEach(l => { g.fillText(l, PAD, y); y += 26; });
+  y += 20; g.fillStyle = VERDE; g.fillRect(0, y, W, 96);
+  g.font = sans(22, '700'); g.fillStyle = CREME; espac(GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO', PAD, y + 44, 2); g.font = sans(18, '400'); g.fillStyle = DOUR; g.fillText(GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.', PAD, y + 72);
+  g.textAlign = 'right'; g.font = sans(20, '600'); g.fillStyle = CREME; g.fillText(`WhatsApp ${ZAP_TXT}`, W - PAD, y + 44); g.font = sans(18, '400'); g.fillText('@maktubgo_', W - PAD, y + 72); g.textAlign = 'left';
+  y += 96;
+  const out = document.createElement('canvas'); out.width = W; out.height = Math.ceil(y); out.getContext('2d').drawImage(c, 0, 0);
+  return new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.92));
 }
