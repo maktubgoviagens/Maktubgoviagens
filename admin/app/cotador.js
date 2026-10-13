@@ -12,7 +12,7 @@ const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktu
 const SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const h = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const num = (v) => { const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+const num = (v) => { let t = String(v ?? '').replace(/[^\d.,-]/g, ''); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ''); const n = parseFloat(t); return isNaN(n) ? 0 : n; };
 const brl = (v) => 'R$ ' + (+v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dt = (iso) => iso ? new Date(iso + 'T12:00:00') : null;
 const ddmm = (iso) => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
@@ -116,7 +116,7 @@ function editor(P, X) {
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
   });
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
-  $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para arrastar no Netlify.'); };
+  $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); };
   $('salvarC').onclick = () => salvar(X);
   $('acervoC').onclick = () => acervo(X);
   $('linkC').onclick = () => gerarLink(X);
@@ -586,7 +586,7 @@ ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotaç
 ${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
   return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
-${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span>${v.duracao ? `<span class="chip">Duração ${h(v.duracao)}</span>` : ''}</div></div></div>`).join('')}
+${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
 ${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
@@ -683,7 +683,7 @@ async function imagemRapida() {
       g.fillStyle = '#fff'; g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 88, 10) : g.rect(PAD, y, W - PAD * 2, 88); g.fill(); g.strokeStyle = 'rgba(168,139,74,.45)'; g.lineWidth = 2; g.stroke();
       const d = dt(v.data);
       g.font = sans(18, '600'); g.fillStyle = DOUR; espac(`${String(v.rotulo || '').toUpperCase()}${d ? ' · ' + SEMANA[d.getDay()].slice(0, 3).toUpperCase() + ' ' + ddmm(v.data) : ''}`, PAD + 24, y + 30, 2);
-      g.textAlign = 'right'; g.font = sans(18, '500'); g.fillStyle = '#6E6A5E'; g.fillText([v.tipo, v.duracao].filter(Boolean).join(' · '), W - PAD - 24, y + 30); g.textAlign = 'left';
+      g.textAlign = 'right'; g.font = sans(18, '500'); g.fillStyle = '#6E6A5E'; g.fillText([v.tipo].filter(Boolean).join(' · '), W - PAD - 24, y + 30); g.textAlign = 'left';
       g.font = sans(34, '600'); g.fillStyle = VERDE; g.fillText(`${v.saida} ${String(v.ocod).toUpperCase()}   →   ${v.chegada} ${String(v.dcod).toUpperCase()}`, PAD + 24, y + 72);
       y += 104;
     });

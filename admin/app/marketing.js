@@ -43,14 +43,13 @@ export function pend() {
   if (!LISTA) return {};
   return {
     aprovacao: LISTA.filter(p => p.status === 'aprovacao').length,
-    tiktok: LISTA.filter(precisaTikTok).length,
     atrasados: LISTA.filter(atrasado).length
   };
 }
-export function rota(h) { VIEW = h[1] || null; ED = null; ED_EST = null; PRE = null; }
-export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; }
+export function rota(h) { VIEW = h[1] || null; ED = null; ED_EST = null; PRE = null; CONF = null; }
+export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
-const precisaTikTok = (p) => p.formato === 'reels' && p.status === 'publicado' && !p.tiktok_feito;
+const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0];
 const atrasado = (p) => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista < hoje();
 const cfg = () => EST.find(e => e.chave === 'config');
 const exigir = () => !(cfg() && cfg().valores && cfg().valores.aprovacao === false);
@@ -129,7 +128,6 @@ function estilos() {
 .mk-ideia b{font-size:14.5px;font-weight:500;color:var(--tinta);line-height:1.3}
 .mk-ideia small{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--c);font-weight:600}
 .mk-rapida{display:flex;gap:8px;margin-top:12px}.mk-rapida input{flex:1;min-width:0;padding:12px;border:1px solid var(--linha);font-size:16px;background:var(--branco)}
-.mk-tt{background:#1f1f1c;color:#f9f6f1}.mk-tt .nome{color:#f9f6f1}
 `;
   document.head.appendChild(s);
 }
@@ -173,7 +171,6 @@ function vPainel() {
   const aprov = LISTA.filter(p => p.status === 'aprovacao').sort(porData);
   const atras = LISTA.filter(atrasado).sort(porData);
   const prox = LISTA.filter(p => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista >= hoje() && p.data_prevista <= maisDias(hoje(), 7)).sort(porData);
-  const tt = LISTA.filter(precisaTikTok);
   const aFazer = LISTA.filter(p => ['producao', 'aprovacao', 'agendado'].includes(p.status));
   const noMes = LISTA.filter(p => p.status !== 'ideia' && mesK(diaPost(p)) === k);
   const porPilar = pilares().map(pl => [pl, noMes.filter(p => p.pilar_id === pl.id).length]);
@@ -193,7 +190,6 @@ function vPainel() {
     ${atras.length ? `<div class="secao">Atrasados</div><div class="mk-lista">${atras.map(linha).join('')}</div>` : ''}
     <div class="secao">Próximos 7 dias <button data-v="calendario">Calendário ›</button></div>
     ${prox.length ? `<div class="mk-lista">${prox.map(linha).join('')}</div>` : '<div class="vazio">Nada programado para os próximos dias.</div>'}
-    ${tt.length ? `<div class="secao">Repostar no TikTok</div><div class="mk-lista">${tt.map(linha).join('')}</div>` : ''}
     <section class="bloco"><h2>Pilares em ${mesNome(k).split(' ')[0].toLowerCase()}</h2>
       ${porPilar.length || semPilar ? porPilar.map(([pl, n]) => `<div class="mk-barra"><span>${esc(pl.titulo)}</span><span class="t"><i style="width:${n / maxP * 100}%;background:${pl.cor || CORES[0]}"></i></span><span class="q">${n}</span></div>`).join('') + (semPilar ? `<div class="mk-barra"><span style="color:var(--tinta-3)">Sem pilar</span><span class="t"><i style="width:${semPilar / maxP * 100}%;background:var(--tinta-3)"></i></span><span class="q">${semPilar}</span></div>` : '') : '<div class="vazio">Cadastre os pilares em Estratégia para ver o equilíbrio dos temas.</div>'}
       ${pilares().length && porPilar.some(x => !x[1]) ? `<div class="sub">Sem post no mês: ${porPilar.filter(x => !x[1]).map(x => esc(x[0].titulo)).join(', ')}.</div>` : ''}
@@ -203,18 +199,18 @@ function vPainel() {
 const porData = (a, b) => String(a.data_prevista || '9999').localeCompare(String(b.data_prevista || '9999'));
 function linha(p) {
   const { esc } = X, pl = est(p.pilar_id);
-  const det = [FMT[p.formato][0], diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).join(' · ');
-  const tag = precisaTikTok(p) ? '<span class="tag alerta">TikTok</span>' : `<span class="tag ${atrasado(p) ? 'alerta' : ST_TAG[p.status]}">${atrasado(p) ? 'Atrasado' : ST[p.status]}</span>`;
+  const det = [fmtN(p), diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).join(' · ');
+  const tag = `<span class="tag ${atrasado(p) ? 'alerta' : ST_TAG[p.status]}">${atrasado(p) ? 'Atrasado' : ST[p.status]}</span>`;
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${corP(p)}"></i><span class="t">${esc(p.titulo)}<small>${esc(det)}</small></span>${tag}</button>`;
 }
 function links(p) {
-  const L = [[p.link_arquivo, 'Ver a arte'], [p.link_post, 'Ver no Instagram'], [p.link_tiktok, 'Ver no TikTok']].filter(x => x[0]);
+  const L = [[p.link_arquivo, 'Ver a arte'], [p.link_post, 'Ver no Instagram']].filter(x => x[0]);
   return L.length ? `<div class="mk-links">${L.map(([u, t]) => `<a href="${X.esc(u)}" target="_blank" rel="noopener">${t} ›</a>`).join('')}</div>` : '';
 }
 function cardAprovar(p) {
   const { esc } = X, pl = est(p.pilar_id);
   return `<div class="mk-aprov">
-    <div style="display:flex;justify-content:space-between;gap:8px"><span class="tag" style="margin:0;border-color:${corP(p)};color:${corP(p)}">${FMT[p.formato][0]}</span><span class="sub" style="margin:0">${p.data_prevista ? dm(p.data_prevista) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'}</span></div>
+    <div style="display:flex;justify-content:space-between;gap:8px"><span class="tag" style="margin:0;border-color:${corP(p)};color:${corP(p)}">${fmtN(p)}</span><span class="sub" style="margin:0">${p.data_prevista ? dm(p.data_prevista) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'}</span></div>
     <button data-p="${p.id}" style="background:none;border:0;text-align:left;padding:0;cursor:pointer;margin-top:8px;display:block"><div class="nome">${esc(p.titulo)}</div></button>
     <div class="sub">${[pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', p.responsavel_id ? 'por ' + primeiro(nomeT(p.responsavel_id)) : ''].filter(Boolean).map(esc).join(' · ')}</div>
     ${p.legenda ? `<div class="leg">${esc(p.legenda)}</div>` : ''}
@@ -253,18 +249,18 @@ function vProducao() {
   const { esc } = X;
   const cols = X.ADMIN ? ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'] : ['producao', 'aprovacao', 'agendado', 'publicado'];
   const limite = maisDias(hoje(), -21);
-  const col = (s) => LISTA.filter(p => p.status === s && (s !== 'publicado' || (p.publicado_em || '') >= limite || precisaTikTok(p))).sort(s === 'publicado' ? (a, b) => String(b.publicado_em).localeCompare(String(a.publicado_em)) : porData);
+  const col = (s) => LISTA.filter(p => p.status === s && (s !== 'publicado' || (p.publicado_em || '') >= limite)).sort(s === 'publicado' ? (a, b) => String(b.publicado_em).localeCompare(String(a.publicado_em)) : porData);
   const nome = { ideia: 'Ideias', producao: 'Em produção', aprovacao: exigir() ? 'Aprovação' : 'Revisão', agendado: 'Aprovado e agendado', publicado: 'Publicado' };
   return `
     <div style="display:flex;gap:8px;margin-top:12px"><button class="zap grande" data-novo="producao">+ Novo post</button></div>
     <div class="secao" style="margin-top:16px">Produção</div>
     <div class="kdica">Arraste para o lado para ver as etapas. Toque no post para abrir.</div>
     <div class="kanban" style="margin-top:8px">${cols.map(s => { const L = col(s); return `<div class="kcol"><h3>${nome[s]} <small>${L.length}</small></h3>${L.map(p => kcard(p)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
-    <div class="sub">Publicados aparecem por 21 dias, ou até o reels ser repostado no TikTok.</div>`;
+    <div class="sub">Publicados aparecem por 21 dias.</div>`;
 }
 function kcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)};margin-top:0;margin-bottom:8px"><button data-p="${p.id}"><span class="pill">${FMT[p.formato][0]}</span>${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}${p.ajuste && p.status === 'producao' ? '<span class="st" style="color:var(--alerta)">ajuste pedido</span>' : ''}
+  return `<div class="mk-vcard" style="--c:${corP(p)};margin-top:0;margin-bottom:8px"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span>${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}${p.ajuste && p.status === 'producao' ? '<span class="st" style="color:var(--alerta)">ajuste pedido</span>' : ''}
     <b style="font-size:18px">${esc(p.titulo)}</b><small>${[diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ')}</small></button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
 }
@@ -274,7 +270,6 @@ function acao(p) {
   if (p.status === 'producao') return exigir() && !X.ADMIN ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.ADMIN ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
   if (p.status === 'aprovacao') return X.ADMIN || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>';
   if (p.status === 'agendado') return `<button data-publicar="${p.id}">Marcar publicado</button>`;
-  if (precisaTikTok(p)) return `<button data-tt="${p.id}">Repostado no TikTok</button>`;
   return '';
 }
 
@@ -291,7 +286,6 @@ function vSemana() {
   const hora = new Date().getHours();
   const ajustes = LISTA.filter(p => p.status === 'producao' && p.ajuste);
   const atras = LISTA.filter(atrasado);
-  const tt = LISTA.filter(precisaTikTok);
   const mostrar = DIA && dias.includes(DIA) ? [DIA] : dias;
   return `
     <div class="mk-hero">
@@ -307,12 +301,11 @@ function vSemana() {
     ${ajustes.length ? `<div class="mk-dia" style="color:var(--alerta)">Ajustes pedidos</div>${ajustes.map(vcard).join('')}` : ''}
     ${atras.length ? `<div class="mk-dia" style="color:var(--alerta)">Atrasados</div>${atras.map(vcard).join('')}` : ''}
     ${(c => c || `<div class="mk-dia">${DIA ? (DIA === h ? 'Hoje' : SEMANA[new Date(DIA + 'T12:00:00').getDay()] + ' ' + dm(DIA)) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">Nada programado.</div>`)(mostrar.map(d => { const L = naSemana(d).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))); const dd = new Date(d + 'T12:00:00'); return L.length ? `<div class="mk-dia">${d === h ? 'Hoje' : d === maisDias(h, 1) ? 'Amanhã' : SEMANA[dd.getDay()] + ' ' + dm(d)}</div>${L.map(vcard).join('')}` : ''; }).join(''))}
-    ${DIA && dias.includes(DIA) ? '<button class="sec" data-sdia="" style="width:100%;margin-top:12px">Ver a semana inteira</button>' : ''}
-    ${tt.length ? `<div class="mk-dia">Repostar no TikTok</div>${tt.map(vcard).join('')}` : ''}`;
+    ${DIA && dias.includes(DIA) ? '<button class="sec" data-sdia="" style="width:100%;margin-top:12px">Ver a semana inteira</button>' : ''}`;
 }
 function vcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)}"><button data-p="${p.id}"><span class="pill">${FMT[p.formato][0]}</span><span class="st">${ST[p.status]}</span>
+  return `<div class="mk-vcard" style="--c:${corP(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${ST[p.status]}</span>
     <b>${esc(p.titulo)}</b><small>${[p.hora ? 'às ' + p.hora : '', pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
     ${p.ajuste && p.status === 'producao' ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
@@ -325,7 +318,7 @@ function vIdeias() {
     <div class="sub" style="margin-top:12px">Anote a ideia na hora. Quando for produzir, toque em Produzir e ela vai para a produção.</div>
     <div class="mk-fmts" id="mkIdFmt" style="margin-top:10px">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="idfmt" value="${k}" ${ID_FMT === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div>
     <div class="mk-rapida"><input id="mkIdTxt" placeholder="Nova ideia de post" maxlength="160"><button class="zap" id="mkIdOk" style="flex:0 0 auto;min-width:0">Salvar</button></div>
-    ${L.length ? `<div class="mk-ideias">${L.map((p, i) => `<div style="display:flex;flex-direction:column"><button class="mk-ideia" data-p="${p.id}" style="--r:${[-1, .8, -.5, 1.2][i % 4]}deg;--c:${corP(p)}"><b>${esc(p.titulo)}</b><small>${FMT[p.formato][0]}${est(p.pilar_id) ? ' · ' + esc(est(p.pilar_id).titulo) : ''}</small></button><button class="sec" data-mudar="${p.id}" data-st="producao" style="margin-top:6px;padding:8px">Produzir</button></div>`).join('')}</div>` : '<div class="vazio" style="margin-top:10px">Nenhuma ideia guardada ainda.</div>'}`;
+    ${L.length ? `<div class="mk-ideias">${L.map((p, i) => `<div style="display:flex;flex-direction:column"><button class="mk-ideia" data-p="${p.id}" style="--r:${[-1, .8, -.5, 1.2][i % 4]}deg;--c:${corP(p)}"><b>${esc(p.titulo)}</b><small>${fmtN(p)}${est(p.pilar_id) ? ' · ' + esc(est(p.pilar_id).titulo) : ''}</small></button><button class="sec" data-mudar="${p.id}" data-st="producao" style="margin-top:6px;padding:8px">Produzir</button></div>`).join('')}</div>` : '<div class="vazio" style="margin-top:10px">Nenhuma ideia guardada ainda.</div>'}`;
 }
 
 /* ---------- estratégia ---------- */
@@ -375,9 +368,6 @@ function formPost(P) {
       ${campo('link_arquivo', 'Link da arte ou do vídeo (Canva ou Drive)', p.link_arquivo, 'url', 'placeholder="https://"')}
       <div id="mkPub">${campo('link_post', 'Link do post no Instagram', p.link_post, 'url', 'placeholder="https://www.instagram.com/..."')}
         ${campo('publicado_em', 'Publicado em', p.publicado_em || (p.status === 'publicado' ? hoje() : ''), 'date')}</div>
-      <div id="mkTT" class="bloco mk-tt" style="margin-top:12px"><h2 style="color:var(--dourado-claro)">TikTok</h2>
-        <label class="fc"><input type="checkbox" name="tiktok_feito" ${p.tiktok_feito ? 'checked' : ''}><span>Reels repostado no TikTok</span></label>
-        <label class="fl"><span style="color:rgba(249,246,241,.7)">Link no TikTok</span><input name="link_tiktok" type="url" value="${esc(p.link_tiktok || '')}" placeholder="https://www.tiktok.com/..."></label></div>
       <label class="fl"><span>Observações internas</span><textarea name="obs" rows="2">${esc(p.obs || '')}</textarea></label>
       <button class="zap grande" type="submit" id="mkSalvar" style="margin-top:16px;width:100%">${nova ? 'Salvar' : 'Salvar alterações'}</button>
       ${!nova ? '<button class="sec grande" type="button" id="mkExcluir" style="margin-top:10px;width:100%">Excluir post</button>' : ''}
@@ -387,7 +377,6 @@ function formPost(P) {
   const mostrar = () => {
     const st = el.status.value, fmt = f.querySelector('[name=formato]:checked').value;
     document.getElementById('mkPub').hidden = st !== 'publicado';
-    document.getElementById('mkTT').hidden = !(fmt === 'reels' && st === 'publicado');
     if (st === 'publicado' && !el.publicado_em.value) el.publicado_em.value = hoje();
   };
   mostrar(); f.addEventListener('change', mostrar);
@@ -397,7 +386,7 @@ function formPost(P) {
     const v = (n) => (el[n].value || '').trim() || null;
     const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, data_prevista: v('data_prevista'), hora: v('hora'),
       pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
-      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, tiktok_feito: el.tiktok_feito.checked, link_tiktok: v('link_tiktok'), obs: v('obs') };
+      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs') };
     if (!reg.titulo) { msg('Escreva o título do post.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);
@@ -490,7 +479,6 @@ function ligar(P) {
   q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para a produção.', aprovacao: 'Enviado para aprovação. Isadora e Matheus recebem o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
   q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
   q('[data-publicar]').forEach(b => b.onclick = () => { ED = b.dataset.publicar; PRE = { status: 'publicado' }; rerender(); scrollTo(0, 0); X.aviso('Cole o link do post e salve.'); });
-  q('[data-tt]').forEach(b => b.onclick = () => mudar(b.dataset.tt, { tiktok_feito: true }, 'Repost no TikTok marcado.'));
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
   q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; mudar(b.dataset.ajok, { status: 'producao', ajuste: t }, 'Devolvido para a produção com o ajuste.'); });

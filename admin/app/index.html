@@ -374,12 +374,13 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=1';
+import * as MKT from '/admin/app/marketing.js?v=2';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=10';
+import * as COT from '/admin/app/cotador.js?v=11';
+import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=6';
 import * as DRE from '/admin/app/dre.js?v=4';
 const EXIGIR_CODIGO = true;
@@ -498,35 +499,47 @@ $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
 $('clientesTopo').onclick = () => { CRM.abrir(null); ir('crm'); };
-document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('app').hidden) carregar(true); });
+/* ao voltar para o app: atualiza os dados, mas não redesenha a tela se a pessoa estava digitando */
+let SUJO = false, ULT_CARGA = 0;
+$('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
+$('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
+  carregar(true, SUJO);
+});
 window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
 $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
   if (!pode('checkin')) { aviso('Seu acesso não inclui marcar check-in.'); return; }
   const feito = !b.classList.contains('feito');
-  if (feito && !(await perguntarBilhete(b.dataset.tr))) return;
+  if (feito && !(await perguntarBilhete(b.dataset.tr, refEmissao(b.dataset.id)))) return;
   const { error } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: b.dataset.tr, p_feito: feito });
   if (error) { aviso('Não salvou: ' + error.message); return; }
   const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + b.dataset.tr] = feito;
   const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + b.dataset.tr] = feito;
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
+/* registro de ações que não mudam o banco (vai para o log de atividades; se o log não estiver ativo, ignora) */
+function logEvento(tabela, registro, rotulo, detalhe) {
+  try { sb.from('log_atividades').insert({ acao: 'evento', tabela, registro: registro ? String(registro) : null, rotulo: rotulo || null, detalhe }).then(() => {}, () => {}); } catch (_) {}
+}
+const refEmissao = (id) => { const e = (D.emissoes || []).find(x => x.id === id) || (D.voosEm || []).find(x => x.id === id) || {}; return { id, rotulo: [e.comprador, e.sobrenome].filter(Boolean).join(' ') || e.passageiro || '' }; };
 /* check-in só fecha depois de confirmar que o bilhete foi enviado ao cliente */
-function perguntarBilhete(tr) {
+function perguntarBilhete(tr, ref) {
   return new Promise((ok) => {
     const el = document.createElement('div');
     el.className = 'folha';
     el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="folha-tit">Check-in ${tr === 'volta' ? 'da volta' : 'da ida'}</div>
       <div style="font-size:17px;color:var(--verde);margin:4px 0 14px">Você já enviou o bilhete para o cliente?</div>
       <div class="botoes4"><button class="zap" type="button" data-r="1">Sim, já enviei</button><button class="sec" type="button" data-r="0">Ainda não</button></div></div>`;
-    const fim = (r) => { el.remove(); if (!r) aviso('Check-in não marcado. Envie o bilhete ao cliente e marque de novo.'); ok(r); };
+    const fim = (r) => { el.remove(); if (!r) aviso('Check-in não marcado. Envie o bilhete ao cliente e marque de novo.'); logEvento('checkin', ref && ref.id, ref && ref.rotulo, r ? `Confirmou que enviou o bilhete da ${tr === 'volta' ? 'volta' : 'ida'}${ref && ref.rotulo ? ' de ' + ref.rotulo : ''}` : `Ainda não tinha enviado o bilhete da ${tr === 'volta' ? 'volta' : 'ida'}${ref && ref.rotulo ? ' de ' + ref.rotulo : ''}`); ok(r); };
     el.querySelector('.folha-fundo').onclick = () => fim(false);
     el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -541,7 +554,7 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
 /* aba -> permissão que libera */
 const ABA_PERM = { marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
-const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
+const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
 const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
@@ -587,7 +600,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao'];
+const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -643,13 +656,14 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Equipe' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Equipe', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
-async function carregar(silencioso) {
+async function carregar(silencioso, manterTela) {
+  ULT_CARGA = Date.now();
   if (!silencioso) $('pagina').classList.add('carregando');
-  if (soMarketing()) { await MKT.carregar(sb); $('pagina').classList.remove('carregando'); D.atual = new Date(); return tela(); }
+  if (soMarketing()) { await MKT.carregar(sb); $('pagina').classList.remove('carregando'); D.atual = new Date(); return manterTela ? null : tela(); }
   const hoje = HOJE(), iso = (d) => d.toISOString().slice(0, 10);
   const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
   const inicioAno = `${hoje.getFullYear()}-01-01`, desde = `${hoje.getFullYear() - 1}-01-01`;
@@ -725,7 +739,7 @@ async function carregar(silencioso) {
   if (podeAba('marketing')) await MKT.carregar(sb);
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
-  tela();
+  if (!manterTela) tela();
 }
 
 function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: () => ABA, mesNome, nomeTime, CAT_DESP, mes: () => EM_MES, setMes: (k) => { EM_MES = k; }, seletorMes, ligarMes, folha: (k) => CMP.folha(ctxCMP(), k), mesCaixa: CMP.MES_CAIXA }; }
@@ -795,6 +809,7 @@ function htmlEvento(e) {
 
 /* ================= telas ================= */
 function tela() {
+  SUJO = false;
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
@@ -810,6 +825,7 @@ function tela() {
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
+  if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
@@ -849,7 +865,7 @@ function telaInicio(P) {
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
     ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
     ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
-    ['Reels para repostar no TikTok', MKT.pend().tiktok, () => ir('marketing', () => MKT.abrir('painel'))],
+    ['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))],
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
@@ -1167,12 +1183,12 @@ function telaFormEmissao(P) {
   const podeMarcar = daPlanilha && (ADMIN || e.vendedor_id === D.meuId);
   if (!podeEditar) [...f.elements].forEach(x => { if (!(daPlanilha && (/^checkin_/.test(x.name) || (podeMarcar && MARCAS.includes(x.name))))) x.disabled = true; });
   if (!pode('checkin')) ['checkin_ida', 'checkin_volta'].forEach(n => { if (f.elements[n]) f.elements[n].disabled = true; });
-  if (!daPlanilha) ['checkin_ida', 'checkin_volta'].forEach(n => { const cx = f.elements[n]; if (cx && !cx.disabled) cx.addEventListener('change', async () => { if (cx.checked && !(await perguntarBilhete(n.slice(8)))) cx.checked = false; }); });
+  if (!daPlanilha) ['checkin_ida', 'checkin_volta'].forEach(n => { const cx = f.elements[n]; if (cx && !cx.disabled) cx.addEventListener('change', async () => { if (cx.checked && !(await perguntarBilhete(n.slice(8), refEmissao(e.id)))) cx.checked = false; }); });
   if (daPlanilha) MARCAS.forEach(n => {
     const cx = f.elements[n]; if (!cx || cx.disabled) return;
     cx.onchange = async () => {
       const ck = /^checkin_/.test(n);
-      if (ck && cx.checked && !(await perguntarBilhete(n.slice(8)))) { cx.checked = false; return; }
+      if (ck && cx.checked && !(await perguntarBilhete(n.slice(8), refEmissao(e.id)))) { cx.checked = false; return; }
       const { error } = ck ? await sb.rpc('marcar_checkin', { p_id: e.id, p_trecho: n.slice(8), p_feito: cx.checked })
                            : await sb.from('emissoes').update({ [n]: cx.checked }).eq('id', e.id);
       if (error) { cx.checked = !cx.checked; aviso('Não salvou: ' + error.message); return; }
@@ -1496,7 +1512,7 @@ const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up']
 const ETAPAS_G = ['Novo lead', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
 const etapasDe = (g) => g ? ETAPAS_G : ETAPAS_V;
-const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Cotação enviada' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
+const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Follow-up' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
 const diasDesde = (ts) => ts ? Math.max(0, Math.floor((Date.now() - new Date(ts)) / 864e5)) : 0;
 const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 const reunioesDe = (id) => (D.areu || []).filter(x => x.atendimento_id === id);
@@ -1564,7 +1580,7 @@ async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
   const upd = { etapa };
-  if (etapa === 'Follow-up') { upd.proximo_passo = 'Fazer follow-up'; if (!r.proximo_passo_data || r.proximo_passo_data < hojeISO()) upd.proximo_passo_data = maisDias(2); }
+  if (etapa === 'Follow-up') { if (!r.proximo_passo) upd.proximo_passo = 'Fazer follow-up'; if (!r.proximo_passo_data || r.proximo_passo_data < hojeISO()) upd.proximo_passo_data = maisDias(2); }
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
@@ -1732,7 +1748,7 @@ function telaFormReuniao(P) {
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
-    if (ADMIN) row.responsavel_id = g('responsavel_id') || null;
+    if (ADMIN) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
@@ -2156,12 +2172,12 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
     ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
-    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão']
+    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
@@ -2185,7 +2201,7 @@ function telaEmpresa(P) {
   const it = itensEmpresa();
   P.innerHTML = `
     <h1 class="titulo">Empresa</h1>
-    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
+    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
     ${verNum ? `
     <div class="seg" id="empModo" style="margin-top:12px"><button data-m="mes" class="${EMP_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${EMP_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${EMP_MODO === 'mes' ? seletorMes('empMes') : `<div class="mesnav" id="empMes"><button data-n="-12">‹</button><span>${ano}</span><button data-n="12">›</button></div>`}
