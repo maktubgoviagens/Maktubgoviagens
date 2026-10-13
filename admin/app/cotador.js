@@ -97,7 +97,7 @@ function editor(P, X) {
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
     ${S.modelo !== 'rapida' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="${corp ? 'ian-santiago' : 'veronica-lisboa'}"></label>` : ''}
-    <button class="zap grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
+    <button class="zap grande" id="linkC" style="width:100%;margin-top:6px">${S.link_slug ? 'Atualizar o link do cliente' : 'Gerar link para o cliente'}</button><div id="linkBox"></div>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="salvarC">Salvar rascunho</button><button class="sec" id="acervoC">Guardar no acervo</button></div>
     ${S._id ? '<button class="sec" id="duplicarC" style="width:100%;margin-top:6px">Duplicar para outro cliente</button>' : ''}
     <div class="sub" id="msgC"></div>`;
@@ -320,7 +320,7 @@ async function printUpload(el, P, X) { const f = el.files[0]; if (!f) return; S.
 /* ================= salvar e acervo ================= */
 function tituloDe() { if (S.modelo === 'rapida') return 'Rápida' + (S.cliente ? ' · ' + S.cliente : '') + (S.por ? ' · ' + brl(num(S.por)) : ''); return S.modelo === 'corp' ? `${S.codigo || 'Corporativo'} · ${S.passageiro || ''}`.trim() : [S.titulo, S.sub].filter(Boolean).join(' ').replace(/[,.]\s*$/, '') || S.opcoes[0].nome || 'Cotação'; }
 function clienteDe() { return S.modelo === 'rapida' ? S.cliente : S.modelo === 'corp' ? S.passageiro : S.para; }
-async function salvar(X) {
+async function salvar(X, quieto) {
   const dados = JSON.parse(JSON.stringify(S)); delete dados._id;
   const row = { modelo: S.modelo, titulo: tituloDe(), cliente: clienteDe() || null, destino: S.destino || null, dados, atualizado_em: new Date().toISOString() };
   const r = S._id ? await X.sb.from('propostas').update(row).eq('id', S._id).select().single() : await X.sb.from('propostas').insert(row).select().single();
@@ -328,7 +328,7 @@ async function salvar(X) {
   S._id = r.data.id; ED = String(r.data.id); history.replaceState(null, '', '#cotador/' + ED);
   // fotos de hotel entram no banco de fotos do fornecedor
   if (S.modelo === 'go') for (const o of S.opcoes) for (const ht of o.hoteis) { const urls = linhas(ht.fotos).filter(u => /^https?:/.test(u)); const f = ht.fornecedor_id && X.fornecedores && X.fornecedores.lista().find(x => x.id === ht.fornecedor_id); if (f && urls.length) { const todas = [...new Set([...(f.fotos_maktub || []), ...urls])].slice(0, 30); if (todas.length !== (f.fotos_maktub || []).length) { const u = await X.sb.from('fornecedores').update({ fotos_maktub: todas }).eq('id', f.id); if (!u.error) f.fotos_maktub = todas; } } }
-  X.aviso('Rascunho salvo.'); return true;
+  if (!quieto) X.aviso('Rascunho salvo.'); return true;
 }
 async function colar(P, X, modo) {
   const txt = X.$('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
@@ -351,27 +351,50 @@ async function colar(P, X, modo) {
   const faltaPor = [S.por].concat(S.extras.map(o => o.por)).some(x => !x);
   X.aviso(faltaPor ? 'Preenchido. Confira e digite o valor da Maktub (Por) de cada opção.' : 'Preenchido. Confira e gere o link.');
 }
-const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'viagens', 'index', 'sitemap', 'robots'];
+/* nomes que nunca podem virar link de cotação: páginas e pastas do site e nomes que o site pode usar */
+const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'c', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'trabalhe-conosco', 'viagens', 'index', 'sitemap', 'robots', '404',
+  'fale-conosco', 'contato', 'blog', 'cotacao', 'cotacoes', 'login', 'app', 'site', 'maktub', 'maktubgo', 'servicos', 'sobre', 'politica-de-privacidade', 'termos-de-uso', 'lua-de-mel', 'europa', 'milhas'];
+// confere no próprio site se o endereço já é uma página publicada (pega também páginas novas que entrarem no GitHub)
+async function existeNoSite(slug) {
+  for (const u of [`/${slug}/`, `/${slug}`]) {
+    try { const r = await fetch(u, { method: 'HEAD', cache: 'no-store', redirect: 'follow' }); if (r.ok) return true; } catch (e) {}
+  }
+  return false;
+}
 const limparSlug = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 function sugerirSlug() { const n = String(clienteDe() || '').trim().split(/\s+/)[0]; const dest = S.destino || (S.modelo === 'rapida' && rapVoos()[0] ? (cidadeDe(rapVoos()[0].dcod) || rapVoos()[0].dnome || '') : ''); return limparSlug([n, dest].filter(Boolean).join(' ')); }
 async function gerarLink(X) {
   const campo = X.$('slugC'); let slug = campo ? limparSlug(campo.value) : '';
   if (campo) { campo.value = slug; S.slug = slug; }
   if (slug && slug.length < 3) { X.aviso('O nome do link precisa de pelo menos 3 letras.'); return; }
-  if (RESERVADOS.includes(slug)) { X.aviso('Esse nome já é uma página do site. Escolha outro.'); return; }
-  const b = X.$('linkC'); b.disabled = true; b.textContent = 'Gerando...';
+  const troque = () => { X.aviso(`"maktubgo.com.br/${slug}" já é uma página do site. Troque o nome do link.`); if (campo) { campo.focus(); campo.select(); } };
+  if (slug && RESERVADOS.includes(slug)) return troque();
+  const b = X.$('linkC'), rot = b.textContent; b.disabled = true; b.textContent = 'Conferindo o nome...';
+  const fim = () => { b.disabled = false; b.textContent = rot; };
+  if (slug && await existeNoSite(slug)) { fim(); return troque(); }
+  b.textContent = 'Gerando...';
   const row = { html: S.modelo === 'rapida' ? gerarHTML(rapParaCorp()) : gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
-  const r = await X.sb.from('cotacoes_link').insert(row).select('token,slug').single();
-  b.disabled = false; b.textContent = 'Gerar link para o cliente';
+  // mesma cotação e mesmo nome: atualiza o link que o cliente já recebeu
+  const atualizar = slug && S.link_slug === slug;
+  const r = atualizar
+    ? await X.sb.rpc('cotacao_link_atualizar', { p_slug: slug, p_html: row.html, p_titulo: row.titulo, p_cliente: row.cliente })
+    : await X.sb.from('cotacoes_link').insert(row).select('token,slug').single();
+  fim();
   if (r.error) {
-    if (r.error.code === '23505') { X.aviso(`O nome "${slug}" já foi usado em outro link. Mude o nome (ex.: ${slug}-2) e gere de novo.`); return; }
-    X.aviso(/slug/.test(r.error.message) ? 'Falta rodar o SQL do nome do link no Supabase.' : /cotacoes_link/.test(r.error.message) ? 'Falta rodar o SQL do link no Supabase.' : 'Não gerou o link: ' + r.error.message); return;
+    if (r.error.code === '23505') { X.aviso(`O nome "${slug}" já está em uso por outra cotação. Troque o nome (ex.: ${slug}-2) e gere de novo.`); if (campo) campo.focus(); return; }
+    if (/página do site/.test(r.error.message)) return troque();
+    X.aviso(/cotacao_link_atualizar/.test(r.error.message) ? 'Falta rodar o SQL de atualizar link no Supabase.' : /slug/.test(r.error.message) ? 'Falta rodar o SQL do nome do link no Supabase.' : /cotacoes_link/.test(r.error.message) ? 'Falta rodar o SQL do link no Supabase.' : 'Não gerou o link: ' + r.error.message); return;
   }
-  const url = r.data.slug ? `https://www.maktubgo.com.br/${r.data.slug}` : `https://www.maktubgo.com.br/c/?k=${r.data.token}`;
+  if (atualizar && r.data !== true) { X.aviso('Não encontrei o link antigo para atualizar. Troque o nome e gere um novo.'); S.link_slug = null; return; }
+  const dados = atualizar ? { slug } : r.data;
+  if (dados.slug) S.link_slug = dados.slug;
+  const url = dados.slug ? `https://www.maktubgo.com.br/${dados.slug}` : `https://www.maktubgo.com.br/c/?k=${dados.token}`;
   const zap = `https://wa.me/?text=${encodeURIComponent(url)}`;
-  X.$('linkBox').innerHTML = `<div class="config" style="margin-top:8px;word-break:break-all"><b>Link pronto:</b><br><a href="${url}" target="_blank" rel="noopener">${url}</a></div><div class="botoes4" style="margin-top:6px"><button class="sec" id="copiarL">Copiar link</button><a class="sec" style="text-align:center;text-decoration:none" href="${zap}" target="_blank" rel="noopener">Enviar no WhatsApp</a></div>`;
+  X.$('linkBox').innerHTML = `<div class="config" style="margin-top:8px;word-break:break-all"><b>${atualizar ? 'Link atualizado' : 'Link pronto'}:</b><br><a href="${url}" target="_blank" rel="noopener">${url}</a></div><div class="botoes4" style="margin-top:6px"><button class="sec" id="copiarL">Copiar link</button><a class="sec" style="text-align:center;text-decoration:none" href="${zap}" target="_blank" rel="noopener">Enviar no WhatsApp</a></div>`;
   X.$('copiarL').onclick = async () => { try { await navigator.clipboard.writeText(url); X.aviso('Link copiado.'); } catch (e) { X.aviso(url); } };
-  try { await navigator.clipboard.writeText(url); X.aviso('Link gerado e copiado.'); } catch (e) {}
+  try { await navigator.clipboard.writeText(url); } catch (e) {}
+  X.aviso(atualizar ? 'Link atualizado. O cliente vê a versão nova no mesmo endereço.' : 'Link gerado e copiado.');
+  if (dados.slug) await salvar(X, true);
   enviada(X);
 }
 async function acervo(X) {
@@ -643,7 +666,7 @@ function editorRapida(P, X) {
     <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>
     <label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="victor-santiago"></label>
-    <button class="sec grande" id="linkC" style="width:100%;margin-top:6px">Gerar link para o cliente</button><div id="linkBox"></div>
+    <button class="sec grande" id="linkC" style="width:100%;margin-top:6px">${S.link_slug ? 'Atualizar o link do cliente' : 'Gerar link para o cliente'}</button><div id="linkBox"></div>
     <div id="rpPrevia" style="margin-top:12px"></div>`;
   $('voltar').onclick = () => { S = null; ir(X, null); };
   const f = $('fRap');
