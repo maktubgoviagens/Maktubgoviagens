@@ -99,14 +99,39 @@ function datas(t) {
   while ((m = r2.exec(t))) { const d = +m[1], mes = MESES[m[2].toLowerCase()]; if (d < 1 || d > 31) continue; const y = m[3] ? +m[3] : anoPara(mes, d); out.push({ pos: m.index, iso: `${y}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}` }); }
   return out.sort((a, b) => a.pos - b.pos);
 }
+// palavras de 3 letras maiúsculas que aparecem nas telas das companhias e não são aeroporto
+const NAO_AER = new Set(('BRL USD EUR CLP ARS UYU PYG PEN COP MXN GBP CHF CAD ' +
+  'JAN FEV FEB MAR ABR APR MAI MAY JUN JUL AGO AUG SET SEP OUT OCT NOV DEZ DEC ' +
+  'SEG TER QUA QUI SEX SAB DOM MON TUE WED THU FRI SAT SUN ' +
+  'IDA VOO CIA DIA MIN PAX TAP KLM TAM GOL SKY ADT CHD INF CPF VIA AND THE').split(' '));
+const ehAer = (c) => !NAO_AER.has(c) && (!AERO || !Object.keys(AERO).length || !!AERO[c]);
+// cada horário vira um evento com o aeroporto mais próximo dele (antes ou depois), sem pular outro horário
 function eventos(t) {
   const hora = (h) => { const [a, b] = h.split(/[:h]/); return `${String(+a).padStart(2, '0')}:${b}`; };
-  const tf = [], cf = []; let m;
-  const rT = /\b(\d{1,2}[:h]\d{2})\s*\(?\s*([A-Z]{3})\b/g; while ((m = rT.exec(t))) tf.push({ pos: m.index, fim: m.index + m[0].length, hora: hora(m[1]), cod: m[2] });
-  const rC = /\b([A-Z]{3})\s*\)?\s+(\d{1,2}[:h]\d{2})\b/g; while ((m = rC.exec(t))) cf.push({ pos: m.index, fim: m.index + m[0].length, hora: hora(m[2]), cod: m[1] });
-  const ign = /^(BRL|USD|EUR|CLP|ARS)$/;
-  const a = tf.filter(e => !ign.test(e.cod)), b = cf.filter(e => !ign.test(e.cod));
-  return b.length > a.length ? b : a;
+  const hs = [], cs = []; let m;
+  // "12:20" é horário; "12h20" só com dois dígitos e sem cara de duração ("1h05", "11h50 min", "duração 12h10")
+  const rH = /(?<![\d:])(\d{1,2})([:h])(\d{2})(?![\d:])/g; while ((m = rH.exec(t))) { if (+m[1] > 23 || +m[3] > 59) continue;
+    if (m[2] === 'h' && (m[1].length < 2 || /^\s*min/i.test(t.slice(m.index + m[0].length)) || /dura|tempo|total/i.test(t.slice(Math.max(0, m.index - 20), m.index)))) continue;
+    m[2] = m[3]; hs.push({ pos: m.index, fim: m.index + m[0].length, hora: hora(m[1] + ':' + m[2]) }); }
+  const rA = /\b([A-Z]{3})\b/g; while ((m = rA.exec(t))) if (ehAer(m[1])) cs.push({ pos: m.index, fim: m.index + m[0].length, cod: m[1], usado: false });
+  const PERTO = 45, ev = [];
+  // o texto tem um padrão: "GIG 12:20" (código antes) ou "12:20 GIG" (código depois). Descobre qual domina.
+  const cola = (a, b) => b >= a && b - a <= 4 && /^[\s()]*$/.test(t.slice(a, b));
+  const nAntes = hs.filter(x => cs.some(c => cola(c.fim, x.pos))).length, nDepois = hs.filter(x => cs.some(c => cola(x.fim, c.pos))).length;
+  const lado = nAntes > nDepois ? 'antes' : nDepois > nAntes ? 'depois' : '';
+  hs.forEach((x, i) => {
+    const ant = i ? hs[i - 1].fim : 0, prox = hs[i + 1] ? hs[i + 1].pos : t.length;
+    const depois = cs.find(c => !c.usado && c.pos >= x.fim && c.pos < prox && c.pos - x.fim <= PERTO);
+    const antes = cs.filter(c => !c.usado && c.fim <= x.pos && c.pos >= ant && x.pos - c.fim <= PERTO).pop();
+    const c = depois && antes ? (lado === 'antes' ? antes : lado === 'depois' ? depois : depois.pos - x.fim <= x.pos - antes.fim ? depois : antes) : depois || antes;
+    if (c) { c.usado = true; ev.push({ pos: Math.min(x.pos, c.pos), fim: Math.max(x.fim, c.fim), hora: x.hora, cod: c.cod }); }
+  });
+  if (ev.length >= 2) return ev.sort((a, b) => a.pos - b.pos);
+  // formato "12:20 – 17:00 ... GIG–SCL" (buscadores de voo)
+  const out = []; const rF = /(\d{1,2}[:h]\d{2})\s*[–—-]\s*(\d{1,2}[:h]\d{2})[\s\S]{0,120}?\b([A-Z]{3})\s*[–—-]\s*([A-Z]{3})\b/g;
+  while ((m = rF.exec(t))) { if (!ehAer(m[3]) || !ehAer(m[4])) continue; const p = m.index, f = p + m[0].length;
+    out.push({ pos: p, fim: p + 1, hora: hora(m[1]), cod: m[3] }, { pos: p + 1, fim: f, hora: hora(m[2]), cod: m[4] }); }
+  return out.length ? out : ev;
 }
 const valor = (s) => s ? s.replace(/\s/g, '') : '';
 function lerBloco(t) {
@@ -119,13 +144,14 @@ function lerBloco(t) {
     const st = trecho.match(/(\d)\s*(?:parada|conex|escala|stop)/i);
     const tipo = /direto|sem escala|sem parada|nonstop/i.test(trecho) && !st ? 'Direto' : st ? (+st[1] === 1 ? '1 conexão' : '2 conexões') : 'Direto';
     const du = trecho.match(/(\d{1,2})\s*h(?:oras?)?\s*(\d{1,2})?\s*(?:min)?/i);
+    const px = trecho.match(/(\d{1,2})\s*(?:pax|pessoas?)\b/i);
     voos.push({ rotulo: voos.length === 0 ? 'Ida' : voos.length === 1 ? 'Volta' : 'Trecho ' + (voos.length + 1), data: dt ? dt.iso : (voos.length ? voos[voos.length - 1].data : ''),
-      ocod: dep.cod, onome: '', saida: dep.hora, dcod: arr.cod, dnome: '', chegada: arr.hora, tipo, duracao: du ? `${+du[1]}h${String(+(du[2] || 0)).padStart(2, '0')}` : '' });
+      ocod: dep.cod, onome: '', saida: dep.hora, dcod: arr.cod, dnome: '', chegada: arr.hora, tipo, duracao: du ? `${+du[1]}h${String(+(du[2] || 0)).padStart(2, '0')}` : '', pax: px ? px[1] : '' });
   }
   // valores: o do site (subtotal/total/site/de) e o da Maktub (maktub/por/nosso)
   const N = '(?:R\\$|BRL)?\\s*(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)';
   let site = '', mk = '', m;
-  const rS = new RegExp(`(?:subtotal|total|no site|site|^\\s*de)\\b[^\\d\\n]{0,20}?${N}`, 'gim'); while ((m = rS.exec(t))) site = valor(m[1]);
+  const rS = new RegExp(`(?:subtotal|total|no site|site|^\\s*de)\\b[^\\d]{0,24}?${N}`, 'gim'); while ((m = rS.exec(t))) site = valor(m[1]);
   const rM = new RegExp(`(?:maktub|nosso valor|^\\s*por)\\b[^\\d\\n]{0,20}?${N}`, 'gim'); while ((m = rM.exec(t))) mk = valor(m[1]);
   return { voos, de: site, por: mk };
 }

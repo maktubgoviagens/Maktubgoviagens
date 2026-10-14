@@ -2,7 +2,7 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=1';
+import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=2';
 let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
@@ -591,7 +591,7 @@ h1{font-size:24px;color:var(--v);letter-spacing:.02em;margin-top:26px}.subt{colo
 .voo{background:#fff;border:1px solid var(--l);border-radius:8px;overflow:hidden;margin-top:14px}.voo .cab{background:var(--v);color:#fff;display:flex;justify-content:space-between;padding:10px 16px;font-weight:700;font-size:12.5px;letter-spacing:.06em}
 .voo .corpo{padding:18px 16px;display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:start}.hora{font-size:28px;font-weight:700;color:var(--v)}.aer{color:var(--s);font-weight:700;font-size:13px}.seta{color:var(--d);font-size:22px;padding-top:4px}.cia{font-weight:700;color:var(--v);font-size:16px;padding-top:6px}
 .chips{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}.chip{background:var(--b);border-radius:16px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--v)}
-.print img{max-width:100%;display:block;margin-top:10px;border-radius:4px}.resumo{background:var(--v);color:#fff;border-radius:10px;padding:22px 18px;margin-top:20px}.resumo .p{font-size:11px;letter-spacing:.1em;font-weight:700;margin-top:8px;color:#EBE0C4}
+.caixa.obs{background:var(--b);border-color:var(--d)}.print img{max-width:100%;display:block;margin-top:10px;border-radius:4px}.resumo{background:var(--v);color:#fff;border-radius:10px;padding:22px 18px;margin-top:20px}.resumo .p{font-size:11px;letter-spacing:.1em;font-weight:700;margin-top:8px;color:#EBE0C4}
 .de{margin-top:12px;color:#EBE0C4}.de s{text-decoration-color:var(--d)}.por{font-size:32px;font-weight:800;margin-top:4px}.forma{font-weight:700;color:#EBE0C4;font-size:13px}.resumo hr{border:0;border-top:1px solid var(--d);margin:14px 0 10px}.resumo small{color:#EBE0C4;font-size:11.5px}
 .opcao{margin-top:34px;padding-top:18px;border-top:2px solid var(--d);color:var(--s);font-size:13px;font-weight:700}.opcao span{display:inline-block;background:var(--d);color:#fff;border-radius:4px;padding:3px 10px;margin-right:10px;font-size:11px;letter-spacing:.12em}
 header.go{background:#F3EAD2;color:var(--v)}header.go .slog,header.go .cont,header.go .cont a{color:var(--v)}header.go .marca{color:var(--v)}.logo{height:58px;display:block}
@@ -609,8 +609,9 @@ ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotaç
 ${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
   return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
-${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
+${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
 ${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
+${String(S.obs || '').trim() ? `<div class="caixa obs"><div class="rot">Observação</div><div style="font-weight:700;color:var(--v)">${h(String(S.obs).trim()).replace(/\n/g, '<br>')}</div></div>` : ''}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
 ${multi ? '' : resumo(OPS[0], 0)}
@@ -631,19 +632,28 @@ const ecoAuto = () => { const a = num(S.de), b = num(S.por); return a > b && b >
 const mostraEco = () => { const a = num(S.de), b = num(S.por); if (!(a > b && b > 0)) return false; return S.eco === true || S.eco === false ? S.eco : ecoAuto(); };
 const parcTxt = () => { const np = String(S.parcelas || '').trim(), por = num(S.por); return /^\d{1,2}$/.test(np) && +np > 1 ? `${+np}x de ${brl(por / +np)} sem juros` : np; };
 const rapVoos = () => (S.voos || []).filter(v => v.ocod);
+const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '', pax: '' });
+// passageiros de um trecho só aparecem quando são diferentes do total da cotação
+const paxTrecho = (v, total) => { const n = parseInt(v && v.pax) || 0; return n > 0 && n !== total ? n : 0; };
+// rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N. O que foi digitado à mão fica.
+function rotular(vs) {
+  const ori = vs[0] && vs[0].ocod, voltas = vs.filter((v, i) => i && ori && v.dcod === ori), nv = voltas.length;
+  vs.forEach((v, i) => { if (v._rotM) return; v.rotulo = i === 0 ? 'Ida' : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : vs.length === 2 ? 'Volta' : 'Trecho ' + (i + 1); });
+}
 function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
 function rapParaCorp() {
   const v0 = rapVoos()[0];
   return { modelo: 'corp', marca: S.marca, codigo: '', passageiro: S.cliente || '', pessoas: S.pessoas || '1', validade: hoje(), cia: S.cia || '', rota: rapRota(),
     destino: v0 ? (cidadeDe(v0.dcod) || v0.dnome || '') : '', voos: rapVoos(), bagagem: S.bagagem || '', print: mostraEco() ? (S.prints[0] || '') : '',
-    de: mostraEco() ? S.de : '', por: S.por, forma: [S.forma, parcTxt() ? 'ou ' + parcTxt() : ''].filter(Boolean).join(' · '), rodape: [S.obs, RAP_RODAPE].filter(Boolean).join(' ') };
+    de: mostraEco() ? S.de : '', por: S.por, forma: [S.forma, parcTxt() ? 'ou ' + parcTxt() : ''].filter(Boolean).join(' · '), obs: S.obs || '', rodape: RAP_RODAPE };
 }
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
   if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
-  const vs = rapVoos();
+  const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1);
+  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}</div>`; }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
@@ -652,14 +662,20 @@ function editorRapida(P, X) {
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
-      ${vs.length ? `<div class="config" style="margin:6px 0">${vs.map(v => `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}</div>`).join('')}<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-top:4px">tirar voos</button></div>` : '<div class="config" style="margin:6px 0">Sem voos colados, a cotação sai só com o valor.</div>'}
+      <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
+      ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
+        ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
+        ${duas(inp(`voos.${j}.ocod`, 'Origem (código)', 'text', 'placeholder="GIG" maxlength="3" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
+        ${duas(inp(`voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="SCL" maxlength="3" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
+        ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`))}</div>`).join('')}
+        <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
       <div class="duas-col">${inp('cliente', 'Passageiro', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
       <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
       ${inp('bagagem', 'Bagagem incluída')}
       <div class="duas-col">${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}${inp('de', 'Valor no site (opcional)', 'num', 'placeholder="2.100,00"')}</div>
       <div id="rpEco">${avisoEco()}</div>
       <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
-      ${inp('obs', 'Observação (opcional)', 'text', 'placeholder="Assento marcado incluso"')}
+      ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
       ${dobra('rpPrintD', 'Print do site (opcional, aparece só com a comparação ligada)', `<label class="fl"><input type="file" accept="image/*" multiple id="rpPrint"></label>
       ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}`)}
     </form>
@@ -673,21 +689,31 @@ function editorRapida(P, X) {
   const ligarEco = () => { const ck = $('rpEcoCk'); if (ck) ck.onchange = () => { S.eco = ck.checked; previa(); }; };
   let tm = null; const previa = () => { clearTimeout(tm); tm = setTimeout(() => { if (!num(S.por) || !$('rpPrevia')) return; imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; }); }, 400); };
   let slugManual = !!S.slug; $('slugC').addEventListener('input', () => { slugManual = true; });
-  f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.value);
+  f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return;
+    const vk = k.match(/^voos\.(\d+)\.(\w+)$/);
+    set(k, vk && /^(ocod|dcod)$/.test(vk[2]) ? e.target.value.toUpperCase().trim() : e.target.value);
+    if (vk) { const v = S.voos[+vk[1]]; if (vk[2] === 'rotulo') v._rotM = !!e.target.value.trim(); if (/^(ocod|dcod|data|saida|chegada)$/.test(vk[2])) completarVoo(v); if (/^(ocod|dcod)$/.test(vk[2])) { rotular(S.voos); S.voos.forEach((x, i) => { const el = f.querySelector(`[data-k="voos.${i}.rotulo"]`); if (el && el !== e.target) el.value = x.rotulo; }); } }
+    if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
     if (k === 'de' || k === 'por') { S.eco = undefined; $('rpEco').innerHTML = avisoEco(); ligarEco(); } previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
-  f.addEventListener('change', (e) => { if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
+  f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
   $('rpColar').onclick = async () => {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); } if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
-    S.eco = undefined; editorRapida(P, X); X.aviso(num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
+    if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
+      const mx = Math.max(0, ...S.voos.map(v => parseInt(v.pax) || 0)); if (mx > (parseInt(S.pessoas) || 1)) S.pessoas = String(mx); }
+    if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
+    if (!o.voos.length) ABERTOS.add('rpVoosD');
+    S.eco = undefined; editorRapida(P, X); X.aviso(!o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".' : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
+    S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
+  P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => { S.voos.splice(+b.dataset.tira.split('#')[1], 1); rotular(S.voos); editorRapida(P, X); });
   $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
@@ -744,7 +770,8 @@ async function imagemRapida() {
     vs.forEach(v => {
       const CH = 196; caixa(PAD, y, W - PAD * 2, CH, 12, '#fff', LINHA);
       g.save(); g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 56, [12, 12, 0, 0]) : g.rect(PAD, y, W - PAD * 2, 56); g.fillStyle = VERDE; g.fill(); g.restore();
-      const d = dt(v.data); g.font = sans(20, '700'); g.fillStyle = '#fff'; espac(String(v.rotulo || '').toUpperCase(), PAD + 24, y + 36, 2);
+      const d = dt(v.data), np = paxTrecho(v, pax); g.font = sans(20, '700'); g.fillStyle = '#fff'; const wr = espac(String(v.rotulo || '').toUpperCase(), PAD + 24, y + 36, 2);
+      if (np) { g.fillStyle = CREME; espac(` · ${np} ${np === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}`, PAD + 24 + wr, y + 36, 2); g.fillStyle = '#fff'; }
       g.textAlign = 'right'; g.fillText(d ? `${SEMANA[d.getDay()].toUpperCase()} · ${v.data.split('-').reverse().join('/')}` : '', W - PAD - 24, y + 36); g.textAlign = 'left';
       const yb = y + 56, meio = W / 2, colW = (W - PAD * 2) / 2 - 70;
       g.font = sans(52, '700'); g.fillStyle = VERDE; g.fillText(v.saida || '', PAD + 24, yb + 70); g.fillText(v.chegada || '', meio + 50, yb + 70);
@@ -758,13 +785,16 @@ async function imagemRapida() {
     });
     y += 6;
   }
+  // observação em destaque, com o texto inteiro
+  if (String(S.obs || '').trim()) { g.font = sans(24, '600'); const ls = String(S.obs).trim().split('\n').flatMap(l => quebra(l, W - PAD * 2 - 60)); const OH = 70 + ls.length * 34;
+    caixa(PAD, y, W - PAD * 2, OH, 12, BEGE, DOUR); g.font = sans(17, '700'); g.fillStyle = DOUR; espac('OBSERVAÇÃO', PAD + 24, y + 40, 2); g.font = sans(24, '600'); g.fillStyle = VERDE; ls.forEach((l, i) => g.fillText(l, PAD + 24, y + 78 + i * 34)); y += OH + 22; }
   // bagagem
   if (S.bagagem) { g.font = sans(24, '700'); const ls = quebra(S.bagagem, W - PAD * 2 - 48); const BH = 70 + ls.length * 32; caixa(PAD, y, W - PAD * 2, BH, 12, '#fff', LINHA);
     g.font = sans(17, '700'); g.fillStyle = DOUR; espac('BAGAGEM INCLUÍDA', PAD + 24, y + 40, 2); g.font = sans(24, '700'); g.fillStyle = VERDE; ls.forEach((l, i) => g.fillText(l, PAD + 24, y + 76 + i * 32)); y += BH + 22; }
   // print do site, só quando a comparação está ligada
   prints.forEach((im) => { const hh = Math.round(im.height * (W - PAD * 2 - 48) / im.width); caixa(PAD, y, W - PAD * 2, hh + 74, 12, '#fff', LINHA); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(('VALOR NO SITE' + (S.cia ? ' DA ' + S.cia : '')).toUpperCase(), PAD + 24, y + 40, 2); g.drawImage(im, PAD + 24, y + 56, W - PAD * 2 - 48, hh); y += hh + 96; });
   // resumo com o valor total
-  const linhasR = [['rot'], ['p'], ...(eco ? [['de']] : []), ['por'], ['forma'], ...(parc ? [['parc']] : []), ...(eco ? [['eco']] : []), ...(S.obs ? [['obs']] : []), ['hr'], ['small']];
+  const linhasR = [['rot'], ['p'], ...(eco ? [['de']] : []), ['por'], ['forma'], ...(parc ? [['parc']] : []), ...(eco ? [['eco']] : []), ['hr'], ['small']];
   const alt = { rot: 30, p: 40, de: 50, por: 92, forma: 48, parc: 40, eco: 68, obs: 52, hr: 34, small: 32 };
   const RH = linhasR.reduce((a, [k]) => a + alt[k] - 10, 0) + 74;
   caixa(PAD, y, W - PAD * 2, RH, 16, VERDE); let yy = y + 40; const X0 = PAD + 32;
@@ -777,7 +807,6 @@ async function imagemRapida() {
     if (k === 'forma') { g.font = sans(23, '700'); g.fillStyle = CREME; g.fillText(S.forma || '', X0, yy); }
     if (k === 'parc') { g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; g.fillText('ou ' + parc, X0, yy); }
     if (k === 'eco') { const t = 'Economia de ' + brl(de - por); g.font = sans(21, '700'); const tw = g.measureText(t).width + 36; caixa(X0, yy - 32, tw, 44, 22, null, DOUR); g.fillStyle = CREME; g.fillText(t, X0 + 18, yy - 3); }
-    if (k === 'obs') { g.font = sans(21, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; g.fillText(corta(S.obs, W - PAD * 2 - 64), X0, yy); }
     if (k === 'hr') { g.strokeStyle = DOUR; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X0, yy - 12); g.lineTo(W - PAD - 32, yy - 12); g.stroke(); }
     if (k === 'small') { g.font = sans(18, '400'); g.fillStyle = CREME; g.fillText('Tarifas e disponibilidade confirmadas somente no momento da emissão.', X0, yy - 6); }
   });
