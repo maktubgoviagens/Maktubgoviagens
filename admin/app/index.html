@@ -374,7 +374,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=4';
+import * as MKT from '/admin/app/marketing.js?v=5';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
@@ -3969,7 +3969,7 @@ function htmlClarity(dias) {
     if (fant) {
       const id = card.dataset.kid, et = alvo && alvo.dataset.ket, origem = card.closest('.kcol');
       k.classList.remove('arrastando'); limparCard(); bloquearClique();
-      if (e.type === 'pointerup' && et && origem && origem.dataset.ket !== et) moverEtapa(id, et);
+      if (e.type === 'pointerup' && et && origem && origem.dataset.ket !== et) (k.dataset.mk ? MKT.mover(id, et) : moverEtapa(id, et));
       return;
     }
     limparCard();
