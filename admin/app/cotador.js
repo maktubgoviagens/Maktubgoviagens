@@ -230,7 +230,7 @@ async function colarGo(P, X, modo) {
   const r = await lerColado(txt);
   if (!r.opcoes.length) { X.aviso('Não encontrei voos nem valores. Confira se tem horário e código do aeroporto (ex.: 22:10 GIG).'); return; }
   const conv = (v) => ({ ...VOO(), rotulo: v.rotulo, data: v.data, origem: cidadeDe(v.ocod) || v.ocod, saida: v.saida, destino: cidadeDe(v.dcod) || v.dcod, chegada: v.chegada,
-    mais1: !!(v.saida && v.chegada && v.chegada < v.saida), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
+    mais1: !!(v.mais1 || (v.saida && v.chegada && v.chegada < v.saida)), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
   const aplicar = (o, p) => {
     if (p.voos.length) o.voos = p.voos.map(conv);
     if (p.de) o.sites = p.de; if (p.por) o.cartao = p.por; if (p.nome && !o.nome) o.nome = p.nome;
@@ -609,7 +609,7 @@ ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotaç
 ${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
   return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
-${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
+${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}${v.mais1 ? '<sup style="font-size:13px;color:var(--d);margin-left:3px">+1</sup>' : ''}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
 ${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
 ${String(S.obs || '').trim() ? `<div class="caixa obs"><div class="rot">Observação</div><div style="font-weight:700;color:var(--v)">${h(String(S.obs).trim()).replace(/\n/g, '<br>')}</div></div>` : ''}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
@@ -775,6 +775,7 @@ async function imagemRapida() {
       g.textAlign = 'right'; g.fillText(d ? `${SEMANA[d.getDay()].toUpperCase()} · ${v.data.split('-').reverse().join('/')}` : '', W - PAD - 24, y + 36); g.textAlign = 'left';
       const yb = y + 56, meio = W / 2, colW = (W - PAD * 2) / 2 - 70;
       g.font = sans(52, '700'); g.fillStyle = VERDE; g.fillText(v.saida || '', PAD + 24, yb + 70); g.fillText(v.chegada || '', meio + 50, yb + 70);
+      if (v.mais1) { const wc = g.measureText(v.chegada || '').width; g.font = sans(22, '700'); g.fillStyle = DOUR; g.fillText('+1', meio + 56 + wc, yb + 46); }
       g.font = sans(40, '400'); g.fillStyle = DOUR; centro('→', yb + 64);
       g.font = sans(21, '700'); g.fillStyle = CINZA;
       g.fillText(corta(`${String(v.ocod).toUpperCase()} · ${v.onome || cidadeDe(v.ocod) || ''}`, colW), PAD + 24, yb + 104);
