@@ -39,7 +39,33 @@ const NOVO_RAP = () => { const p = padraoRap(); return { modelo: 'rapida', marca
 const ABERTOS = new Set();
 const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) ? 'open' : ''} style="margin-top:8px;border-top:1px solid var(--linha);padding-top:6px"><summary class="sub" style="cursor:pointer;margin:0">${titulo}</summary>${corpo}</details>`;
 const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>${ajuda}<br><span style="font-family:monospace;font-size:12px">${exemplo}</span></div>
-    <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>`;
+    <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>
+    <label class="sec" style="display:block;text-align:center;width:100%;margin:2px 0 6px;cursor:pointer;padding:10px">Ler print da companhia<input type="file" accept="image/*" multiple id="colaPrint" style="display:none"></label>`;
+/* ler print: os prints vão para a função ler-print do Supabase (Claude), que devolve os voos.
+   Os voos voltam no formato curto ("02/12/2026 GIG 12:20 SCL 17:00 direto") e entram pelo mesmo "Preencher" de sempre. */
+function textoDosVoos(d) {
+  const ls = [d.companhia || ''];
+  (d.voos || []).forEach(v => { const dt = /^\d{4}-\d{2}-\d{2}$/.test(v.data || '') ? v.data.split('-').reverse().join('/') : '';
+    const c = +v.conexoes || 0; ls.push([dt, v.origem, v.saida, v.destino, v.chegada, c ? `${c} ${c === 1 ? 'conexão' : 'conexões'}` : 'direto'].filter(Boolean).join(' ')); });
+  if (d.valor_site_reais) ls.push('site ' + Number(d.valor_site_reais).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+  return ls.filter(Boolean).join('\n');
+}
+function ligarPrint(P, X) {
+  const inp = P.querySelector('#colaPrint'); if (!inp) return;
+  inp.onchange = async () => {
+    const fs = [...inp.files].slice(0, 4); inp.value = ''; if (!fs.length) return;
+    X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
+    const imagens = (await Promise.all(fs.map(f => reduzir(f, 2400, 0.88)))).filter(Boolean);
+    const { data, error } = await X.sb.functions.invoke('ler-print', { body: { imagens } });
+    let msg = data && data.erro;
+    if (!msg && error && error.context && error.context.json) { try { msg = (await error.context.json()).erro; } catch (e) { /* sem corpo */ } }
+    if (!msg && error && error.context && error.context.status === 404) msg = 'A função ler-print ainda não está publicada no Supabase.';
+    if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'); return; }
+    if (!(data.voos || []).length) { X.aviso('Não achei voos nesse print. Confira se aparecem os horários e os aeroportos.'); return; }
+    const ta = P.querySelector('#colaTxt'); if (ta) ta.value = textoDosVoos(data);
+    const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+  };
+}
 const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões' };
 
 /* ================= telas ================= */
@@ -115,6 +141,7 @@ function editor(P, X) {
     if (m) { mais(m.dataset.mais); editor(P, X); }
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
   });
+  ligarPrint(P, X);
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
   $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); };
   $('salvarC').onclick = () => salvar(X);
@@ -308,8 +335,8 @@ function escolherHotel(X, el) {
   if (!ht.fotos && f.fotos_maktub && f.fotos_maktub.length) ht.fotos = f.fotos_maktub.join('\n');
   editor(X.$('pagina'), X);
 }
-function reduzir(file, max = 1200) {
-  return new Promise((ok) => { const img = new Image(); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', 0.74)); URL.revokeObjectURL(img.src); }; img.onerror = () => ok(null); img.src = URL.createObjectURL(file); });
+function reduzir(file, max = 1200, q = 0.74) {
+  return new Promise((ok) => { const img = new Image(); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', q)); URL.revokeObjectURL(img.src); }; img.onerror = () => ok(null); img.src = URL.createObjectURL(file); });
 }
 async function fotoUpload(el, P, X) {
   const novas = (await Promise.all([...el.files].slice(0, 6).map(f => reduzir(f)))).filter(Boolean);
@@ -660,7 +687,7 @@ function editorRapida(P, X) {
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
     <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
+      ${caixaColar('Cole a tela da companhia ou toque em Ler print. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
@@ -699,6 +726,7 @@ function editorRapida(P, X) {
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
+  ligarPrint(P, X);
   $('rpColar').onclick = async () => {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
