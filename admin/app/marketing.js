@@ -147,7 +147,7 @@ function estilos() {
 .mk-kb small{display:block;font-size:12px;color:var(--tinta-3);margin-top:3px}
 .mk-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;color:var(--tinta-2);margin-top:6px}
 .mk-kac{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);padding:7px 10px;font-size:12px}
-.mk-kac a{color:var(--dourado)}.mk-kac span{color:var(--tinta-3)}
+.mk-kac a{color:var(--dourado)}.mk-kl{display:flex;gap:12px}.mk-kac span{color:var(--tinta-3)}
 .mk-kac button{background:none;border:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--verde);font-weight:600;cursor:pointer;padding:2px 0}
 .mk-rapida{display:flex;gap:8px;margin-top:12px}.mk-rapida input{flex:1;min-width:0;padding:12px;border:1px solid var(--linha);font-size:16px;background:var(--branco)}
 `;
@@ -287,11 +287,11 @@ function kcard(p) {
   const { esc } = X, g = grupo(p), quando = diaPost(p);
   const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? `<button data-mover="${p.id}" data-g="publicado">Publicado</button>` : '';
   return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:4px solid ${corP(p)}"><button data-p="${p.id}" class="mk-kb">
-      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
+      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
       <b>${esc(p.titulo)}</b>
       <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
       ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
-    <div class="mk-kac">${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Abrir pasta ›</a>` : '<span>Sem pasta</span>'}${prox}</div></div>`;
+    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
 }
 // mudar de coluna (botão ou arrastar)
 export function mover(id, g) {
@@ -393,39 +393,56 @@ function formPost(P) {
   P.innerHTML = `<button class="voltar" id="mkVoltarF">‹ Marketing</button><h1 class="titulo" style="margin-top:6px">${nova ? (p.status === 'ideia' ? 'Nova <em>ideia</em>' : 'Novo <em>post</em>') : 'Editar <em>post</em>'}</h1>
     ${!nova && base.ajuste && EM_PRODUCAO.includes(base.status) ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
     ${!nova && base.aprovado_em ? `<div class="sub">Aprovado por ${esc(primeiro(nomeT(base.aprovado_por)) || 'administrador')} em ${new Date(base.aprovado_em).toLocaleDateString('pt-BR')}.</div>` : ''}
-    <form class="bloco form" id="mkF">
-      ${campo('titulo', 'Título ou tema do post', p.titulo, 'text', 'required maxlength="160"')}
-      <label class="fl"><span>Descrição</span><textarea name="obs" rows="3" placeholder="Do que se trata o post, o que precisa ter">${esc(p.obs || '')}</textarea></label>
-      <div class="fl"><span>Formato</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <label class="fc" style="margin:2px 0 10px"><input type="checkbox" name="video" ${ehVideo(p) ? 'checked' : ''}><span>Tem gravação de vídeo (roteiro, gravação e edição)</span></label>
+    <div class="seg" id="mkAbasF">${[['geral', 'Geral'], ['briefing', 'Briefing'], ['arquivos', 'Arquivos e postagem']].map(([k, n], i) => `<button type="button" data-aba="${k}" class="${i ? '' : 'on'}">${n}</button>`).join('')}</div>
+    <form class="bloco form" id="mkF" novalidate>
+      <div data-tab="geral">
+      ${campo('titulo', 'Título ou tema do post', p.titulo, 'text', 'maxlength="160"')}
+      <div class="fl"><span>Tipo de conteúdo</span><div class="mk-fmts">${[['1', 'Vídeo', '#8a6520'], ['0', 'Estático', '#2f6b4a']].map(([v, n, c]) => `<label style="--c:${c}"><input type="radio" name="video" value="${v}" ${(ehVideo(p) ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl"><span>Formato no Instagram</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <label class="fl"><span>Etapa</span><select name="status"></select></label>
       <div class="duas-col">${campo('data_prevista', 'Data de publicação', p.data_prevista, 'date')}${campo('hora', 'Horário', p.hora, 'time')}</div>
+      <label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      <div class="duas-col"><label class="fl"><span>Quem grava</span><select name="gravacao_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.gravacao_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}</div>
+      ${p.gravacao_por ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. A pessoa vê no Início do app dela e marca quando gravar.'}</div>` : ''}
       <div class="duas-col">
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
         <label class="fl"><span>Campanha</span><select name="campanha_id"><option value="">Nenhuma</option>${campanhas().filter(c => c.ativo || c.id === p.campanha_id).map(c => `<option value="${c.id}" ${p.campanha_id === c.id ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</select></label>
       </div>
-      <label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      <div class="duas-col"><label class="fl"><span>Quem grava</span><select name="gravacao_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.gravacao_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}</div>
-      ${p.gravacao_por ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. A pessoa vê no Início do app dela e marca quando gravar.'}</div>` : ''}
-      <label class="fl"><span>Legenda</span><textarea name="legenda" rows="5">${esc(p.legenda || '')}</textarea></label>
+      </div>
+      <div data-tab="briefing" hidden>
+      <div class="sub" style="margin-top:0">O que é o post e em que ele deve se inspirar.</div>
+      <label class="fl"><span>Descrição</span><textarea name="obs" rows="6" placeholder="Do que se trata o post, mensagem principal, o que precisa aparecer">${esc(p.obs || '')}</textarea></label>
+      ${campo('link_referencia', 'Post de referência (link)', p.link_referencia, 'url', 'placeholder="https://www.instagram.com/..."')}
+      ${p.link_referencia ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Abrir referência ›</a></div>` : ''}
+      </div>
+      <div data-tab="arquivos" hidden>
+      <div class="sub" style="margin-top:0">Tudo o que a pessoa precisa na hora de postar.</div>
       ${campo('link_arquivo', 'Pasta de arquivos (link da pasta do post no Drive)', p.link_arquivo, 'url', 'placeholder="https://drive.google.com/..."')}
+      ${p.link_arquivo ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Abrir pasta ›</a></div>` : ''}
+      <label class="fl"><span>Legenda</span><textarea name="legenda" rows="5">${esc(p.legenda || '')}</textarea></label>
+      <label class="fl"><span>Como postar</span><textarea name="instrucoes_post" rows="5" placeholder="Ordem das fotos, capa, música, marcações, hashtags, localização, colaboração...">${esc(p.instrucoes_post || '')}</textarea></label>
       <div id="mkPub">${campo('link_post', 'Link do post no Instagram', p.link_post, 'url', 'placeholder="https://www.instagram.com/..."')}
         ${campo('publicado_em', 'Publicado em', p.publicado_em || (p.status === 'publicado' ? hoje() : ''), 'date')}</div>
+      </div>
       <button class="zap grande" type="submit" id="mkSalvar" style="margin-top:16px;width:100%">${nova ? 'Salvar' : 'Salvar alterações'}</button>
       ${!nova ? '<button class="sec grande" type="button" id="mkExcluir" style="margin-top:10px;width:100%">Excluir post</button>' : ''}
       <div class="sub" id="mkMsg"></div>
     </form>`;
   const f = document.getElementById('mkF'), el = f.elements;
   let fmtAnt = p.formato;
+  const vidSel = () => (f.querySelector('[name=video]:checked') || {}).value === '1';
+  const marcarVid = (on) => { const r = f.querySelector(`[name=video][value="${on ? 1 : 0}"]`); if (r) r.checked = true; };
+  const abaF = (k) => { f.querySelectorAll('[data-tab]').forEach(d => { d.hidden = d.dataset.tab !== k; }); document.querySelectorAll('#mkAbasF button').forEach(b => b.classList.toggle('on', b.dataset.aba === k)); };
+  document.querySelectorAll('#mkAbasF button').forEach(b => b.onclick = () => abaF(b.dataset.aba));
   const etapas = () => {
-    const vid = el.video.checked, atual = el.status.value || p.status;
+    const vid = vidSel(), atual = el.status.value || p.status;
     const L = vid ? ETAPAS_VIDEO : ETAPAS_ARTE;
     const sel = L.includes(atual) ? atual : (atual === 'gravacao' || atual === 'edicao' ? 'producao' : L[0]);
     el.status.innerHTML = L.map(k => `<option value="${k}" ${sel === k ? 'selected' : ''} ${pode(k) ? '' : 'disabled'}>${k === 'agendado' ? 'Aprovado e agendado' : stNome({ video: vid }, k)}${pode(k) ? '' : ' (precisa de aprovação)'}</option>`).join('');
   };
   etapas();
-  f.querySelectorAll('[name=formato]').forEach(r => r.addEventListener('change', () => { const novo = f.querySelector('[name=formato]:checked').value; if ((novo === 'reels') !== (fmtAnt === 'reels')) el.video.checked = novo === 'reels'; fmtAnt = novo; etapas(); }));
-  el.video.addEventListener('change', etapas);
+  f.querySelectorAll('[name=formato]').forEach(r => r.addEventListener('change', () => { const novo = f.querySelector('[name=formato]:checked').value; if ((novo === 'reels') !== (fmtAnt === 'reels')) marcarVid(novo === 'reels'); fmtAnt = novo; etapas(); }));
+  f.querySelectorAll('[name=video]').forEach(r => r.addEventListener('change', etapas));
   const mostrar = () => {
     const st = el.status.value, fmt = f.querySelector('[name=formato]:checked').value;
     document.getElementById('mkPub').hidden = st !== 'publicado';
@@ -436,11 +453,11 @@ function formPost(P) {
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
-    const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, video: el.video.checked, data_prevista: v('data_prevista'), hora: v('hora'),
+    const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, video: vidSel(), data_prevista: v('data_prevista'), hora: v('hora'),
       pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_por: v('gravacao_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
-      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs') };
-    if (!reg.titulo) { msg('Escreva o título do post.'); return; }
-    if (reg.status === 'gravacao' && !reg.gravacao_por) { msg('Escolha quem grava antes de mandar para a gravação.'); return; }
+      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs'), link_referencia: v('link_referencia'), instrucoes_post: v('instrucoes_post') };
+    if (!reg.titulo) { abaF('geral'); msg('Escreva o título do post.'); return; }
+    if (reg.status === 'gravacao' && !reg.gravacao_por) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);
     if (!r) return;
