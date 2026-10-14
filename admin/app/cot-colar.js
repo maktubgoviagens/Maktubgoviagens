@@ -167,13 +167,17 @@ function eventos(t) {
   return out.length ? out : ev;
 }
 function trechosGenerico(t) {
+  const PRINT = /^#print/.test(t);
   const ev = eventos(t), ds = datas(t), out = [];
   for (let i = 0; i + 1 < ev.length; i += 2) {
     const dep = ev[i], arr = ev[i + 1], prox = ev[i + 2] ? ev[i + 2].pos : t.length;
     const antes = out.length ? ev[i - 1].fim : 0;
     const dt = ds.filter(d => d.pos >= antes && d.pos < dep.pos).pop() || (out.length ? null : ds.find(d => d.pos < arr.pos));
     const txt = t.slice(dep.fim, arr.pos) + ' ' + t.slice(arr.fim, prox);
-    const st = txt.match(/(\d)\s*(?:parada|conex|escala|stop)/i);
+    // "1 parada" pode vir antes do horário (telas de resultado) ou depois (resumo colado)
+    const rx = /(\d)\s*(?:parada|conex|escala|stop)/i, entre = t.slice(dep.fim, arr.pos), antesTxt = t.slice(antes, dep.pos);
+    const st = PRINT ? (entre.match(rx) || (/direto|sem escala|sem parada/i.test(entre) ? null : antesTxt.match(rx) || (/direto/i.test(antesTxt) ? null : txt.match(rx))))
+      : txt.match(rx) || (/direto|sem escala|sem parada|nonstop/i.test(txt) ? null : antesTxt.match(rx));
     const px = txt.match(/(\d{1,2})\s*(?:pax|pessoas?)\b/i);
     out.push({ pos: dep.pos, fim: arr.fim, ocod: dep.cod, saida: dep.hora, dcod: arr.cod, chegada: arr.hora, data: dt ? dt.iso : (out.length ? out[out.length - 1].data : ''),
       con: st ? +st[1] : 0, pax: px ? px[1] : '' });
@@ -189,9 +193,9 @@ function juntar(ls, t) {
     if (a && a.dcod === l.ocod && l.dcod !== a.ocod && !/volta|retorno/i.test(t.slice(a.fim, l.pos))) {
       let gap = minDe(l.data, l.saida) - minDe(a.dataCheg || a.data, a.chegada);
       if (!l.data || !(a.dataCheg || a.data)) gap = gap < 0 ? gap + 1440 : gap;
-      if (gap >= 0 && gap <= 20 * 60) { a.dcod = l.dcod; a.chegada = l.chegada; a.dataCheg = l.dataCheg || l.data || a.dataCheg; a.con = (a.con || 0) + 1 + (l.con || 0); a.fim = l.fim; return; }
+      if (gap >= 0 && gap <= 20 * 60) { a.dcod = l.dcod; a.chegada = l.chegada; a.dataCheg = l.dataCheg || l.data || a.dataCheg; a.junt = (a.junt || 0) + 1; a.con = Math.max(a.con0 || 0, a.junt); a.fim = l.fim; return; }
     }
-    out.push({ ...l, con: l.con || 0 });
+    out.push({ ...l, con: l.con || 0, con0: l.con || 0 });
   });
   // a mesma viagem copiada duas vezes (resumo e detalhes) fica uma só
   const vistos = [];
@@ -235,4 +239,94 @@ export async function lerColado(texto) {
   if (blocos.length && !opcoes.length) opcoes.push({ nome: '', ...lerBloco(t) });
   opcoes.forEach(o => o.voos.forEach(completarVoo));
   return { cliente: cli ? cli[1].trim() : '', cia, opcoes };
+}
+
+/* ================= leitura de print (OCR) =================
+   O OCR devolve palavras soltas com a posição na tela. Aqui cada horário é casado com o código de aeroporto
+   mais perto dele na imagem (ao lado, acima ou abaixo), e o texto é remontado na ordem de leitura,
+   já no formato "06:20 CNF", para o mesmo leitor de sempre entender. */
+const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+export function textoDoPrint(palavras) {
+  const toks = [];
+  const TEMPO = '([0-9OoIl|]{1,2})[:hH.]([0-9OoIl|]{2})';
+  const num = (s) => s.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1');
+  // "SãoPaulo(VCP" e "(REC)(REC" viram pedaços separados, com a posição proporcional
+  const partes = [];
+  palavras.forEach(w => { const t0 = String(w.t || '').trim(); if (!/[()\s]/.test(t0.slice(1, -1))) { partes.push({ ...w, par: /^[([]/.test(t0.trim()) || /[)\]]$/.test(t0.trim()) }); return; }
+    const L = t0.length, larg = w.b.x1 - w.b.x0; let ini = 0;
+    t0.split(/([()\s]+)/).forEach(pd => { const x0 = w.b.x0 + larg * ini / L; ini += pd.length; if (pd.trim() && !/^[()\s]+$/.test(pd)) partes.push({ t: pd, b: { ...w.b, x0, x1: w.b.x0 + larg * ini / L }, par: /[()]/.test(t0) }); }); });
+  partes.forEach(w => {
+    const t = String(w.t || '').trim().replace(/^[()[\]{}.,;:•*'"“”‘’»«+>-]+|[()[\]{},;:•*'"“”‘’»«+>]+$/g, ''); if (!t) return;
+    const b = w.b, larg = b.x1 - b.x0;
+    let m = t.match(new RegExp(`^([A-Z]{3})${TEMPO}$`));
+    if (m) { const k = 3 / t.length; toks.push({ t: m[1], b: { ...b, x1: b.x0 + larg * k } }, { t: m[2] + ':' + m[3], b: { ...b, x0: b.x0 + larg * k } }); return; }
+    m = t.match(new RegExp(`^${TEMPO}([A-Z]{3})$`));
+    if (m) { const k = (t.length - 3) / t.length; toks.push({ t: m[1] + ':' + m[2], b: { ...b, x1: b.x0 + larg * k } }, { t: m[3], b: { ...b, x0: b.x0 + larg * k } }); return; }
+    // código com letra minúscula ou número no meio ("SlZ", "5LZ") vira maiúsculo
+    const tc = /^[A-Za-z0-9]{3}$/.test(t) && (t.match(/[A-Z]/g) || []).length >= 2 ? t.toUpperCase().replace(/5/g, 'S').replace(/0/g, 'O').replace(/1/g, 'I').replace(/8/g, 'B') : t;
+    toks.push({ t: /^[A-Z]{3}$/.test(tc) ? tc : t, b, par: w.par });
+  });
+  toks.forEach(k => { k.h = k.b.y1 - k.b.y0; k.cx = (k.b.x0 + k.b.x1) / 2; k.cy = (k.b.y0 + k.b.y1) / 2; });
+  // texto logo à esquerda (lado -1) ou à direita (lado 1) do token, na mesma linha da tela
+  const naLinha = (k, lado) => toks.filter(o => o !== k && Math.abs(o.cy - k.cy) < Math.min(o.h, k.h) * 0.6 && (lado < 0 ? o.b.x1 <= k.b.x0 + 2 && k.b.x0 - o.b.x1 < k.h * 6 : o.b.x0 >= k.b.x1 - 2 && o.b.x0 - k.b.x1 < k.h * 3))
+    .sort((a, b) => a.b.x0 - b.b.x0).map(o => o.t).join(' ');
+  // horários: "06:20", "22h45", "O1h45"; duração ("05h20min") e parada ("Parada de 01h10") ficam de fora
+  toks.forEach(k => { const m = k.t.match(new RegExp(`^${TEMPO}$`)); if (!m) return; const hh = +num(m[1]), mm = num(m[2]);
+    if (!/^\d+$/.test(mm) || hh > 23 || +mm > 59) return;
+    if (/(parada|conex\S*|dura\S*|tempo|troca|espera|escala|voo:?)\s*(de)?\s*$/i.test(naLinha(k, -1)) || /^\s*min/i.test(naLinha(k, 1))) return;
+    k.hora = `${String(hh).padStart(2, '0')}:${mm}`; });
+  // "435" / "1015" sem os dois pontos: só quando tem o tamanho dos outros horários da tela (número de voo é pequeno)
+  const hs = toks.filter(k => k.hora).map(k => k.h).sort((a, b) => a - b), H = hs.length ? hs[Math.floor(hs.length / 2)] : 0;
+  toks.forEach((k) => { if (k.hora || k.par || !H || !/^[1-9]\d{2}$|^\d{4}$/.test(k.t) || k.h < H * 0.85) return;
+    if (/(voo|la|g3|ad|n[º°o])\s*$/i.test(naLinha(k, -1)) || /^\s*(pontos|milhas|pts|mil|R\$|BRL)/i.test(naLinha(k, 1))) return; const hh = +k.t.slice(0, -2), mm = k.t.slice(-2); if (hh < 24 && +mm < 60) k.hora = `${String(hh).padStart(2, '0')}:${mm}`; });
+  // códigos de aeroporto; letra trocada pelo OCR (CIG por GIG) é corrigida pela cidade que aparece na tela
+  const tudo = ' ' + semAcento(palavras.map(w => w.t).join(' ')) + ' ';
+  const cidadeNaTela = (c) => { const a = AERO && AERO[c]; if (!a) return false; const cid = semAcento(CIDADE_PT[a[0]] || a[0]); return cid.length > 2 && tudo.includes(cid.split(/[\s/-]/)[0].length > 3 ? cid.split(/[\s/-]/)[0] : cid); };
+  const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const cods = toks.filter(k => !k.hora && /^[A-Z]{3}$/.test(k.t) && !NAO_AER.has(k.t));
+  cods.forEach(k => { if (ehAer(k.t) && cidadeNaTela(k.t)) k.cod = k.t; });
+  const certos = [...new Set(cods.filter(k => k.cod).map(k => k.cod))], dif = (a, b) => [...a].filter((ch, i) => ch !== b[i]).length;
+  cods.forEach(k => { if (k.cod) return;
+    const alt = []; for (let i = 0; i < 3; i++) for (const ch of ABC) { if (ch === k.t[i]) continue; const c = k.t.slice(0, i) + ch + k.t.slice(i + 1); if (ehAer(c) && cidadeNaTela(c)) alt.push(c); }
+    const alt2 = certos.filter(c => dif(c, k.t) <= 2);
+    k.cod = alt.length === 1 ? alt[0] : alt2.length === 1 ? alt2[0] : ehAer(k.t) ? k.t : undefined; });
+  // casa cada horário com o código mais perto na imagem (ao lado ou logo acima/abaixo)
+  const T = toks.filter(k => k.hora), C = toks.filter(k => k.cod), pares = [];
+  T.forEach(t => C.forEach(c => { const hm = (t.h + c.h) / 2, dx = Math.max(0, c.b.x0 - t.b.x1, t.b.x0 - c.b.x1), dy = Math.max(0, c.b.y0 - t.b.y1, t.b.y0 - c.b.y1);
+    const s = (dy < hm * 0.6 ? dx / hm : dx / hm * 0.6) + dy / hm * 1.3; if (s <= 4.5) pares.push({ t, c, s }); }));
+  pares.sort((a, b) => a.s - b.s).forEach(p => { if (p.t.par || p.c.usado) return; p.t.par = p.c; p.c.usado = true; });
+  // "Direto" / "1 parada" vão para o meio da linha do voo mais perto (cada site põe num lugar: acima, abaixo ou no meio)
+  const linhaVoo = T.filter(t => t.par).flatMap(a => T.filter(b => b !== a && b.par && b.b.x0 > a.b.x1 && Math.abs(b.cy - a.cy) < Math.min(a.h, b.h) * 0.6).slice(0, 1).map(b => ({ a, b })));
+  toks.forEach(k => { let fr = null;
+    if (/^direto$/i.test(k.t)) fr = [k];
+    else if (/^\d$/.test(k.t)) { const o = toks.find(o => o !== k && Math.abs(o.cy - k.cy) < Math.min(o.h, k.h) * 0.6 && o.b.x0 >= k.b.x1 - 2 && o.b.x0 - k.b.x1 < k.h * 1.5); if (o && /^(paradas?|conex\S*|escalas?)$/i.test(o.t)) fr = [k, o]; }
+    if (!fr || !linhaVoo.length) return;
+    const cx = fr[0].cx, cy = fr[0].cy, alvo = linhaVoo.map(p => ({ p, d: Math.hypot(cx - (p.a.cx + p.b.cx) / 2, (cy - p.a.cy) * 2) })).sort((x, y) => x.d - y.d)[0];
+    if (alvo.d > alvo.p.a.h * 12) return;
+    const meio = (alvo.p.a.b.x1 + alvo.p.b.b.x0) / 2; fr.forEach((f, i) => { f.cy = alvo.p.a.cy; f.b = { ...f.b, x0: meio + i, x1: meio + i + 1 }; }); });
+  // remonta o texto em linhas, de cima para baixo e da esquerda para a direita
+  const resto = toks.filter(k => !k.usado).sort((a, b) => a.cy - b.cy), linhas = [];
+  resto.forEach(k => { const l = linhas.find(l => Math.abs(l.cy - k.cy) < Math.min(l.h, k.h) * 0.6); if (l) { l.ks.push(k); } else linhas.push({ cy: k.cy, h: k.h, ks: [k] }); });
+  return '#print\n' + linhas.sort((a, b) => a.cy - b.cy).map(l => l.ks.sort((a, b) => a.b.x0 - b.b.x0).map(k => k.hora ? (k.par ? `${k.hora} ${k.par.cod}` : k.hora) : k.t).join(' ')).join('\n');
+}
+
+// junta duas leituras do mesmo print: onde a primeira leu lixo ("F1:05:5LZ") e a segunda leu certo ("11:05", "SLZ"), fica a certa
+const lixo = (t) => !/min\.?$/i.test(t) && /\d[:h]\d/.test(t) && /[A-Za-z]/.test(t.replace(/^[A-Z]{3}|[A-Z]{3}$/g, '').replace(/h/g, ''));
+const util = (t) => /^\(?([A-Z]{3})\)?$/.test(t) || /^[0-9O]{1,2}[:h][0-9O]{2}$/.test(t);
+export function printDuvidoso(ps) { return ps.some(w => lixo(String(w.t || ''))); }
+export const ehLixo = (t) => lixo(String(t || ''));
+export function juntarPalavras(a, b) {
+  const area = (x) => Math.max(0, x.x1 - x.x0) * Math.max(0, x.y1 - x.y0);
+  const sob = (p, q) => { const i = { x0: Math.max(p.x0, q.x0), y0: Math.max(p.y0, q.y0), x1: Math.min(p.x1, q.x1), y1: Math.min(p.y1, q.y1) }; return area(i) / Math.min(area(p), area(q) || 1); };
+  const out = a.slice();
+  b.forEach(w => { const sobre = out.filter(o => sob(o.b, w.b) > 0.3);
+    if (!sobre.length) { out.push(w); return; }
+    if (util(String(w.t).trim()) && sobre.some(o => lixo(String(o.t)))) { sobre.filter(o => lixo(String(o.t))).forEach(o => out.splice(out.indexOf(o), 1)); out.push(w); } });
+  return out;
+}
+// entre várias releituras de um pedaço do print, fica a que mais parece "11:05 SLZ" (a que aparece mais vezes desempata)
+export function melhorReleitura(ops) {
+  const nota = (t) => t.split(/\s+/).filter(Boolean).reduce((a, p) => a + (/^\d{1,2}[:h]\d{2}$/.test(p) ? 2 : /^[A-Z]{3}$/.test(p) && ehAer(p) ? 1 : -1), 0);
+  const vs = ops.map(t => String(t || '').trim()).filter(Boolean); if (!vs.length) return '';
+  return vs.map(t => ({ t, n: nota(t) + vs.filter(o => o === t).length * 0.5 })).sort((a, b) => b.n - a.n)[0].t;
 }

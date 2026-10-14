@@ -2,7 +2,7 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=4';
+import { lerColado, completarVoo, carregarAero, cidadeDe, textoDoPrint, ehLixo, melhorReleitura } from '/admin/app/cot-colar.js?v=5';
 let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
@@ -41,21 +41,43 @@ const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) 
 const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>${ajuda}<br><span style="font-family:monospace;font-size:12px">${exemplo}</span></div>
     <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>
     <label class="sec" style="display:block;text-align:center;width:100%;margin:2px 0 6px;cursor:pointer;padding:10px">Ler print da companhia<input type="file" accept="image/*" multiple id="colaPrint" style="display:none"></label>`;
-/* ler print: o próprio celular lê o texto da imagem (gratuito, sem IA paga) e o texto entra no mesmo "Preencher" */
-let OCR = null;
+/* ler print: o próprio celular lê a imagem (gratuito, sem IA paga). Cada palavra vem com a posição na tela,
+   e o leitor casa horário com aeroporto pela posição. Trechos mal lidos ("F1:05:5LZ") são relidos de perto. */
+let OCR = null, OCR2 = null;
+const carregarTess = () => window.Tesseract ? Promise.resolve() : new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+const abrirImg = (f) => new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = URL.createObjectURL(f); });
+async function lerUmPrint(f) {
+  const im = await abrirImg(f), W0 = im.naturalWidth, H0 = im.naturalHeight;
+  const k = Math.max(1, Math.min(4, 2400 / W0, Math.sqrt(12e6 / (W0 * H0)))), W = Math.round(W0 * k), Hh = Math.round(H0 * k);
+  const cor = document.createElement('canvas'); cor.width = W; cor.height = Hh; cor.getContext('2d').drawImage(im, 0, 0, W, Hh);
+  const cinza = document.createElement('canvas'); cinza.width = W; cinza.height = Hh; const g = cinza.getContext('2d'); g.drawImage(cor, 0, 0);
+  const d = g.getImageData(0, 0, W, Hh), px = d.data; for (let i = 0; i < px.length; i += 4) { const y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; px[i] = px[i + 1] = px[i + 2] = y; } g.putImageData(d, 0, 0);
+  if (!OCR) { OCR = await window.Tesseract.createWorker('por'); await OCR.setParameters({ tessedit_pageseg_mode: '11' }); }
+  const r = await OCR.recognize(cinza, {}, { blocks: true }), ws = [];
+  (r.data.blocks || []).forEach(b => b.paragraphs.forEach(pp => pp.lines.forEach(l => l.words.forEach(x => ws.push({ t: x.text, b: x.bbox })))));
+  for (const w of ws) { if (!ehLixo(w.t)) continue;
+    if (!OCR2) { OCR2 = await window.Tesseract.createWorker('eng'); await OCR2.setParameters({ tessedit_pageseg_mode: '7', tessedit_char_whitelist: '0123456789:hABCDEFGHIJKLMNOPQRSTUVWXYZ ' }); }
+    const ops = [];
+    for (const [pad, esc] of [[10, 1], [20, 2], [6, 3]]) { const cw = w.b.x1 - w.b.x0 + 2 * pad, ch = w.b.y1 - w.b.y0 + 2 * pad, cc = document.createElement('canvas'); cc.width = cw * esc; cc.height = ch * esc;
+      const gg = cc.getContext('2d'); gg.fillStyle = '#fff'; gg.fillRect(0, 0, cc.width, cc.height); gg.drawImage(cor, w.b.x0 - pad, w.b.y0 - pad, cw, ch, 0, 0, cc.width, cc.height);
+      ops.push((await OCR2.recognize(cc)).data.text); }
+    const t = melhorReleitura(ops); if (t) w.t = t; }
+  URL.revokeObjectURL(im.src);
+  return { texto: textoDoPrint(ws), pequeno: W0 < 600 };
+}
 async function lerPrints(arquivos) {
-  if (!window.Tesseract) await new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
-  if (!OCR) OCR = await window.Tesseract.createWorker('por');
-  let txt = ''; for (const f of arquivos) txt += (await OCR.recognize(f)).data.text + '\n';
-  return txt;
+  await carregarTess(); const out = [];
+  for (const f of arquivos) out.push(await lerUmPrint(f));
+  return { texto: out.map(o => o.texto).join('\n'), pequeno: out.some(o => o.pequeno) };
 }
 function ligarPrint(P, X) {
   const inp = P.querySelector('#colaPrint'); if (!inp) return;
   inp.onchange = async () => {
     const fs = [...inp.files].slice(0, 4); inp.value = ''; if (!fs.length) return;
     X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
-    try { const txt = await lerPrints(fs); const ta = P.querySelector('#colaTxt'); if (ta) ta.value = txt.trim();
-      const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click(); }
+    try { const lido = await lerPrints(fs); const ta = P.querySelector('#colaTxt'); if (ta) ta.value = lido.texto.trim();
+      const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+      if (lido.pequeno) setTimeout(() => X.aviso('Print pequeno ou recortado: confira os voos. Print da tela inteira lê melhor.'), 1800); }
     catch (e) { X.aviso('Não consegui ler o print. Confira a internet e tente de novo, ou copie o texto do print e cole.'); }
   };
 }
