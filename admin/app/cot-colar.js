@@ -204,7 +204,7 @@ function lerBloco(t) {
   const ls = [trechosAzul, trechosSmiles, trechosGoogle].map(f => f(t)).find(x => x.length) || trechosGenerico(t);
   const voos = juntar(ls, t).map((v, i) => ({ rotulo: i === 0 ? 'Ida' : i === 1 ? 'Volta' : 'Trecho ' + (i + 1), data: v.data || '',
     ocod: v.ocod, onome: '', saida: v.saida, dcod: v.dcod, dnome: '', chegada: v.chegada,
-    mais1: !!(v.data && v.dataCheg && v.dataCheg > v.data), tipo: !v.con ? 'Direto' : v.con === 1 ? '1 conexão' : '2 conexões', duracao: '', pax: v.pax || '' }));
+    mais1: v.data && v.dataCheg ? v.dataCheg > v.data : !!(v.saida && v.chegada && v.chegada < v.saida), tipo: !v.con ? 'Direto' : v.con === 1 ? '1 conexão' : '2 conexões', duracao: '', pax: v.pax || '' }));
   // valores em reais: o do site (subtotal/total/site/de) e o da Maktub (maktub/por/nosso). Pontos e milhas não contam.
   const N = '(?:R\\$|BRL)?\\s*(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)(?![\\d.,]|\\s*(?:pontos|milhas|pts|mil\\b))';
   let site = '', mk = '', m;
