@@ -40,7 +40,7 @@ const ABERTOS = new Set();
 const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) ? 'open' : ''} style="margin-top:8px;border-top:1px solid var(--linha);padding-top:6px"><summary class="sub" style="cursor:pointer;margin:0">${titulo}</summary>${corpo}</details>`;
 const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>${ajuda}<br><span style="font-family:monospace;font-size:12px">${exemplo}</span></div>
     <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>
-    <label class="sec" style="display:block;text-align:center;width:100%;margin:2px 0 6px;cursor:pointer;padding:10px">Ler print da companhia<input type="file" accept="image/*" multiple id="colaPrint" style="display:none"></label>`;
+    <div class="botoes4" style="margin:2px 0 6px"><button type="button" class="zap" id="colaImg">Colar print</button><label class="sec" style="display:block;text-align:center;cursor:pointer;padding:10px">Escolher da galeria<input type="file" accept="image/*" multiple id="colaPrint" style="display:none"></label></div>`;
 /* ler print: os prints vão para a função ler-print do Supabase (Claude), que devolve os voos.
    Os voos voltam no formato curto ("02/12/2026 GIG 12:20 SCL 17:00 direto") e entram pelo mesmo "Preencher" de sempre. */
 function textoDosVoos(d) {
@@ -50,21 +50,38 @@ function textoDosVoos(d) {
   if (d.valor_site_reais) ls.push('site ' + Number(d.valor_site_reais).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
   return ls.filter(Boolean).join('\n');
 }
+async function lerImagens(P, X, fs) {
+  fs = fs.slice(0, 4); if (!fs.length) return;
+  X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
+  const imagens = (await Promise.all(fs.map(f => reduzir(f, 2400, 0.88)))).filter(Boolean);
+  const { data, error } = await X.sb.functions.invoke('ler-print', { body: { imagens } });
+  let msg = data && data.erro;
+  if (!msg && error && error.context && error.context.json) { try { msg = (await error.context.json()).erro; } catch (e) { /* sem corpo */ } }
+  if (!msg && error && error.context && error.context.status === 404) msg = 'A função ler-print ainda não está publicada no Supabase.';
+  if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'); return; }
+  if (!(data.voos || []).length) { X.aviso('Não achei voos nesse print. Confira se aparecem os horários e os aeroportos.'); return; }
+  const ta = P.querySelector('#colaTxt'); if (ta) ta.value = textoDosVoos(data);
+  const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+}
+const imgsDoClipboard = (dt) => [...((dt && dt.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
+let colarGlobal = null;
 function ligarPrint(P, X) {
   const inp = P.querySelector('#colaPrint'); if (!inp) return;
-  inp.onchange = async () => {
-    const fs = [...inp.files].slice(0, 4); inp.value = ''; if (!fs.length) return;
-    X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
-    const imagens = (await Promise.all(fs.map(f => reduzir(f, 2400, 0.88)))).filter(Boolean);
-    const { data, error } = await X.sb.functions.invoke('ler-print', { body: { imagens } });
-    let msg = data && data.erro;
-    if (!msg && error && error.context && error.context.json) { try { msg = (await error.context.json()).erro; } catch (e) { /* sem corpo */ } }
-    if (!msg && error && error.context && error.context.status === 404) msg = 'A função ler-print ainda não está publicada no Supabase.';
-    if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'); return; }
-    if (!(data.voos || []).length) { X.aviso('Não achei voos nesse print. Confira se aparecem os horários e os aeroportos.'); return; }
-    const ta = P.querySelector('#colaTxt'); if (ta) ta.value = textoDosVoos(data);
-    const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+  inp.onchange = () => { const fs = [...inp.files]; inp.value = ''; lerImagens(P, X, fs); };
+  // botão "Colar print": lê a imagem copiada (print da tela) direto da área de transferência
+  const bt = P.querySelector('#colaImg');
+  if (bt) bt.onclick = async () => {
+    if (!navigator.clipboard || !navigator.clipboard.read) { X.aviso('Toque e segure na caixa acima e escolha Colar.'); return; }
+    try { const its = await navigator.clipboard.read(), fs = [];
+      for (const it of its) { const t = it.types.find(x => /^image\//.test(x)); if (t) { const b = await it.getType(t); fs.push(new File([b], 'print.' + t.split('/')[1], { type: t })); } }
+      if (fs.length) lerImagens(P, X, fs); else X.aviso('Não tem imagem copiada. Tire o print, toque nele e escolha Copiar.');
+    } catch (e) { X.aviso('O celular não liberou a colagem. Toque e segure na caixa acima e escolha Colar.'); }
   };
+  // colar na caixa de texto (ou Ctrl+V no computador) com uma imagem copiada também lê o print
+  if (colarGlobal) document.removeEventListener('paste', colarGlobal);
+  colarGlobal = (e) => { if (!document.body.contains(inp)) { document.removeEventListener('paste', colarGlobal); colarGlobal = null; return; }
+    const fs = imgsDoClipboard(e.clipboardData); if (!fs.length) return; e.preventDefault(); lerImagens(P, X, fs); };
+  document.addEventListener('paste', colarGlobal);
 }
 const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões' };
 
@@ -687,7 +704,7 @@ function editorRapida(P, X) {
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
     <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      ${caixaColar('Cole a tela da companhia ou toque em Ler print. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
+      ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
