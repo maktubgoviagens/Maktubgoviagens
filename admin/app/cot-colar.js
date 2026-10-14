@@ -123,9 +123,9 @@ function trechosSmiles(t) {
   const out = []; for (let i = 0; i + 1 < ev.length; i += 2) out.push({ pos: ev[i].pos, fim: ev[i + 1].fim, ocod: ev[i].cod, data: ev[i].data, saida: ev[i].hora, dcod: ev[i + 1].cod, dataCheg: ev[i + 1].data, chegada: ev[i + 1].hora });
   return out;
 }
-// Google Flights: "06:20Aeroporto Internacional ... (CNF)", horário e aeroporto na mesma linha
+// Google Flights: "06:20Aeroporto Internacional ... (CNF)", horário e aeroporto na mesma linha (no print o nome pode quebrar em até 3 linhas)
 function trechosGoogle(t) {
-  const ev = []; let m; const r = /^[ \t]*(\d{1,2}):(\d{2})(?:\s*\+(\d))?[ \t]*(?:[^\n\d][^\n]*)?\(([A-Z]{3})\)[ \t]*$/gm;
+  const ev = []; let m; const r = /^[ \t]*(\d{1,2}):(\d{2})(?:\s*\+(\d))?[ \t]*(?:[^\n\d][^\n]*?)?(?:\n[ \t]*(?:[^\n\d][^\n]*?)?){0,4}?\(([A-Z]{3})\)[ \t]*$/gm;
   while ((m = r.exec(t))) if (ehAer(m[4])) ev.push({ pos: m.index, fim: m.index + m[0].length, cod: m[4], hora: hora(m[1], m[2]), mais: +(m[3] || 0) });
   if (ev.length < 2) return [];
   const ds = datas(t), dataAntes = (p) => (ds.filter(d => d.pos < p).pop() || {}).iso || '';

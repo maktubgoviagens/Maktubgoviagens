@@ -2,7 +2,7 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=3';
+import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=4';
 let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
@@ -39,7 +39,26 @@ const NOVO_RAP = () => { const p = padraoRap(); return { modelo: 'rapida', marca
 const ABERTOS = new Set();
 const dobra = (id, titulo, corpo) => `<details data-d="${id}" ${ABERTOS.has(id) ? 'open' : ''} style="margin-top:8px;border-top:1px solid var(--linha);padding-top:6px"><summary class="sub" style="cursor:pointer;margin:0">${titulo}</summary>${corpo}</details>`;
 const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>${ajuda}<br><span style="font-family:monospace;font-size:12px">${exemplo}</span></div>
-    <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>`;
+    <label class="fl"><textarea id="colaTxt" rows="4" placeholder="Cole aqui a tela da companhia"></textarea></label>
+    <label class="sec" style="display:block;text-align:center;width:100%;margin:2px 0 6px;cursor:pointer;padding:10px">Ler print da companhia<input type="file" accept="image/*" multiple id="colaPrint" style="display:none"></label>`;
+/* ler print: o próprio celular lê o texto da imagem (gratuito, sem IA paga) e o texto entra no mesmo "Preencher" */
+let OCR = null;
+async function lerPrints(arquivos) {
+  if (!window.Tesseract) await new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+  if (!OCR) OCR = await window.Tesseract.createWorker('por');
+  let txt = ''; for (const f of arquivos) txt += (await OCR.recognize(f)).data.text + '\n';
+  return txt;
+}
+function ligarPrint(P, X) {
+  const inp = P.querySelector('#colaPrint'); if (!inp) return;
+  inp.onchange = async () => {
+    const fs = [...inp.files].slice(0, 4); inp.value = ''; if (!fs.length) return;
+    X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
+    try { const txt = await lerPrints(fs); const ta = P.querySelector('#colaTxt'); if (ta) ta.value = txt.trim();
+      const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click(); }
+    catch (e) { X.aviso('Não consegui ler o print. Confira a internet e tente de novo, ou copie o texto do print e cole.'); }
+  };
+}
 const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões' };
 
 /* ================= telas ================= */
@@ -115,6 +134,7 @@ function editor(P, X) {
     if (m) { mais(m.dataset.mais); editor(P, X); }
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
   });
+  ligarPrint(P, X);
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
   $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); };
   $('salvarC').onclick = () => salvar(X);
@@ -660,7 +680,7 @@ function editorRapida(P, X) {
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
     <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
-      ${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
+      ${caixaColar('Cole a tela da companhia ou toque em Ler print. Voos, companhia e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
@@ -699,6 +719,7 @@ function editorRapida(P, X) {
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
+  ligarPrint(P, X);
   $('rpColar').onclick = async () => {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
