@@ -59,14 +59,28 @@ async function lerImagens(P, X, fs) {
   fs = fs.slice(0, 4); if (!fs.length) return;
   X.aviso(fs.length > 1 ? `Lendo ${fs.length} prints...` : 'Lendo o print...');
   const imagens = (await Promise.all(fs.map(f => reduzir(f, 2400, 0.88)))).filter(Boolean);
-  const { data, error } = await X.sb.functions.invoke('ler-print', { body: { imagens } });
-  let msg = data && data.erro;
-  if (!msg && error && error.context && error.context.json) { try { msg = (await error.context.json()).erro; } catch (e) { /* sem corpo */ } }
-  if (!msg && error && error.context && error.context.status === 404) msg = 'A função ler-print ainda não está publicada no Supabase.';
-  if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'); return; }
-  if (!(data.voos || []).length) { X.aviso('Não achei voos nesse print. Confira se aparecem os horários e os aeroportos.'); return; }
-  const ta = P.querySelector('#colaTxt'); if (ta) ta.value = textoDosVoos(data);
-  const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+  // vários prints na rápida ou na corporativa: cada print é lido à parte (ao mesmo tempo) e entra como uma colagem,
+  // para o app saber que são cotações diferentes e separar as viagens. No Maktub Go os prints seguem juntos.
+  const lotes = imagens.length > 1 && S && S.modelo !== 'go' ? imagens.map(i => [i]) : [imagens];
+  const res = await Promise.all(lotes.map(l => X.sb.functions.invoke('ler-print', { body: { imagens: l } })));
+  let ok = 0, falha = '';
+  for (const { data, error } of res) {
+    let msg = data && data.erro;
+    if (!msg && error && error.context && error.context.json) { try { msg = (await error.context.json()).erro; } catch (e) { /* sem corpo */ } }
+    if (!msg && error && error.context && error.context.status === 404) msg = 'A função ler-print ainda não está publicada no Supabase.';
+    if (!data || !data.ok) { falha = msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'; continue; }
+    if (!(data.voos || []).length) { falha = 'Não achei voos em um dos prints. Confira se aparecem os horários e os aeroportos.'; continue; }
+    const ta = P.querySelector('#colaTxt'); if (!ta) break;
+    ta.value = textoDosVoos(data); await preencher(P, X); ok++;
+  }
+  if (!ok) X.aviso(falha);
+  else if (ok < lotes.length) X.aviso(`${ok} de ${lotes.length} prints entraram na cotação. ${falha}`);
+}
+// o mesmo "Preencher" do botão, esperando terminar (para os prints entrarem um depois do outro)
+async function preencher(P, X) {
+  if (S && S.modelo === 'rapida') { const b = P.querySelector('#rpColar'); if (b && b.onclick) await b.onclick(); return; }
+  if (S && S.modelo === 'go') return colarGo(P, X, 'tudo');
+  return colar(P, X, 'tudo');
 }
 const imgsDoClipboard = (dt) => [...((dt && dt.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
 let colarGlobal = null;
@@ -387,14 +401,24 @@ async function colar(P, X, modo) {
   const ops = modo === 'nova' && (S.voos || []).some(v => v.ocod) ? r.opcoes.map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por })) : null;
   if (ops) { S.extras = S.extras.concat(ops).slice(0, 2); }
   else {
-    const [p1, ...resto] = r.opcoes;
-    S.voos = p1.voos.length ? p1.voos : S.voos; S.de = p1.de || S.de; S.por = p1.por || S.por; S.nome1 = p1.nome || S.nome1 || '';
-    S.extras = resto.slice(0, 2).map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por }));
+    const [p1, ...resto] = r.opcoes, somando = (S.voos || []).some(v => v.ocod);
+    if (somando && r.opcoes.length === 1) {
+      // já tem voo: o que foi colado é mais um trecho ou outra viagem da mesma cotação
+      p1.voos.forEach(v => completarVoo(v)); const novos = somarVoos(S.voos, p1.voos); rotular(S.voos);
+      if (novos) { if (p1.de) S.de = somaValor(S.de, p1.de); if (p1.por) S.por = somaValor(S.por, p1.por); }
+      if (S.rota === S._rotaAuto) S.rota = '';
+    } else {
+      if (p1.voos.length) { S.voos = []; somarVoos(S.voos, p1.voos); } S.de = p1.de || S.de; S.por = p1.por || S.por; S.nome1 = p1.nome || S.nome1 || '';
+      S.extras = resto.slice(0, 2).map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por }));
+      if (S.rota === S._rotaAuto) S.rota = '';
+      if (S.voos.length) rotular(S.voos);
+    }
+    X.$('colaTxt').value = '';
   }
   if (r.cliente && !S.passageiro) S.passageiro = r.cliente;
   if (r.cia && !S.cia) S.cia = r.cia;
   const v0 = (S.voos || [])[0];
-  if (v0 && !S.rota) { const a = cidadeDe(v0.ocod) || v0.ocod, b = cidadeDe(v0.dcod) || v0.dcod; S.rota = `${a} ${S.voos.length > 1 ? '⇄' : '→'} ${b}`; }
+  if (v0 && !S.rota) { S.rota = rotaDe(S.voos); S._rotaAuto = S.rota; }
   if (v0 && !S.destino) S.destino = cidadeDe(v0.dcod) || '';
   editor(P, X);
   const faltaPor = [S.por].concat(S.extras.map(o => o.por)).some(x => !x);
@@ -620,7 +644,7 @@ function gerarCorp() {
   const multi = OPS.length > 1, GO = S.marca === 'Maktub Go';
   const voos = OPS[0].voos;
   const ida = voos[0], vol = voos[1];
-  const trecho = ida ? `${(ida.ocod || '').toUpperCase()} ${vol ? '⇄' : '→'} ${(ida.dcod || '').toUpperCase()}` : '';
+  const nvg = nViagens(voos), trecho = nvg > 1 ? nvg + ' viagens' : ida ? `${(ida.ocod || '').toUpperCase()} ${vol ? '⇄' : '→'} ${(ida.dcod || '').toUpperCase()}` : '';
   const cidade = (v, q) => (q === 'o' ? v.onome : v.dnome) || '';
   const titDe = (vs) => { const a = vs[0], b = vs[1]; return S.rota ? h(S.rota).toUpperCase() : a ? `${h(a.onome).toUpperCase() || h(a.ocod)} ${b ? '⇄' : '→'} ${h(a.dnome).toUpperCase() || h(a.dcod)}` : 'Cotação'; };
   const tit = S.rota ? h(S.rota).toUpperCase() : ida ? `${h(cidade(ida, 'o')).toUpperCase() || h(ida.ocod)} ${vol ? '⇄' : '→'} ${h(cidade(ida, 'd')).toUpperCase() || h(ida.dcod)}` : 'Cotação';
@@ -657,7 +681,7 @@ ${S.passageiro ? `<div class="ola"><b>${h(String(S.passageiro).trim().split(/\s+
 ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotação válida somente em ${val}. Após essa data, os valores precisam ser consultados novamente.</div></div>` : ''}
 ${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
-  return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
+  return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), nViagens(vs) > 1 ? nViagens(vs) + ' viagens' : b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
 ${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}${v.mais1 ? '<sup style="font-size:13px;color:var(--d);margin-left:3px">+1</sup>' : ''}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
 ${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
 ${String(S.obs || '').trim() ? `<div class="caixa obs"><div class="rot">Observação</div><div style="font-weight:700;color:var(--v)">${h(String(S.obs).trim()).replace(/\n/g, '<br>')}</div></div>` : ''}
@@ -684,12 +708,61 @@ const rapVoos = () => (S.voos || []).filter(v => v.ocod);
 const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '', pax: '' });
 // passageiros de um trecho só aparecem quando são diferentes do total da cotação
 const paxTrecho = (v, total) => { const n = parseInt(v && v.pax) || 0; return n > 0 && n !== total ? n : 0; };
-// rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N. O que foi digitado à mão fica.
-function rotular(vs) {
-  const ori = vs[0] && vs[0].ocod, voltas = vs.filter((v, i) => i && ori && v.dcod === ori), nv = voltas.length;
-  vs.forEach((v, i) => { if (v._rotM) return; v.rotulo = i === 0 ? 'Ida' : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : vs.length === 2 ? 'Volta' : 'Trecho ' + (i + 1); });
+/* vários prints ou colagens na mesma cotação: os voos novos somam aos que já estão, em ordem de data,
+   e o app separa em viagens. Cada viagem sai de uma cidade e volta para ela (GIG e SDU contam como Rio).
+   Trecho que não continua nenhuma viagem aberta, pela cidade e pela data, começa uma viagem nova.
+   Cada colagem é um lote: um lote que já tem ida e volta é sempre uma viagem nova; um lote só de ida
+   (ou só de volta) pode continuar a viagem de outra colagem, como a volta colada depois da ida. */
+const cidCod = (c) => String(cidadeDe(c) || c || '').toLowerCase();
+const diasEntre = (a, b) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(a || '') || !/^\d{4}-\d{2}-\d{2}$/.test(b || '')) return 0; return Math.abs((new Date(b) - new Date(a)) / 864e5); };
+const perto = (t, v) => diasEntre(t.ult, v.data) <= 60;
+function viagens(vs) {
+  const vg = [], fechado = {};
+  const lotes = {}; vs.forEach(v => { if (v._lote) (lotes[v._lote] = lotes[v._lote] || []).push(v); });
+  Object.keys(lotes).forEach(k => { const l = lotes[k], o0 = cidCod(l[0].ocod); fechado[k] = l.some((v, i) => i && cidCod(v.dcod) === o0); });
+  vs.forEach(v => {
+    const o = cidCod(v.ocod), d = cidCod(v.dcod);
+    const pode = (t) => perto(t, v) && (!v._lote || t.lotes.has(v._lote) || !fechado[v._lote]);
+    let t = vg.find(t => !t.fechada && t.loc === o && pode(t)) // continua de onde parou (volta ou trecho seguinte)
+      || vg.find(t => !t.fechada && t.origem === d && t.locais.length && pode(t)) // volta saindo de outra cidade (entra por Lisboa, volta por Madri)
+      || vg.find(t => t.fechada && t.origem === d && t.locais.includes(o) && pode(t)); // outra volta da mesma viagem, em outra data
+    if (!t) { t = { origem: o, locais: [], loc: '', fechada: false, ult: '', voos: [], lotes: new Set() }; vg.push(t); }
+    t.voos.push(v); t.locais.push(d); t.loc = d; if (v.data) t.ult = v.data; if (d === t.origem) t.fechada = true; if (v._lote) t.lotes.add(v._lote);
+  });
+  return vg;
 }
-function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
+// rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N.
+// Com mais de uma viagem na cotação: "Viagem 1 · Ida", "Viagem 2 · Volta". O que foi digitado à mão fica.
+function rotular(vs) {
+  const vg = viagens(vs), multi = vg.length > 1;
+  vg.forEach((t, k) => {
+    const voltas = t.voos.filter((v, i) => i && cidCod(v.dcod) === t.origem), nv = voltas.length;
+    t.voos.forEach((v, i) => { if (v._rotM) return;
+      const r = i === 0 ? 'Ida' : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : 'Trecho ' + (i + 1);
+      v.rotulo = multi ? `Viagem ${k + 1} · ${r}` : r; });
+  });
+}
+const chaveVoo = (v) => [v.data, String(v.ocod || '').toUpperCase(), v.saida, String(v.dcod || '').toUpperCase()].join('|');
+const ordemVoo = (v) => (v.data || '9999-99-99') + ' ' + (v.saida || '99:99');
+// junta os voos novos aos que já estão (sem repetir o mesmo voo), em ordem de data. Devolve quantos entraram.
+function somarVoos(atuais, novos) {
+  const tem = new Set(atuais.filter(v => v.ocod).map(chaveVoo)), lote = 'L' + Date.now(); let n = 0;
+  novos.forEach(v => { const c = chaveVoo(v); if (!tem.has(c)) { tem.add(c); if (v.ocod) v._lote = lote; atuais.push(v); n++; } });
+  const ok = atuais.filter(v => v.ocod).sort((a, b) => ordemVoo(a).localeCompare(ordemVoo(b))), resto = atuais.filter(v => !v.ocod);
+  atuais.splice(0, atuais.length, ...ok, ...resto);
+  return n;
+}
+const somaValor = (a, b) => { const t = num(a) + num(b); return t ? t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''; };
+function rotaDe(vs) {
+  vs = vs.filter(v => v.ocod); if (!vs.length) return '';
+  const nome = (c, n) => cidadeDe(c) || n || c, vg = viagens(vs);
+  if (vg.length > 1) return vg.map(t => { const v = t.voos[0]; return `${nome(v.ocod, v.onome)} ${t.voos.length > 1 ? '⇄' : '→'} ${nome(v.dcod, v.dnome)}`; }).join(' · ');
+  const v = vs[0]; return `${nome(v.ocod, v.onome)} ${vs.length > 1 ? '⇄' : '→'} ${nome(v.dcod, v.dnome)}`;
+}
+function rapRota() { return rotaDe(rapVoos()); }
+// destino de cada viagem (a cidade mais longe antes de voltar) e quantas viagens a cotação tem
+function destinosDe(vs) { return viagens(vs.filter(v => v.ocod)).map(t => { const ida = t.voos.filter(v => cidCod(v.dcod) !== t.origem), v = ida[ida.length - 1] || t.voos[0]; return cidadeDe(v.dcod) || v.dnome || v.dcod; }); }
+const nViagens = (vs) => viagens(vs.filter(v => v.ocod)).length;
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
 function rapParaCorp() {
   const v0 = rapVoos()[0];
@@ -753,11 +826,24 @@ function editorRapida(P, X) {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
+    const somando = rapVoos().length > 0; let novos = 0;
+    if (o.voos.length) { o.voos.forEach(v => completarVoo(v));
+      if (!somando) S.voos = []; novos = somarVoos(S.voos, o.voos);
+      rotular(S.voos);
       const mx = Math.max(0, ...S.voos.map(v => parseInt(v.pax) || 0)); if (mx > (parseInt(S.pessoas) || 1)) S.pessoas = String(mx); }
-    if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
+    // valores: na primeira colagem entram como vieram; nas seguintes, somam ao total (só se entrou voo novo)
+    if (somando) { if (novos) { if (o.de) S.de = somaValor(S.de, o.de); if (o.por) S.por = somaValor(S.por, o.por); } }
+    else { if (o.de) S.de = o.de; if (o.por) S.por = o.por; }
+    if (r.cia) S.cia = !somando || !S.cia ? r.cia : S.cia.toLowerCase().includes(r.cia.toLowerCase()) ? S.cia : S.cia + ' e ' + r.cia;
+    if (r.cliente && !S.cliente) S.cliente = r.cliente;
     if (!o.voos.length) ABERTOS.add('rpVoosD');
-    S.eco = undefined; editorRapida(P, X); X.aviso(!o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".' : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
+    $('colaTxt').value = '';
+    const nv = viagens(rapVoos()).length;
+    const msg = !o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".'
+      : somando && !novos ? 'Esses voos já estavam na cotação. Nada mudou.'
+      : somando ? `${novos === 1 ? '1 voo somado' : novos + ' voos somados'} aos que já estavam${nv > 1 ? ` (${nv} viagens)` : ''}. Para recomeçar, toque em tirar voos.`
+      : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.';
+    S.eco = undefined; editorRapida(P, X); X.aviso(msg);
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
@@ -807,15 +893,15 @@ async function imagemRapida() {
   g.textAlign = 'right'; g.font = sans(20, '400'); g.fillText(EMAIL, W - PAD, 76); g.font = sans(24, '700'); g.fillText(ZAP_TXT, W - PAD, 112); g.textAlign = 'left';
   // faixa: passageiro, trecho e validade
   let y = CAB; const FX = 110; g.fillStyle = VERDE2; g.fillRect(0, y, W, FX);
-  const v0 = vs[0], trecho = v0 ? `${String(v0.ocod).toUpperCase()} ${vs.length > 1 ? '⇄' : '→'} ${String(v0.dcod).toUpperCase()}` : '';
+  const v0 = vs[0], nvg = nViagens(vs), trecho = nvg > 1 ? nvg + ' viagens' : v0 ? `${String(v0.ocod).toUpperCase()} ${vs.length > 1 ? '⇄' : '→'} ${String(v0.dcod).toUpperCase()}` : '';
   const cols = [['PASSAGEIRO', `${S.cliente ? String(S.cliente).trim() + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}`], ...(trecho ? [['TRECHO', trecho]] : []), ['VALIDADE', new Date().toLocaleDateString('pt-BR')]];
   const pesos = cols.length === 3 ? [0.48, 0.27, 0.25] : [0.6, 0.4], cx = pesos.map((_, i) => PAD + pesos.slice(0, i).reduce((a, b) => a + b, 0) * (W - PAD * 2));
   cols.forEach(([l, v], i) => { const x = cx[i], cw = pesos[i] * (W - PAD * 2); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(l, x, y + 44, 2); g.font = sans(24, '700'); g.fillStyle = '#fff'; g.fillText(corta(v, cw - 16), x, y + 82); });
   y += FX + 50;
   // título com a rota
   if (v0) {
-    g.font = sans(40, '700'); g.fillStyle = VERDE; g.fillText(corta(rapRota().toUpperCase(), W - PAD * 2), PAD, y); y += 38;
-    g.font = sans(22, '400'); g.fillStyle = CINZA; g.fillText([S.cia, vs.length > 1 ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · '), PAD, y); y += 34;
+    g.font = sans(40, '700'); g.fillStyle = VERDE; g.fillText(corta((nvg > 1 ? destinosDe(vs).join(' · ') : rapRota()).toUpperCase(), W - PAD * 2), PAD, y); y += 38;
+    g.font = sans(22, '400'); g.fillStyle = CINZA; g.fillText([S.cia, nvg > 1 ? nvg + ' viagens' : vs.length > 1 ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · '), PAD, y); y += 34;
     // cartões dos voos
     vs.forEach(v => {
       const CH = 196; caixa(PAD, y, W - PAD * 2, CH, 12, '#fff', LINHA);
