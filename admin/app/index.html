@@ -281,7 +281,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .resq button.f{border-color:var(--ok);color:var(--ok)}
 .resq button.n{border-color:rgba(160,86,31,.45);color:var(--alerta)}
 .tag.ok{border-color:rgba(47,107,74,.45);color:var(--ok)}
-.kanban{display:flex;gap:10px;overflow-x:auto;touch-action:pan-y;scroll-snap-type:x mandatory;scroll-padding-left:16px;margin:0 -16px;padding:2px 16px 10px;scrollbar-width:none}
+.kanban{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;scroll-snap-type:x mandatory;scroll-padding-left:16px;margin:0 -16px;padding:2px 16px 10px;scrollbar-width:none}
 .kanban::-webkit-scrollbar{display:none}
 @media (hover:hover) and (pointer:fine){
 .kanban{cursor:grab;scrollbar-width:thin;scrollbar-color:var(--dourado) transparent}
@@ -3888,7 +3888,7 @@ function htmlClarity(dias) {
     ${Object.keys(pags).length ? `<section class="bloco"><h2>Páginas mais visitadas (Clarity)</h2>${barras(Object.entries(pags).sort((a, b) => b[1] - a[1]).slice(0, 8))}</section>` : ''}`;
 }
 /* Kanban:
-   - deslizar o funil para o lado (dedo ou mouse) passa de etapa em etapa;
+   - deslizar o funil para o lado passa de etapa em etapa (no celular, rolagem nativa; no computador, arrastando com o mouse);
    - arrastar um card até outra coluna muda a etapa dele. No celular, segura o card um instante e arrasta;
      no computador, clica no card e arrasta. */
 (() => {
@@ -3950,6 +3950,8 @@ function htmlClarity(dias) {
     const dx = px - x0, dy = py - y0;
     if (!moveu && Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
     if (segura) { clearTimeout(segura); segura = null; card = null; }
+    // no celular o deslizar para o lado é a rolagem nativa do aparelho (mais fluida); o app só cuida do mouse
+    if (tipo !== 'mouse') { kb = null; card = null; return; }
     if (card && tipo === 'mouse') { moveu = true; pegarCard(); e.preventDefault(); return; }
     if (!moveu && Math.abs(dx) < 8) return;
     if (!moveu) { moveu = true; kb.classList.add('arrastando'); }
