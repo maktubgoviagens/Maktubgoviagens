@@ -295,7 +295,7 @@ function vProducao() {
 }
 function kcard(p) {
   const { esc } = X, g = grupo(p), quando = diaPost(p);
-  const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? `<button data-mover="${p.id}" data-g="publicado">Publicado</button>` : '';
+  const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? (acao(p) || `<button data-mover="${p.id}" data-g="publicado">Publicado</button>`) : '';
   return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:4px solid ${corP(p)}"><button data-p="${p.id}" class="mk-kb">
       <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
       <span class="mk-conta">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
@@ -377,7 +377,7 @@ function vEstrategia() {
   const camp = campanhas().sort((a, b) => String(b.inicio || '').localeCompare(String(a.inicio || '')));
   const ativa = (c) => c.ativo && (!c.fim || c.fim >= hoje());
   return `
-    ${X.ADMIN ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação da coordenação do marketing ou dos sócios antes de ser agendado ou publicado</span></label></section>` : ''}
+    ${X.COORD ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação da coordenação do marketing ou dos sócios antes de ser agendado ou publicado</span></label></section>` : ''}
     <div class="secao">Metas do mês</div>
     <div class="mesnav" id="mkMes"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="numeros" style="margin-top:8px">

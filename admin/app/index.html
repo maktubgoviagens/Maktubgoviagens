@@ -374,7 +374,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=7';
+import * as MKT from '/admin/app/marketing.js?v=8';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
@@ -565,7 +565,7 @@ const PERMS = [
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
-  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Aprova posts e vídeos, vê o painel e o calendário e escolhe quem grava cada vídeo', 0]]],
+  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
