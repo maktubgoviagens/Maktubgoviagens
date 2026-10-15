@@ -3,6 +3,8 @@
 // Regime de competência: venda, custo, imposto e comissão contam no mês da venda.
 // Quando cada valor sai do caixa fica em Compromissos a pagar.
 
+import * as CX from './caixa.js?v=1';
+
 let MODO = 'mes', CONF = null, ABERTOS = new Set();
 
 const brlS = (brl2, v) => v < 0 ? '− ' + brl2(-v) : brl2(v);
@@ -31,7 +33,8 @@ export async function tela(P, ctx) {
     sb.rpc('dre_custos', { p_ini: ini + '-01', p_fim: fim + '-01' }),
     sb.from('despesas').select('*').gte('mes', ini + '-01').lte('mes', fim + '-01').order('mes', { ascending: false }),
     sb.from('despesas_fixas').select('*'),
-    sb.from('pagamentos_feitos').select('*').eq('tipo', 'avulsa')
+    sb.from('pagamentos_feitos').select('*').eq('tipo', 'avulsa'),
+    CX.pronto() ? null : CX.carregar(sb)
   ]);
   if (ctx.aba() !== 'dre' || ctx.mes() !== mes || (MODO === 'mes') !== mesModo) return;
   if (cu.error) { P.innerHTML = cab + '<div class="vazio">O DRE é ativado pelo 27-dre-e-salarios.sql no Supabase.</div>'; ligarTopo(); return; }
@@ -62,7 +65,9 @@ export async function tela(P, ctx) {
   }
   if (ctx.aba() !== 'dre' || ctx.mes() !== mes) return;
   const sal = meses.reduce((t, k) => t + TM[k].sal, 0), comPg = meses.reduce((t, k) => t + TM[k].com, 0), fix = C.reduce((t, r) => t + (+r.fixas || 0), 0), avu = avul.reduce((t, d) => t + (+d.valor || 0), 0);
-  const res = margem - sal - comPg - fix - avu;
+  // Juros dos empréstimos para o caixa: só a parte acima do valor recebido, no mês de cada parcela.
+  const JU = CX.jurosPeriodo(ini, fim), jur = JU.reduce((t, x) => t + x.juros, 0);
+  const res = margem - sal - comPg - fix - avu - jur;
   void com;
 
   // ---------- detalhes ----------
@@ -82,6 +87,9 @@ export async function tela(P, ctx) {
     sal: lista('iSal', 'Nenhum salário fixo neste período. Cadastre o salário de cada pessoa, com o mês em que começou a valer, em Salários e despesas fixas.'),
     cpg: lista('iCom', 'Nenhuma comissão paga neste período.') + '<div class="sub" style="margin:8px 0 4px">Comissões geradas pelas vendas deste período, por vendedor. Informativo, não entra na conta acima.</div>' + comDet,
     fix: (() => { const meses = C.map(r => mk(r.mes)); const L = fixas.map(x => ({ x, n: meses.filter(k => mk(x.desde) <= k && (!x.ate || mk(x.ate) >= k)).length })).filter(o => o.n); return L.length ? L.map(({ x, n }) => item(esc(x.descricao), esc(x.categoria) + (mesModo ? '' : ' · ' + n + (n === 1 ? ' mês' : ' meses')), (+x.valor || 0) * n)).join('') : '<div class="vazio">Nenhuma despesa fixa no período.</div>'; })(),
+    jur: JU.length ? (mesModo ? JU.map(x => item(esc(x.emp.descricao), 'parcela ' + x.n + ' de ' + x.emp.parcelas + ' · ' + brl2(x.valor) + (x.pago ? ', paga' : ', a pagar'), x.juros)).join('')
+      : grupo(JU.map(x => ({ d: x.emp.descricao, v: x.juros })), x => x.d, 'v').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' parcela' : ' parcelas'), x.v)).join(''))
+      + '<div class="sub" style="margin:8px 0 4px">O valor que entrou e a parte principal das parcelas ficam fora do resultado. Detalhes em Investimentos e caixa.</div>' : '<div class="vazio">Nenhuma parcela de empréstimo no período.</div>',
     avu: avul.length ? (mesModo ? avul.map(d => item(esc(d.descricao), esc(d.categoria), d.valor)).join('') : grupo(avul, d => d.categoria || 'Outros', 'valor').map(([k, x]) => item(esc(k), x.n + (x.n === 1 ? ' lançamento' : ' lançamentos'), x.v)).join('')) : '<div class="vazio">Nenhuma despesa avulsa no período.</div>'
   };
   const linha = (k, t, v) => `<details class="dreDet" data-k="${k}" ${ABERTOS.has(k) ? 'open' : ''}><summary class="lin" style="cursor:pointer;list-style:none"><span>${t} <b class="seta" style="font-size:12px">▾</b></span><span>${brlS(brl2, v)}</span></summary><div style="padding:2px 0 10px 10px;border-left:2px solid var(--linha, #ddd);margin:0 0 6px 4px">${det[k]}</div></details>`;
@@ -91,7 +99,8 @@ export async function tela(P, ctx) {
   let porMes = '';
   if (!mesModo) porMes = `<section class="bloco"><h2>Resultado por mês</h2>${C.map(r => {
     const k = mk(r.mes), Em = E.filter(e => mk(e.data_negociacao) === k), av = avul.filter(d => mk(d.mes) === k).reduce((t, d) => t + (+d.valor || 0), 0);
-    const rr = s(Em, 'lucro_bruto') - s(Em, 'imposto') - s(Em, 'repasse') - TM[k].sal - TM[k].com - (+r.fixas || 0) - av;
+    const ju = JU.filter(x => x.comp === k).reduce((t, x) => t + x.juros, 0);
+    const rr = s(Em, 'lucro_bruto') - s(Em, 'imposto') - s(Em, 'repasse') - TM[k].sal - TM[k].com - (+r.fixas || 0) - av - ju;
     return Em.length || +r.salarios || +r.fixas || av ? `<button class="lin" data-mesdre="${k}"><span>${mesNome(k)}<small style="display:block;color:var(--tinta-3);font-size:12px">vendas ${brl2(s(Em, 'valor_receber'))}</small></span><span style="color:${rr < 0 ? 'var(--alerta)' : 'var(--verde)'}">${brlS(brl2, rr)}<b class="seta">›</b></span></button>` : '';
   }).join('') || '<div class="vazio">Sem movimento no ano.</div>'}</section>`;
 
@@ -116,7 +125,7 @@ export async function tela(P, ctx) {
       <div class="sub" style="margin:-4px 0 6px">Toque em cada linha para ver o detalhe.</div>
       ${linha('rec', 'Receita das vendas', rec)}${linha('cus', '(−) Custo das emissões', -cus)}${tot('= Lucro bruto', lb)}
       ${linha('imp', '(−) Imposto', -imp)}${linha('rep', '(−) Parceiros', -rep)}${tot('= Margem de contribuição', margem)}
-      ${linha('sal', '(−) Salários fixos', -sal)}${linha('cpg', '(−) Comissões do time', -comPg)}${linha('fix', '(−) Despesas fixas', -fix)}${linha('avu', '(−) Despesas avulsas', -avu)}
+      ${linha('sal', '(−) Salários fixos', -sal)}${linha('cpg', '(−) Comissões do time', -comPg)}${linha('fix', '(−) Despesas fixas', -fix)}${linha('avu', '(−) Despesas avulsas', -avu)}${jur ? linha('jur', '(−) Juros de empréstimos', -jur) : ''}
       <div class="lin forte"><span>= Resultado da empresa</span><span style="color:${res < 0 ? 'var(--alerta)' : 'var(--verde)'}">${brlS(brl2, res)}</span></div>
       <div class="sub" style="margin-top:8px">Vendas, custos e impostos contam no mês da venda. O time entra pelo que é pago no mês: o fechamento do mês anterior (salário fixo + comissões 50/50), pago no dia 5. Até setembro/2026, o DRE mostra salário e comissão do próprio mês.</div>
     </section>

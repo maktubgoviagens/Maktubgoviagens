@@ -8,6 +8,8 @@
 
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
+import * as CX from './caixa.js?v=1';
+
 export const INICIO = '2026-09';
 const INICIO_CONTAS = '2026-10';
 
@@ -47,7 +49,8 @@ export async function carregar(ctx) {
     sb.rpc('compromissos_time', { p_ini: INICIO + '-01', p_fim: mesMais(atual, 4) + '-01' }),
     sb.from('pagamentos_feitos').select('*').order('pago_em', { ascending: false }).limit(500),
     sb.from('despesas_fixas').select('*'),
-    sb.from('despesas').select('*').gte('mes', INICIO_CONTAS + '-01')
+    sb.from('despesas').select('*').gte('mes', INICIO_CONTAS + '-01'),
+    CX.carregar(sb)
   ]);
   if (t.error || p.error) { C = { erro: (t.error || p.error).message }; return C; }
   C = { time: t.data || [], pagos: p.data || [], fixas: f.error ? [] : (f.data || []), avulsas: a.error ? [] : (a.data || []) };
@@ -81,6 +84,7 @@ function montar(ctx) {
     const k = mk(d.mes), v = d.vencimento ? new Date(+d.vencimento.slice(0, 4), +d.vencimento.slice(5, 7) - 1, +d.vencimento.slice(8, 10)) : dataNoMes(k, 31);
     L.push({ tipo: 'avulsa', ref: d.id, comp: k, titulo: d.descricao, desc: (d.categoria || 'Despesa avulsa') + ' de ' + nomeMes(k), venc: v, valor: Number(d.valor) || 0, pago: pago('avulsa', d.id, k) });
   });
+  L.push(...CX.compromissos()); // parcelas dos empréstimos para o caixa
   return { pessoas: Object.values(pessoas), L: L.sort((a, b) => a.venc - b.venc) };
 }
 
@@ -126,7 +130,7 @@ export async function tela(P, ctx) {
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Marcar como pago</button>
     </form>`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
-    <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento e despesas avulsas lançadas no DRE. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
+    <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento, despesas avulsas lançadas no DRE e parcelas dos empréstimos para o caixa. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Próximos 7 dias</div><div class="v">${brl2(vence7.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${vence7.length} ${vence7.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
       <div class="num"><div class="l">Atrasados</div><div class="v">${brl2(atras.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${atras.length} ${atras.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
@@ -150,14 +154,16 @@ export async function tela(P, ctx) {
     const x = L.find(y => chave(y) === f.dataset.pg); if (!x) return;
     const valor = Number(String(f.elements.valor.value).replace(',', '.'));
     if (!(valor >= 0)) { aviso('Valor inválido.'); return; }
-    const { error } = await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: f.elements.pago_em.value || undefined });
+    const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, f.elements.pago_em.value)
+      : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: f.elements.pago_em.value || undefined });
     if (error) { aviso('Não salvou: ' + error.message); return; }
     aviso('Marcado como pago.'); tela(P, ctx);
   });
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
     if (CONF !== b.dataset.desf) { CONF = b.dataset.desf; b.textContent = 'confirmar'; return; }
     CONF = null;
-    const { error } = await sb.from('pagamentos_feitos').delete().eq('id', b.dataset.desf);
+    const id = b.dataset.desf;
+    const { error } = id.startsWith('emp:') ? await CX.desfazerParcela(sb, id.slice(4)) : await sb.from('pagamentos_feitos').delete().eq('id', id);
     if (error) { aviso('Não desfez: ' + error.message); return; }
     aviso('Voltou para a lista de a pagar.'); tela(P, ctx);
   });
