@@ -371,6 +371,90 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 
 <div class="aviso" id="aviso" hidden></div>
 
+<style>
+.sug{position:absolute;z-index:60;background:var(--branco);border:1px solid var(--linha);box-shadow:0 8px 22px rgba(0,0,0,.14);max-height:260px;overflow:auto;-webkit-overflow-scrolling:touch}
+.sug button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--linha);padding:12px 14px;font:inherit;font-size:15px;color:var(--tinta);cursor:pointer}
+.sug button:last-child{border-bottom:0}
+.sug button b{color:var(--verde)}
+.sug button:active,.sug button.ativo{background:var(--creme-2)}
+</style>
+<script>
+// Sugestões ao digitar: todo campo com lista (clientes, comprador, fornecedor, programas...)
+// mostra uma caixa logo abaixo com os nomes cadastrados que batem com o que foi digitado.
+// Toque em um nome para escolher (escolha única).
+(() => {
+  const tira = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let caixa = null, alvo = null, itens = [], ativo = -1;
+  const fechar = () => { if (caixa) caixa.remove(); caixa = null; ativo = -1; };
+  const opcoes = inp => {
+    const id = inp.dataset.lista || inp.getAttribute('list');
+    const dl = id && document.getElementById(id);
+    return dl ? [...new Set([...dl.options].map(o => o.value).filter(Boolean))] : [];
+  };
+  const prepara = inp => {
+    if (inp.dataset.lista || !inp.getAttribute('list')) return;
+    inp.dataset.lista = inp.getAttribute('list');
+    inp.removeAttribute('list'); // tira a sugestão nativa do teclado para não duplicar
+    inp.setAttribute('autocomplete', 'off');
+  };
+  const escolher = v => {
+    if (!alvo) return;
+    alvo.value = v;
+    alvo.dispatchEvent(new Event('input', { bubbles: true }));
+    alvo.dispatchEvent(new Event('change', { bubbles: true }));
+    fechar();
+  };
+  const mostrar = inp => {
+    const q = tira(inp.value);
+    if (!q) return fechar();
+    const lista = opcoes(inp).map(v => ({ v, t: tira(v) })).filter(o => o.t.includes(q) && o.t !== q);
+    lista.sort((a, b) => {
+      const pa = a.t.startsWith(q) ? 0 : a.t.split(/\s+/).some(w => w.startsWith(q)) ? 1 : 2;
+      const pb = b.t.startsWith(q) ? 0 : b.t.split(/\s+/).some(w => w.startsWith(q)) ? 1 : 2;
+      return pa - pb || a.v.localeCompare(b.v, 'pt-BR');
+    });
+    itens = lista.slice(0, 30).map(o => o.v);
+    if (!itens.length) return fechar();
+    if (!caixa) { caixa = document.createElement('div'); caixa.className = 'sug'; document.body.appendChild(caixa); }
+    alvo = inp; ativo = -1;
+    caixa.innerHTML = itens.map((v, i) => {
+      const k = tira(v).indexOf(q);
+      const h = k < 0 ? esc(v) : esc(v.slice(0, k)) + '<b>' + esc(v.slice(k, k + q.length)) + '</b>' + esc(v.slice(k + q.length));
+      return `<button type="button" data-i="${i}">${h}</button>`;
+    }).join('');
+    const r = inp.getBoundingClientRect();
+    caixa.style.left = (r.left + window.scrollX) + 'px';
+    caixa.style.top = (r.bottom + window.scrollY) + 'px';
+    caixa.style.width = r.width + 'px';
+    // dentro de folhas com rolagem própria, posiciona como fixo
+    const fixo = inp.closest('.folha,.folha-caixa,[style*="position:fixed"]');
+    if (fixo) { caixa.style.position = 'fixed'; caixa.style.left = r.left + 'px'; caixa.style.top = r.bottom + 'px'; }
+    else caixa.style.position = 'absolute';
+  };
+  document.addEventListener('focusin', e => { const t = e.target; if (t.tagName === 'INPUT' && (t.dataset.lista || t.getAttribute('list'))) { prepara(t); if (t.value) mostrar(t); } });
+  document.addEventListener('input', e => { const t = e.target; if (t.tagName === 'INPUT' && t.dataset.lista && t === document.activeElement) mostrar(t); });
+  // pointerdown antes do blur, para o toque na opção não se perder
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.sug button');
+    if (b) { e.preventDefault(); escolher(itens[+b.dataset.i]); return; }
+    if (caixa && !e.target.closest('.sug') && e.target !== alvo) fechar();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (!caixa || e.target !== alvo) return;
+    const bs = caixa.querySelectorAll('button');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); ativo = (ativo + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length;
+      bs.forEach((b, i) => b.classList.toggle('ativo', i === ativo)); bs[ativo].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && ativo >= 0) { e.preventDefault(); escolher(itens[ativo]); }
+    else if (e.key === 'Escape') fechar();
+  });
+  document.addEventListener('focusout', e => { if (e.target === alvo) setTimeout(() => { if (document.activeElement !== alvo) fechar(); }, 150); });
+  document.addEventListener('scroll', e => { if (caixa && alvo && !caixa.contains(e.target)) mostrar(alvo); }, true);
+  window.addEventListener('resize', () => { if (caixa && alvo) mostrar(alvo); });
+})();
+</script>
+
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
