@@ -7,7 +7,12 @@ let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
 export function preparar(pre) { PRE = pre || null; ED = null; S = null; }
-const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d.destino || PRE.destino || ''; if (d.modelo === 'go') { d.para = PRE.cliente || ''; d.nomeZap = String(PRE.cliente || '').split(' ')[0]; } else if (d.modelo === 'corp') d.passageiro = PRE.cliente || ''; else d.cliente = PRE.cliente || ''; return d; };
+const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d.destino || PRE.destino || ''; if (d.modelo === 'go') { d.para = PRE.cliente || ''; d.nomeZap = String(PRE.cliente || '').split(' ')[0]; } else if (d.modelo === 'corp') d.passageiro = PRE.cliente || ''; else d.cliente = PRE.cliente || '';
+  (d.opcoes || []).forEach(o => { if (PRE.ida && !o.embarque) o.embarque = PRE.ida; if (PRE.volta && !o.retorno) o.retorno = PRE.volta; });
+  const vs = d.voos || (d.opcoes && d.opcoes[0] && d.opcoes[0].voos) || [];
+  if (vs[0] && PRE.ida && 'data' in vs[0] && !vs[0].data) vs[0].data = PRE.ida;
+  if (vs[1] && PRE.volta && 'data' in vs[1] && !vs[1].data) vs[1].data = PRE.volta;
+  return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
 const SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];

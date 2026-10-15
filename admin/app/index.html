@@ -1660,7 +1660,7 @@ function htmlReuniao(r) {
   return `<div class="card ${atrasado ? 'novo' : ''}" style="margin-bottom:8px">
     <button class="card em" data-r="${r.id}" style="border:0;padding:0;background:none">
       <div class="cab"><div><div class="nome">${esc(r.cliente)}</div><span class="tag">${esc(r.produto)}</span> <span class="tag ${tag}">${esc(etapaDe(r))}</span>${auto}</div><span class="quando">${dataCurta(new Date(r.data))}</span></div>
-      <div class="info">${r.trecho || r.data_viagem ? `<div><span>Viagem:</span> ${esc(r.trecho || '')}${r.data_viagem ? ' · ' + dataCurta(dia(r.data_viagem)) : ''}</div>` : ''}<div>${esc(r.tipo)}${r.origem ? ' · ' + esc(r.origem) : ''}${ADMIN ? ' · ' + esc(nomeTime(r.responsavel_id) || 'sem responsável') : ''}</div>
+      <div class="info">${r.trecho || r.data_viagem ? `<div><span>Viagem:</span> ${esc(r.trecho || '')}${r.data_viagem ? ' · ' + dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : ' (só ida)') : ''}</div>` : ''}<div>${esc(r.tipo)}${r.origem ? ' · ' + esc(r.origem) : ''}${ADMIN ? ' · ' + esc(nomeTime(r.responsavel_id) || 'sem responsável') : ''}</div>
       ${r.resultado === 'Fechou' && r.valor_fechado ? `<div><span>Fechado:</span> ${brl2(r.valor_fechado)}</div>` : r.valor_estimado ? `<div><span>${ehGestao(r) ? 'Potencial' : 'Valor cotado'}:</span> ${brl2(r.valor_estimado)}</div>` : ''}
       ${r.observacoes ? `<div><span>Anotações:</span> ${esc(r.observacoes)}</div>` : ''}
       ${r.resultado === 'Não fechou' && (r.motivo_perda || r.motivo_detalhe) ? `<div><span>Por que não fechou:</span> ${esc([r.motivo_perda, r.motivo_detalhe].filter(Boolean).join(': '))}</div>` : ''}
@@ -1804,7 +1804,7 @@ function telaFormReuniao(P) {
       <input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}">
       <div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>
       ${campo('contato', 'WhatsApp ou e-mail', r.contato)}
-      ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}${campo('data_viagem', 'Data da viagem', r.data_viagem, 'date')}<div id="indicDestino"></div>`}
+      ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`}
       <label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
@@ -1838,7 +1838,7 @@ function telaFormReuniao(P) {
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
-  if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '' }));
+  if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '', ida: base.data_viagem || '', volta: base.data_volta || '' }));
   if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
   f.elements.cliente.addEventListener('change', () => {
     const p = pessoaPorNome(f.elements.cliente.value);
@@ -1848,6 +1848,12 @@ function telaFormReuniao(P) {
   });
   const atualizarIndic = () => { const el = $('indicDestino'); if (el && f.elements.trecho) el.innerHTML = htmlIndicacoes(f.elements.trecho.value); el && el.querySelectorAll('[data-fornid]').forEach(b => b.onclick = () => ir('fornecedores', () => FORN.abrir(b.dataset.fornid))); };
   if (f.elements.trecho) { f.elements.trecho.addEventListener('input', atualizarIndic); atualizarIndic(); }
+  if ($('segIV')) {
+    const soIda = () => $('segIV').querySelector('.on').dataset.iv === 'so';
+    $('segIV').querySelectorAll('button').forEach(b => b.onclick = () => { $('segIV').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('blVolta').hidden = soIda(); if (soIda()) f.elements.data_volta.value = ''; });
+    const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
+    f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
+  }
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); };
   mostrar();
   $('voltar').onclick = () => history.back();
@@ -1856,6 +1862,9 @@ function telaFormReuniao(P) {
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
     const n2 = (x) => x === '' ? null : Number(x.replace(',', '.'));
     if (!g('cliente')) { $('msgRe').textContent = 'Informe o cliente.'; return; }
+    const soIda = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so';
+    if ($('segIV') && !soIda && g('data_viagem') && !g('data_volta')) { $('msgRe').textContent = 'Informe a data de volta ou marque Somente ida.'; f.elements.data_volta.focus(); return; }
+    if (g('data_volta') && g('data_viagem') && g('data_volta') < g('data_viagem')) { $('msgRe').textContent = 'A volta não pode ser antes da ida.'; f.elements.data_volta.focus(); return; }
     const et = g('etapa'), res = FINAIS.includes(et) ? et : 'Em andamento';
     if (res === 'Não fechou' && !g('motivo_detalhe')) { $('msgRe').textContent = 'Explique por que não fechou. Isso é o que nos faz melhorar.'; f.elements.motivo_detalhe.focus(); return; }
     if ((g('nr_abordado') || g('nr_data')) && !g('nr_assunto')) { $('msgRe').textContent = 'Informe o assunto da reunião.'; f.elements.nr_assunto.focus(); return; }
@@ -1866,6 +1875,7 @@ function telaFormReuniao(P) {
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
+    if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
