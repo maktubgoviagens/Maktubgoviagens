@@ -102,6 +102,18 @@ function estilos() {
 .mk-barra{display:grid;grid-template-columns:110px 1fr 28px;gap:8px;align-items:center;padding:6px 0;font-size:13px}
 .mk-barra .t{height:8px;background:var(--creme-2)}.mk-barra .t i{display:block;height:100%}
 .mk-barra .q{text-align:right;color:var(--tinta-2)}
+.mk-cm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--linha);border-top:1px solid var(--linha);margin:10px -10px 0;background:var(--branco)}
+.mk-cm .h{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);text-align:center;padding:6px 0;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);background:var(--creme-2)}
+.mk-cm .d{min-height:86px;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);padding:3px 2px 4px;display:flex;flex-direction:column;gap:2px;cursor:pointer;min-width:0}
+.mk-cm .d.fora{background:var(--creme-2);cursor:default}.mk-cm .d.hj .n{background:var(--dourado);color:#fff;border-radius:9px;padding:0 5px}
+.mk-cm .d.sel{outline:2px solid var(--verde);outline-offset:-2px}
+.mk-cm .n{align-self:flex-end;font-size:11px;color:var(--tinta-2);line-height:16px;margin:0 2px 1px}
+.mk-chip{display:block;width:100%;border:0;border-radius:3px;padding:2px 4px;font-size:10px;line-height:1.3;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
+.mk-chip.planejado{background:#b9b4aa}.mk-chip.andamento{background:#c08a2e}.mk-chip.publicado{background:#2f8a57}.mk-chip.atrasado{background:#b5533c}
+.mk-mais{font-size:10px;color:var(--tinta-3);padding-left:3px}
+.mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+@media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
+@media (min-width:700px){.mk-cm{margin:10px 0 0}.mk-cm .d{min-height:110px;padding:4px}.mk-chip{font-size:12px;padding:3px 6px}}
 .mk-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
 .mk-cal .h{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);text-align:center;padding:4px 0}
 .mk-cal button{aspect-ratio:1/1.05;background:var(--branco);border:1px solid var(--linha);font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:6px;gap:4px;color:var(--tinta)}
@@ -260,24 +272,26 @@ function cardAprovar(p) {
 /* ---------- administradores: calendário ---------- */
 function vCalendario() {
   const { esc } = X, k = MES, [y, mm] = k.split('-').map(Number);
-  const prim = new Date(y, mm - 1, 1).getDay(), dias = new Date(y, mm, 0).getDate();
+  const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate();
   const doMes = vis().filter(p => mesK(diaPost(p)) === k);
-  if (!DIA || mesK(DIA) !== k) DIA = mesK(hoje()) === k ? hoje() : null;
-  let cel = SEMANA.map(d => `<div class="h">${d.slice(0, 1)}</div>`).join('');
-  for (let i = 0; i < prim; i++) cel += '<button class="fora" tabindex="-1"></button>';
+  if (DIA && mesK(DIA) !== k) DIA = null;
+  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(p.titulo)}"><span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
+  let cel = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(d => `<div class="h">${d}</div>`).join('');
+  for (let i = 0; i < prim; i++) cel += '<div class="d fora"></div>';
   for (let d = 1; d <= dias; d++) {
-    const iso = `${k}-${String(d).padStart(2, '0')}`, L = doMes.filter(p => diaPost(p) === iso);
-    cel += `<button data-dia="${iso}" class="${iso === hoje() ? 'hj' : ''} ${iso === DIA ? 'sel' : ''}">${d}<span class="mk-dots">${L.slice(0, 6).map(p => `<i style="background:${p.status === 'publicado' ? corP(p) : 'transparent'};border:1.5px solid ${corP(p)}"></i>`).join('')}</span></button>`;
+    const iso = `${k}-${String(d).padStart(2, '0')}`;
+    const L = doMes.filter(p => diaPost(p) === iso).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
+    cel += `<div class="d ${iso === hoje() ? 'hj' : ''} ${iso === DIA ? 'sel' : ''}" data-dia="${iso}"><span class="n">${d}</span>${L.slice(0, 3).map(chip).join('')}${L.length > 3 ? `<span class="mk-mais">+${L.length - 3}</span>` : ''}</div>`;
   }
+  const resto = (prim + dias) % 7; if (resto) for (let i = resto; i < 7; i++) cel += '<div class="d fora"></div>';
   const doDia = DIA ? doMes.filter(p => diaPost(p) === DIA) : [];
   const semData = vis().filter(p => p.status !== 'publicado' && !p.data_prevista);
   return `${filtroConta()}
     <div class="mesnav" id="mkMes" style="margin-top:12px"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
-    <div class="mk-cal">${cel}</div>
-    <div class="sub">Bolinha cheia: publicado. Contorno: planejado ou em andamento. Cores por formato: ${Object.values(FMT).map(([n, c]) => `<span style="color:${c};font-weight:600">${n}</span>`).join(', ')}.</div>
+    <div class="mk-cm">${cel}</div>
+    <div class="mk-leg"><span><i style="background:#b9b4aa"></i>Planejado</span><span><i style="background:#c08a2e"></i>Em andamento</span><span><i style="background:#2f8a57"></i>Publicado</span><span><i style="background:#b5533c"></i>Atrasado</span></div>
+    <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele.</div>
     ${DIA ? `<div class="secao">${new Date(DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} <button data-novo-dia="${DIA}">+ Post neste dia</button></div>${doDia.length ? `<div class="mk-lista">${doDia.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))).map(linha).join('')}</div>` : '<div class="vazio">Nenhum post neste dia.</div>'}` : ''}
-    <div class="secao">Mês inteiro · ${doMes.length}</div>
-    ${doMes.length ? `<div class="mk-lista">${doMes.sort((a, b) => String(diaPost(a)).localeCompare(String(diaPost(b)))).map(linha).join('')}</div>` : '<div class="vazio">Nada programado neste mês.</div>'}
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
 }
 
@@ -557,7 +571,7 @@ function ligar(P) {
   const q = (s) => P.querySelectorAll(s), by = (id) => document.getElementById(id);
   if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('empresa');
   q('[data-v]').forEach(b => b.onclick = () => { VIEW = b.dataset.v; DIA = null; rerender(); scrollTo(0, 0); });
-  q('[data-p]').forEach(b => b.onclick = () => { ED = b.dataset.p; PRE = null; rerender(); scrollTo(0, 0); });
+  q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); ED = b.dataset.p; PRE = null; rerender(); scrollTo(0, 0); });
   q('[data-novo]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: b.dataset.novo }; rerender(); scrollTo(0, 0); });
   q('[data-novo-dia]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: 'ideia', data_prevista: b.dataset.novoDia }; rerender(); scrollTo(0, 0); });
   q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', aprovacao: 'Enviado para aprovação. A coordenação recebe o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
