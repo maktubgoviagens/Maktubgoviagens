@@ -1649,7 +1649,7 @@ function conversao(L) {
 }
 function blocoConv(titulo, L, chave, rotulo) {
   const grupos = {};
-  L.filter(r => r.resultado !== 'Não se aplica').forEach(r => { const k = chave(r) || 'Não informado'; (grupos[k] = grupos[k] || []).push(r); });
+  L.filter(r => r.resultado !== 'Não se aplica').forEach(r => { [].concat(chave(r) || 'Não informado').forEach(k => (grupos[k] = grupos[k] || []).push(r)); });
   const linhas = Object.entries(grupos).map(([k, arr]) => [k, conversao(arr), arr.length]).sort((a, b) => b[2] - a[2]);
   return `<section class="bloco"><h2>${titulo}</h2>${linhas.length ? linhas.map(([k, c, n]) => `<div class="conv"><span>${esc(rotulo ? rotulo(k) : k)}</span><b>${c.taxa === null ? '-' : pct(c.taxa)}</b><span class="m"><i style="width:${c.taxa || 0}%"></i></span><small>${c.fechou} fechou · ${c.perdeu} não fechou · ${c.andamento} em andamento${c.valor ? ' · ' + brl2(c.valor) : ''}</small></div>`).join('') : '<div class="vazio">Sem reuniões no período.</div>'}</section>`;
 }
@@ -1739,7 +1739,7 @@ function telaReunioes(P) {
       <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">no período</div></div>
       <div class="num"><div class="l">Não fecharam</div><div class="v">${c.perdeu}</div><div class="d">veja os motivos abaixo</div></div>
     </div>
-    ${G ? '' : blocoConv('Conversão por produto', base, r => r.produto)}
+    ${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}
     ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
     ${ADMIN && semResp().length ? `<section class="bloco"><h2>Sem responsável</h2><div class="sub" style="margin-top:0">${semResp().length} ${semResp().length === 1 ? 'atendimento' : 'atendimentos'} de ${G ? 'Gestão de Milhas' : 'viagens'}, de todos os períodos, sem ninguém definido (a maioria veio do Iddas).</div>
       <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Passar para</span><select id="loteResp">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteRespB" style="align-self:end">Definir para todos</button></div></section>` : ''}
@@ -1796,7 +1796,7 @@ function telaFormReuniao(P) {
       <div class="grupo">Reunião</div>
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
-      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : sel('produto', 'Produto', RE_PRODUTOS, r.produto)}
+      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
       ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
       <div class="grupo">Cliente</div>
       ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
@@ -1848,6 +1848,24 @@ function telaFormReuniao(P) {
   });
   const atualizarIndic = () => { const el = $('indicDestino'); if (el && f.elements.trecho) el.innerHTML = htmlIndicacoes(f.elements.trecho.value); el && el.querySelectorAll('[data-fornid]').forEach(b => b.onclick = () => ir('fornecedores', () => FORN.abrir(b.dataset.fornid))); };
   if (f.elements.trecho) { f.elements.trecho.addEventListener('input', atualizarIndic); atualizarIndic(); }
+  if ($('reProd')) {
+    const base0 = Array.isArray(r.itens) && r.itens.length ? r.itens : String(r.produto || '').split(' + ').filter(Boolean).map(p => ({ produto: p, custo: null, venda: null }));
+    let IT = base0.map(x => ({ ...x }));
+    const nb = (v) => { let x = String(v ?? '').trim(); if (x.includes(',')) x = x.replace(/\./g, '').replace(',', '.'); return x === '' || isNaN(+x) ? null : +x; };
+    const tot = (k) => IT.reduce((a, x) => a + (+x[k] || 0), 0);
+    const resumo = () => { const v = tot('venda'), c = tot('custo'); const el = $('reTot'); if (!el) return;
+      el.innerHTML = IT.length > 0 && (v || c) ? `<div class="lin"><span>Venda total</span><b>${brl2(v)}</b></div><div class="lin"><span>Custo total</span><span>${brl2(c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${brl2(v - c)}</b></div>` : '';
+      if (v) { if (f.elements.valor_estimado) f.elements.valor_estimado.value = v; } };
+    const desenha = () => {
+      $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
+      $('reItens').innerHTML = IT.length ? `<div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${esc(x.produto)}</div><div class="duas-col"><label class="fl"><span>Custo (R$)</span><input inputmode="decimal" data-it="${i}" data-k="custo" value="${x.custo ?? ''}"></label><label class="fl"><span>Venda (R$)</span><input inputmode="decimal" data-it="${i}" data-k="venda" value="${x.venda ?? ''}"></label></div></div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+      $('reItens').querySelectorAll('[data-it]').forEach(inp => inp.oninput = () => { IT[+inp.dataset.it][inp.dataset.k] = nb(inp.value); resumo(); });
+      resumo();
+    };
+    $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => { const k = IT.findIndex(x => x.produto === b.dataset.p); if (k >= 0) IT.splice(k, 1); else IT.push({ produto: b.dataset.p, custo: null, venda: null }); desenha(); });
+    f._itens = () => IT;
+    desenha();
+  }
   if ($('segIV')) {
     const soIda = () => $('segIV').querySelector('.on').dataset.iv === 'so';
     $('segIV').querySelectorAll('button').forEach(b => b.onclick = () => { $('segIV').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('blVolta').hidden = soIda(); if (soIda()) f.elements.data_volta.value = ''; });
@@ -1865,16 +1883,19 @@ function telaFormReuniao(P) {
     const soIda = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so';
     if ($('segIV') && !soIda && g('data_viagem') && !g('data_volta')) { $('msgRe').textContent = 'Informe a data de volta ou marque Somente ida.'; f.elements.data_volta.focus(); return; }
     if (g('data_volta') && g('data_viagem') && g('data_volta') < g('data_viagem')) { $('msgRe').textContent = 'A volta não pode ser antes da ida.'; f.elements.data_volta.focus(); return; }
+    const IT = f._itens ? f._itens() : null;
+    if (IT && !IT.length) { $('msgRe').textContent = 'Marque pelo menos um produto.'; return; }
     const et = g('etapa'), res = FINAIS.includes(et) ? et : 'Em andamento';
     if (res === 'Não fechou' && !g('motivo_detalhe')) { $('msgRe').textContent = 'Explique por que não fechou. Isso é o que nos faz melhorar.'; f.elements.motivo_detalhe.focus(); return; }
     if ((g('nr_abordado') || g('nr_data')) && !g('nr_assunto')) { $('msgRe').textContent = 'Informe o assunto da reunião.'; f.elements.nr_assunto.focus(); return; }
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
-    const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
+    const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
       motivo_detalhe: res === 'Não fechou' ? (g('motivo_detalhe') || null) : null,
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
+    if (IT) { row.itens = IT; if (res === 'Fechou' && row.valor_fechado == null) { const v = IT.reduce((a, x) => a + (+x.venda || 0), 0); if (v) row.valor_fechado = v; } }
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
