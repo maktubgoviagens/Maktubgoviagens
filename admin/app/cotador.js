@@ -97,7 +97,7 @@ const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 con
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
   if (!MARCA) { try { const m = await import('/admin/app/cot-marca.js?v=2'); MARCA = m.MARCA; RAPM = m.RAP || null; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
-  carregarAero();
+  carregarAero(); TAXAS = X.D && X.D.cfg && X.D.cfg.taxas_cartao;
   if (PEDIR) { const tipo = PEDIR; PEDIR = null; return comCard(P, X, () => { S = comPre(tipo === 'rapida' ? NOVO_RAP() : tipo === 'corp' ? NOVO_CORP() : NOVO_GO()); PRE = null; ir(X, 'novo'); }); }
   if (ED) return editor(P, X);
   return lista(P, X);
@@ -793,7 +793,11 @@ const RAP_BAGAGEM = '1 item pessoal + 1 mala de cabine de até 10 kg por passage
 const RAP_RODAPE = 'Taxas inclusas. Alterações e cancelamentos têm custo e devem ser solicitados à Maktub. Tarifa sujeita à confirmação no momento da emissão. Horários locais. Check-in realizado por nossa equipe.';
 const ecoAuto = () => { const a = num(S.de), b = num(S.por); return a > b && b > 0 && (a - b) / a >= ECO_MIN; };
 const mostraEco = () => { const a = num(S.de), b = num(S.por); if (!(a > b && b > 0)) return false; return S.eco === true || S.eco === false ? S.eco : ecoAuto(); };
-const parcTxt = () => { const np = String(S.parcelas || '').trim(), por = num(S.por); return /^\d{1,2}$/.test(np) && +np > 1 ? `${+np}x de ${brl(por / +np)} sem juros` : np; };
+// cartão pelo link da InfinitePay com a taxa repassada: o valor do Pix é o que a Maktub recebe líquido.
+// total = Pix ÷ (1 − taxa da parcela), arredondado para cima no centavo; parcela = total ÷ parcelas (confere com a calculadora da InfinitePay)
+const parcTxt = () => { const np = String(S.parcelas || '').trim(), por = num(S.por); if (!/^\d{1,2}$/.test(np) || !por) return np; const c = cartao(por, +np);
+  // o preço do cartão é o anunciado, em até N vezes sem juros; o Pix é o desconto
+  return !c ? `${+np}x no cartão` : +np === 1 ? `${brl(c.total)} no cartão` : `${brl(c.total)} em até ${+np}x de ${brl(c.parcela)} sem juros`; };
 const rapVoos = () => (S.voos || []).filter(v => v.ocod);
 const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '', pax: '' });
 // passageiros de um trecho só aparecem quando são diferentes do total da cotação
@@ -819,6 +823,12 @@ function textoBag(mao, desp) {
   if (mao) p.push('1 mala de mão de até 10 kg');
   if (+desp) p.push(`${desp} ${+desp === 1 ? 'mala despachada' : 'malas despachadas'} de até 23 kg`);
   return p.join(' + ') + ' por passageiro';
+}
+// o que o vendedor vê ao escolher as parcelas: quanto o cliente paga e quanto a Maktub recebe
+function resumoParc() {
+  const np = parseInt(S.parcelas) || 0, por = num(S.por); if (!np || !por) return 'O valor digitado acima é o do Pix. No cartão, o app soma a taxa da InfinitePay da parcela escolhida.';
+  const c = cartao(por, np); if (!c) return 'Parcelamento de 1 a 12x.';
+  return `No cartão: ${brl(c.total)}${np > 1 ? ` em até ${np}x de ${brl(c.parcela)} sem juros` : ''}. No fechamento, crie o link da InfinitePay de ${brl(c.total)}, sem repassar a taxa, em até ${np}x: em ${np}x a Maktub recebe ${brl(por)} (em menos parcelas, recebe mais).`;
 }
 function editorRapida(P, X) {
   const { $ } = X;
@@ -848,7 +858,8 @@ function editorRapida(P, X) {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px"><span>Malas despachadas de até 23 kg</span><span style="display:flex;align-items:center;gap:8px"><button type="button" class="sec" data-bagd="-1" style="width:40px;padding:6px 0">−</button><b style="min-width:18px;text-align:center">${bagDesp()}</b><button type="button" class="sec" data-bagd="1" style="width:40px;padding:6px 0">+</button></span></div></div>
       ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
       ${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}
-      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
+      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou no cartão em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (de 1 a 12x)"')}</div>
+      <div class="sub" id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
     </form>
     <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
@@ -867,6 +878,7 @@ function editorRapida(P, X) {
     if (vk) { const v = S.voos[+vk[1]]; if (vk[2] === 'rotulo') v._rotM = !!e.target.value.trim(); if (/^(ocod|dcod|data|saida|chegada)$/.test(vk[2])) completarVoo(v); if (/^(ocod|dcod)$/.test(vk[2])) { rotular(S.voos); S.voos.forEach((x, i) => { const el = f.querySelector(`[data-k="voos.${i}.rotulo"]`); if (el && el !== e.target) el.value = x.rotulo; }); } }
     if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
+    if ((k === 'parcelas' || k === 'por') && $('rpParc')) $('rpParc').innerHTML = resumoParc();
     previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
@@ -976,6 +988,15 @@ const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload 
 const EXT = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito'];
 const MES3 = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 const cap = (t) => t ? t[0].toUpperCase() + t.slice(1) : t;
+// taxas do link de pagamento (InfinitePay, recebimento em 1 dia útil), de 1x a 12x. As da configuração do app têm prioridade.
+export const TAXAS_PADRAO = [4.2, 6.09, 7.01, 7.91, 8.8, 9.67, 12.59, 13.42, 14.25, 15.06, 15.87, 16.66];
+let TAXAS = null;
+const taxasCartao = () => Array.isArray(TAXAS) && TAXAS.length === 12 && TAXAS.every(t => t !== null && t !== '' && !isNaN(+t)) ? TAXAS.map(Number) : TAXAS_PADRAO;
+export function cartao(valorPix, n) {
+  const t = taxasCartao()[n - 1]; if (!(n >= 1) || t == null || t >= 100 || !(valorPix > 0)) return null;
+  const total = Math.ceil(Math.round(valorPix * 100 / (1 - t / 100) * 1e6) / 1e6) / 100;
+  return { total, parcela: Math.round(total * 100 / n) / 100, taxa: t };
+}
 function rapInfo() {
   const vs = rapVoos(), n = vs.length, pax = Math.max(1, parseInt(S.pessoas) || 1);
   const cid = (v, k) => cidadeDe(v[k + 'cod']) || v[k + 'nome'] || String(v[k + 'cod'] || '').toUpperCase();
@@ -986,7 +1007,9 @@ function rapInfo() {
   const tipo = ida ? 'Somente ida' : iv ? 'Ida e volta' : `${cap(EXT[n] || String(n))} trechos`;
   const total = ida ? 'Somente ida' : iv ? 'Ida e volta' : `Os ${EXT[n] || n} trechos`;
   const paxT = `${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}`;
-  const pagto = [S.forma || 'À vista via Pix', parcTxt() ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
+  // com cartão na cotação, o Pix aparece como o desconto
+  const fm = S.forma || 'À vista via Pix', comCartao = !!parcTxt() && /^\d{1,2}$/.test(String(S.parcelas || '').trim());
+  const pagto = [comCartao && /^à vista (via|no) pix$/i.test(fm.trim()) ? 'No Pix, com desconto' : fm, parcTxt() ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
       tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });

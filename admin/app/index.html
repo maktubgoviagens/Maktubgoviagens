@@ -463,7 +463,7 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=24';
+import * as COT from '/admin/app/cotador.js?v=26';
 import * as VENDA from '/admin/app/venda.js?v=1';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
@@ -2578,6 +2578,11 @@ function telaEquipe(P) {
       <label class="fc"><input type="checkbox" name="desc" ${D.cfg && D.cfg.comissao_desconta_imposto ? 'checked' : ''}><span>Descontar comissão e parceiro da base do imposto</span></label>
       <div class="sub">Desligado é o método 1: imposto primeiro, depois comissão, depois parceiro. Só ligue com a confirmação do contador. Vale para as próximas vendas.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar regras</button>
+    </form>
+    <form class="bloco form" id="fTaxas">
+      <div class="sub" style="margin:0 0 6px"><b>Taxas do cartão (link InfinitePay)</b><br>Usadas nas cotações: o valor digitado é o do Pix e o app soma a taxa da parcela para a Maktub receber o valor cheio. Atualize aqui quando a InfinitePay mudar.</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${(() => { const t = Array.isArray(D.cfg && D.cfg.taxas_cartao) && D.cfg.taxas_cartao.length === 12 ? D.cfg.taxas_cartao : COT.TAXAS_PADRAO; return t.map((v, i) => `<label class="fl" style="margin:0"><span>${i + 1}x (%)</span><input name="tx${i}" inputmode="decimal" value="${String(v).replace('.', ',')}"></label>`).join(''); })()}</div>
+      <button class="zap" type="submit" style="margin-top:8px">Salvar taxas</button>
     </form>`;
   $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
@@ -2614,6 +2619,14 @@ function telaEquipe(P) {
     const { error } = await sb.from('configuracoes').update({ imposto_pct: Number(f.elements.imposto_pct.value || 6), comissao_desconta_imposto: f.elements.desc.checked, origem_emissoes: f.elements.origem.value, planilha_url: f.elements.planilha_url.value.trim() || null, atualizado_em: new Date().toISOString() }).eq('id', 1);
     if (error) { aviso('Não salvou: ' + error.message); return; }
     await carregarEquipe(); aviso('Regras salvas.');
+  };
+  $('fTaxas').onsubmit = async (ev) => {
+    ev.preventDefault(); const f = ev.target;
+    const tx = [...Array(12)].map((_, i) => Number(String(f.elements['tx' + i].value).replace(',', '.')));
+    if (tx.some(t => isNaN(t) || t < 0 || t >= 100)) { aviso('Confira as taxas: use números como 7,91.'); return; }
+    const { error } = await sb.from('configuracoes').update({ taxas_cartao: tx, atualizado_em: new Date().toISOString() }).eq('id', 1);
+    if (error) { aviso(/taxas_cartao/.test(error.message) ? 'Falta rodar no Supabase o SQL das taxas do cartão.' : 'Não salvou: ' + error.message); return; }
+    if (D.cfg) D.cfg.taxas_cartao = tx; aviso('Taxas salvas. As próximas cotações já usam.');
   };
 }
 async function carregarEquipe() {
