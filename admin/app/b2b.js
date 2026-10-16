@@ -128,64 +128,134 @@ export function tela(P, X) {
   };
 }
 
-// ---------- cancelamento ----------
-// A linha da planilha é ajustada pelo script "script-vendas-do-app" (ação "atualizar" pelo ID sistema):
-// valor e custo passam a ser só o que ficou (multa recebida e taxa que não voltou) e a comissão vira R$ 2,00.
-// Venda de mês já fechado: a linha original não muda. Entra uma linha de ajuste no mês atual
-// (diferenças negativas de venda, custo e comissão), e o fechamento do mês antigo fica intacto.
+// ---------- cancelamento (qualquer emissão: B2C e B2B) ----------
+// Mês aberto: a própria linha da planilha é ajustada pelo script "script-vendas-do-app" (ação "atualizar"
+// pelo ID sistema). Valor e custo passam a ser só o que ficou (multa recebida e custo que não voltou).
+// Comissão: B2B vira R$ 2,00 fixos (sócio R$ 0); B2C recalcula pelo percentual da venda sobre o que ficou.
+// Mês fechado: a linha original não muda. Entra uma linha de ajuste no mês atual com as diferenças
+// (venda, custo, comissão e parceiro), e o fechamento do mês antigo fica intacto.
 const REF = (id) => `ref ${id}`;
 const ajusteDe = (e, D) => (D.emissoes || []).find(x => x.id !== e.id && String(x.observacoes || '').includes('CANCELAMENTO') && String(x.observacoes || '').includes(REF(e.id)));
 export const ehCancelada = (e, D) => /CANCELADA/.test(String((e && e.observacoes) || '')) || !!(D && e && ajusteDe(e, D));
-export const ehAjuste = (e) => /CANCELAMENTO/.test(String((e && e.observacoes) || ''));
+export const ehAjuste = (e) => /CANCELAMENTO|AJUSTE ESTORNO/.test(String((e && e.observacoes) || ''));
+const pctVend = (e, X) => e.vendedor_id === X.D.meuId ? (+(X.D.perfil || {}).comissao_pct || 0) : (+((X.D.equipe || []).find(x => x.user_id === e.vendedor_id) || {}).comissao_pct || 0);
+const custoDe = (e) => r2((+e.milhas || 0) * (+e.milheiro || 0) / 1000 + (+e.taxas || 0));
+
+// comissão e parceiro depois do cancelamento, sobre o que ficou
+function novosValores(e, X, val, cus) {
+  if (ehB2B(e)) return { com: pctVend(e, X) === 0 ? 0 : comissaoB2B(0, true), rep: 0 };
+  const t = Number((X.D.cfg && X.D.cfg.imposto_pct) ?? 6) / 100, m = val - cus, imp = Math.max(m, 0) * t;
+  const com = r2(Math.max(m - imp, 0) * (+e.comissao_pct || 0) / 100);
+  const rep = r2(Math.max(m - imp - com, 0) * (+e.parceiro_pct || 0) / 100);
+  return { com, rep };
+}
 
 export function blocoCancelar(e, X) {
-  if (!ehB2B(e)) return '';
-  if (ehAjuste(e)) return `<section class="bloco" style="margin-top:12px"><h2>Ajuste de cancelamento B2B</h2><div class="sub" style="margin:0">Lançado no mês do cancelamento porque a venda original é de um mês fechado. Os valores negativos descontam a venda, o custo e a comissão.</div></section>`;
-  const pode = X.ADMIN || e.vendedor_id === X.D.meuId;
+  const tipo = ehB2B(e) ? 'B2B' : '';
+  const sec = (t, txt) => `<section class="bloco" style="margin-top:12px"><h2>${t}</h2><div class="sub" style="margin:0">${txt}</div></section>`;
+  if (ehAjuste(e)) return /AJUSTE ESTORNO/.test(e.observacoes || '') ? sec('Ajuste de estorno (no-show)', 'Lançado no mês do estorno porque a venda original é de um mês fechado. O custo negativo é o valor que a companhia devolveu.') : sec('Ajuste de cancelamento', 'Lançado no mês do cancelamento porque a venda original é de um mês fechado. Os valores negativos descontam a venda, o custo e a comissão.');
   const aj = ajusteDe(e, X.D);
-  if (aj) return `<section class="bloco" style="margin-top:12px"><h2>Emissão B2B cancelada</h2><div class="sub" style="margin:0">Mês fechado: o ajuste entrou em ${String(aj.data_negociacao || '').slice(0, 7).split('-').reverse().join('/')}.</div></section>`;
-  if (ehCancelada(e)) return `<section class="bloco" style="margin-top:12px"><h2>Emissão B2B cancelada</h2><div class="sub" style="margin:0">Comissão de cancelamento: ${X.brl2(e.comissao)}.</div></section>`;
-  if (!pode) return '';
-  const pendente = (X.D.b2bCanc || {})[e.id];
-  if (pendente) return `<section class="bloco" style="margin-top:12px"><h2>Cancelamento enviado</h2><div class="sub" style="margin:0">A planilha atualiza em até 5 minutos.</div></section>`;
-  return `<details class="bloco" style="margin-top:12px" id="b2bCanc"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão B2B</summary>
-    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
-    <div class="duas-col"><label class="fl"><span>A agência paga no cancelamento (R$)</span><input id="b2bCVal" inputmode="decimal" value="0"></label><label class="fl"><span>Custo que não voltou (R$)</span><input id="b2bCCus" inputmode="decimal" value="0"></label></div>
-    <div class="sub" style="margin-top:2px">Ex.: taxa de embarque não reembolsada. Milhas devolvidas não contam como custo.</div>
-    <label class="fl"><span>Motivo (opcional)</span><input id="b2bCMot"></label>
-    <button type="button" class="sec grande" id="b2bCOk" style="width:100%;margin-top:10px;color:var(--alerta)">Confirmar cancelamento</button></details>`;
+  if (aj) return sec(`Emissão ${tipo} cancelada`.replace('  ', ' '), `Mês fechado: o ajuste entrou em ${String(aj.data_negociacao || '').slice(0, 7).split('-').reverse().join('/')}.`);
+  if (ehCancelada(e)) return sec(`Emissão ${tipo} cancelada`.replace('  ', ' '), `Comissão depois do cancelamento: ${X.brl2(e.comissao)}.`);
+  if (!(X.ADMIN || e.vendedor_id === X.D.meuId)) return '';
+  if ((X.D.cancPend || {})[e.id]) return sec('Cancelamento enviado', 'A planilha atualiza em até 5 minutos.');
+  const est = blocoEstorno(e, X);
+  const regra = tipo ? `A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.` : 'A comissão é recalculada pelo percentual da venda sobre o que ficou.';
+  const quem = tipo ? 'A agência paga' : 'O cliente paga';
+  return `<details class="bloco" style="margin-top:12px" id="cancEm"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão</summary>
+    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. ${regra}${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
+    <div class="duas-col"><label class="fl"><span>${quem} no cancelamento (R$)</span><input id="cancVal" inputmode="decimal" value="0"></label><label class="fl"><span>Custo que não voltou (R$)</span><input id="cancCus" inputmode="decimal" value="0"></label></div>
+    <div class="sub" style="margin-top:2px">Ex.: multa, taxa de embarque ou tarifa não reembolsada. Milhas devolvidas não contam como custo.</div>
+    <label class="fl"><span>Motivo</span><input id="cancMot" placeholder="Ex.: passageiro desistiu, mudança de data"></label>
+    <button type="button" class="sec grande" id="cancOk" style="width:100%;margin-top:10px;color:var(--alerta)">Confirmar cancelamento</button></details>${est}`;
 }
-const pctVend = (e, X) => e.vendedor_id === X.D.meuId ? (+(X.D.perfil || {}).comissao_pct || 0) : (+((X.D.equipe || []).find(x => x.user_id === e.vendedor_id) || {}).comissao_pct || 0);
 
-export function ligarCancelar(P, e, X, depois) {
-  const b = P.querySelector('#b2bCOk'); if (!b) return;
+// ---------- no-show / estorno de taxas ----------
+// A venda continua (o passageiro não voou, mas não é cancelamento). A cia devolve parte do custo (ex.: taxa de embarque).
+// Fica com a Maktub: o custo cai e o lucro sobe. Devolvido ao cliente: custo e venda caem juntos.
+// Mês aberto: ajusta a própria linha. Mês fechado: linha de ajuste no mês atual, como no cancelamento.
+export const ehEstorno = (e) => /ESTORNO/.test(String((e && e.observacoes) || ''));
+function blocoEstorno(e, X) {
+  if (ehAjuste(e)) return '';
+  return `<details class="bloco" style="margin-top:8px" id="estEm"><summary style="cursor:pointer;color:var(--verde);font-weight:600">No-show: registrar estorno recebido</summary>
+    <div class="sub" style="margin-top:6px">Para quando o passageiro não voou e a companhia devolveu parte do custo, como a taxa de embarque. A venda continua.${X.fechado ? ' <b>Mês fechado: a diferença entra como ajuste no mês atual.</b>' : ''}</div>
+    <label class="fl"><span>Valor estornado pela companhia (R$)</span><input id="estVal" inputmode="decimal"></label>
+    <div class="seg" id="estDest"><button type="button" data-d="maktub" class="on">Fica com a Maktub</button><button type="button" data-d="cliente">Devolvido ao ${ehB2B(e) ? 'comprador' : 'cliente'}</button></div>
+    <label class="fl"><span>Observação (opcional)</span><input id="estObs" placeholder="Ex.: no-show no trecho de volta"></label>
+    <button type="button" class="sec grande" id="estOk" style="width:100%;margin-top:10px">Registrar estorno</button></details>`;
+}
+function ligarEstorno(P, e, X, depois) {
+  const b = P.querySelector('#estOk'); if (!b) return;
+  let dest = 'maktub';
+  P.querySelector('#estDest').onclick = (ev) => { const x = ev.target.closest('button'); if (!x) return; dest = x.dataset.d; P.querySelectorAll('#estDest button').forEach(y => y.classList.toggle('on', y === x)); };
   b.onclick = async () => {
-    const val = nb(P.querySelector('#b2bCVal').value) || 0, cus = nb(P.querySelector('#b2bCCus').value) || 0;
-    const mot = P.querySelector('#b2bCMot').value.trim();
-    if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
+    const est = nb(P.querySelector('#estVal').value) || 0;
+    if (est <= 0) { X.aviso('Informe o valor estornado.'); return; }
+    if (est > custoDe(e) + 0.009) { X.aviso(`O estorno (${X.brl2(est)}) passa do custo da emissão (${X.brl2(custoDe(e))}).`); return; }
+    const devolve = dest === 'cliente' ? est : 0;
+    const val = r2((+e.valor_receber || 0) - devolve), cus = r2(custoDe(e) - est);
+    if (!confirm(`Registrar estorno de ${X.brl2(est)} (${dest === 'cliente' ? 'devolvido' : 'fica com a Maktub'})? Custo passa para ${X.brl2(cus)} e venda para ${X.brl2(val)}.`)) return;
     const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    const comNova = pctVend(e, X) === 0 ? 0 : comissaoB2B(0, true);
+    const nota = `ESTORNO no-show em ${quando}: ${X.brl2(est)} ${dest === 'cliente' ? 'devolvido' : 'fica com a Maktub'}`;
+    const obsx = P.querySelector('#estObs').value.trim(), b2b = ehB2B(e);
+    // comissão: B2B não muda; B2C recalcula pelo percentual sobre o novo lucro
+    const nv = b2b ? { com: +e.comissao || 0, rep: +e.repasse || 0 } : novosValores(e, X, val, cus);
     let dados;
     if (X.fechado) {
-      // mês fechado não muda: linha nova no mês atual com as diferenças
-      const custoOrig = r2((+e.milhas || 0) * (+e.milheiro || 0) / 1000 + (+e.taxas || 0));
       const mes = String(e.data_negociacao || '').slice(0, 7).split('-').reverse().join('/');
-      dados = { 'Gestor': e.gestor || 'Maktub', 'Conta': e.conta || '', 'Email ou Produto': '', 'Cidade': MARCA, 'Cia': e.cia || '',
-        'Sobrenome': e.sobrenome || '', 'Origem': e.origem || '', 'Destino': e.destino || '', 'Comprador': e.comprador || '', 'Passageiros': +e.passageiros || 1,
+      dados = { 'Gestor': e.gestor || 'Maktub', 'Conta': e.conta || e.fornecedor || '', 'Email ou Produto': e.produto || '', 'Cidade': b2b ? MARCA : (e.destino || ''), 'Cia': e.cia || '',
+        'Sobrenome': e.sobrenome || '', 'CPF (NF)': e.cpf_nf || '', 'Origem': e.origem || '', 'Destino': e.destino || '', 'Comprador': e.comprador || '', 'Passageiros': +e.passageiros || 1,
         'Contato': e.contato || '', 'Indicação': '', 'Localizador': String(e.localizador || '').toUpperCase(), 'Data da negociação': hojeISO(),
-        'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus - custoOrig), 'Valor a receber': r2(val - (+e.valor_receber || 0)), 'Pago': true,
-        'Comissão': r2(comNova - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
-        'Observações': [MARCA_OBS, `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)})`, mot].filter(Boolean).join(' · '),
+        'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(-est), 'Valor a receber': r2(-devolve), 'Pago': true,
+        'Comissão': r2(nv.com - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
+        'Observações': [b2b ? MARCA_OBS : '', `AJUSTE ${nota} da venda de ${mes} (${REF(e.id)})`, obsx].filter(Boolean).join(' · '),
         'Serviço': e.servico || 'Passagens (Milhas)', 'Vendedor': X.nomeTime(e.vendedor_id) || '' };
+      if (+e.repasse) dados['Repasse do parceiro'] = r2(nv.rep - (+e.repasse || 0));
     } else {
-      const obs = [e.observacoes || MARCA_OBS, `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
-      dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Comissão': comNova, 'Observações': obs };
+      dados = { _acao: 'atualizar', _alvo: e.id, 'Taxas': r2((+e.taxas || 0) - est), 'Valor a receber': val,
+        'Observações': [e.observacoes || (b2b ? MARCA_OBS : ''), nota, obsx].filter(Boolean).join(' · ') };
     }
     b.disabled = true; b.textContent = 'Enviando...';
     const nid = uuid(); if (X.fechado) dados['ID sistema'] = nid;
     const { error } = await X.sb.from('fila_planilha').insert({ id: nid, atendimento_id: null, item: 0, dados });
-    if (error) { b.disabled = false; b.textContent = 'Confirmar cancelamento'; X.aviso('Não cancelou: ' + error.message); return; }
-    X.D.b2bCanc = X.D.b2bCanc || {}; X.D.b2bCanc[e.id] = true;
+    if (error) { b.disabled = false; b.textContent = 'Registrar estorno'; X.aviso('Não registrou: ' + error.message); return; }
+    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = true;
+    X.aviso('Estorno registrado. A planilha atualiza em até 5 minutos.'); depois();
+  };
+}
+
+export function ligarCancelar(P, e, X, depois) {
+  ligarEstorno(P, e, X, depois);
+  const b = P.querySelector('#cancOk'); if (!b) return;
+  b.onclick = async () => {
+    const val = nb(P.querySelector('#cancVal').value) || 0, cus = nb(P.querySelector('#cancCus').value) || 0;
+    const mot = P.querySelector('#cancMot').value.trim();
+    if (!mot) { X.aviso('Informe o motivo do cancelamento.'); P.querySelector('#cancMot').focus(); return; }
+    if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
+    const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const nv = novosValores(e, X, val, cus), b2b = ehB2B(e);
+    let dados;
+    if (X.fechado) {
+      // mês fechado não muda: linha nova no mês atual com as diferenças
+      const mes = String(e.data_negociacao || '').slice(0, 7).split('-').reverse().join('/');
+      dados = { 'Gestor': e.gestor || 'Maktub', 'Conta': e.conta || e.fornecedor || '', 'Email ou Produto': e.produto || '', 'Cidade': b2b ? MARCA : (e.destino || ''), 'Cia': e.cia || '',
+        'Sobrenome': e.sobrenome || '', 'CPF (NF)': e.cpf_nf || '', 'Origem': e.origem || '', 'Destino': e.destino || '', 'Comprador': e.comprador || '', 'Passageiros': +e.passageiros || 1,
+        'Contato': e.contato || '', 'Indicação': '', 'Localizador': String(e.localizador || '').toUpperCase(), 'Data da negociação': hojeISO(),
+        'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus - custoDe(e)), 'Valor a receber': r2(val - (+e.valor_receber || 0)), 'Pago': true,
+        'Comissão': r2(nv.com - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
+        'Observações': [b2b ? MARCA_OBS : '', `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)})`, mot].filter(Boolean).join(' · '),
+        'Serviço': e.servico || 'Passagens (Milhas)', 'Vendedor': X.nomeTime(e.vendedor_id) || '' };
+      if (+e.repasse) dados['Repasse do parceiro'] = r2(nv.rep - (+e.repasse || 0));
+    } else {
+      const obs = [e.observacoes || (b2b ? MARCA_OBS : ''), `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
+      dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Observações': obs };
+      if (b2b) dados['Comissão'] = nv.com; // B2C: a comissão continua pelo percentual e se recalcula sozinha
+    }
+    b.disabled = true; b.textContent = 'Enviando...';
+    const nid = uuid(); if (X.fechado) dados['ID sistema'] = nid;
+    const { error } = await X.sb.from('fila_planilha').insert({ id: nid, atendimento_id: null, item: 0, dados });
+    if (error) { b.disabled = false; b.textContent = 'Confirmar cancelamento'; X.aviso('Não cancelou: ' + error.message + (/null value|not-null/.test(error.message) ? ' (falta rodar o SQL da emissão B2B no Supabase)' : '')); return; }
+    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = true;
     X.aviso('Cancelamento enviado. A planilha atualiza em até 5 minutos.'); depois();
   };
 }

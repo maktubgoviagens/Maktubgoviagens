@@ -10,7 +10,7 @@
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
 import * as CX from './caixa.js?v=1';
-import { ehB2B } from './b2b.js?v=4';
+import { ehB2B } from './b2b.js?v=5';
 
 export const INICIO = '2026-09';
 const INICIO_CONTAS = '2026-10';

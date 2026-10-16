@@ -466,10 +466,10 @@ import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=34';
 import * as VENDA from '/admin/app/venda.js?v=4';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=9';
+import * as CMP from '/admin/app/compromissos.js?v=10';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=4';
+import * as B2B from '/admin/app/b2b.js?v=5';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -1178,7 +1178,7 @@ function telaEmissoes(P) {
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
-        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${B2B.ehB2B(e) ? ` <span class="tag">${B2B.ehAjuste(e) ? 'B2B ajuste de cancelamento' : B2B.ehCancelada(e, D) ? 'B2B cancelada' : 'B2B'}</span>` : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
+        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${B2B.ehB2B(e) ? ' <span class="tag">B2B</span>' : ''}${B2B.ehAjuste(e) ? ` <span class="tag">${/AJUSTE ESTORNO/.test(e.observacoes || '') ? 'ajuste de estorno' : 'ajuste de cancelamento'}</span>` : B2B.ehCancelada(e, D) ? ' <span class="tag">cancelada</span>' : B2B.ehEstorno(e) ? ' <span class="tag">no-show, estorno</span>' : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}${VER || minha(e) ? `<span>Comissão:</span> ${brl2(e.comissao)}` : ''}</div>
         ${!VER && LST ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}
@@ -2709,7 +2709,7 @@ async function marcarCheckinB2B() {
 function trechosEm() {
   const T = [];
   D.voosEm.forEach(v => {
-    if (B2B.ehB2B((D.emissoes || []).find(x => x.id === v.id))) return;
+    { const em = (D.emissoes || []).find(x => x.id === v.id); if (B2B.ehB2B(em) || B2B.ehCancelada(em, D)) return; }
     [['ida', v.data_ida, v.checkin_ida, v.origem, v.destino], ['volta', v.data_volta, v.checkin_volta, v.destino, v.origem]].forEach(([tr, data, feito, de, para]) => {
       if (!data) return;
       const d = dia(data), k = difDias(d);
