@@ -1039,14 +1039,18 @@ function rapInfo() {
   // o valor grande é o do Pix; embaixo, o cartão de crédito por extenso (e o parcelamento maior, se o vendedor pediu)
   const pr = precoRapida(S), cc = pr;
   // a cotação nunca anuncia mais que as parcelas sem juros; parcelamento maior o vendedor passa na conversa (tabela no editor)
-  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`, 'Taxas inclusas'] : [S.forma || 'À vista via Pix', 'taxas inclusas'];
-  const totalLbl = pr ? `No Pix · ${total}` : total, valor = pr ? pr.pix : num(S.por);
+  // "taxas de embarque inclusas" fica no bloco do que está incluído na passagem, junto da bagagem
+  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`] : [S.forma || 'À vista via Pix'];
+  const totalLbl = `${pr ? 'No Pix · ' : ''}${total}`, valor = pr ? pr.pix : num(S.por);
   const descTxt = pr && pr.desc > 0 ? `${pct1(pr.desc)}% de desconto por pagar no Pix` : '';
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
       tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });
   const corp = S.marca === 'Maktub Corporativo';
-  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, valor, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+  // mensagem do botão "Quero fechar esta viagem": a Maktub já sabe qual cotação é
+  const per = trechos.length ? (trechos.length > 1 && trechos[trechos.length - 1].dataL ? ` (${ddmm(trechos[0].v.data)} a ${ddmm(trechos[trechos.length - 1].v.data)})` : trechos[0].dataL ? ` (${ddmm(trechos[0].v.data)})` : '') : '';
+  const zapTxt = `Olá, Maktub! Quero fechar a viagem ${titulo}${per}${S.cliente ? ', em nome de ' + String(S.cliente).trim() : ''}.${S.slug ? ' Cotação: maktubgo.com.br/' + S.slug : ''}`;
+  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, valor, zapTxt, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
 }
 // página do link (mesmo visual da imagem, em versão para celular)
 function htmlRapida() {
@@ -1115,6 +1119,8 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
 .valor .n{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:500;color:var(--creme);line-height:1.08;margin:12px 0 2px;letter-spacing:1px;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1}
 .valor .p{font-size:10.5px;letter-spacing:3px;text-transform:uppercase;color:rgba(235,224,196,.72)}
 .valor .desc{display:inline-block;margin-top:12px;padding:6px 14px;border:1px solid var(--dourado);border-radius:20px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.valor .cta{display:block;margin:22px auto 0;max-width:340px;background:var(--creme);color:var(--verde);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:500;padding:15px 18px}
+.valor .cta-sub{font-size:9.5px;color:rgba(235,224,196,.55);margin-top:8px;letter-spacing:.3px}
 .valor .d{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.18);font-size:11px;color:rgba(235,224,196,.65);letter-spacing:.3px}
 .nota{padding:20px 26px 24px;font-size:10px;line-height:1.95;color:var(--suave);text-align:center}
 .rodape{background:var(--verde);padding:28px 24px 24px;text-align:center}
@@ -1142,14 +1148,16 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
     <div class="fio"></div>
 ${tr}
     ${obs ? `<div class="obs"><div class="k">Observação</div><div class="v">${h(obs)}</div></div>` : ''}
-    ${S.bagagem ? `<div class="bag"><div class="k">Bagagem incluída</div><div class="v">${h(S.bagagem)}</div></div>` : ''}
+    <div class="bag"><div class="k">${S.bagagem ? 'Bagagem incluída' : 'Incluído'}</div>${S.bagagem ? `<div class="v">${h(S.bagagem)}</div>` : ''}<div class="v" style="${S.bagagem ? 'margin-top:4px;font-size:11px;color:var(--suave)' : ''}">Taxas de embarque inclusas</div></div>
   </div>
   <div class="valor">
     <div class="k">Valor total</div>
     <div class="n">${brl(I.valor)}</div>
     <div class="p">${h(I.total)}</div>
     ${I.descTxt ? `<div class="desc">${h(I.descTxt)}</div>` : ''}
-    <div class="d">${I.cc ? I.pagto.slice(0, -1).map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') + '<br>' + h(I.pagto[I.pagto.length - 1]) : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <div class="d">${I.cc ? I.pagto.map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(I.zapTxt)}" target="_blank" rel="noopener">Quero fechar esta viagem</a>
+    <div class="cta-sub">Abre o WhatsApp da Maktub com a sua mensagem pronta</div>
   </div>
   <div class="nota">
     Valores consultados em ${hoje} às ${hora}.<br>
@@ -1224,9 +1232,12 @@ async function imagemRapida() {
     g.font = jost(13, '500'); g.fillStyle = DOUR; esp('OBSERVAÇÃO', W / 2, y + 34, 3.4, 'center');
     g.font = jost(17); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 62 + i * 26)); g.textAlign = 'left'; y += OH; }
   // bagagem
-  if (S.bagagem) { g.font = jost(18); const ls = quebra(S.bagagem, W - M * 2 - 40);
-    g.font = jost(13, '500'); g.fillStyle = DOUR; esp('BAGAGEM INCLUÍDA', W / 2, y + 53, 3.4, 'center');
-    g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28)); g.textAlign = 'left'; y += (ls.length - 1) * 28; }
+  // bagagem e taxas de embarque: o que está incluído na passagem
+  { g.font = jost(18); const ls = S.bagagem ? quebra(S.bagagem, W - M * 2 - 40) : [];
+    g.font = jost(13, '500'); g.fillStyle = DOUR; esp(S.bagagem ? 'BAGAGEM INCLUÍDA' : 'INCLUÍDO', W / 2, y + 53, 3.4, 'center');
+    g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28));
+    const yt = y + 86 + ls.length * 28 - (ls.length ? 2 : 0); g.font = jost(ls.length ? 15 : 18); g.fillStyle = ls.length ? SUAVE : VERDE; g.fillText('Taxas de embarque inclusas', W / 2, yt); g.textAlign = 'left';
+    y += Math.max(0, ls.length - 1) * 28 + (ls.length ? 26 : 0); }
   y += 166;
   // valor total
   g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28 + (I.descTxt ? 58 : 0), DO = I.descTxt ? 58 : 0;
@@ -1239,7 +1250,7 @@ async function imagemRapida() {
     g.strokeStyle = DOUR; g.lineWidth = 1.5; g.beginPath(); g.roundRect ? g.roundRect(tx, ty, tw, 40, 20) : g.rect(tx, ty, tw, 40); g.stroke();
     g.fillStyle = DOUR; esp(I.descTxt.toUpperCase(), W / 2, ty + 26, 2.4, 'center'); }
   g.fillStyle = 'rgba(235,224,196,.2)'; g.fillRect(M, y + 205 + DO, W - M * 2, 1);
-  g.textAlign = 'center'; pl.forEach((l, i) => { const forte = I.cc && i < pl.length - 1; g.font = jost(forte ? 19 : 17, forte ? '500' : '400'); g.fillStyle = forte ? CREME : 'rgba(235,224,196,.72)'; g.fillText(l, W / 2, y + 239 + DO + i * 28); }); g.textAlign = 'left';
+  g.textAlign = 'center'; pl.forEach((l, i) => { const forte = !!I.cc; g.font = jost(forte ? 19 : 17, forte ? '500' : '400'); g.fillStyle = forte ? CREME : 'rgba(235,224,196,.72)'; g.fillText(l, W / 2, y + 239 + DO + i * 28); }); g.textAlign = 'left';
   y += VH;
   // rodapé: selo, "Seu destino começa aqui" e contato
   const PE = 143; g.fillStyle = VERDE; g.fillRect(0, y, W, PE); g.fillStyle = 'rgba(235,224,196,.18)'; g.fillRect(0, y, W, 1);
