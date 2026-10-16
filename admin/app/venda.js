@@ -21,6 +21,30 @@ const usaMilhas = (x) => ehVoo(x) && x.pago_em !== 'pagante';
 export const custoDe = (x) => usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : (+x.custo || 0);
 export const enviado = (x) => !!x.planilha_id;
 
+// passageiros do voo: nome, CPF e nascimento de cada um (B2C). A quantidade tem que bater com "Passageiros".
+const soDig = (v) => String(v || '').replace(/\D/g, '');
+export function cpfValido(v) {
+  const c = soDig(v); if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+  const dv = (n) => { let t = 0; for (let i = 0; i < n; i++) t += +c[i] * (n + 1 - i); const r = (t * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === +c[9] && dv(10) === +c[10];
+}
+const fmtCpf = (v) => { const d = soDig(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : v; };
+const nPax = (x) => Math.max(parseInt(x.passageiros, 10) || 0, 0);
+function paxAjustado(x) {
+  const n = nPax(x); x.pax = Array.isArray(x.pax) ? x.pax : [];
+  while (x.pax.length < n) x.pax.push({ nome: '', cpf: '', nasc: '' });
+  return x.pax.slice(0, n);
+}
+function pendenciasPax(x) {
+  const n = nPax(x); if (!n) return [];
+  const L = paxAjustado(x), f = [];
+  L.forEach((p, k) => {
+    const falta = [!String(p.nome || '').trim().includes(' ') && 'nome completo', !cpfValido(p.cpf) && 'CPF válido', !p.nasc && 'nascimento'].filter(Boolean);
+    if (falta.length) f.push(`passageiro ${k + 1}: ${falta.join(', ')}`);
+  });
+  return f;
+}
+
 // o que falta para um serviço poder ir para a planilha
 export function pendenciasItem(x) {
   const f = [];
@@ -30,6 +54,7 @@ export function pendenciasItem(x) {
   if (ehVoo(x)) {
     if (!x.localizador) f.push('localizador');
     if (!x.passageiros) f.push('passageiros');
+    else f.push(...pendenciasPax(x));
     if (x.bagagem == null || x.bagagem === '') f.push('bagagem despachada');
     if (!x.print) f.push('print da tarifa');
     if (!x.cia_emissora) f.push('companhia');
@@ -71,6 +96,7 @@ function htmlItem(X, x, i, ctx) {
       ${usaMilhas(x) ? `${dupla(inp(X, 'conta', i, 'Conta usada', x.conta), inp(X, 'gestor', i, 'Gestor da conta', x.gestor))}
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, 'Milhas', x.milhas, 'n')}${inp(X, 'milheiro', i, 'Milheiro (R$)', x.milheiro, 'n')}${inp(X, 'taxas', i, 'Taxas (R$)', x.taxas, 'n')}</div>` : ''}
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
+      ${htmlPax(X, x, i, trava)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
       <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa (obrigatório)'}</span></button>${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
       <div class="sub" style="margin:-4px 0 8px">Confira no print se a tarifa inclui a mala despachada. Às vezes o bilhete não mostra.</div>`;
@@ -88,6 +114,18 @@ function htmlItem(X, x, i, ctx) {
   return base + `<details ${ctx.fechou && !trava ? 'open' : ''} style="margin-top:4px"><summary style="cursor:pointer;font-size:13px;color:var(--verde);font-weight:600;padding:6px 0">Detalhes ${ehVoo(x) ? 'do voo' : ehHotel(x) ? 'do hotel' : 'do serviço'}${trava ? ' · na planilha' : x.emitido ? ' · emitido' : ''}</summary>${det}</details>`;
 }
 
+// um bloco por passageiro: nome (puxa da ficha), CPF e nascimento
+function htmlPax(X, x, i, trava) {
+  const L = paxAjustado(x); if (!L.length) return '';
+  return `<div class="sub" style="margin:6px 0 0">Dados dos passageiros (${L.length})</div>${L.map((p, k) => {
+    const ok = String(p.nome || '').trim().includes(' ') && cpfValido(p.cpf) && p.nasc;
+    return `<div style="border-left:3px solid ${ok ? 'var(--verde)' : 'var(--linha)'};padding-left:8px;margin:6px 0">
+      <label class="fl"><span>Passageiro ${k + 1}: nome completo</span><input data-pax="${i}|${k}|nome" value="${X.esc(p.nome || '')}" list="dlPaxV" ${trava ? 'disabled' : ''}></label>
+      <div class="duas-col"><label class="fl"><span>CPF</span><input data-pax="${i}|${k}|cpf" inputmode="numeric" value="${X.esc(p.cpf || '')}" ${trava ? 'disabled' : ''}>${p.cpf && !cpfValido(p.cpf) ? '<small style="color:var(--alerta)">CPF inválido</small>' : ''}</label>
+      <label class="fl"><span>Nascimento</span><input type="date" data-pax="${i}|${k}|nasc" value="${X.esc(p.nasc || '')}" ${trava ? 'disabled' : ''}></label></div></div>`;
+  }).join('')}`;
+}
+
 // editor dos serviços: devolve funções para ler o estado
 export function editorItens(X, el, IT, ctx, aoMudar) {
   const tot = () => ({ v: r2(IT.reduce((a, x) => a + (+x.venda || 0), 0)), c: r2(IT.reduce((a, x) => a + custoDe(x), 0)) });
@@ -100,7 +138,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   });
   const desenha = () => {
     if (ctx.detalhes) padroes();
-    el.innerHTML = IT.length ? `<datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}</div>${htmlItem(X, x, i, ctx)}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}</div>${htmlItem(X, x, i, ctx)}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
     el.querySelectorAll('input[data-it],textarea[data-it]').forEach(e => {
       const set = () => { const x = IT[+e.dataset.it], k = e.dataset.k, t = e.dataset.t; x[k] = t === 'b' ? e.checked : t === 'n' ? nb(e.value) : e.value.trim(); };
       if (e.type === 'checkbox') e.onchange = () => {
@@ -111,6 +149,23 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
       else { e.oninput = () => { set(); resumo(); }; e.onchange = () => { if (['milhas', 'milheiro', 'taxas', 'cia_voo', 'cia_emissora'].includes(e.dataset.k)) desenha(); }; }
     });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { IT[+b.dataset.it][b.dataset.k] = b.dataset.set; desenha(); });
+    // passageiros: muda a quantidade e redesenha os blocos; nome de quem tem ficha já traz CPF e nascimento
+    el.querySelectorAll('input[data-k="passageiros"]').forEach(e => e.addEventListener('change', () => desenha()));
+    el.querySelectorAll('[data-pax]').forEach(e => {
+      const [i, k, campo] = e.dataset.pax.split('|'), x = IT[+i];
+      e.oninput = () => { paxAjustado(x); x.pax[+k][campo] = e.value.trim(); };
+      e.onchange = () => {
+        paxAjustado(x); const p = x.pax[+k];
+        if (campo === 'nome') {
+          const n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+          const f = (X.D.pessoas || []).find(o => n(o.nome) === n(p.nome));
+          if (f) { p.pessoa_id = f.id; const d = (X.D.docs || []).find(o => o.pessoa_id === f.id); if (!p.cpf && d && d.cpf) p.cpf = fmtCpf(d.cpf); if (!p.nasc && f.nascimento) p.nasc = f.nascimento; }
+          else delete p.pessoa_id;
+        }
+        if (campo === 'cpf' && cpfValido(p.cpf)) p.cpf = fmtCpf(p.cpf);
+        desenha();
+      };
+    });
     el.querySelectorAll('[data-print]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.print]; x.print ? verArquivo(X, x.print) : anexar(X, 'print', x, desenha); });
     el.querySelectorAll('[data-printtroca]').forEach(b => b.onclick = () => anexar(X, 'print', IT[+b.dataset.printtroca], desenha));
     resumo();
@@ -215,16 +270,43 @@ export async function enviarParaPlanilha(X, r, IT, F) {
       'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
       'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
       'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
-      'Observações': [numCard(r), ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : ''].filter(Boolean).join(' · '),
+'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : ''].filter(Boolean).join(' · '),
       'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : '',
       'Quantas vezes': F.forma === 'cartao' && F.parcelas ? +F.parcelas : '',
       'Serviço': servicoPlanilha(x), 'Vendedor': vendedor, 'ID sistema': id
     } };
   });
   if (!linhas.length) return { ok: true, n: 0 };
+  await salvarPassageiros(X, novos);
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
   const agora = new Date().toISOString();
   linhas.forEach(l => { IT[l.item].planilha_id = l.id; IT[l.item].enviado_em = agora; });
   return { ok: true, n: linhas.length };
+}
+
+// cada passageiro vira (ou atualiza) uma ficha no CRM com papel de passageiro, CPF e nascimento
+async function salvarPassageiros(X, itens) {
+  const n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const todos = itens.filter(ehVoo).flatMap(x => paxAjustado(x).map(p => ({ x, p }))).filter(({ p }) => String(p.nome || '').trim());
+  for (const { p } of todos) {
+    try {
+      let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : (X.D.pessoas || []).find(o => n(o.nome) === n(p.nome));
+      if (!f) {
+        const ins = await X.sb.from('pessoas').insert({ nome: p.nome.replace(/\s+/g, ' ').trim(), nascimento: p.nasc || null, papeis: ['passageiro'] }).select().single();
+        if (ins.error) continue; f = ins.data; (X.D.pessoas = X.D.pessoas || []).push(f);
+      } else {
+        const up = {};
+        if (p.nasc && !f.nascimento) up.nascimento = p.nasc;
+        if (!(f.papeis || []).includes('passageiro')) up.papeis = [...(f.papeis || []), 'passageiro'];
+        if (Object.keys(up).length) { const u = await X.sb.from('pessoas').update(up).eq('id', f.id).select().single(); if (!u.error) Object.assign(f, u.data); }
+      }
+      p.pessoa_id = f.id;
+      const d = (X.D.docs || []).find(o => o.pessoa_id === f.id);
+      if (cpfValido(p.cpf) && !(d && d.cpf)) {
+        const r = await X.sb.from('pessoas_documentos').upsert({ ...(d || {}), pessoa_id: f.id, cpf: fmtCpf(p.cpf) }).select().single();
+        if (!r.error) X.D.docs = (X.D.docs || []).filter(o => o.pessoa_id !== f.id).concat(r.data);
+      }
+    } catch (_) { /* a venda segue; a ficha pode ser completada depois no CRM */ }
+  }
 }
