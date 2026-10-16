@@ -3,7 +3,7 @@
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
 import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=3';
-let LISTA = null, ED = null, S = null, MARCA = null, PRE = null, PEDIR = null;
+let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
 // toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
 export function novaRapida() { PRE = null; S = null; ED = null; PEDIR = 'rapida'; }
@@ -96,7 +96,7 @@ const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 con
 /* ================= telas ================= */
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
-  if (!MARCA) { try { MARCA = (await import('/admin/app/cot-marca.js?v=1')).MARCA; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
+  if (!MARCA) { try { const m = await import('/admin/app/cot-marca.js?v=2'); MARCA = m.MARCA; RAPM = m.RAP || null; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
   carregarAero();
   if (PEDIR) { const tipo = PEDIR; PEDIR = null; return comCard(P, X, () => { S = comPre(tipo === 'rapida' ? NOVO_RAP() : tipo === 'corp' ? NOVO_CORP() : NOVO_GO()); PRE = null; ir(X, 'novo'); }); }
   if (ED) return editor(P, X);
@@ -536,7 +536,7 @@ async function gerarLink(X) {
   const fim = () => { b.disabled = false; b.textContent = rot; };
   if (slug && await existeNoSite(slug)) { fim(); return troque(); }
   b.textContent = 'Gerando...';
-  const row = { html: S.modelo === 'rapida' ? gerarHTML(rapParaCorp()) : gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
+  const row = { html: S.modelo === 'rapida' ? htmlRapida() : gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
   // mesma cotação e mesmo nome: atualiza o link que o cliente já recebeu
   const atualizar = slug && S.link_slug === slug;
   const r = atualizar
@@ -821,7 +821,7 @@ function editorRapida(P, X) {
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
     <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>${faixaCard(X)}${htmlHistorico(X)}
-    <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
+    <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
       <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
@@ -832,15 +832,12 @@ function editorRapida(P, X) {
         ${duas(inp(`voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="SCL" maxlength="3" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
         ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`))}</div>`).join('')}
         <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
-      <div class="duas-col">${inp('cliente', 'Passageiro', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
+      <div class="duas-col">${inp('cliente', 'Cliente (não aparece na cotação)', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
       <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
       ${inp('bagagem', 'Bagagem incluída')}
-      <div class="duas-col">${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}${inp('de', 'Valor no site (opcional)', 'num', 'placeholder="2.100,00"')}</div>
-      <div id="rpEco">${avisoEco()}</div>
+      ${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}
       <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
-      ${dobra('rpPrintD', 'Print do site (opcional, aparece só com a comparação ligada)', `<label class="fl"><input type="file" accept="image/*" multiple id="rpPrint"></label>
-      ${S.prints.map((u, i) => `<div style="position:relative;margin:6px 0"><img src="${u}" style="max-width:100%;border:1px solid var(--linha)"><button type="button" data-rm="${i}" style="position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--linha);padding:4px 8px;font-size:12px">remover</button></div>`).join('')}`)}
     </form>
     <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
     <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>
@@ -858,7 +855,7 @@ function editorRapida(P, X) {
     if (vk) { const v = S.voos[+vk[1]]; if (vk[2] === 'rotulo') v._rotM = !!e.target.value.trim(); if (/^(ocod|dcod|data|saida|chegada)$/.test(vk[2])) completarVoo(v); if (/^(ocod|dcod)$/.test(vk[2])) { rotular(S.voos); S.voos.forEach((x, i) => { const el = f.querySelector(`[data-k="voos.${i}.rotulo"]`); if (el && el !== e.target) el.value = x.rotulo; }); } }
     if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
-    if (k === 'de' || k === 'por') { S.eco = undefined; $('rpEco').innerHTML = avisoEco(); ligarEco(); } previa(); });
+    previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
@@ -878,7 +875,7 @@ function editorRapida(P, X) {
   $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
     S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
   P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => { S.voos.splice(+b.dataset.tira.split('#')[1], 1); rotular(S.voos); editorRapida(P, X); });
-  $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
+  if ($('rpPrint')) $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
   const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor total com a Maktub.'); return false; } return true; };
@@ -956,92 +953,232 @@ function htmlHistorico(X) {
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 
+/* ================= cotação rápida: modelo aprovado em 16/10/2026 =================
+   O mesmo desenho serve para somente ida, ida e volta e multitrecho (até 4 trechos; com mais, a peça cresce).
+   A imagem não tem altura fixa: acompanha a quantidade de trechos, sem sobrar espaço em branco.
+   Sem duração de voo e sem comparação com o site. */
+const EXT = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito'];
+const MES3 = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+const cap = (t) => t ? t[0].toUpperCase() + t.slice(1) : t;
+function rapInfo() {
+  const vs = rapVoos(), n = vs.length, pax = Math.max(1, parseInt(S.pessoas) || 1);
+  const cid = (v, k) => cidadeDe(v[k + 'cod']) || v[k + 'nome'] || String(v[k + 'cod'] || '').toUpperCase();
+  const seq = []; vs.forEach((v, i) => { if (!i) seq.push(cid(v, 'o')); seq.push(cid(v, 'd')); });
+  const uni = [...new Set(seq.filter(Boolean))];
+  const ida = n === 1, iv = n === 2 && vs[1].dcod === vs[0].ocod && vs[1].ocod === vs[0].dcod;
+  const titulo = !n ? 'Sua viagem' : ida ? `${uni[0]} → ${uni[1] || ''}` : uni.length <= 2 ? uni.join(' & ') : uni.slice(0, -1).join(', ') + ' & ' + uni[uni.length - 1];
+  const tipo = ida ? 'Somente ida' : iv ? 'Ida e volta' : `${cap(EXT[n] || String(n))} trechos`;
+  const total = ida ? 'Somente ida' : iv ? 'Ida e volta' : `Os ${EXT[n] || n} trechos`;
+  const paxT = `${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}`;
+  const pagto = [S.forma || 'À vista via Pix', parcTxt() ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
+  const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
+    return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
+      tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });
+  const corp = S.marca === 'Maktub Corporativo';
+  return { vs, n, pax, titulo, tipo, total, paxT, pagto, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+}
+// página do link (mesmo visual da imagem, em versão para celular)
+function htmlRapida() {
+  const I = rapInfo(), R = RAPM || {}, agora = new Date();
+  const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), hoje = agora.toLocaleDateString('pt-BR');
+  const tr = I.trechos.map(t => `
+      <div class="tr">
+        <div class="tr-top"><span class="tr-rot">${h(t.rot)}</span><span class="tr-data">${h(t.dia)}${t.dataL ? ' · ' + t.dataL : ''}</span></div>
+        <div class="tr-body">
+          <div class="pt"><div class="h">${h(t.v.saida || '')}</div><div class="a">${h(t.o)}${t.onome ? ' · ' + h(t.onome) : ''}</div></div>
+          <div class="mid"><div class="seta">&#8594;</div><div class="tipo">${h(t.tipo)}</div></div>
+          <div class="pt fim"><div class="h">${h(t.v.chegada || '')}${t.v.mais1 ? '<sup>+1</sup>' : ''}</div><div class="a">${h(t.d)}${t.dnome ? ' · ' + h(t.dnome) : ''}</div></div>
+          <div class="pax">${t.pax} ${t.pax === 1 ? 'passageiro' : 'passageiros'}</div>
+        </div>
+      </div>`).join('');
+  const obs = String(S.obs || '').trim();
+  return `<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${h(I.titulo)} · ${I.corp ? 'Maktub Corporativo' : 'Maktub Go'}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--verde:#1B4332;--dourado:#A88B4A;--creme:#EBE0C4;--papel:#F4F2ED;--branco:#fff;--texto:#3A3A34;--suave:#8A877E;--linha:#E4DFD2}
+body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-height:1.6;-webkit-font-smoothing:antialiased;padding:18px 12px 34px}
+.peca{max-width:600px;margin:0 auto;background:var(--papel);box-shadow:0 2px 24px rgba(27,67,50,.1);overflow:hidden}
+.topo{background:var(--creme);padding:20px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.topo .ass img{height:50px;width:auto;display:block}
+.topo .marca{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--verde);letter-spacing:1px}
+.topo .tag{font-size:9.5px;letter-spacing:2.6px;text-transform:uppercase;color:rgba(27,67,50,.6);margin-top:5px;margin-left:3px}
+.topo .ct{text-align:right;font-size:11px;color:var(--verde);line-height:1.9}
+.topo .ct b{font-weight:500}
+.faixa{background:var(--verde);display:grid;grid-template-columns:1fr 1fr 1fr}
+.faixa > div{padding:13px 18px;border-left:1px solid rgba(235,224,196,.16)}
+.faixa > div:first-child{border-left:none}
+.faixa .k{font-size:8px;letter-spacing:2.6px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.faixa .v{font-size:12.5px;color:var(--creme);margin-top:4px;letter-spacing:.3px}
+.corpo{padding:34px 26px 28px;position:relative}
+.corpo::before{content:'';position:absolute;top:18px;left:50%;transform:translateX(-50%);width:216px;height:227px;opacity:.05;background:url('${R.marcaDagua || ''}') no-repeat center/contain;pointer-events:none}
+.corpo > *{position:relative}
+.rota-tt{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:500;color:var(--verde);text-align:center;line-height:1.25;letter-spacing:.5px}
+.rota-sub{text-align:center;font-size:9.5px;letter-spacing:3.4px;text-transform:uppercase;color:var(--dourado);margin-top:9px;font-weight:500}
+.fio{width:38px;height:1px;background:var(--dourado);margin:20px auto 26px}
+.tr{background:var(--branco);border:1px solid var(--linha);margin-bottom:12px}
+.tr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:11px 18px;border-bottom:1px solid var(--linha);background:#FBFAF6}
+.tr-rot{font-size:8.5px;letter-spacing:2.8px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.tr-data{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--verde);font-weight:500}
+.tr-body{padding:20px 18px 16px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.pt{flex:1;min-width:104px}
+.pt.fim{text-align:right}
+.pt .h{font-family:'Cormorant Garamond',serif;font-size:37px;font-weight:600;color:var(--verde);line-height:1;letter-spacing:.5px;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1,'tnum' 0}
+.pt .h sup{font-family:'Jost',sans-serif;font-size:11px;color:var(--dourado);font-weight:500;margin-left:2px;vertical-align:top}
+.pt .a{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--suave);margin-top:6px}
+.mid{flex:0 0 auto;text-align:center;padding:8px 6px 0}
+.mid .seta{color:var(--dourado);font-size:17px;line-height:1}
+.mid .tipo{font-size:8px;letter-spacing:1.8px;text-transform:uppercase;color:var(--suave);margin-top:6px;white-space:nowrap}
+.pax{flex:1 0 100%;margin-top:15px;padding-top:11px;border-top:1px solid var(--linha);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--suave);text-align:center}
+.bag,.obs{border:1px solid var(--linha);background:var(--branco);padding:15px 18px;margin:16px 0 0;text-align:center}
+.obs{border-color:var(--dourado);background:#FBF7EC}
+.bag{margin-bottom:22px}
+.bag .k,.obs .k{font-size:8px;letter-spacing:2.8px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.bag .v,.obs .v{font-size:12.5px;color:var(--verde);margin-top:7px;white-space:pre-line}
+.valor{background:var(--verde);padding:32px 24px;text-align:center}
+.valor .k{font-size:8.5px;letter-spacing:3.6px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.valor .n{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:500;color:var(--creme);line-height:1.08;margin:12px 0 2px;letter-spacing:1px;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1}
+.valor .p{font-size:10.5px;letter-spacing:3px;text-transform:uppercase;color:rgba(235,224,196,.72)}
+.valor .d{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.18);font-size:11px;color:rgba(235,224,196,.65);letter-spacing:.3px}
+.nota{padding:20px 26px 24px;font-size:10px;line-height:1.95;color:var(--suave);text-align:center}
+.rodape{background:var(--verde);padding:28px 24px 24px;text-align:center}
+.rodape .selo img{height:66px;width:auto;opacity:.92}
+.rodape .lt img{height:34px;width:auto;margin-top:14px;opacity:.95}
+.rodape .ct{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.16);font-size:10.5px;color:rgba(235,224,196,.8);line-height:1.95;letter-spacing:.4px}
+@media(max-width:470px){body{padding:0}.topo{justify-content:center;text-align:center}.topo .ct{text-align:center}.faixa > div{padding:11px 12px}.faixa .v{font-size:11.5px}.rota-tt{font-size:25px}.valor .n{font-size:44px}.pt .h{font-size:30px}}
+</style></head><body>
+<div class="peca">
+  <div class="topo">
+    <div>
+      ${I.corp || !R.assin ? `<div class="marca">${I.corp ? 'Maktub Corporativo' : 'Maktub Go'}</div>` : `<div class="ass"><img src="${R.assin}" alt="Maktub Go"></div>`}
+      <div class="tag">${I.corp ? 'Viagens a trabalho, resolvidas.' : 'Alfaiataria de Viagens'}</div>
+    </div>
+    <div class="ct"><b>${EMAIL}</b><br>${ZAP_TXT}</div>
+  </div>
+  <div class="faixa">
+    <div><div class="k">Passageiros</div><div class="v">${I.pax} ${I.pax === 1 ? 'pessoa' : 'pessoas'}</div></div>
+    <div><div class="k">Trecho</div><div class="v">${h(I.rota)}</div></div>
+    <div><div class="k">Consulta</div><div class="v">${hoje}</div></div>
+  </div>
+  <div class="corpo">
+    <div class="rota-tt">${h(I.titulo)}</div>
+    <div class="rota-sub">${I.sub.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <div class="fio"></div>
+${tr}
+    ${obs ? `<div class="obs"><div class="k">Observação</div><div class="v">${h(obs)}</div></div>` : ''}
+    ${S.bagagem ? `<div class="bag"><div class="k">Bagagem incluída</div><div class="v">${h(S.bagagem)}</div></div>` : ''}
+  </div>
+  <div class="valor">
+    <div class="k">Valor total</div>
+    <div class="n">${brl(num(S.por))}</div>
+    <div class="p">${h(I.total)}</div>
+    <div class="d">${I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+  </div>
+  <div class="nota">
+    Valores consultados em ${hoje} às ${hora}.<br>
+    Tarifa sujeita à confirmação no momento da emissão. Horários locais.<br>
+    Alterações podem ser feitas pela companhia aérea.
+  </div>
+  <div class="rodape">
+    ${R.selo ? `<div class="selo"><img src="${R.selo}" alt="Maktub Go"></div>` : ''}
+    ${R.letreiro ? `<div class="lt"><img src="${R.letreiro}" alt="Seu destino começa aqui"></div>` : ''}
+    <div class="ct">WhatsApp ${ZAP_TXT} &nbsp;·&nbsp; @maktubgo_</div>
+  </div>
+</div>
+</body></html>`;
+}
+// fontes do desenho: Jost do app e a Cormorant com algarismos alinhados (iguais aos do modelo)
+let FONTES = null;
+function fontesProntas() {
+  if (FONTES) return FONTES;
+  FONTES = (async () => {
+    try { for (const w of ['500', '600']) { const f = new FontFace('Cormorant Maktub', `url(/admin/app/fontes/cormorant-lnum-${w}.woff2)`, { weight: w }); await f.load(); document.fonts.add(f); } } catch (e) { /* cai na Cormorant comum */ }
+    try { await Promise.all(['400 16px Jost', '500 16px Jost'].map(x => document.fonts.load(x))); } catch (e) {}
+  })();
+  return FONTES;
+}
+// imagem para o WhatsApp: 1080 de largura, altura conforme os trechos
 async function imagemRapida() {
-  const W = 1080, PAD = 44, corp = S.marca === 'Maktub Corporativo', GO = !corp;
-  const eco = mostraEco(), de = num(S.de), por = num(S.por), pax = Math.max(1, parseInt(S.pessoas) || 1);
-  const prints = eco ? (await Promise.all((S.prints || []).map(carregar))).filter(Boolean) : [];
-  const logo = GO && MARCA && MARCA.rodape ? await carregar(MARCA.rodape) : null;
-  const vs = rapVoos(), parc = parcTxt();
-  const c = document.createElement('canvas'); c.width = W; c.height = 4200; const g = c.getContext('2d');
-  const VERDE = '#1B4332', VERDE2 = '#245a3b', DOUR = '#A88B4A', CREME = '#EBE0C4', BEGE = '#F3EAD2', PAPEL = '#F3F1EA', CINZA = '#5b625d', LINHA = '#d9d2bf';
-  const sans = (px, w = '500') => `${w} ${px}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
-  const espac = (t, x, y, sp) => { let cx = x; for (const ch of t) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + sp; } return cx - x - sp; };
-  const largEsp = (t, sp) => [...t].reduce((a, ch) => a + g.measureText(ch).width + sp, -sp);
-  const centro = (t, y) => { g.textAlign = 'center'; g.fillText(t, W / 2, y); g.textAlign = 'left'; };
-  const caixa = (x, y, w, hh, r, cor, borda) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, hh, r) : g.rect(x, y, w, hh); if (cor) { g.fillStyle = cor; g.fill(); } if (borda) { g.strokeStyle = borda; g.lineWidth = 2; g.stroke(); } };
-  const corta = (t, max) => { t = String(t || ''); if (g.measureText(t).width <= max) return t; while (t && g.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
-  const quebra = (t, max) => { const out = []; let l = ''; String(t || '').split(/\s+/).forEach(p => { const n = l ? l + ' ' + p : p; if (g.measureText(n).width > max && l) { out.push(l); l = p; } else l = n; }); if (l) out.push(l); return out; };
+  await fontesProntas();
+  const I = rapInfo(), R = RAPM || {}, W = 1080, M = 56, por = num(S.por);
+  const [assin, marcaD, selo, letreiro] = await Promise.all([I.corp ? null : R.assin, R.marcaDagua, R.selo, R.letreiro].map(u => u ? carregar(u) : null));
+  const VERDE = '#1B4332', DOUR = '#A88B4A', CREME = '#EBE0C4', PAPEL = '#F4F2ED', SUAVE = '#8A877E', LINHA = '#E2DDD0';
+  const obs = String(S.obs || '').trim();
+  const c = document.createElement('canvas'); c.width = W; c.height = 3000; const g = c.getContext('2d');
+  const corm = (px, w = '500') => `${w} ${px}px "Cormorant Maktub", "Cormorant Garamond", Georgia, serif`;
+  const jost = (px, w = '400') => `${w} ${px}px Jost, "Helvetica Neue", Arial, sans-serif`;
+  const larg = (t, sp) => [...t].reduce((a, ch) => a + g.measureText(ch).width + sp, -sp);
+  const esp = (t, x, y, sp, al = 'left') => { const w = larg(t, sp); let cx = al === 'center' ? x - w / 2 : al === 'right' ? x - w : x; for (const ch of t) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + sp; } return w; };
+  const quebra = (t, max) => { const out = []; String(t || '').split('\n').forEach(par => { let l = ''; par.split(/\s+/).forEach(p => { const n = l ? l + ' ' + p : p; if (g.measureText(n).width > max && l) { out.push(l); l = p; } else l = n; }); if (l) out.push(l); }); return out; };
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
   g.fillStyle = PAPEL; g.fillRect(0, 0, W, c.height);
-  // cabeçalho, como na corporativa
-  const CAB = 170; g.fillStyle = GO ? BEGE : VERDE; g.fillRect(0, 0, W, CAB);
-  if (logo) { const lh = 92, lw = logo.width * lh / logo.height; g.drawImage(logo, PAD, (CAB - lh) / 2 - 10, lw, lh); }
-  else { g.font = sans(36, '700'); g.fillStyle = GO ? VERDE : CREME; const w1 = espac('MAKTUB ', PAD, 82, 4); g.fillStyle = DOUR; espac(GO ? 'GO' : 'CORPORATIVO', PAD + w1 + 4, 82, 4); }
-  g.font = sans(22, '400'); g.fillStyle = GO ? VERDE : CREME; g.fillText(GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.', PAD, logo ? CAB - 26 : 122);
-  g.textAlign = 'right'; g.font = sans(20, '400'); g.fillText(EMAIL, W - PAD, 76); g.font = sans(24, '700'); g.fillText(ZAP_TXT, W - PAD, 112); g.textAlign = 'left';
-  // faixa: passageiro, trecho e validade
-  let y = CAB; const FX = 110; g.fillStyle = VERDE2; g.fillRect(0, y, W, FX);
-  const v0 = vs[0], trecho = v0 ? `${String(v0.ocod).toUpperCase()} ${vs.length > 1 ? '⇄' : '→'} ${String(v0.dcod).toUpperCase()}` : '';
-  const cols = [['PASSAGEIRO', `${S.cliente ? String(S.cliente).trim() + ' · ' : ''}${pax} ${pax === 1 ? 'pessoa' : 'pessoas'}`], ...(trecho ? [['TRECHO', trecho]] : []), ['VALIDADE', new Date().toLocaleDateString('pt-BR')]];
-  const pesos = cols.length === 3 ? [0.48, 0.27, 0.25] : [0.6, 0.4], cx = pesos.map((_, i) => PAD + pesos.slice(0, i).reduce((a, b) => a + b, 0) * (W - PAD * 2));
-  cols.forEach(([l, v], i) => { const x = cx[i], cw = pesos[i] * (W - PAD * 2); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(l, x, y + 44, 2); g.font = sans(24, '700'); g.fillStyle = '#fff'; g.fillText(corta(v, cw - 16), x, y + 82); });
-  y += FX + 50;
-  // título com a rota
-  if (v0) {
-    g.font = sans(40, '700'); g.fillStyle = VERDE; g.fillText(corta(rapRota().toUpperCase(), W - PAD * 2), PAD, y); y += 38;
-    g.font = sans(22, '400'); g.fillStyle = CINZA; g.fillText([S.cia, vs.length > 1 ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · '), PAD, y); y += 34;
-    // cartões dos voos
-    vs.forEach(v => {
-      const CH = 196; caixa(PAD, y, W - PAD * 2, CH, 12, '#fff', LINHA);
-      g.save(); g.beginPath(); g.roundRect ? g.roundRect(PAD, y, W - PAD * 2, 56, [12, 12, 0, 0]) : g.rect(PAD, y, W - PAD * 2, 56); g.fillStyle = VERDE; g.fill(); g.restore();
-      const d = dt(v.data), np = paxTrecho(v, pax); g.font = sans(20, '700'); g.fillStyle = '#fff'; const wr = espac(String(v.rotulo || '').toUpperCase(), PAD + 24, y + 36, 2);
-      if (np) { g.fillStyle = CREME; espac(` · ${np} ${np === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}`, PAD + 24 + wr, y + 36, 2); g.fillStyle = '#fff'; }
-      g.textAlign = 'right'; g.fillText(d ? `${SEMANA[d.getDay()].toUpperCase()} · ${v.data.split('-').reverse().join('/')}` : '', W - PAD - 24, y + 36); g.textAlign = 'left';
-      const yb = y + 56, meio = W / 2, colW = (W - PAD * 2) / 2 - 70;
-      g.font = sans(52, '700'); g.fillStyle = VERDE; g.fillText(v.saida || '', PAD + 24, yb + 70); g.fillText(v.chegada || '', meio + 50, yb + 70);
-      if (v.mais1) { const wc = g.measureText(v.chegada || '').width; g.font = sans(22, '700'); g.fillStyle = DOUR; g.fillText('+1', meio + 56 + wc, yb + 46); }
-      g.font = sans(40, '400'); g.fillStyle = DOUR; centro('→', yb + 64);
-      g.font = sans(21, '700'); g.fillStyle = CINZA;
-      g.fillText(corta(`${String(v.ocod).toUpperCase()} · ${v.onome || cidadeDe(v.ocod) || ''}`, colW), PAD + 24, yb + 104);
-      g.fillText(corta(`${String(v.dcod).toUpperCase()} · ${v.dnome || cidadeDe(v.dcod) || ''}`, colW), meio + 50, yb + 104);
-      const chip = (v.tipo || 'Direto').toUpperCase(); g.font = sans(17, '700'); const tw = largEsp(chip, 1.5) + 32;
-      caixa(W - PAD - 24 - tw, yb + 84 - 26, tw, 34, 17, BEGE); g.fillStyle = VERDE; espac(chip, W - PAD - 24 - tw + 16, yb + 84 - 3, 1.5);
-      y += CH + 18;
-    });
-    y += 6;
-  }
-  // observação em destaque, com o texto inteiro
-  if (String(S.obs || '').trim()) { g.font = sans(24, '600'); const ls = String(S.obs).trim().split('\n').flatMap(l => quebra(l, W - PAD * 2 - 60)); const OH = 70 + ls.length * 34;
-    caixa(PAD, y, W - PAD * 2, OH, 12, BEGE, DOUR); g.font = sans(17, '700'); g.fillStyle = DOUR; espac('OBSERVAÇÃO', PAD + 24, y + 40, 2); g.font = sans(24, '600'); g.fillStyle = VERDE; ls.forEach((l, i) => g.fillText(l, PAD + 24, y + 78 + i * 34)); y += OH + 22; }
-  // bagagem
-  if (S.bagagem) { g.font = sans(24, '700'); const ls = quebra(S.bagagem, W - PAD * 2 - 48); const BH = 70 + ls.length * 32; caixa(PAD, y, W - PAD * 2, BH, 12, '#fff', LINHA);
-    g.font = sans(17, '700'); g.fillStyle = DOUR; espac('BAGAGEM INCLUÍDA', PAD + 24, y + 40, 2); g.font = sans(24, '700'); g.fillStyle = VERDE; ls.forEach((l, i) => g.fillText(l, PAD + 24, y + 76 + i * 32)); y += BH + 22; }
-  // print do site, só quando a comparação está ligada
-  prints.forEach((im) => { const hh = Math.round(im.height * (W - PAD * 2 - 48) / im.width); caixa(PAD, y, W - PAD * 2, hh + 74, 12, '#fff', LINHA); g.font = sans(17, '700'); g.fillStyle = DOUR; espac(('VALOR NO SITE' + (S.cia ? ' DA ' + S.cia : '')).toUpperCase(), PAD + 24, y + 40, 2); g.drawImage(im, PAD + 24, y + 56, W - PAD * 2 - 48, hh); y += hh + 96; });
-  // resumo com o valor total
-  const linhasR = [['rot'], ['p'], ...(eco ? [['de']] : []), ['por'], ['forma'], ...(parc ? [['parc']] : []), ...(eco ? [['eco']] : []), ['hr'], ['small']];
-  const alt = { rot: 30, p: 40, de: 50, por: 92, forma: 48, parc: 40, eco: 68, obs: 52, hr: 34, small: 32 };
-  const RH = linhasR.reduce((a, [k]) => a + alt[k] - 10, 0) + 74;
-  caixa(PAD, y, W - PAD * 2, RH, 16, VERDE); let yy = y + 40; const X0 = PAD + 32;
-  linhasR.forEach(([k]) => {
-    yy += alt[k] - 10;
-    if (k === 'rot') { g.font = sans(18, '700'); g.fillStyle = DOUR; espac('RESUMO DA COTAÇÃO', X0, yy, 2.5); }
-    if (k === 'p') { g.font = sans(19, '700'); g.fillStyle = CREME; espac(`VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}`, X0, yy, 1.5); }
-    if (k === 'de') { g.font = sans(24, '400'); g.fillStyle = 'rgba(235,224,196,.8)'; const t = 'No site ' + brl(de); g.fillText(t, X0, yy); const a = g.measureText('No site ').width, tw = g.measureText(t).width; g.strokeStyle = DOUR; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X0 + a, yy - 8); g.lineTo(X0 + tw, yy - 8); g.stroke(); }
-    if (k === 'por') { g.font = sans(64, '800'); g.fillStyle = '#fff'; g.fillText(brl(por), X0, yy); }
-    if (k === 'forma') { g.font = sans(23, '700'); g.fillStyle = CREME; g.fillText(S.forma || '', X0, yy); }
-    if (k === 'parc') { g.font = sans(22, '400'); g.fillStyle = 'rgba(235,224,196,.85)'; g.fillText('ou ' + parc, X0, yy); }
-    if (k === 'eco') { const t = 'Economia de ' + brl(de - por); g.font = sans(21, '700'); const tw = g.measureText(t).width + 36; caixa(X0, yy - 32, tw, 44, 22, null, DOUR); g.fillStyle = CREME; g.fillText(t, X0 + 18, yy - 3); }
-    if (k === 'hr') { g.strokeStyle = DOUR; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X0, yy - 12); g.lineTo(W - PAD - 32, yy - 12); g.stroke(); }
-    if (k === 'small') { g.font = sans(18, '400'); g.fillStyle = CREME; g.fillText('Tarifas e disponibilidade confirmadas somente no momento da emissão.', X0, yy - 6); }
+  // topo creme: assinatura, "Alfaiataria de Viagens" e contato
+  const TOPO = 158; g.fillStyle = CREME; g.fillRect(0, 0, W, TOPO);
+  if (assin) { const lh = 74, lw = assin.width * lh / assin.height; g.drawImage(assin, M, 30, lw, lh); }
+  else { g.font = corm(46, '600'); g.fillStyle = VERDE; g.fillText(I.corp ? 'Maktub Corporativo' : 'Maktub Go', M, 92); }
+  g.font = jost(14); g.fillStyle = 'rgba(27,67,50,.6)'; esp((I.corp ? 'Viagens a trabalho, resolvidas.' : 'Alfaiataria de Viagens').toUpperCase(), M + 5, 126, 4.4);
+  g.font = jost(17); g.fillStyle = VERDE; g.textAlign = 'right'; g.fillText(EMAIL, W - M, 70); g.fillText(ZAP_TXT, W - M, 103); g.textAlign = 'left';
+  // marca d'água
+  if (marcaD) { g.save(); g.globalAlpha = 0.05; const mw = 330, mh = marcaD.height * mw / marcaD.width; g.drawImage(marcaD, (W - mw) / 2, TOPO + 26, mw, mh); g.restore(); }
+  // título e subtítulo
+  let fs = 60; g.font = corm(fs); while (fs > 36 && larg(I.titulo, 1) > W - M * 2) { fs -= 2; g.font = corm(fs); }
+  g.fillStyle = VERDE; esp(I.titulo, W / 2, 255, 1, 'center');
+  g.font = jost(15, '500'); g.fillStyle = DOUR; esp(I.sub.join('  ·  ').toUpperCase(), W / 2, 298, 6, 'center');
+  g.fillRect(W / 2 - 30, 333, 60, 1.5);
+  // um cartão por trecho
+  let y = 370; const CH = 122;
+  I.trechos.forEach(t => {
+    g.fillStyle = '#fff'; g.fillRect(M, y, W - M * 2, CH); g.strokeStyle = LINHA; g.lineWidth = 1.5; g.strokeRect(M + .75, y + .75, W - M * 2 - 1.5, CH - 1.5);
+    g.fillStyle = LINHA; g.fillRect(230, y + 31, 1.5, 60); g.fillRect(909, y + 52, 1.5, 20);
+    g.font = jost(13); g.fillStyle = SUAVE; esp(t.dia.toUpperCase(), 146, y + 45, 3, 'center');
+    g.font = corm(30, '600'); g.fillStyle = VERDE; esp(t.dataC, 146, y + 82, 1.5, 'center');
+    g.font = corm(46, '600'); g.textAlign = 'center'; g.fillText(t.v.saida || '', 430, y + 63); g.fillText(t.v.chegada || '', 710, y + 63); g.textAlign = 'left';
+    if (t.v.mais1) { const wc = g.measureText(t.v.chegada || '').width; g.font = jost(15, '500'); g.fillStyle = DOUR; g.fillText('+1', 710 + wc / 2 + 6, y + 36); }
+    g.font = jost(14); g.fillStyle = SUAVE; esp(t.o, 430, y + 92, 4, 'center'); esp(t.d, 710, y + 92, 4, 'center');
+    g.font = jost(22); g.fillStyle = DOUR; g.textAlign = 'center'; g.fillText('→', 570, y + 58); g.textAlign = 'left';
+    g.font = jost(12); g.fillStyle = SUAVE; esp(t.tipo.toUpperCase(), 570, y + 79, 2.6, 'center');
+    g.font = jost(15); esp(`${t.pax} PAX`, 964, y + 66, 2.4, 'center');
+    y += CH + 16;
   });
-  y += RH + 30;
-  // condições e contato
-  g.font = sans(18, '400'); g.fillStyle = CINZA; const agora = new Date();
-  quebra(`Valores consultados em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. ${RAP_RODAPE}`, W - PAD * 2).forEach(l => { g.fillText(l, PAD, y); y += 26; });
-  y += 20; g.fillStyle = VERDE; g.fillRect(0, y, W, 96);
-  g.font = sans(22, '700'); g.fillStyle = CREME; espac(GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO', PAD, y + 44, 2); g.font = sans(18, '400'); g.fillStyle = DOUR; g.fillText(GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.', PAD, y + 72);
-  g.textAlign = 'right'; g.font = sans(20, '600'); g.fillStyle = CREME; g.fillText(`WhatsApp ${ZAP_TXT}`, W - PAD, y + 44); g.font = sans(18, '400'); g.fillText('@maktubgo_', W - PAD, y + 72); g.textAlign = 'left';
-  y += 96;
+  y -= 16;
+  // observação (só quando preenchida)
+  if (obs) { g.font = jost(17); const ls = quebra(obs, W - M * 2 - 80); const OH = 62 + ls.length * 26;
+    y += 26; g.fillStyle = '#FBF7EC'; g.fillRect(M, y, W - M * 2, OH); g.strokeStyle = DOUR; g.lineWidth = 1.5; g.strokeRect(M + .75, y + .75, W - M * 2 - 1.5, OH - 1.5);
+    g.font = jost(13, '500'); g.fillStyle = DOUR; esp('OBSERVAÇÃO', W / 2, y + 34, 3.4, 'center');
+    g.font = jost(17); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 62 + i * 26)); g.textAlign = 'left'; y += OH; }
+  // bagagem
+  if (S.bagagem) { g.font = jost(18); const ls = quebra(S.bagagem, W - M * 2 - 40);
+    g.font = jost(13, '500'); g.fillStyle = DOUR; esp('BAGAGEM INCLUÍDA', W / 2, y + 53, 3.4, 'center');
+    g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28)); g.textAlign = 'left'; y += (ls.length - 1) * 28; }
+  y += 166;
+  // valor total
+  g.font = jost(17); const pl = quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28;
+  g.fillStyle = VERDE; g.fillRect(0, y, W, VH);
+  g.font = jost(14, '500'); g.fillStyle = DOUR; esp('VALOR TOTAL', W / 2, y + 49, 6, 'center');
+  g.font = corm(92); g.fillStyle = CREME; esp(brl(por), W / 2, y + 147, 2, 'center');
+  g.font = jost(15); g.fillStyle = 'rgba(235,224,196,.7)'; esp(I.total.toUpperCase(), W / 2, y + 183, 4.6, 'center');
+  g.fillStyle = 'rgba(235,224,196,.2)'; g.fillRect(M, y + 205, W - M * 2, 1);
+  g.font = jost(17); g.fillStyle = 'rgba(235,224,196,.72)'; g.textAlign = 'center'; pl.forEach((l, i) => g.fillText(l, W / 2, y + 239 + i * 28)); g.textAlign = 'left';
+  y += VH;
+  // rodapé: selo, "Seu destino começa aqui" e contato
+  const PE = 143; g.fillStyle = VERDE; g.fillRect(0, y, W, PE); g.fillStyle = 'rgba(235,224,196,.18)'; g.fillRect(0, y, W, 1);
+  g.font = jost(16); const ctW = Math.max(g.measureText(`WhatsApp ${ZAP_TXT}`).width, g.measureText('@maktubgo_').width);
+  let sw = 0; if (selo) { const sh = 86; sw = selo.width * sh / selo.height; g.drawImage(selo, M, y + 28, sw, sh); }
+  // como no modelo: o letreiro fica no meio do espaço entre o selo e o contato
+  if (letreiro) { const lh = 56, lw = letreiro.width * lh / letreiro.height, cx = (M + sw + W - M - ctW) / 2; g.drawImage(letreiro, cx - lw / 2, y + 43, lw, lh); }
+  g.font = jost(16); g.fillStyle = 'rgba(235,224,196,.85)'; g.textAlign = 'right'; g.fillText(`WhatsApp ${ZAP_TXT}`, W - M, y + 60); g.fillText('@maktubgo_', W - M, y + 90); g.textAlign = 'left';
+  y += PE;
   const out = document.createElement('canvas'); out.width = W; out.height = Math.ceil(y); out.getContext('2d').drawImage(c, 0, 0);
   return new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.92));
+}
+// gera a imagem e a página de uma cotação rápida salva (usado para conferir o modelo)
+export async function pecaRapida(dados) {
+  if (!RAPM) { try { const m = await import('/admin/app/cot-marca.js?v=2'); MARCA = MARCA || m.MARCA; RAPM = m.RAP || null; } catch (e) {} }
+  await carregarAero();
+  const antes = S; S = dados;
+  try { return { imagem: await imagemRapida(), html: htmlRapida() }; } finally { S = antes; }
 }
