@@ -286,9 +286,9 @@ export async function enviarParaPlanilha(X, r, IT, F) {
 }
 
 // cada passageiro vira (ou atualiza) uma ficha no CRM com papel de passageiro, CPF e nascimento
-async function salvarPassageiros(X, itens) {
+export async function salvarPassageiros(X, itens) {
   const n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-  const todos = itens.filter(ehVoo).flatMap(x => paxAjustado(x).map(p => ({ x, p }))).filter(({ p }) => String(p.nome || '').trim());
+  const todos = itens.filter(ehVoo).flatMap(x => paxAjustado(x).map(p => ({ x, p }))).filter(({ p }) => String(p.nome || '').trim().includes(' '));
   for (const { p } of todos) {
     try {
       let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : (X.D.pessoas || []).find(o => n(o.nome) === n(p.nome));

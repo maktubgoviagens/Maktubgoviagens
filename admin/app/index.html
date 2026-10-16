@@ -464,7 +464,7 @@ import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=34';
-import * as VENDA from '/admin/app/venda.js?v=5';
+import * as VENDA from '/admin/app/venda.js?v=6';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=11';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -2113,6 +2113,8 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = 'Não salvou: ' + error.message; return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
+    if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
     if (data.pessoa_id) { if (res === 'Fechou') virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
     if (g('nr_assunto') && D.agenda) {
       const feita = f.elements.nr_feita.checked;
