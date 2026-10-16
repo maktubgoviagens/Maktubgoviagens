@@ -325,7 +325,7 @@ function kcard(p) {
       <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
       ${quem ? `<small>${esc(quem)}</small>` : ''}
       ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
-    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
+    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Material bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
 }
 // mudar de coluna (botão ou arrastar)
 export function mover(id, g) {
@@ -455,8 +455,8 @@ function formPost(P) {
       <label class="fl"><span>Descrição</span><textarea name="obs" rows="6" placeholder="Do que se trata o post, mensagem principal, o que precisa aparecer">${esc(p.obs || '')}</textarea></label>
       ${campo('link_referencia', 'Post de referência (link)', p.link_referencia, 'url', 'placeholder="https://www.instagram.com/..."')}
       ${p.link_referencia ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Abrir referência ›</a></div>` : ''}
-      ${campo('link_bruto', 'Arquivo bruto (link)', p.link_bruto, 'url', 'placeholder="https://drive.google.com/..."')}
-      ${p.link_bruto ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Abrir arquivo bruto ›</a></div>` : ''}
+      ${campo('link_bruto', 'Material bruto (link da pasta)', p.link_bruto, 'url', 'placeholder="https://drive.google.com/..."')}
+      ${p.link_bruto ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Abrir material bruto ›</a></div>` : ''}
       </div>
       <div data-tab="arquivos" hidden>
       <div class="sub" style="margin-top:0">Tudo o que a pessoa precisa na hora de postar.</div>
