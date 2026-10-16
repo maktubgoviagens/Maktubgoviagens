@@ -802,8 +802,10 @@ const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', d
 const paxTrecho = (v, total) => { const n = parseInt(v && v.pax) || 0; return n > 0 && n !== total ? n : 0; };
 // rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N. O que foi digitado à mão fica.
 function rotular(vs) {
-  const ori = vs[0] && vs[0].ocod, voltas = vs.filter((v, i) => i && ori && v.dcod === ori), nv = voltas.length;
-  vs.forEach((v, i) => { if (v._rotM) return; v.rotulo = i === 0 ? 'Ida' : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : vs.length === 2 ? 'Volta' : 'Trecho ' + (i + 1); });
+  const ori = vs[0] && vs[0].ocod, des = vs[0] && vs[0].dcod, voltas = vs.filter((v, i) => i && ori && v.dcod === ori), nv = voltas.length;
+  // mais de uma ida na mesma rota (ex.: um passageiro vai antes): Ida 1, Ida 2
+  const idas = vs.filter(v => ori && v.ocod === ori && v.dcod === des), ni = idas.length;
+  vs.forEach((v, i) => { if (v._rotM) return; v.rotulo = idas.includes(v) ? (ni > 1 ? 'Ida ' + (idas.indexOf(v) + 1) : 'Ida') : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : vs.length === 2 ? 'Volta' : 'Trecho ' + (i + 1); });
 }
 function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
@@ -834,6 +836,8 @@ function resumoParc() {
     ${dobra('rpTab', 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
     <div class="sub" style="margin:6px 0 0">Link da InfinitePay: o total da linha escolhida, sem repassar a taxa, com o número de parcelas dela.</div></div>`;
 }
+// colar de novo com voos já na cotação: soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2) ou troca tudo
+let RAP_MODO = 'somar', RAP_PAXN = '';
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
@@ -847,7 +851,10 @@ function editorRapida(P, X) {
     <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
-      <button type="button" class="zap" id="rpColar" style="width:100%">Preencher</button>
+      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Ao colar outra tela:</div>
+        <div class="seg" id="rpModo" style="margin:4px 0"><button type="button" data-m="somar" class="${RAP_MODO === 'somar' ? 'on' : ''}">Somar os trechos</button><button type="button" data-m="trocar" class="${RAP_MODO === 'trocar' ? 'on' : ''}">Trocar tudo</button></div>
+        ${RAP_MODO === 'somar' ? `<label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div>` : ''}</div>` : ''}
+      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length && RAP_MODO === 'somar' ? 'Preencher e somar' : 'Preencher'}</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
@@ -891,14 +898,30 @@ function editorRapida(P, X) {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
+    const somar = rapVoos().length > 0 && RAP_MODO === 'somar' && o.voos.length;
+    if (somar) {
+      const chave = (v) => [v.data, v.ocod, v.dcod, v.saida].join('|'), ja = new Set(S.voos.map(chave));
+      const novos = o.voos.filter(v => !ja.has(chave(v)));
+      if (!novos.length) { X.aviso('Esses trechos já estão na cotação.'); return; }
+      if (S.voos.length + novos.length > 4) { X.aviso(`A cotação rápida comporta até 4 trechos. Já tem ${S.voos.length}; esta tela traz ${novos.length}.`); return; }
+      const totAntes = Math.max(1, parseInt(S.pessoas) || 1), pn = parseInt(($('rpPaxN') || {}).value) || 0;
+      // trechos que já estavam ficam com a quantidade de antes; os novos com a informada (ou a lida da tela)
+      S.voos.forEach(v => { if (!(parseInt(v.pax) > 0)) v.pax = String(totAntes); });
+      novos.forEach(v => { completarVoo(v); v.pax = String(pn || parseInt(v.pax) || totAntes); });
+      S.voos = S.voos.concat(novos); rotular(S.voos);
+      S.pessoas = String(Math.max(totAntes, ...S.voos.map(v => parseInt(v.pax) || 0)));
+      if (o.de) S.de = String(Math.round(((num(S.de) || 0) + num(o.de)) * 100) / 100);
+      RAP_PAXN = '';
+    } else if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
       const mx = Math.max(0, ...S.voos.map(v => parseInt(v.pax) || 0)); if (mx > (parseInt(S.pessoas) || 1)) S.pessoas = String(mx); }
-    if (o.de) S.de = o.de; if (o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
+    if (!somar && o.de) S.de = o.de; if (!somar && o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
     if (!o.voos.length) ABERTOS.add('rpVoosD');
     S.eco = undefined; editorRapida(P, X); X.aviso(!o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".' : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  if ($('rpModo')) $('rpModo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; RAP_MODO = b.dataset.m; editorRapida(P, X); };
+  if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)
   const bagTexto = () => { S.bagagem = textoBag(S.bag_mao, S.bag_desp); editorRapida(P, X); };
   if ($('bagMao')) $('bagMao').onchange = (e) => { S.bag_mao = e.target.checked; S.bag_desp = bagDesp(); bagTexto(); };
