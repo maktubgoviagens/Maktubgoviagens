@@ -1013,12 +1013,15 @@ function rapInfo() {
   const np = parseInt(S.parcelas) || 0, cc = comCartao ? cartao(num(S.por), np) : null;
   const pagto = cc ? [`No cartão de crédito: ${brl(cc.total)}${np > 1 ? ` em até ${np}x de ${brl(cc.parcela)} sem juros` : ' à vista'}`, 'Taxas inclusas']
     : [fm, comCartao ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
+  // desconto do Pix sobre o preço do cartão, arredondado para baixo (nunca promete mais do que dá)
+  const desc = cc ? Math.floor((cc.total - num(S.por)) / cc.total * 1000) / 10 : 0;
   const totalLbl = cc ? `No Pix · ${total}` : total;
+  const descTxt = desc > 0 ? `${String(desc).replace('.', ',')}% de desconto por pagar no Pix` : '';
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
       tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });
   const corp = S.marca === 'Maktub Corporativo';
-  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
 }
 // página do link (mesmo visual da imagem, em versão para celular)
 function htmlRapida() {
@@ -1086,6 +1089,7 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
 .valor .k{font-size:8.5px;letter-spacing:3.6px;text-transform:uppercase;color:var(--dourado);font-weight:500}
 .valor .n{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:500;color:var(--creme);line-height:1.08;margin:12px 0 2px;letter-spacing:1px;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1}
 .valor .p{font-size:10.5px;letter-spacing:3px;text-transform:uppercase;color:rgba(235,224,196,.72)}
+.valor .desc{display:inline-block;margin-top:12px;padding:6px 14px;border:1px solid var(--dourado);border-radius:20px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);font-weight:500}
 .valor .d{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.18);font-size:11px;color:rgba(235,224,196,.65);letter-spacing:.3px}
 .nota{padding:20px 26px 24px;font-size:10px;line-height:1.95;color:var(--suave);text-align:center}
 .rodape{background:var(--verde);padding:28px 24px 24px;text-align:center}
@@ -1119,6 +1123,7 @@ ${tr}
     <div class="k">Valor total</div>
     <div class="n">${brl(num(S.por))}</div>
     <div class="p">${h(I.total)}</div>
+    ${I.descTxt ? `<div class="desc">${h(I.descTxt)}</div>` : ''}
     <div class="d">${I.cc ? `<b style="color:var(--creme);font-weight:500">${h(I.pagto[0])}</b><br>${h(I.pagto[1])}` : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
   </div>
   <div class="nota">
@@ -1199,13 +1204,17 @@ async function imagemRapida() {
     g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28)); g.textAlign = 'left'; y += (ls.length - 1) * 28; }
   y += 166;
   // valor total
-  g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28;
+  g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28 + (I.descTxt ? 58 : 0), DO = I.descTxt ? 58 : 0;
   g.fillStyle = VERDE; g.fillRect(0, y, W, VH);
   g.font = jost(14, '500'); g.fillStyle = DOUR; esp('VALOR TOTAL', W / 2, y + 49, 6, 'center');
   g.font = corm(92); g.fillStyle = CREME; esp(brl(por), W / 2, y + 147, 2, 'center');
   g.font = jost(15); g.fillStyle = 'rgba(235,224,196,.7)'; esp(I.total.toUpperCase(), W / 2, y + 183, 4.6, 'center');
-  g.fillStyle = 'rgba(235,224,196,.2)'; g.fillRect(M, y + 205, W - M * 2, 1);
-  g.textAlign = 'center'; pl.forEach((l, i) => { const forte = I.cc && i < pl.length - 1; g.font = jost(forte ? 19 : 17, forte ? '500' : '400'); g.fillStyle = forte ? CREME : 'rgba(235,224,196,.72)'; g.fillText(l, W / 2, y + 239 + i * 28); }); g.textAlign = 'left';
+  // selo do desconto no Pix
+  if (I.descTxt) { g.font = jost(14, '500'); const tw = larg(I.descTxt.toUpperCase(), 2.4) + 40, tx = (W - tw) / 2, ty = y + 205;
+    g.strokeStyle = DOUR; g.lineWidth = 1.5; g.beginPath(); g.roundRect ? g.roundRect(tx, ty, tw, 40, 20) : g.rect(tx, ty, tw, 40); g.stroke();
+    g.fillStyle = DOUR; esp(I.descTxt.toUpperCase(), W / 2, ty + 26, 2.4, 'center'); }
+  g.fillStyle = 'rgba(235,224,196,.2)'; g.fillRect(M, y + 205 + DO, W - M * 2, 1);
+  g.textAlign = 'center'; pl.forEach((l, i) => { const forte = I.cc && i < pl.length - 1; g.font = jost(forte ? 19 : 17, forte ? '500' : '400'); g.fillStyle = forte ? CREME : 'rgba(235,224,196,.72)'; g.fillText(l, W / 2, y + 239 + DO + i * 28); }); g.textAlign = 'left';
   y += VH;
   // rodapé: selo, "Seu destino começa aqui" e contato
   const PE = 143; g.fillStyle = VERDE; g.fillRect(0, y, W, PE); g.fillStyle = 'rgba(235,224,196,.18)'; g.fillRect(0, y, W, 1);
