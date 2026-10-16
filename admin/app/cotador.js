@@ -1009,12 +1009,16 @@ function rapInfo() {
   const paxT = `${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}`;
   // com cartão na cotação, o Pix aparece como o desconto
   const fm = S.forma || 'À vista via Pix', comCartao = !!parcTxt() && /^\d{1,2}$/.test(String(S.parcelas || '').trim());
-  const pagto = [comCartao && /^à vista (via|no) pix$/i.test(fm.trim()) ? 'No Pix, com desconto' : fm, parcTxt() ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
+  // com cartão: o valor grande é o do Pix e a linha de baixo diz o do cartão de crédito, por extenso
+  const np = parseInt(S.parcelas) || 0, cc = comCartao ? cartao(num(S.por), np) : null;
+  const pagto = cc ? [`No cartão de crédito: ${brl(cc.total)}${np > 1 ? ` em até ${np}x de ${brl(cc.parcela)} sem juros` : ' à vista'}`, 'Taxas inclusas']
+    : [fm, comCartao ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
+  const totalLbl = cc ? `No Pix · ${total}` : total;
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
       tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });
   const corp = S.marca === 'Maktub Corporativo';
-  return { vs, n, pax, titulo, tipo, total, paxT, pagto, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
 }
 // página do link (mesmo visual da imagem, em versão para celular)
 function htmlRapida() {
@@ -1115,7 +1119,7 @@ ${tr}
     <div class="k">Valor total</div>
     <div class="n">${brl(num(S.por))}</div>
     <div class="p">${h(I.total)}</div>
-    <div class="d">${I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <div class="d">${I.cc ? `<b style="color:var(--creme);font-weight:500">${h(I.pagto[0])}</b><br>${h(I.pagto[1])}` : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
   </div>
   <div class="nota">
     Valores consultados em ${hoje} às ${hora}.<br>
@@ -1195,13 +1199,13 @@ async function imagemRapida() {
     g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28)); g.textAlign = 'left'; y += (ls.length - 1) * 28; }
   y += 166;
   // valor total
-  g.font = jost(17); const pl = quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28;
+  g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28;
   g.fillStyle = VERDE; g.fillRect(0, y, W, VH);
   g.font = jost(14, '500'); g.fillStyle = DOUR; esp('VALOR TOTAL', W / 2, y + 49, 6, 'center');
   g.font = corm(92); g.fillStyle = CREME; esp(brl(por), W / 2, y + 147, 2, 'center');
   g.font = jost(15); g.fillStyle = 'rgba(235,224,196,.7)'; esp(I.total.toUpperCase(), W / 2, y + 183, 4.6, 'center');
   g.fillStyle = 'rgba(235,224,196,.2)'; g.fillRect(M, y + 205, W - M * 2, 1);
-  g.font = jost(17); g.fillStyle = 'rgba(235,224,196,.72)'; g.textAlign = 'center'; pl.forEach((l, i) => g.fillText(l, W / 2, y + 239 + i * 28)); g.textAlign = 'left';
+  g.textAlign = 'center'; pl.forEach((l, i) => { const forte = I.cc && i < pl.length - 1; g.font = jost(forte ? 19 : 17, forte ? '500' : '400'); g.fillStyle = forte ? CREME : 'rgba(235,224,196,.72)'; g.fillText(l, W / 2, y + 239 + i * 28); }); g.textAlign = 'left';
   y += VH;
   // rodapé: selo, "Seu destino começa aqui" e contato
   const PE = 143; g.fillStyle = VERDE; g.fillRect(0, y, W, PE); g.fillStyle = 'rgba(235,224,196,.18)'; g.fillRect(0, y, W, 1);
