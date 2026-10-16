@@ -458,7 +458,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=9';
+import * as MKT from '/admin/app/marketing.js?v=10';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
@@ -607,8 +607,22 @@ $('pagina').addEventListener('click', async (e) => {
   aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela();
 });
 /* vídeos que a pessoa foi escalada para gravar (marketing) */
-async function recarregarGravar() { const r = await sb.rpc('marketing_minhas_gravacoes'); D.gravar = r.error ? [] : (r.data || []); return D.gravar; }
-function blocoGravar() {
+async function recarregarGravar() {
+  const [r, q] = await Promise.all([sb.rpc('marketing_minhas_gravacoes'), sb.rpc('marketing_minhas_postagens')]);
+  D.gravar = r.error ? [] : (r.data || []); D.postar = q.error ? [] : (q.data || []); return D.gravar;
+}
+function blocoGravar() { return blocoGravacoes() + blocoPostar(); }
+function blocoPostar() {
+  const L = D.postar || []; if (!L.length) return '';
+  const dd = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
+  const fmt = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };
+  const conta = { maktub: 'Maktub Go', bragas: 'Os Bragas' };
+  return `<div class="secao">Para você postar</div>${L.map(p => { const atr = p.data_prevista && p.data_prevista < hojeISO(); return `<div class="card ${atr ? 'novo' : ''}" style="margin-bottom:8px">
+    <div class="cab"><div><div class="nome">${esc(p.titulo)}</div><span class="tag">${esc(conta[p.conta] || 'Maktub Go')}</span> <span class="tag">${esc((fmt[p.formato] || 'Post') + (p.formato === 'reels' && p.reels_teste ? ' teste' : ''))}</span>${p.data_prevista ? ` <span class="tag ${atr ? 'alerta' : 'ouro'}">postar ${dd(p.data_prevista)}${p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}</div></div>
+    ${p.instrucoes_post || p.legenda ? `<div class="info"><div>${esc(String(p.instrucoes_post || p.legenda).slice(0, 220))}</div></div>` : ''}
+    ${p.link_arquivo ? `<div class="acoes"><a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Abrir arquivos</a></div>` : ''}</div>`; }).join('')}`;
+}
+function blocoGravacoes() {
   const L = D.gravar || []; if (!L.length) return '';
   const dd = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
   const fmt = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };

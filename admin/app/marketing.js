@@ -17,13 +17,19 @@ const EM_PRODUCAO = ['producao', 'gravacao', 'edicao'];
 const GRUPOS = [['planejado', 'Planejado'], ['andamento', 'Em andamento'], ['publicado', 'Publicado']];
 const grupo = (p) => p.status === 'ideia' ? 'planejado' : p.status === 'publicado' ? 'publicado' : 'andamento';
 /* duas contas no Instagram e collab com os sócios */
-const CONTAS = [['maktub', 'Maktub Go'], ['bragas', 'Os Bragas']];
+const CONTAS = [['maktub', 'Maktub Go', '#1b4332', 'rgba(27,67,50,.05)'], ['bragas', 'Os Bragas', '#c96a28', 'rgba(201,106,40,.09)']];
 const contaDe = (p) => p.conta || 'maktub';
-const contaN = (p) => (CONTAS.find(c => c[0] === contaDe(p)) || CONTAS[0])[1];
+const contaX = (p) => CONTAS.find(c => c[0] === contaDe(p)) || CONTAS[0];
+const contaN = (p) => contaX(p)[1];
+const contaCor = (p) => contaX(p)[2];
+const contaFundo = (p) => contaX(p)[3];
+/* quem grava pode ser mais de uma pessoa */
+const equipeG = (p) => Array.isArray(p.gravacao_equipe) && p.gravacao_equipe.length ? p.gravacao_equipe : p.gravacao_por ? [p.gravacao_por] : [];
+const nomesG = (p) => equipeG(p).map(id => primeiro(nomeT(id))).filter(Boolean).join(', ');
 const COLLAB = [['isadora', 'Isadora'], ['matheus', 'Matheus']];
 const collabN = (p) => { const L = COLLAB.filter(c => (p.collab || []).includes(c[0])).map(c => c[1]); return L.length ? 'Collab: ' + L.join(' e ') : ''; };
 const vis = () => LISTA.filter(p => !FCONTA || contaDe(p) === FCONTA);
-const filtroConta = () => `<div class="mk-fmts" id="mkConta" style="margin-top:12px">${[['', 'Todas'], ...CONTAS].map(([k, n]) => `<label style="--c:var(--verde)"><input type="radio" name="fconta" value="${k}" ${FCONTA === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div>`;
+const filtroConta = () => `<div class="mk-fmts" id="mkConta" style="margin-top:12px">${[['', 'Todas', 'var(--verde)'], ...CONTAS].map(([k, n, c]) => `<label style="--c:${c}"><input type="radio" name="fconta" value="${k}" ${FCONTA === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div>`;
 const GR_TAG = { planejado: '', andamento: 'ouro', publicado: 'ok' };
 const grNome = (p) => grupo(p) === 'andamento' ? 'Em andamento · ' + stNome(p) : (GRUPOS.find(g => g[0] === grupo(p)) || [, ''])[1];
 const voltaAjuste = (p) => ehVideo(p) ? 'edicao' : 'producao';
@@ -71,7 +77,7 @@ export function pend() {
 export function rota(h) { VIEW = h[1] || null; ED = null; ED_EST = null; PRE = null; CONF = null; }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
-const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0];
+const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0] + (p.formato === 'reels' && p.reels_teste ? ' teste' : '');
 const atrasado = (p) => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista < hoje();
 const cfg = () => EST.find(e => e.chave === 'config');
 const exigir = () => !(cfg() && cfg().valores && cfg().valores.aprovacao === false);
@@ -240,10 +246,10 @@ function vPainel() {
     </section>
     <div class="pend" style="margin-top:12px"><button data-v="producao"><span>Banco de ideias</span><span>${ideias ? `<b>${ideias}</b>` : ''}<span class="seta">›</span></span></button></div>`;
 }
-const gravPend = () => LISTA.filter(p => p.gravacao_por && !p.gravado_em && p.status !== 'publicado').sort((a, b) => String(a.gravacao_data || a.data_prevista || '9999').localeCompare(String(b.gravacao_data || b.data_prevista || '9999')));
+const gravPend = () => LISTA.filter(p => equipeG(p).length && !p.gravado_em && p.status !== 'publicado').sort((a, b) => String(a.gravacao_data || a.data_prevista || '9999').localeCompare(String(b.gravacao_data || b.data_prevista || '9999')));
 function linhaGrav(p) {
   const { esc } = X, prazo = p.gravacao_data || p.data_prevista, atr = prazo && prazo < hoje();
-  return `<button class="mk-lin" data-p="${p.id}"><i style="background:${atr ? 'var(--alerta)' : 'var(--dourado)'}"></i><span class="t">${esc(p.titulo)}<small>${esc(primeiro(nomeT(p.gravacao_por)) || 'Equipe')}${prazo ? ' · até ' + dm(prazo) : ''}${atr ? ' · atrasado' : ''}</small></span><span class="seta">›</span></button>`;
+  return `<button class="mk-lin" data-p="${p.id}"><i style="background:${atr ? 'var(--alerta)' : 'var(--dourado)'}"></i><span class="t">${esc(p.titulo)}<small>${esc(nomesG(p) || 'Equipe')}${prazo ? ' · até ' + dm(prazo) : ''}${atr ? ' · atrasado' : ''}</small></span><span class="seta">›</span></button>`;
 }
 const porData = (a, b) => String(a.data_prevista || '9999').localeCompare(String(b.data_prevista || '9999'));
 function linha(p) {
@@ -275,7 +281,7 @@ function vCalendario() {
   const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate();
   const doMes = vis().filter(p => mesK(diaPost(p)) === k);
   if (DIA && mesK(DIA) !== k) DIA = null;
-  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(p.titulo)}"><span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
+  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(contaN(p) + ': ' + p.titulo)}" style="box-shadow:inset 4px 0 0 ${contaCor(p)},inset 5px 0 0 #fff;padding-left:8px"><span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
   let cel = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(d => `<div class="h">${d}</div>`).join('');
   for (let i = 0; i < prim; i++) cel += '<div class="d fora"></div>';
   for (let d = 1; d <= dias; d++) {
@@ -290,6 +296,7 @@ function vCalendario() {
     <div class="mesnav" id="mkMes" style="margin-top:12px"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="mk-cm">${cel}</div>
     <div class="mk-leg"><span><i style="background:#b9b4aa"></i>Planejado</span><span><i style="background:#c08a2e"></i>Em andamento</span><span><i style="background:#2f8a57"></i>Publicado</span><span><i style="background:#b5533c"></i>Atrasado</span></div>
+    <div class="mk-leg" style="margin-top:4px">${CONTAS.map(c => `<span><i style="background:${c[2]}"></i>${c[1]} (faixa do lado)</span>`).join('')}</div>
     <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele.</div>
     ${DIA ? `<div class="secao">${new Date(DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} <button data-novo-dia="${DIA}">+ Post neste dia</button></div>${doDia.length ? `<div class="mk-lista">${doDia.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))).map(linha).join('')}</div>` : '<div class="vazio">Nenhum post neste dia.</div>'}` : ''}
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
@@ -310,13 +317,15 @@ function vProducao() {
 function kcard(p) {
   const { esc } = X, g = grupo(p), quando = diaPost(p);
   const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? (acao(p) || `<button data-mover="${p.id}" data-g="publicado">Publicado</button>`) : '';
-  return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:4px solid ${corP(p)}"><button data-p="${p.id}" class="mk-kb">
+  const quem = [nomesG(p) ? 'grava: ' + nomesG(p) : '', p.postagem_por ? 'posta: ' + primeiro(nomeT(p.postagem_por)) : ''].filter(Boolean).join(' · ');
+  return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:5px solid ${contaCor(p)};background:${contaFundo(p)}"><button data-p="${p.id}" class="mk-kb">
       <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
-      <span class="mk-conta">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
+      <span class="mk-conta" style="color:${contaCor(p)}">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
       <b>${esc(p.titulo)}</b>
       <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
+      ${quem ? `<small>${esc(quem)}</small>` : ''}
       ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
-    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
+    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
 }
 // mudar de coluna (botão ou arrastar)
 export function mover(id, g) {
@@ -361,7 +370,8 @@ function vSemana() {
       <div class="mk-semana">${dias.map(d => { const L = naSemana(d), dd = new Date(d + 'T12:00:00'); return `<button data-sdia="${d}" class="${d === h ? 'hj' : ''} ${d === DIA ? 'sel' : ''}"><span class="d">${SEMANA[dd.getDay()]}</span><span class="n">${dd.getDate()}</span><span class="mk-dots">${L.slice(0, 4).map(p => `<i style="background:${corP(p)}"></i>`).join('')}</span></button>`; }).join('')}</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
-    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você gravar</div>${L.map(p => vcard(p) + `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei: ${X.esc(p.titulo)}</button>`).join('')}` : '')(gravPend().filter(p => p.gravacao_por === X.meuId))}
+    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você gravar</div>${L.map(p => vcard(p) + `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei: ${X.esc(p.titulo)}</button>`).join('')}` : '')(gravPend().filter(p => equipeG(p).includes(X.meuId)))}
+    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você postar</div>${L.map(vcard).join('')}` : '')(LISTA.filter(p => p.postagem_por === X.meuId && !['ideia', 'publicado'].includes(p.status)).sort(porData))}
     ${ajustes.length ? `<div class="mk-dia" style="color:var(--alerta)">Ajustes pedidos</div>${ajustes.map(vcard).join('')}` : ''}
     ${atras.length ? `<div class="mk-dia" style="color:var(--alerta)">Atrasados</div>${atras.map(vcard).join('')}` : ''}
     ${(c => c || `<div class="mk-dia">${DIA ? (DIA === h ? 'Hoje' : SEMANA[new Date(DIA + 'T12:00:00').getDay()] + ' ' + dm(DIA)) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">Nada programado.</div>`)(mostrar.map(d => { const L = naSemana(d).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))); const dd = new Date(d + 'T12:00:00'); return L.length ? `<div class="mk-dia">${d === h ? 'Hoje' : d === maisDias(h, 1) ? 'Amanhã' : SEMANA[dd.getDay()] + ' ' + dm(d)}</div>${L.map(vcard).join('')}` : ''; }).join(''))}
@@ -369,7 +379,7 @@ function vSemana() {
 }
 function vcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span>
+  return `<div class="mk-vcard" style="--c:${corP(p)};border-left-color:${contaCor(p)};background:${contaFundo(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span><span class="st" style="color:${contaCor(p)};font-weight:600">${contaN(p)}</span>
     <b>${esc(p.titulo)}</b><small>${[p.hora ? 'às ' + p.hora : '', pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
     ${p.ajuste && EM_PRODUCAO.includes(p.status) ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
@@ -422,15 +432,19 @@ function formPost(P) {
     <form class="bloco form" id="mkF" novalidate>
       <div data-tab="geral">
       ${campo('titulo', 'Título ou tema do post', p.titulo, 'text', 'maxlength="160"')}
-      <div class="fl"><span>Conta do Instagram</span><div class="mk-fmts">${CONTAS.map(([k, n]) => `<label style="--c:var(--verde)"><input type="radio" name="conta" value="${k}" ${contaDe(p) === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl"><span>Conta do Instagram</span><div class="mk-fmts">${CONTAS.map(([k, n, c]) => `<label style="--c:${c}"><input type="radio" name="conta" value="${k}" ${contaDe(p) === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <div class="fl"><span>Collab com</span><div class="mk-fmts">${COLLAB.map(([k, n]) => `<label style="--c:var(--dourado)"><input type="checkbox" name="collab" value="${k}" ${(p.collab || []).includes(k) ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <div class="fl"><span>Tipo de conteúdo</span><div class="mk-fmts">${[['1', 'Vídeo', '#8a6520'], ['0', 'Estático', '#2f6b4a']].map(([v, n, c]) => `<label style="--c:${c}"><input type="radio" name="video" value="${v}" ${(ehVideo(p) ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <div class="fl"><span>Formato no Instagram</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl" id="mkReelsTipo"><span>Tipo de Reels</span><div class="mk-fmts">${[['0', 'Reels normal'], ['1', 'Reels teste']].map(([v, n]) => `<label style="--c:#8a6520"><input type="radio" name="reels_teste" value="${v}" ${(p.reels_teste ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <label class="fl"><span>Etapa</span><select name="status"></select></label>
       <div class="duas-col">${campo('data_prevista', 'Data de publicação', p.data_prevista, 'date')}${campo('hora', 'Horário', p.hora, 'time')}</div>
       <label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      <div class="duas-col"><label class="fl"><span>Quem grava</span><select name="gravacao_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.gravacao_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}</div>
-      ${p.gravacao_por ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. A pessoa vê no Início do app dela e marca quando gravar.'}</div>` : ''}
+      <div class="fl"><span>Quem grava (pode marcar mais de uma pessoa)</span><div class="mk-fmts">${marketing.map(t => `<label style="--c:var(--verde)"><input type="checkbox" name="gravacao_equipe" value="${t.user_id}" ${equipeG(p).includes(t.user_id) ? 'checked' : ''}><span>${esc(t.nome)}</span></label>`).join('') || '<span class="sub">Ninguém da equipe cadastrado.</span>'}</div></div>
+      <div class="duas-col">${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}<span></span></div>
+      ${equipeG(p).length ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. Quem foi escalado vê no app e marca quando gravar.'}</div>` : ''}
+      <label class="fl"><span>Quem posta</span><select name="postagem_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.postagem_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      ${p.postagem_por && p.status !== 'publicado' ? '<div class="sub" style="margin:-4px 0 8px">A pessoa recebe o aviso no app dela, em "Para você postar". A validação da publicação continua com a coordenação.</div>' : ''}
       <div class="duas-col">
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
         <label class="fl"><span>Campanha</span><select name="campanha_id"><option value="">Nenhuma</option>${campanhas().filter(c => c.ativo || c.id === p.campanha_id).map(c => `<option value="${c.id}" ${p.campanha_id === c.id ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</select></label>
@@ -441,6 +455,8 @@ function formPost(P) {
       <label class="fl"><span>Descrição</span><textarea name="obs" rows="6" placeholder="Do que se trata o post, mensagem principal, o que precisa aparecer">${esc(p.obs || '')}</textarea></label>
       ${campo('link_referencia', 'Post de referência (link)', p.link_referencia, 'url', 'placeholder="https://www.instagram.com/..."')}
       ${p.link_referencia ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Abrir referência ›</a></div>` : ''}
+      ${campo('link_bruto', 'Arquivo bruto (link)', p.link_bruto, 'url', 'placeholder="https://drive.google.com/..."')}
+      ${p.link_bruto ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Abrir arquivo bruto ›</a></div>` : ''}
       </div>
       <div data-tab="arquivos" hidden>
       <div class="sub" style="margin-top:0">Tudo o que a pessoa precisa na hora de postar.</div>
@@ -473,6 +489,7 @@ function formPost(P) {
   const mostrar = () => {
     const st = el.status.value, fmt = f.querySelector('[name=formato]:checked').value;
     document.getElementById('mkPub').hidden = st !== 'publicado';
+    document.getElementById('mkReelsTipo').hidden = fmt !== 'reels';
     if (st === 'publicado' && !el.publicado_em.value) el.publicado_em.value = hoje();
   };
   mostrar(); f.addEventListener('change', mostrar);
@@ -480,12 +497,14 @@ function formPost(P) {
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
+    const equipe = [...f.querySelectorAll('[name=gravacao_equipe]:checked')].map(c => c.value);
+    const fmtSel = f.querySelector('[name=formato]:checked').value;
     const reg = { titulo: v('titulo'), formato: f.querySelector('[name=formato]:checked').value, status: el.status.value, video: vidSel(), data_prevista: v('data_prevista'), hora: v('hora'),
-      pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_por: v('gravacao_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
-      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs'), link_referencia: v('link_referencia'), instrucoes_post: v('instrucoes_post'),
-      conta: (f.querySelector('[name=conta]:checked') || {}).value || 'maktub', collab: [...f.querySelectorAll('[name=collab]:checked')].map(c => c.value) };
+      pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_equipe: equipe, gravacao_por: equipe[0] || null, postagem_por: v('postagem_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
+      link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs'), link_referencia: v('link_referencia'), link_bruto: v('link_bruto'), instrucoes_post: v('instrucoes_post'),
+      conta: (f.querySelector('[name=conta]:checked') || {}).value || 'maktub', collab: [...f.querySelectorAll('[name=collab]:checked')].map(c => c.value), reels_teste: fmtSel === 'reels' && (f.querySelector('[name=reels_teste]:checked') || {}).value === '1' };
     if (!reg.titulo) { abaF('geral'); msg('Escreva o título do post.'); return; }
-    if (reg.status === 'gravacao' && !reg.gravacao_por) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.'); return; }
+    if (reg.status === 'gravacao' && !equipe.length) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.'); return; }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);
     if (!r) return;
@@ -578,8 +597,8 @@ function ligar(P) {
   q('[name=fconta]').forEach(r => r.onchange = () => { FCONTA = r.value; rerender(); });
   q('[data-mover]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); mover(b.dataset.mover, b.dataset.g); });
   q('[data-gravar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const pp = LISTA.find(x => x.id === b.dataset.gravar); if (!pp) return;
-    if (!pp.gravacao_por) { ED = pp.id; PRE = { status: 'gravacao' }; rerender(); scrollTo(0, 0); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
-    mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${primeiro(nomeT(pp.gravacao_por))}.`); });
+    if (!equipeG(pp).length) { ED = pp.id; PRE = { status: 'gravacao' }; rerender(); scrollTo(0, 0); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
+    mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${nomesG(pp)}.`); });
   q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
   q('[data-publicar]').forEach(b => b.onclick = () => { ED = b.dataset.publicar; PRE = { status: 'publicado' }; rerender(); scrollTo(0, 0); X.aviso('Cole o link do post e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
