@@ -463,7 +463,7 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=19';
+import * as COT from '/admin/app/cotador.js?v=20';
 import * as VENDA from '/admin/app/venda.js?v=1';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
@@ -754,6 +754,13 @@ async function cotacaoEnviada(id, o = {}) {
 }
 // cotações do cotador ligadas a cada card (o card guarda só o vínculo, a cotação fica no cotador)
 const cotsDe = (id) => (D.cots || []).filter(c => c.reuniao_id === id);
+// "enviada 2x · última 16/10 R$ 1.500 · antes R$ 1.700"
+function resumoEnvios(c) {
+  const H = Array.isArray(c.hist) ? c.hist : [];
+  if (!H.length) return 'ainda não enviada · ' + new Date(c.atualizado_em).toLocaleDateString('pt-BR');
+  const v = (r) => ((r.opcoes || [])[0] || {}).valor, u = H[H.length - 1], a = H.length > 1 ? H[H.length - 2] : null;
+  return `enviada ${H.length}x · última ${dataCurta(new Date(u.em))}${v(u) ? ' ' + brl2(v(u)) : ''}${a && v(a) && v(a) !== v(u) ? ' · antes ' + brl2(v(a)) : ''}`;
+}
 function cotSalva(c) { D.cots = (D.cots || []).filter(x => x.id !== c.id); D.cots.unshift(c); }
 async function abrirCotacao(id) {
   const { data, error } = await sb.from('propostas').select('*').eq('id', id).single();
@@ -811,7 +818,7 @@ async function carregar(silencioso, manterTela) {
     sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
   ]);
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
-  if (podeAba('cotador')) { const pc = await sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id').order('atualizado_em', { ascending: false }).limit(3000); D.cots = pc.error ? [] : (pc.data || []); }
+  if (podeAba('cotador')) { const pc = await sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000); D.cots = pc.error ? [] : (pc.data || []); }
   { const ar = await sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000); D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda; }
   { const tt = await sb.rpc('ticktick_situacao'); D.tt = tt.error ? null : tt.data; }
   { const cl = await sb.rpc('cal_links'); D.cal = cl.error ? null : (cl.data || []); }
@@ -1856,7 +1863,7 @@ function telaFormReuniao(P) {
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
-    ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
+    ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
     <form id="fRe" class="form" autocomplete="off">
       <div class="grupo">Reunião</div>
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}

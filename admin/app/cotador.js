@@ -251,7 +251,7 @@ function editor(P, X) {
   if (S.modelo === 'rapida') return editorRapida(P, X);
   const corp = S.modelo === 'corp';
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
-    <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>${faixaCard(X)}
+    <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>${faixaCard(X)}${htmlHistorico(X)}
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
     ${S.modelo !== 'rapida' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="${corp ? 'ian-santiago' : 'veronica-lisboa'}"></label>` : ''}
@@ -276,11 +276,11 @@ function editor(P, X) {
   ligarPrint(P, X);
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
   ligarFaixa(P, X);
-  $('baixarC').onclick = () => comCardNaCotacao(P, X, () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); });
+  $('baixarC').onclick = () => comCardNaCotacao(P, X, () => { enviada(X, 'Arquivo HTML'); salvar(X, true); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); });
   $('salvarC').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
   $('acervoC').onclick = () => acervo(X);
   $('linkC').onclick = () => comCardNaCotacao(P, X, () => gerarLink(X));
-  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
+  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; delete S.historico; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
 }
 
 function mais(a) {
@@ -486,7 +486,7 @@ async function salvar(X, quieto) {
   const r = S._id ? await X.sb.from('propostas').update(row).eq('id', S._id).select().single() : await X.sb.from('propostas').insert(row).select().single();
   if (r.error) { X.aviso('Não salvou: ' + r.error.message + (/relation|does not exist/.test(r.error.message) ? ' (rode o 1-cotador.sql)' : '')); return false; }
   S._id = r.data.id; ED = String(r.data.id); history.replaceState(null, '', '#cotador/' + ED);
-  if (X.cotSalva) X.cotSalva({ id: r.data.id, titulo: row.titulo, modelo: row.modelo, atualizado_em: row.atualizado_em, reuniao_id: S.reuniao_id || null });
+  if (X.cotSalva) X.cotSalva({ id: r.data.id, titulo: row.titulo, modelo: row.modelo, atualizado_em: row.atualizado_em, reuniao_id: S.reuniao_id || null, hist: S.historico || null });
   if (S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { iniciada: true });
   // fotos de hotel entram no banco de fotos do fornecedor
   if (S.modelo === 'go') for (const o of S.opcoes) for (const ht of o.hoteis) { const urls = linhas(ht.fotos).filter(u => /^https?:/.test(u)); const f = ht.fornecedor_id && X.fornecedores && X.fornecedores.lista().find(x => x.id === ht.fornecedor_id); if (f && urls.length) { const todas = [...new Set([...(f.fotos_maktub || []), ...urls])].slice(0, 30); if (todas.length !== (f.fotos_maktub || []).length) { const u = await X.sb.from('fornecedores').update({ fotos_maktub: todas }).eq('id', f.id); if (!u.error) f.fotos_maktub = todas; } } }
@@ -556,8 +556,8 @@ async function gerarLink(X) {
   X.$('copiarL').onclick = async () => { try { await navigator.clipboard.writeText(url); X.aviso('Link copiado.'); } catch (e) { X.aviso(url); } };
   try { await navigator.clipboard.writeText(url); } catch (e) {}
   X.aviso(atualizar ? 'Link atualizado. O cliente vê a versão nova no mesmo endereço.' : 'Link gerado e copiado.');
-  if (dados.slug) await salvar(X, true);
-  enviada(X);
+  enviada(X, atualizar ? 'Link atualizado' : 'Link', url);
+  await salvar(X, true);
 }
 async function acervo(X) {
   const html = gerar(X), nome = (tituloDe() || 'cotacao').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase().slice(0, 60);
@@ -569,7 +569,7 @@ async function acervo(X) {
   const r = await X.sb.from('roteiros').insert(row);
   if (r.error) { await X.sb.storage.from('roteiros').remove([path]); X.aviso('Não guardou: ' + r.error.message); return; }
   if (X.acervoRecarregar) X.acervoRecarregar();
-  enviada(X); X.aviso('Guardada no acervo, na pasta do destino.');
+  enviada(X, null); X.aviso('Guardada no acervo, na pasta do destino.');
 }
 
 /* ================= geração: Maktub Go ================= */
@@ -819,7 +819,7 @@ function editorRapida(P, X) {
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
-    <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>${faixaCard(X)}
+    <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>${faixaCard(X)}${htmlHistorico(X)}
     <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
@@ -884,17 +884,43 @@ function editorRapida(P, X) {
   ligarFaixa(P, X);
   $('rpEnviar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, enviarImagem); };
   const enviarImagem = async () => {
-    enviada(X); salvar(X, true); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
+    enviada(X, 'Imagem no WhatsApp'); salvar(X, true); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [arq] })) { try { await navigator.share({ files: [arq] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     baixar(blob); X.aviso('Imagem baixada. Anexe no WhatsApp.');
   };
-  $('rpBaixar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, async () => { enviada(X); salvar(X, true); baixar(await imagemRapida()); }); };
+  $('rpBaixar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, async () => { enviada(X, 'Imagem baixada'); salvar(X, true); baixar(await imagemRapida()); }); };
   $('rpSalvar').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
   $('linkC').onclick = () => { if (pronto()) comCardNaCotacao(P, X, () => gerarLink(X)); };
   previa();
 }
 // cotação entregue ao cliente: o card vai para "Cotação enviada" com o valor cotado (a ligação com o card fica guardada)
-function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { valor: valorCotacao(S.modelo === 'go' ? autoGo(S) : S) }); }
+// e cada envio vira um registro na própria cotação: quando, por onde, quem e quanto (o link pode ser o mesmo, o histórico fica)
+function enviada(X, canal, link) {
+  if (!S) return;
+  const d = S.modelo === 'go' ? autoGo(S) : S;
+  if (canal) {
+    const ops = opcoesCotacao(d).map(o => ({ nome: o.nome || '', valor: o.valor || 0 }));
+    const reg = { em: new Date().toISOString(), canal, por: (X.D && X.D.eu) || '', opcoes: ops, voos: resumoVoosCot(d), link: '' };
+    reg.link = link || (S.link_slug ? 'https://www.maktubgo.com.br/' + S.link_slug : '');
+    const H = S.historico = S.historico || [], ult = H[H.length - 1];
+    // o mesmo envio repetido em poucos minutos (tocou duas vezes) não vira um registro novo
+    if (ult && Date.now() - new Date(ult.em) < 10 * 6e4 && JSON.stringify(ult.opcoes) === JSON.stringify(reg.opcoes) && ult.voos === reg.voos) Object.assign(ult, { em: reg.em, canal: reg.canal, link: reg.link || ult.link });
+    else H.push(reg);
+  }
+  if (S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { valor: valorCotacao(d) });
+}
+function resumoVoosCot(d) {
+  const o = opcoesCotacao(d)[0]; if (!o) return '';
+  const vs = d.modelo === 'go' ? (o.o.voos || []).filter(v => v.origem || v.destino).map(v => `${v.origem}-${v.destino}${v.data ? ' ' + ddmm(v.data) : ''}`) : (o.voos || []).filter(v => v.ocod).map(v => `${v.ocod}-${v.dcod}${v.data ? ' ' + ddmm(v.data) : ''}${v.saida ? ' ' + v.saida : ''}`);
+  return vs.join(' · ');
+}
+// histórico de envios, do mais recente para o mais antigo
+function htmlHistorico(X) {
+  const H = (S.historico || []).slice().reverse(); if (!H.length) return '';
+  const dh = (iso) => { const t = new Date(iso); return t.toLocaleDateString('pt-BR') + ' ' + t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+  return dobra('histEnv', `Histórico de envios (${H.length})`, H.map((r, i) => `<div style="border-top:${i ? '1px solid var(--linha)' : '0'};padding:6px 0;font-size:13px"><b>${dh(r.em)}</b> · ${X.esc(r.canal)}${r.por ? ' · ' + X.esc(r.por) : ''}
+    <div>${r.opcoes.map(o => `${o.nome ? X.esc(o.nome) + ': ' : ''}${o.valor ? brl(o.valor) : 'sem valor'}`).join(' · ')}</div>${r.voos ? `<div style="color:var(--tinta-3)">${X.esc(r.voos)}</div>` : ''}${r.link ? `<div style="word-break:break-all"><a href="${X.esc(r.link)}" target="_blank" rel="noopener">${X.esc(r.link)}</a></div>` : ''}</div>`).join(''));
+}
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 
