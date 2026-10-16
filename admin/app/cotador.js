@@ -97,7 +97,7 @@ const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 con
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
   if (!MARCA) { try { const m = await import('/admin/app/cot-marca.js?v=2'); MARCA = m.MARCA; RAPM = m.RAP || null; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
-  carregarAero(); TAXAS = X.D && X.D.cfg && X.D.cfg.taxas_cartao;
+  carregarAero(); const cfg = (X.D && X.D.cfg) || {}; TAXAS = cfg.taxas_cartao; REGRA = { desc: cfg.pix_desconto, n: cfg.parcelas_sem_juros };
   if (PEDIR) { const tipo = PEDIR; PEDIR = null; return comCard(P, X, () => { S = comPre(tipo === 'rapida' ? NOVO_RAP() : tipo === 'corp' ? NOVO_CORP() : NOVO_GO()); PRE = null; ir(X, 'novo'); }); }
   if (ED) return editor(P, X);
   return lista(P, X);
@@ -186,7 +186,7 @@ export function opcoesCotacao(d) {
   if (!d) return [];
   if (d.modelo === 'go') return (d.opcoes || []).map((o, i) => ({ nome: o.nome || (d.opcoes.length > 1 ? 'Opção ' + (i + 1) : ''), valor: precos(o).cartao, o }));
   if (d.modelo === 'corp') return [{ nome: d.nome1 || ((d.extras || []).length ? 'Opção 1' : ''), valor: num(d.por), voos: d.voos || [] }].concat((d.extras || []).map((o, i) => ({ nome: o.nome || 'Opção ' + (i + 2), valor: num(o.por), voos: o.voos || [] })));
-  return [{ nome: '', valor: num(d.por), voos: (d.voos || []).filter(v => v.ocod) }];
+  return [{ nome: '', valor: (precoRapida(d) || {}).pix || num(d.por), voos: (d.voos || []).filter(v => v.ocod) }];
 }
 export const valorCotacao = (d) => { const o = opcoesCotacao(d)[0]; return o ? o.valor : 0; };
 // serviços já preenchidos para o fechamento: voo (rota, datas, passageiros, companhia) e hotéis (nome e datas)
@@ -795,9 +795,7 @@ const ecoAuto = () => { const a = num(S.de), b = num(S.por); return a > b && b >
 const mostraEco = () => { const a = num(S.de), b = num(S.por); if (!(a > b && b > 0)) return false; return S.eco === true || S.eco === false ? S.eco : ecoAuto(); };
 // cartão pelo link da InfinitePay com a taxa repassada: o valor do Pix é o que a Maktub recebe líquido.
 // total = Pix ÷ (1 − taxa da parcela), arredondado para cima no centavo; parcela = total ÷ parcelas (confere com a calculadora da InfinitePay)
-const parcTxt = () => { const np = String(S.parcelas || '').trim(), por = num(S.por); if (!/^\d{1,2}$/.test(np) || !por) return np; const c = cartao(por, +np);
-  // o preço do cartão é o anunciado, em até N vezes sem juros; o Pix é o desconto
-  return !c ? `${+np}x no cartão` : +np === 1 ? `${brl(c.total)} no cartão` : `${brl(c.total)} em até ${+np}x de ${brl(c.parcela)} sem juros`; };
+const parcTxt = () => { const pr = precoRapida(S); return pr ? `${brl(pr.cartao.total)} em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ''; };
 const rapVoos = () => (S.voos || []).filter(v => v.ocod);
 const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '', pax: '' });
 // passageiros de um trecho só aparecem quando são diferentes do total da cotação
@@ -826,9 +824,10 @@ function textoBag(mao, desp) {
 }
 // o que o vendedor vê ao escolher as parcelas: quanto o cliente paga e quanto a Maktub recebe
 function resumoParc() {
-  const np = parseInt(S.parcelas) || 0, por = num(S.por); if (!np || !por) return 'O valor digitado acima é o do Pix. No cartão, o app soma a taxa da InfinitePay da parcela escolhida.';
-  const c = cartao(por, np); if (!c) return 'Parcelamento de 1 a 12x.';
-  return `No cartão: ${brl(c.total)}${np > 1 ? ` em até ${np}x de ${brl(c.parcela)} sem juros` : ''}. No fechamento, crie o link da InfinitePay de ${brl(c.total)}, sem repassar a taxa, em até ${np}x: em ${np}x a Maktub recebe ${brl(por)} (em menos parcelas, recebe mais).`;
+  const pr = precoRapida(S), R = regraPix();
+  if (!pr) return `Digite o mínimo que a Maktub quer receber. O app monta o Pix com ${pct1(R.desc)}% de desconto e o cartão em até ${R.n}x sem juros.`;
+  const c = pr.cartao, e = pr.extra;
+  return `<b>Pix:</b> ${brl(pr.pix)} · <b>Cartão:</b> ${brl(c.total)} em até ${pr.n}x de ${brl(c.parcela)}${e ? ` · <b>ou ${e.n}x</b> de ${brl(e.parcela)} (total ${brl(e.total)})` : ''}<br>Spread no Pix: ${brl(pr.pix - pr.piso)}. Link da InfinitePay: ${brl(c.total)}, sem repassar a taxa, em até ${pr.n}x${e ? `; para ${e.n}x, ${brl(e.total)} em até ${e.n}x` : ''}. Em qualquer opção a Maktub recebe pelo menos ${brl(pr.piso)}.`;
 }
 function editorRapida(P, X) {
   const { $ } = X;
@@ -857,8 +856,8 @@ function editorRapida(P, X) {
         <label class="fc" style="margin:4px 0"><input type="checkbox" id="bagMao" ${bagMao() ? 'checked' : ''}><span>Mala de mão de até 10 kg</span></label>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px"><span>Malas despachadas de até 23 kg</span><span style="display:flex;align-items:center;gap:8px"><button type="button" class="sec" data-bagd="-1" style="width:40px;padding:6px 0">−</button><b style="min-width:18px;text-align:center">${bagDesp()}</b><button type="button" class="sec" data-bagd="1" style="width:40px;padding:6px 0">+</button></span></div></div>
       ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
-      ${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}
-      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou no cartão em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (de 1 a 12x)"')}</div>
+      ${inp('por', 'Quanto a Maktub quer receber (mínimo)', 'num', 'placeholder="1.000,00"')}
+      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', `Mais parcelas (opcional, acima de ${regraPix().n}x)`, 'text', `inputmode="numeric" placeholder="ex.: 10 (até 12x)"`)}</div>
       <div class="sub" id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
     </form>
@@ -992,6 +991,21 @@ const cap = (t) => t ? t[0].toUpperCase() + t.slice(1) : t;
 export const TAXAS_PADRAO = [4.2, 6.09, 7.01, 7.91, 8.8, 9.67, 12.59, 13.42, 14.25, 15.06, 15.87, 16.66];
 let TAXAS = null;
 const taxasCartao = () => Array.isArray(TAXAS) && TAXAS.length === 12 && TAXAS.every(t => t !== null && t !== '' && !isNaN(+t)) ? TAXAS.map(Number) : TAXAS_PADRAO;
+// regra padrão da cotação rápida: o vendedor digita o mínimo que a Maktub quer receber.
+// Cartão em até N vezes sem juros (calculado com a taxa de N vezes, então a Maktub recebe o mínimo mesmo em N vezes)
+// e Pix com X% de desconto sobre o cartão. O que passa do mínimo é o spread da Maktub. Acima de N vezes, só quando o vendedor pede.
+let REGRA = null;
+const regraPix = () => ({ desc: REGRA && REGRA.desc != null && +REGRA.desc >= 0 && +REGRA.desc < 50 ? +REGRA.desc : 5, n: REGRA && +REGRA.n >= 1 && +REGRA.n <= 12 ? Math.round(+REGRA.n) : 4 });
+const pct1 = (v) => String(v).replace('.', ',');
+export function precoRapida(d) {
+  const piso = num(d && d.por); if (!piso) return null;
+  const { desc, n } = regraPix(), c = cartao(piso, n); if (!c) return null;
+  const comDesc = Math.round(c.total * (100 - desc)) / 100, pix = Math.max(piso, comDesc);
+  const np = parseInt(d.parcelas) || 0, extra = np > n ? cartao(piso, np) : null;
+  // se o desconto padrão deixaria o Pix abaixo do mínimo, o Pix fica no mínimo e mostra o desconto real (arredondado para baixo)
+  const descMostra = pix === comDesc ? desc : Math.floor((c.total - pix) / c.total * 1000) / 10;
+  return { piso, pix, cartao: c, n, desc: descMostra, extra: extra ? { n: np, ...extra } : null };
+}
 export function cartao(valorPix, n) {
   const t = taxasCartao()[n - 1]; if (!(n >= 1) || t == null || t >= 100 || !(valorPix > 0)) return null;
   const total = Math.ceil(Math.round(valorPix * 100 / (1 - t / 100) * 1e6) / 1e6) / 100;
@@ -1008,20 +1022,16 @@ function rapInfo() {
   const total = ida ? 'Somente ida' : iv ? 'Ida e volta' : `Os ${EXT[n] || n} trechos`;
   const paxT = `${pax} ${pax === 1 ? 'passageiro' : 'passageiros'}`;
   // com cartão na cotação, o Pix aparece como o desconto
-  const fm = S.forma || 'À vista via Pix', comCartao = !!parcTxt() && /^\d{1,2}$/.test(String(S.parcelas || '').trim());
-  // com cartão: o valor grande é o do Pix e a linha de baixo diz o do cartão de crédito, por extenso
-  const np = parseInt(S.parcelas) || 0, cc = comCartao ? cartao(num(S.por), np) : null;
-  const pagto = cc ? [`No cartão de crédito: ${brl(cc.total)}${np > 1 ? ` em até ${np}x de ${brl(cc.parcela)} sem juros` : ' à vista'}`, 'Taxas inclusas']
-    : [fm, comCartao ? 'ou ' + parcTxt() : '', 'taxas inclusas'].filter(Boolean);
-  // desconto do Pix sobre o preço do cartão, arredondado para baixo (nunca promete mais do que dá)
-  const desc = cc ? Math.floor((cc.total - num(S.por)) / cc.total * 1000) / 10 : 0;
-  const totalLbl = cc ? `No Pix · ${total}` : total;
-  const descTxt = desc > 0 ? `${String(desc).replace('.', ',')}% de desconto por pagar no Pix` : '';
+  // o valor grande é o do Pix; embaixo, o cartão de crédito por extenso (e o parcelamento maior, se o vendedor pediu)
+  const pr = precoRapida(S), cc = pr;
+  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`, ...(pr.extra ? [`ou em até ${pr.extra.n}x de ${brl(pr.extra.parcela)}`] : []), 'Taxas inclusas'] : [S.forma || 'À vista via Pix', 'taxas inclusas'];
+  const totalLbl = pr ? `No Pix · ${total}` : total, valor = pr ? pr.pix : num(S.por);
+  const descTxt = pr && pr.desc > 0 ? `${pct1(pr.desc)}% de desconto por pagar no Pix` : '';
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
       tipo: (v.tipo || 'Direto'), o: String(v.ocod || '').toUpperCase(), d: String(v.dcod || '').toUpperCase(), onome: v.onome || cidadeDe(v.ocod) || '', dnome: v.dnome || cidadeDe(v.dcod) || '', pax: np }; });
   const corp = S.marca === 'Maktub Corporativo';
-  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, valor, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
 }
 // página do link (mesmo visual da imagem, em versão para celular)
 function htmlRapida() {
@@ -1121,10 +1131,10 @@ ${tr}
   </div>
   <div class="valor">
     <div class="k">Valor total</div>
-    <div class="n">${brl(num(S.por))}</div>
+    <div class="n">${brl(I.valor)}</div>
     <div class="p">${h(I.total)}</div>
     ${I.descTxt ? `<div class="desc">${h(I.descTxt)}</div>` : ''}
-    <div class="d">${I.cc ? `<b style="color:var(--creme);font-weight:500">${h(I.pagto[0])}</b><br>${h(I.pagto[1])}` : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <div class="d">${I.cc ? I.pagto.slice(0, -1).map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') + '<br>' + h(I.pagto[I.pagto.length - 1]) : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
   </div>
   <div class="nota">
     Valores consultados em ${hoje} às ${hora}.<br>
@@ -1207,7 +1217,7 @@ async function imagemRapida() {
   g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28 + (I.descTxt ? 58 : 0), DO = I.descTxt ? 58 : 0;
   g.fillStyle = VERDE; g.fillRect(0, y, W, VH);
   g.font = jost(14, '500'); g.fillStyle = DOUR; esp('VALOR TOTAL', W / 2, y + 49, 6, 'center');
-  g.font = corm(92); g.fillStyle = CREME; esp(brl(por), W / 2, y + 147, 2, 'center');
+  g.font = corm(92); g.fillStyle = CREME; esp(brl(I.valor), W / 2, y + 147, 2, 'center');
   g.font = jost(15); g.fillStyle = 'rgba(235,224,196,.7)'; esp(I.total.toUpperCase(), W / 2, y + 183, 4.6, 'center');
   // selo do desconto no Pix
   if (I.descTxt) { g.font = jost(14, '500'); const tw = larg(I.descTxt.toUpperCase(), 2.4) + 40, tx = (W - tw) / 2, ty = y + 205;

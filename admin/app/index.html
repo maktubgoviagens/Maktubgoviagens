@@ -463,7 +463,7 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=28';
+import * as COT from '/admin/app/cotador.js?v=29';
 import * as VENDA from '/admin/app/venda.js?v=1';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
@@ -2582,6 +2582,8 @@ function telaEquipe(P) {
     <form class="bloco form" id="fTaxas">
       <div class="sub" style="margin:0 0 6px"><b>Taxas do cartão (link InfinitePay)</b><br>Usadas nas cotações: o valor digitado é o do Pix e o app soma a taxa da parcela para a Maktub receber o valor cheio. Atualize aqui quando a InfinitePay mudar.</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${(() => { const t = Array.isArray(D.cfg && D.cfg.taxas_cartao) && D.cfg.taxas_cartao.length === 12 ? D.cfg.taxas_cartao : COT.TAXAS_PADRAO; return t.map((v, i) => `<label class="fl" style="margin:0"><span>${i + 1}x (%)</span><input name="tx${i}" inputmode="decimal" value="${String(v).replace('.', ',')}"></label>`).join(''); })()}</div>
+      <div class="duas-col" style="margin-top:8px">${campo('pix_desconto', 'Desconto no Pix (%)', D.cfg && D.cfg.pix_desconto != null ? D.cfg.pix_desconto : 5, 'number', 'step="0.1"')}${campo('parcelas_sem_juros', 'Cartão sem juros em até', D.cfg && D.cfg.parcelas_sem_juros ? D.cfg.parcelas_sem_juros : 4, 'number', 'min="1" max="12"')}</div>
+      <div class="sub">Na cotação rápida, o vendedor digita o mínimo que a Maktub quer receber. O cartão sai em até essas vezes sem juros e o Pix com esse desconto.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar taxas</button>
     </form>`;
   $('voltar').onclick = () => ir('empresa');
@@ -2624,9 +2626,11 @@ function telaEquipe(P) {
     ev.preventDefault(); const f = ev.target;
     const tx = [...Array(12)].map((_, i) => Number(String(f.elements['tx' + i].value).replace(',', '.')));
     if (tx.some(t => isNaN(t) || t < 0 || t >= 100)) { aviso('Confira as taxas: use números como 7,91.'); return; }
-    const { error } = await sb.from('configuracoes').update({ taxas_cartao: tx, atualizado_em: new Date().toISOString() }).eq('id', 1);
-    if (error) { aviso(/taxas_cartao/.test(error.message) ? 'Falta rodar no Supabase o SQL das taxas do cartão.' : 'Não salvou: ' + error.message); return; }
-    if (D.cfg) D.cfg.taxas_cartao = tx; aviso('Taxas salvas. As próximas cotações já usam.');
+    const pd = Number(String(f.elements.pix_desconto.value).replace(',', '.')), ps = parseInt(f.elements.parcelas_sem_juros.value);
+    if (isNaN(pd) || pd < 0 || pd >= 50 || !(ps >= 1 && ps <= 12)) { aviso('Confira o desconto do Pix (0 a 49%) e as parcelas sem juros (1 a 12).'); return; }
+    const { error } = await sb.from('configuracoes').update({ taxas_cartao: tx, pix_desconto: pd, parcelas_sem_juros: ps, atualizado_em: new Date().toISOString() }).eq('id', 1);
+    if (error) { aviso(/pix_desconto|parcelas_sem_juros/.test(error.message) ? 'Falta rodar no Supabase o SQL do desconto do Pix.' : /taxas_cartao/.test(error.message) ? 'Falta rodar no Supabase o SQL das taxas do cartão.' : 'Não salvou: ' + error.message); return; }
+    if (D.cfg) Object.assign(D.cfg, { taxas_cartao: tx, pix_desconto: pd, parcelas_sem_juros: ps }); aviso('Salvo. As próximas cotações já usam.');
   };
 }
 async function carregarEquipe() {
