@@ -1025,6 +1025,25 @@ export function cartao(valorPix, n) {
   const total = Math.ceil(Math.round(valorPix * 100 / (1 - t / 100) * 1e6) / 1e6) / 100;
   return { total, parcela: Math.round(total * 100 / n) / 100, taxa: t };
 }
+// bagagem em ícones (traço dourado, desenhados no estilo da marca). Só aparece o que a tarifa inclui.
+const ICON_BAG = {
+  item: '<rect x="5" y="7.5" width="14" height="13.5" rx="3.5"/><path d="M9 7.5V6a3 3 0 0 1 6 0v1.5"/><rect x="8" y="13.5" width="8" height="4.5" rx="1.5"/><path d="M5 12h14"/>',
+  mao: '<rect x="7" y="8.5" width="10" height="11.5" rx="2"/><path d="M10 8.5V3.5h4v5"/><path d="M10.5 11.5v5.5M13.5 11.5v5.5"/><circle cx="9.5" cy="21.6" r="1"/><circle cx="14.5" cy="21.6" r="1"/>',
+  desp: '<rect x="4.5" y="6.5" width="15" height="14" rx="2.5"/><path d="M9.5 6.5V4h5v2.5"/><path d="M8.5 9.5v8M12 9.5v8M15.5 9.5v8"/><circle cx="7.5" cy="22" r="1"/><circle cx="16.5" cy="22" r="1"/>'
+};
+const svgBag = (k, px) => `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="#A88B4A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${ICON_BAG[k]}</svg>`;
+function itensBag() {
+  const d = bagDesp(), tx = String(S.bagagem || '');
+  // o peso vem do texto quando foi ajustado à mão (ex.: 32 kg na executiva)
+  const kgM = (/m[aã]o de até (\d+)\s*kg/i.exec(tx) || /cabine de até (\d+)\s*kg/i.exec(tx) || [, '10'])[1], kgD = (/despachadas? de até (\d+)\s*kg/i.exec(tx) || [, '23'])[1];
+  const L = [['item', 'Item pessoal', 'mochila ou bolsa', '']];
+  if (bagMao()) L.push(['mao', 'Mala de mão', `até ${kgM} kg`, '']);
+  if (d > 0) L.push(['desp', 'Despachada', `até ${kgD} kg`, d > 1 ? d + 'x' : '']);
+  // o que o texto disser além dos ícones (caso fora do padrão) aparece embaixo deles
+  const esperado = textoBag(bagMao(), d).replace('de até 10 kg', `de até ${kgM} kg`).replace(/(despachadas? de até )23( kg)/, `$1${kgD}$2`);
+  const extra = tx.trim() && !/cabine/i.test(tx) && tx.trim() !== esperado ? tx.trim() : '';
+  return { L, extra };
+}
 function rapInfo() {
   const vs = rapVoos(), n = vs.length, pax = Math.max(1, parseInt(S.pessoas) || 1);
   const cid = (v, k) => cidadeDe(v[k + 'cod']) || v[k + 'nome'] || String(v[k + 'cod'] || '').toUpperCase();
@@ -1111,7 +1130,11 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
 .pax{flex:1 0 100%;margin-top:15px;padding-top:11px;border-top:1px solid var(--linha);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--suave);text-align:center}
 .bag,.obs{border:1px solid var(--linha);background:var(--branco);padding:15px 18px;margin:16px 0 0;text-align:center}
 .obs{border-color:var(--dourado);background:#FBF7EC}
-.bag{margin-bottom:22px}
+.bag{margin-bottom:22px;padding:16px 10px 14px}
+.bagrow{display:flex;justify-content:center;gap:18px;margin-top:12px}.bagit{width:104px}.bagic{position:relative;display:inline-block}
+.bagq{position:absolute;top:-3px;right:-14px;background:var(--verde);color:var(--creme);font-size:9px;font-weight:500;border-radius:20px;padding:2px 6px}
+.bagt{font-size:12px;color:var(--verde);margin-top:6px;font-weight:500}.bags{font-size:9.5px;color:var(--suave);letter-spacing:.5px;margin-top:2px}
+.bagtx{font-size:10px;color:var(--suave);margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)}
 .bag .k,.obs .k{font-size:8px;letter-spacing:2.8px;text-transform:uppercase;color:var(--dourado);font-weight:500}
 .bag .v,.obs .v{font-size:12.5px;color:var(--verde);margin-top:7px;white-space:pre-line}
 .valor{background:var(--verde);padding:32px 24px;text-align:center}
@@ -1148,7 +1171,7 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
     <div class="fio"></div>
 ${tr}
     ${obs ? `<div class="obs"><div class="k">Observação</div><div class="v">${h(obs)}</div></div>` : ''}
-    <div class="bag"><div class="k">${S.bagagem ? 'Bagagem incluída' : 'Incluído'}</div>${S.bagagem ? `<div class="v">${h(S.bagagem)}</div>` : ''}<div class="v" style="${S.bagagem ? 'margin-top:4px;font-size:11px;color:var(--suave)' : ''}">Taxas de embarque inclusas</div></div>
+    ${(B => `<div class="bag"><div class="k">Bagagem por passageiro</div><div class="bagrow">${B.L.map(([k, t, sb, q]) => `<div class="bagit"><div class="bagic">${svgBag(k, 40)}${q ? `<span class="bagq">${q}</span>` : ''}</div><div class="bagt">${t}</div><div class="bags">${sb}</div></div>`).join('')}</div>${B.extra ? `<div class="v" style="margin-top:10px">${h(B.extra)}</div>` : ''}<div class="bagtx">Taxas de embarque inclusas</div></div>`)(itensBag())}
   </div>
   <div class="valor">
     <div class="k">Valor total</div>
@@ -1232,13 +1255,21 @@ async function imagemRapida() {
     g.font = jost(13, '500'); g.fillStyle = DOUR; esp('OBSERVAÇÃO', W / 2, y + 34, 3.4, 'center');
     g.font = jost(17); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 62 + i * 26)); g.textAlign = 'left'; y += OH; }
   // bagagem
-  // bagagem e taxas de embarque: o que está incluído na passagem
-  { g.font = jost(18); const ls = S.bagagem ? quebra(S.bagagem, W - M * 2 - 40) : [];
-    g.font = jost(13, '500'); g.fillStyle = DOUR; esp(S.bagagem ? 'BAGAGEM INCLUÍDA' : 'INCLUÍDO', W / 2, y + 53, 3.4, 'center');
-    g.font = jost(18); g.fillStyle = VERDE; g.textAlign = 'center'; ls.forEach((l, i) => g.fillText(l, W / 2, y + 86 + i * 28));
-    const yt = y + 86 + ls.length * 28 - (ls.length ? 2 : 0); g.font = jost(ls.length ? 15 : 18); g.fillStyle = ls.length ? SUAVE : VERDE; g.fillText('Taxas de embarque inclusas', W / 2, yt); g.textAlign = 'left';
-    y += Math.max(0, ls.length - 1) * 28 + (ls.length ? 26 : 0); }
-  y += 166;
+  // bagagem em ícones e taxas de embarque: o que está incluído na passagem
+  { const B = itensBag(), ics = await Promise.all(B.L.map(([k]) => carregar('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgBag(k, 128)))));
+    g.font = jost(17); const xl = B.extra ? quebra(B.extra, W - M * 2 - 60) : [], BH = 244 + xl.length * 26;
+    y += 26; g.fillStyle = '#fff'; g.fillRect(M, y, W - M * 2, BH); g.strokeStyle = LINHA; g.lineWidth = 1.5; g.strokeRect(M + .75, y + .75, W - M * 2 - 1.5, BH - 1.5);
+    g.font = jost(13, '500'); g.fillStyle = DOUR; esp('BAGAGEM POR PASSAGEIRO', W / 2, y + 40, 3.4, 'center');
+    const k = B.L.length, CW = 190, GAP = 70, x0 = W / 2 - (k * CW + (k - 1) * GAP) / 2 + CW / 2;
+    B.L.forEach(([, t, sb, q], i) => { const cx = x0 + i * (CW + GAP);
+      if (ics[i]) g.drawImage(ics[i], cx - 32, y + 58, 64, 64);
+      if (q) { g.font = jost(13, '500'); const qw = g.measureText(q).width + 16; g.fillStyle = VERDE; g.beginPath(); g.roundRect ? g.roundRect(cx + 22, y + 52, qw, 22, 11) : g.rect(cx + 22, y + 52, qw, 22); g.fill(); g.fillStyle = CREME; g.fillText(q, cx + 30, y + 68); }
+      g.textAlign = 'center'; g.font = jost(18, '500'); g.fillStyle = VERDE; g.fillText(t, cx, y + 150); g.font = jost(14); g.fillStyle = SUAVE; g.fillText(sb, cx, y + 172); g.textAlign = 'left'; });
+    g.textAlign = 'center'; g.font = jost(17); g.fillStyle = VERDE; xl.forEach((l, i) => g.fillText(l, W / 2, y + 204 + i * 26));
+    const yl = y + 192 + xl.length * 26; g.fillStyle = LINHA; g.fillRect(M + 20, yl, W - M * 2 - 40, 1);
+    g.font = jost(15); g.fillStyle = SUAVE; g.fillText('Taxas de embarque inclusas', W / 2, yl + 32); g.textAlign = 'left';
+    y += BH; }
+  y += 40;
   // valor total
   g.font = jost(17); const pl = I.cc ? I.pagto.flatMap(t => quebra(t, W - M * 2)) : quebra(I.pagto.join('  ·  '), W - M * 2), VH = 274 + (pl.length - 1) * 28 + (I.descTxt ? 58 : 0), DO = I.descTxt ? 58 : 0;
   g.fillStyle = VERDE; g.fillRect(0, y, W, VH);
