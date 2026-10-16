@@ -87,7 +87,7 @@ const campanhas = () => EST.filter(e => e.tipo === 'campanha');
 const est = (id) => EST.find(e => e.id === id);
 const nomeT = (id) => (TIME.find(t => t.user_id === id) || {}).nome || '';
 const primeiro = (n) => String(n || '').split(' ')[0];
-const corP = (p) => (FMT[p.formato] || FMT.feed)[1];
+const corP = (p) => contaCor(p);
 const pubNoMes = (k) => LISTA.filter(p => p.status === 'publicado' && mesK(p.publicado_em) === k);
 
 /* ---------- estilos próprios da aba ---------- */
@@ -115,7 +115,7 @@ function estilos() {
 .mk-cm .d.sel{outline:2px solid var(--verde);outline-offset:-2px}
 .mk-cm .n{align-self:flex-end;font-size:11px;color:var(--tinta-2);line-height:16px;margin:0 2px 1px}
 .mk-chip{display:block;width:100%;border:0;border-radius:3px;padding:2px 4px;font-size:10px;line-height:1.3;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
-.mk-chip.planejado{background:#b9b4aa}.mk-chip.andamento{background:#c08a2e}.mk-chip.publicado{background:#2f8a57}.mk-chip.atrasado{background:#b5533c}
+.mk-chip.planejado{opacity:.5}.mk-chip.atrasado{box-shadow:inset 4px 0 0 #b5533c;padding-left:8px}
 .mk-mais{font-size:10px;color:var(--tinta-3);padding-left:3px}
 .mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 @media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
@@ -281,7 +281,7 @@ function vCalendario() {
   const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate();
   const doMes = vis().filter(p => mesK(diaPost(p)) === k);
   if (DIA && mesK(DIA) !== k) DIA = null;
-  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(contaN(p) + ': ' + p.titulo)}" style="box-shadow:inset 4px 0 0 ${contaCor(p)},inset 5px 0 0 #fff;padding-left:8px"><span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
+  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(contaN(p) + ': ' + p.titulo)}" style="background:${contaCor(p)}">${c === 'publicado' ? '✓ ' : c === 'atrasado' ? '! ' : ''}<span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
   let cel = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(d => `<div class="h">${d}</div>`).join('');
   for (let i = 0; i < prim; i++) cel += '<div class="d fora"></div>';
   for (let d = 1; d <= dias; d++) {
@@ -295,8 +295,8 @@ function vCalendario() {
   return `${filtroConta()}
     <div class="mesnav" id="mkMes" style="margin-top:12px"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="mk-cm">${cel}</div>
-    <div class="mk-leg"><span><i style="background:#b9b4aa"></i>Planejado</span><span><i style="background:#c08a2e"></i>Em andamento</span><span><i style="background:#2f8a57"></i>Publicado</span><span><i style="background:#b5533c"></i>Atrasado</span></div>
-    <div class="mk-leg" style="margin-top:4px">${CONTAS.map(c => `<span><i style="background:${c[2]}"></i>${c[1]} (faixa do lado)</span>`).join('')}</div>
+    <div class="mk-leg">${CONTAS.map(c => `<span><i style="background:${c[2]}"></i>${c[1]}</span>`).join('')}</div>
+    <div class="mk-leg" style="margin-top:4px"><span>Clarinho: planejado</span><span>Cor cheia: em andamento</span><span>✓ publicado</span><span>! atrasado</span></div>
     <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele.</div>
     ${DIA ? `<div class="secao">${new Date(DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} <button data-novo-dia="${DIA}">+ Post neste dia</button></div>${doDia.length ? `<div class="mk-lista">${doDia.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))).map(linha).join('')}</div>` : '<div class="vazio">Nenhum post neste dia.</div>'}` : ''}
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
@@ -379,7 +379,7 @@ function vSemana() {
 }
 function vcard(p) {
   const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)};border-left-color:${contaCor(p)};background:${contaFundo(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span><span class="st" style="color:${contaCor(p)};font-weight:600">${contaN(p)}</span>
+  return `<div class="mk-vcard" style="--c:${corP(p)};background:${contaFundo(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span><span class="st" style="color:${contaCor(p)};font-weight:600">${contaN(p)}</span>
     <b>${esc(p.titulo)}</b><small>${[p.hora ? 'às ' + p.hora : '', pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
     ${p.ajuste && EM_PRODUCAO.includes(p.status) ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
@@ -429,18 +429,18 @@ function formPost(P) {
     ${!nova && base.ajuste && EM_PRODUCAO.includes(base.status) ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
     ${!nova && base.aprovado_em ? `<div class="sub">Aprovado por ${esc(primeiro(nomeT(base.aprovado_por)) || 'administrador')} em ${new Date(base.aprovado_em).toLocaleDateString('pt-BR')}.</div>` : ''}
     <div class="seg" id="mkAbasF">${[['geral', 'Geral'], ['briefing', 'Briefing'], ['arquivos', 'Arquivos e postagem']].map(([k, n], i) => `<button type="button" data-aba="${k}" class="${i ? '' : 'on'}">${n}</button>`).join('')}</div>
-    <form class="bloco form" id="mkF" novalidate>
+    <form class="bloco form" id="mkF" novalidate style="--kc:${contaCor(p)}">
       <div data-tab="geral">
       ${campo('titulo', 'Título ou tema do post', p.titulo, 'text', 'maxlength="160"')}
       <div class="fl"><span>Conta do Instagram</span><div class="mk-fmts">${CONTAS.map(([k, n, c]) => `<label style="--c:${c}"><input type="radio" name="conta" value="${k}" ${contaDe(p) === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <div class="fl"><span>Collab com</span><div class="mk-fmts">${COLLAB.map(([k, n]) => `<label style="--c:var(--dourado)"><input type="checkbox" name="collab" value="${k}" ${(p.collab || []).includes(k) ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <div class="fl"><span>Tipo de conteúdo</span><div class="mk-fmts">${[['1', 'Vídeo', '#8a6520'], ['0', 'Estático', '#2f6b4a']].map(([v, n, c]) => `<label style="--c:${c}"><input type="radio" name="video" value="${v}" ${(ehVideo(p) ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <div class="fl"><span>Formato no Instagram</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
-      <div class="fl" id="mkReelsTipo"><span>Tipo de Reels</span><div class="mk-fmts">${[['0', 'Reels normal'], ['1', 'Reels teste']].map(([v, n]) => `<label style="--c:#8a6520"><input type="radio" name="reels_teste" value="${v}" ${(p.reels_teste ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl"><span>Collab com</span><div class="mk-fmts">${COLLAB.map(([k, n]) => `<label style="--c:var(--kc)"><input type="checkbox" name="collab" value="${k}" ${(p.collab || []).includes(k) ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl"><span>Tipo de conteúdo</span><div class="mk-fmts">${[['1', 'Vídeo'], ['0', 'Estático']].map(([v, n]) => `<label style="--c:var(--kc)"><input type="radio" name="video" value="${v}" ${(ehVideo(p) ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl"><span>Formato no Instagram</span><div class="mk-fmts">${Object.entries(FMT).map(([k, [n]]) => `<label style="--c:var(--kc)"><input type="radio" name="formato" value="${k}" ${p.formato === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
+      <div class="fl" id="mkReelsTipo"><span>Tipo de Reels</span><div class="mk-fmts">${[['0', 'Reels normal'], ['1', 'Reels teste']].map(([v, n]) => `<label style="--c:var(--kc)"><input type="radio" name="reels_teste" value="${v}" ${(p.reels_teste ? '1' : '0') === v ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div></div>
       <label class="fl"><span>Etapa</span><select name="status"></select></label>
       <div class="duas-col">${campo('data_prevista', 'Data de publicação', p.data_prevista, 'date')}${campo('hora', 'Horário', p.hora, 'time')}</div>
       <label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="">Ninguém definido</option>${marketing.map(t => `<option value="${t.user_id}" ${p.responsavel_id === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      <div class="fl"><span>Quem grava (pode marcar mais de uma pessoa)</span><div class="mk-fmts">${marketing.map(t => `<label style="--c:var(--verde)"><input type="checkbox" name="gravacao_equipe" value="${t.user_id}" ${equipeG(p).includes(t.user_id) ? 'checked' : ''}><span>${esc(t.nome)}</span></label>`).join('') || '<span class="sub">Ninguém da equipe cadastrado.</span>'}</div></div>
+      <div class="fl"><span>Quem grava (pode marcar mais de uma pessoa)</span><div class="mk-fmts">${marketing.map(t => `<label style="--c:var(--kc)"><input type="checkbox" name="gravacao_equipe" value="${t.user_id}" ${equipeG(p).includes(t.user_id) ? 'checked' : ''}><span>${esc(t.nome)}</span></label>`).join('') || '<span class="sub">Ninguém da equipe cadastrado.</span>'}</div></div>
       <div class="duas-col">${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}<span></span></div>
       ${equipeG(p).length ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. Quem foi escalado vê no app e marca quando gravar.'}</div>` : ''}
       <label class="fl"><span>Quem posta</span><select name="postagem_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.postagem_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
@@ -493,6 +493,7 @@ function formPost(P) {
     if (st === 'publicado' && !el.publicado_em.value) el.publicado_em.value = hoje();
   };
   mostrar(); f.addEventListener('change', mostrar);
+  f.querySelectorAll('[name=conta]').forEach(r => r.addEventListener('change', () => f.style.setProperty('--kc', contaCor({ conta: r.value }))));
   document.getElementById('mkVoltarF').onclick = () => { ED = null; PRE = null; rerender(); scrollTo(0, 0); };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
