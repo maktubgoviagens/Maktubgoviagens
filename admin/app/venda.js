@@ -41,6 +41,8 @@ export function pendenciasFechamento(r) {
   const F = r.fech || {}, IT = r.itens || [];
   const f = [];
   if (!F.forma) f.push('forma de pagamento');
+  // sem as parcelas não dá para medir o custo da maquininha
+  if (F.forma === 'cartao' && !+F.parcelas) f.push('em quantas vezes no cartão');
   if (!F.comprovante) f.push('comprovante de pagamento');
   IT.filter(x => !enviado(x)).forEach(x => { const p = pendenciasItem(x); if (p.length) f.push(`${x.produto}: ${p.join(', ')}`); });
   return f;
