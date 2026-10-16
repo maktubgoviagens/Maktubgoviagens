@@ -592,7 +592,7 @@ let SUJO = false, ULT_CARGA = 0;
 $('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 $('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 // versão publicada: se o celular ou o navegador ainda estiver com a tela antiga, recarrega sozinho (sem perder edição em andamento)
-const VERSAO_APP = '202610162016';
+const VERSAO_APP = '202610162018';
 async function conferirVersao() {
   try {
     const j = await (await fetch('/admin/app/versao.json?t=' + Date.now(), { cache: 'no-store' })).json();
@@ -1923,7 +1923,7 @@ function telaFormReuniao(P) {
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
     ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
     <form id="fRe" class="form" autocomplete="off">
-      <div class="grupo">Reunião</div>
+      <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
@@ -1950,7 +1950,8 @@ function telaFormReuniao(P) {
         ${campo('proximo_passo_data', 'Retornar em', r.proximo_passo_data, 'date')}
         <div class="sub">No dia do retorno, você recebe um aviso.</div>
       </div>
-      <div class="grupo">Reuniões</div>
+      ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:13px;padding:0;margin-top:10px">+ registrar uma reunião</button>' : ''}
+      <div id="blReun"><div class="grupo">Reuniões</div>
       ${D.agenda === null ? '<div class="sub">As reuniões são ativadas pelo 11-agenda-reunioes.sql.</div>' : `
       ${!nova && reunioesDe(base.id).length ? reunioesDe(base.id).map(htmlReuniaoAgenda).join('') : ''}
       ${!nova && meuCal() ? '<button class="zap" type="button" id="calAtd" style="margin-top:8px;width:100%">Agendar pelo meu Cal.com</button>' : ''}
@@ -1959,7 +1960,7 @@ function telaFormReuniao(P) {
       ${campo('nr_data', 'Data e hora', '', 'datetime-local')}
       <label class="fc"><input type="checkbox" name="nr_feita"><span>Essa reunião já aconteceu</span></label>
       <label class="fl" id="nrResumo" hidden><span>Resumo da reunião</span><textarea name="nr_abordado" rows="5" placeholder="Cole aqui o resumo do Granola."></textarea></label>
-      <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}
+      <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}</div>
       <label class="fl"><span>Anotações gerais</span><textarea name="observacoes" rows="3">${esc(r.observacoes || '')}</textarea></label>
       <button class="zap grande" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
       ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
@@ -1969,6 +1970,16 @@ function telaFormReuniao(P) {
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
+  // reunião só aparece para pacote e gestão de milhas (ou quando o card já tem reunião); passagem avulsa fica limpa
+  let reunAberta = false;
+  f._reunVis = () => {
+    const bl = $('blReun'); if (!bl) return;
+    const prods = f._itens ? f._itens().map(x => x.produto) : String(r.produto || '').split(' + ');
+    const precisa = G || reunAberta || prods.includes('Viagem completa / pacote') || (!nova && reunioesDe(base.id).length > 0);
+    bl.hidden = !precisa; if ($('reunMostra')) $('reunMostra').hidden = precisa;
+  };
+  if ($('reunMostra')) $('reunMostra').onclick = () => { reunAberta = true; f._reunVis(); };
+  f._reunVis();
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
@@ -2014,7 +2025,7 @@ function telaFormReuniao(P) {
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
       const k = IT.findIndex(x => x.produto === b.dataset.p);
       if (k >= 0) { if (VENDA.enviado(IT[k])) { aviso('Esse serviço já foi para a planilha.'); return; } IT.splice(k, 1); } else IT.push({ produto: b.dataset.p, custo: null, venda: null });
-      marcar(); EDIT.desenha();
+      marcar(); EDIT.desenha(); if (f._reunVis) f._reunVis();
     });
     marcar();
     f._itens = () => IT;
@@ -2064,7 +2075,7 @@ function telaFormReuniao(P) {
     const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
     f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
   }
-  mostrar(); if (f._prepFechou) f._prepFechou();
+  mostrar(); f._reunVis(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
   if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   $('voltar').onclick = () => history.back();
