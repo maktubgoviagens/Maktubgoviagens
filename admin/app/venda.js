@@ -129,6 +129,24 @@ function htmlItem(X, x, i, ctx) {
   return base + `<details ${ctx.fechou && !trava ? 'open' : ''} style="margin-top:4px"><summary style="cursor:pointer;font-size:13px;color:var(--verde);font-weight:600;padding:6px 0">Detalhes ${ehVoo(x) ? 'do voo' : ehHotel(x) ? 'do hotel' : 'do serviço'}${trava ? ' · na planilha' : x.emitido ? ' · emitido' : ''}</summary>${det}</details>`;
 }
 
+// título de cada emissão quando a venda tem mais de uma: rota, companhia e localizador
+function tituloVoo(X, x, IT) {
+  const n = IT.filter(ehVoo).length; if (n < 2 && !x.localizador) return '';
+  const rota = x.origem || x.destino ? ` · ${X.esc(up3(x.origem))} ${x.tipo_trecho === 'iv' ? '⇄' : '→'} ${X.esc(up3(x.destino))}` : '';
+  return `<span style="font-weight:400;color:var(--tinta-2)">${n > 1 ? ' · emissão ' + (IT.filter(ehVoo).indexOf(x) + 1) : ''}${rota}${x.cia_emissora ? ' · ' + X.esc(x.cia_emissora) : ''}${x.localizador ? ' · ' + X.esc(String(x.localizador).toUpperCase()) : ''}</span>`;
+}
+// um trecho que foi emitido à parte (outra companhia, outro localizador) vira outra emissão, com o próprio custo
+function separarTrecho(IT, i, k) {
+  const x = IT[i], l = x.ct.splice(k, 1)[0];
+  const novo = { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', origem: up3(l.o), destino: up3(l.d), data_ida: l.data || null, passageiros: +l.pax || null, pago_em: 'milhas' };
+  // a emissão que ficou: rota e datas pelos trechos que sobraram
+  const r = x.ct; if (r.length === 1) { x.tipo_trecho = 'ida'; x.origem = up3(r[0].o); x.destino = up3(r[0].d); x.data_ida = r[0].data || x.data_ida; x.data_volta = null; x.ct_on = false; }
+  else if (r.length === 2 && up3(r[1].d) === up3(r[0].o)) { x.tipo_trecho = 'iv'; x.origem = up3(r[0].o); x.destino = up3(r[0].d); x.data_ida = r[0].data || null; x.data_volta = r[1].data || null; x.ct_on = false; }
+  else x.trechos = r.map(t => `${up3(t.o)}-${up3(t.d)}${t.data ? ' ' + t.data.split('-').reverse().slice(0, 2).join('/') : ''}`).join('\n');
+  x.passageiros = Math.max(...r.map(t => +t.pax || 0)) || x.passageiros;
+  IT.splice(i + 1, 0, novo);
+}
+
 // ---------- custo por trecho ----------
 // cada trecho com o seu custo (milhas e taxas, ou valor pagante) e passageiros; o custo do serviço vira a soma.
 // Fica guardado no atendimento, e o app mostra quanto já se pagou no mesmo trecho em vendas anteriores.
@@ -168,7 +186,7 @@ function htmlTrechos(X, x, i, trava, ctx) {
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase" ${trava ? 'disabled' : ''}></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}" ${trava ? 'disabled' : ''}></label></div>
       <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 1fr 0.8fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}" ${trava ? 'disabled' : ''}></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}" ${trava ? 'disabled' : ''}></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}" ${trava ? 'disabled' : ''}></label></div>
       <div class="sub" style="margin:2px 0 0">${c ? `Este trecho: ${X.brl2(c)}${p > 1 ? ` (${X.brl2(c / p)} por passageiro)` : ''}` : ''}${hs.length ? `<br>Já pago em ${X.esc(l.o)} → ${X.esc(l.d)}: ${hs.map(hh => `${X.brl2(hh.pax)}/pax${hh.milhas ? ` (${hh.milhas.toLocaleString('pt-BR')} milhas)` : ''}${hh.cia ? ' · ' + X.esc(hh.cia) : ''}${hh.data ? ' · ' + dd(hh.data) : ''}`).join(' | ')}` : ''}</div>
-      ${trava || x.ct.length < 2 ? '' : `<button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}</div>`; }).join('')}
+      ${trava || x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button><button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}</div>`; }).join('')}
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
 }
 
@@ -196,7 +214,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   });
   const desenha = () => {
     if (ctx.detalhes) padroes();
-    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}</div>${htmlItem(X, x, i, ctx)}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
     el.querySelectorAll('input[data-it],textarea[data-it]').forEach(e => {
       const set = () => { const x = IT[+e.dataset.it], k = e.dataset.k, t = e.dataset.t; x[k] = t === 'b' ? e.checked : t === 'n' ? nb(e.value) : e.value.trim(); };
       if (e.type === 'checkbox') e.onchange = () => {
@@ -210,6 +228,9 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     // custo por trecho
     el.querySelectorAll('[data-ctliga]').forEach(e => e.onchange = () => { const x = IT[+e.dataset.ctliga]; x.ct_on = e.checked; if (e.checked && !(x.ct || []).length) x.ct = null; desenha(); });
     el.querySelectorAll('[data-ctmais]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.ctmais], u = x.ct[x.ct.length - 1] || {}; x.ct.push({ o: u.d || '', d: '', data: '', pax: u.pax || '' }); desenha(); });
+    const avisaMudou = () => el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.querySelectorAll('[data-ctsep]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.ctsep.split('|'); separarTrecho(IT, +i, +k); desenha(); avisaMudou(); X.aviso('Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.'); });
+    el.querySelectorAll('[data-outraem]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.outraem]; IT.splice(+b.dataset.outraem + 1, 0, { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', pago_em: 'milhas' }); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cttira.split('|'); IT[+i].ct.splice(+k, 1); desenha(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
       const [i, k, campo] = e.dataset.ct.split('|'), x = IT[+i];

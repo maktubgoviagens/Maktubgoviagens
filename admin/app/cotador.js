@@ -199,20 +199,22 @@ export function itensDaCotacao(d, k = 0) {
   const go = d.modelo === 'go', vs = go ? (op.o.voos || []).filter(v => v.origem || v.destino) : op.voos.filter(v => v.ocod || v.dcod);
   const ori = (v) => go ? v.origem : v.ocod, des = (v) => go ? v.destino : v.dcod;
   const itens = [];
-  if (vs.length) {
-    const iv = vs.length === 2 && des(vs[1]) && des(vs[1]) === ori(vs[0]);
-    const tipo = vs.length === 1 ? 'ida' : iv ? 'iv' : 'multi';
+  // passageiros diferentes por trecho costumam ser emissões diferentes (ex.: um vai antes): cada grupo vira uma emissão,
+  // com o próprio custo, companhia, forma de pagamento e localizador
+  const tot = parseInt(d.pessoas) || 1, paxDe = (v) => parseInt(v.pax) || tot;
+  const grupos = []; vs.forEach(v => { const g = grupos.find(g => g.pax === paxDe(v)); if (g) g.vs.push(v); else grupos.push({ pax: paxDe(v), vs: [v] }); });
+  grupos.forEach(({ pax, vs: gv }) => {
+    const iv = gv.length === 2 && des(gv[1]) && des(gv[1]) === ori(gv[0]);
+    const tipo = gv.length === 1 ? 'ida' : iv ? 'iv' : 'multi';
     const x = { produto: !go && (d.marca || (d.modelo === 'corp' ? 'Maktub Corporativo' : '')) === 'Maktub Corporativo' ? 'Maktub Corporativo' : 'Passagens',
-      custo: null, venda: null, tipo_trecho: tipo, origem: ori(vs[0]) || '', destino: des(vs[0]) || '', data_ida: vs[0].data || null, passageiros: parseInt(d.pessoas) || null, cia_emissora: d.cia || '' };
-    if (tipo === 'iv') x.data_volta = vs[1].data || null;
-    if (tipo === 'multi') { x.data_volta = vs[vs.length - 1].data || null; x.trechos = vs.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n'); }
-    // trechos da cotação já entram como linhas do custo por trecho (com os passageiros de cada um)
-    const tot = parseInt(d.pessoas) || 1;
-    x.ct = vs.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', pax: String(parseInt(v.pax) || tot) }));
-    // passageiros diferentes por trecho: já abre separado, porque o custo de cada perna é diferente
-    if (vs.length > 2 || x.ct.some(l => +l.pax !== tot)) { x.ct_on = true; x.passageiros = Math.max(tot, ...x.ct.map(l => +l.pax || 0)); }
+      custo: null, venda: null, tipo_trecho: tipo, origem: ori(gv[0]) || '', destino: des(gv[0]) || '', data_ida: gv[0].data || null, passageiros: pax, cia_emissora: grupos.length > 1 ? '' : (d.cia || '') };
+    if (tipo === 'iv') x.data_volta = gv[1].data || null;
+    if (tipo === 'multi') { x.data_volta = gv[gv.length - 1].data || null; x.trechos = gv.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n'); }
+    // trechos da emissão já entram como linhas do custo por trecho
+    x.ct = gv.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', pax: String(pax) }));
+    if (tipo === 'multi') x.ct_on = true;
     itens.push(x);
-  }
+  });
   if (go) (op.o.hoteis || []).filter(ht => ht.nome).forEach(ht => itens.push({ produto: 'Hotelaria', custo: null, venda: null, nome: ht.nome, destino: ht.cidade || '', data_ida: ht.entrada || null, data_volta: ht.saida || null }));
   // carro: as opções da cotação viram um serviço só (o cliente fica com uma delas; ajuste o nome no fechamento)
   if (go) { const cs = ((op.o.carro || {}).opcoes || []).filter(c => c.grupo); if (cs.length) itens.push({ produto: 'Aluguel de carro', custo: null, venda: null, nome: cs.map(c => c.grupo).join(' ou '), destino: d.destino || '', data_ida: op.o.embarque || null, data_volta: op.o.retorno || null }); }
