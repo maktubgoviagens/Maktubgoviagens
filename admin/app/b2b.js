@@ -131,17 +131,25 @@ export function tela(P, X) {
 // ---------- cancelamento ----------
 // A linha da planilha é ajustada pelo script "script-vendas-do-app" (ação "atualizar" pelo ID sistema):
 // valor e custo passam a ser só o que ficou (multa recebida e taxa que não voltou) e a comissão vira R$ 2,00.
-export const ehCancelada = (e) => /CANCELADA/.test(String((e && e.observacoes) || ''));
+// Venda de mês já fechado: a linha original não muda. Entra uma linha de ajuste no mês atual
+// (diferenças negativas de venda, custo e comissão), e o fechamento do mês antigo fica intacto.
+const REF = (id) => `ref ${id}`;
+const ajusteDe = (e, D) => (D.emissoes || []).find(x => x.id !== e.id && String(x.observacoes || '').includes('CANCELAMENTO') && String(x.observacoes || '').includes(REF(e.id)));
+export const ehCancelada = (e, D) => /CANCELADA/.test(String((e && e.observacoes) || '')) || !!(D && e && ajusteDe(e, D));
+export const ehAjuste = (e) => /CANCELAMENTO/.test(String((e && e.observacoes) || ''));
 
 export function blocoCancelar(e, X) {
   if (!ehB2B(e)) return '';
+  if (ehAjuste(e)) return `<section class="bloco" style="margin-top:12px"><h2>Ajuste de cancelamento B2B</h2><div class="sub" style="margin:0">Lançado no mês do cancelamento porque a venda original é de um mês fechado. Os valores negativos descontam a venda, o custo e a comissão.</div></section>`;
   const pode = X.ADMIN || e.vendedor_id === X.D.meuId;
+  const aj = ajusteDe(e, X.D);
+  if (aj) return `<section class="bloco" style="margin-top:12px"><h2>Emissão B2B cancelada</h2><div class="sub" style="margin:0">Mês fechado: o ajuste entrou em ${String(aj.data_negociacao || '').slice(0, 7).split('-').reverse().join('/')}.</div></section>`;
   if (ehCancelada(e)) return `<section class="bloco" style="margin-top:12px"><h2>Emissão B2B cancelada</h2><div class="sub" style="margin:0">Comissão de cancelamento: ${X.brl2(e.comissao)}.</div></section>`;
   if (!pode) return '';
   const pendente = (X.D.b2bCanc || {})[e.id];
   if (pendente) return `<section class="bloco" style="margin-top:12px"><h2>Cancelamento enviado</h2><div class="sub" style="margin:0">A planilha atualiza em até 5 minutos.</div></section>`;
   return `<details class="bloco" style="margin-top:12px" id="b2bCanc"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão B2B</summary>
-    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.</div>
+    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
     <div class="duas-col"><label class="fl"><span>A agência paga no cancelamento (R$)</span><input id="b2bCVal" inputmode="decimal" value="0"></label><label class="fl"><span>Custo que não voltou (R$)</span><input id="b2bCCus" inputmode="decimal" value="0"></label></div>
     <div class="sub" style="margin-top:2px">Ex.: taxa de embarque não reembolsada. Milhas devolvidas não contam como custo.</div>
     <label class="fl"><span>Motivo (opcional)</span><input id="b2bCMot"></label>
@@ -156,10 +164,26 @@ export function ligarCancelar(P, e, X, depois) {
     const mot = P.querySelector('#b2bCMot').value.trim();
     if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
     const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    const obs = [e.observacoes || MARCA_OBS, `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
-    const dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Comissão': pctVend(e, X) === 0 ? 0 : comissaoB2B(0, true), 'Observações': obs };
+    const comNova = pctVend(e, X) === 0 ? 0 : comissaoB2B(0, true);
+    let dados;
+    if (X.fechado) {
+      // mês fechado não muda: linha nova no mês atual com as diferenças
+      const custoOrig = r2((+e.milhas || 0) * (+e.milheiro || 0) / 1000 + (+e.taxas || 0));
+      const mes = String(e.data_negociacao || '').slice(0, 7).split('-').reverse().join('/');
+      dados = { 'Gestor': e.gestor || 'Maktub', 'Conta': e.conta || '', 'Email ou Produto': '', 'Cidade': MARCA, 'Cia': e.cia || '',
+        'Sobrenome': e.sobrenome || '', 'Origem': e.origem || '', 'Destino': e.destino || '', 'Comprador': e.comprador || '', 'Passageiros': +e.passageiros || 1,
+        'Contato': e.contato || '', 'Indicação': '', 'Localizador': String(e.localizador || '').toUpperCase(), 'Data da negociação': hojeISO(),
+        'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus - custoOrig), 'Valor a receber': r2(val - (+e.valor_receber || 0)), 'Pago': true,
+        'Comissão': r2(comNova - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
+        'Observações': [MARCA_OBS, `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)})`, mot].filter(Boolean).join(' · '),
+        'Serviço': e.servico || 'Passagens (Milhas)', 'Vendedor': X.nomeTime(e.vendedor_id) || '' };
+    } else {
+      const obs = [e.observacoes || MARCA_OBS, `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
+      dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Comissão': comNova, 'Observações': obs };
+    }
     b.disabled = true; b.textContent = 'Enviando...';
-    const { error } = await X.sb.from('fila_planilha').insert({ id: uuid(), atendimento_id: null, item: 0, dados });
+    const nid = uuid(); if (X.fechado) dados['ID sistema'] = nid;
+    const { error } = await X.sb.from('fila_planilha').insert({ id: nid, atendimento_id: null, item: 0, dados });
     if (error) { b.disabled = false; b.textContent = 'Confirmar cancelamento'; X.aviso('Não cancelou: ' + error.message); return; }
     X.D.b2bCanc = X.D.b2bCanc || {}; X.D.b2bCanc[e.id] = true;
     X.aviso('Cancelamento enviado. A planilha atualiza em até 5 minutos.'); depois();
