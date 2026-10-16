@@ -827,6 +827,7 @@ function textoBag(mao, desp) {
 // o que o vendedor vê ao escolher as parcelas: quanto o cliente paga e quanto a Maktub recebe
 // para o vendedor (não vai para o cliente): Pix, cartão sem juros e a tabela de 1x a 12x, já garantindo o mínimo da Maktub
 function resumoParc() {
+  if (S.so_pix) return `<div class="config" style="margin:0"><b>Só Pix:</b> ${num(S.por) ? `a cotação mostra ${brl(num(S.por))} no Pix` : 'a cotação mostra exatamente o valor digitado no Pix'}, sem cartão de crédito e sem desconto.</div>`;
   const pr = precoRapida(S), R = regraPix();
   if (!pr) return `<div class="sub" style="margin:0">Digite o mínimo que a Maktub quer receber. O app monta o Pix com ${pct1(R.desc)}% de desconto e o cartão em até ${R.n}x sem juros.</div>`;
   const c = pr.cartao, lin = [];
@@ -868,7 +869,8 @@ function editorRapida(P, X) {
         <label class="fc" style="margin:4px 0"><input type="checkbox" id="bagMao" ${bagMao() ? 'checked' : ''}><span>Mala de mão de até 10 kg</span></label>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px"><span>Malas despachadas de até 23 kg</span><span style="display:flex;align-items:center;gap:8px"><button type="button" class="sec" data-bagd="-1" style="width:40px;padding:6px 0">−</button><b style="min-width:18px;text-align:center">${bagDesp()}</b><button type="button" class="sec" data-bagd="1" style="width:40px;padding:6px 0">+</button></span></div></div>
       ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
-      ${inp('por', 'Quanto a Maktub quer receber (mínimo)', 'num', 'placeholder="1.000,00"')}
+      <div class="seg" id="rpForma" style="margin:8px 0 4px"><button type="button" data-f="ambos" class="${S.so_pix ? '' : 'on'}">Pix e cartão</button><button type="button" data-f="pix" class="${S.so_pix ? 'on' : ''}">Só Pix</button></div>
+      ${inp('por', S.so_pix ? 'Valor no Pix (é o que o cliente vê)' : 'Quanto a Maktub quer receber (mínimo)', 'num', 'placeholder="1.000,00"')}
       <div id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
     </form>
@@ -920,6 +922,7 @@ function editorRapida(P, X) {
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
   if ($('rpModo')) $('rpModo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; RAP_MODO = b.dataset.m; editorRapida(P, X); };
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)
@@ -1035,6 +1038,8 @@ export function valorPelaCotacao(d, forma, n) {
   return n <= pr.n ? pr.cartao.total : (cartao(pr.piso, n) || {}).total || null;
 }
 export function precoRapida(d) {
+  // cotação só no Pix: sem cartão e sem o acréscimo que vira desconto; o cliente vê exatamente o valor digitado
+  if (d && d.so_pix) return null;
   const piso = num(d && d.por); if (!piso) return null;
   const { desc, n } = regraPix(), c = cartao(piso, n); if (!c) return null;
   const comDesc = Math.round(c.total * (100 - desc)) / 100, pix = Math.max(piso, comDesc);
@@ -1082,8 +1087,8 @@ function rapInfo() {
   const pr = precoRapida(S), cc = pr;
   // a cotação nunca anuncia mais que as parcelas sem juros; parcelamento maior o vendedor passa na conversa (tabela no editor)
   // "taxas de embarque inclusas" fica no bloco do que está incluído na passagem, junto da bagagem
-  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`] : [S.forma || 'À vista via Pix'];
-  const totalLbl = `${pr ? 'No Pix · ' : ''}${total}`, valor = pr ? pr.pix : num(S.por);
+  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`] : [S.so_pix ? 'Pagamento à vista no Pix' : (S.forma || 'À vista via Pix')];
+  const totalLbl = `${pr || S.so_pix ? 'No Pix · ' : ''}${total}`, valor = pr ? pr.pix : num(S.por);
   const descTxt = pr && pr.desc > 0 ? `${pct1(pr.desc)}% de desconto por pagar no Pix` : '';
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
     return { v, rot: v.rotulo || 'Trecho ' + (i + 1), dia: d ? SEMANA[d.getDay()] : '', dataC: d ? `${String(d.getDate()).padStart(2, '0')} ${MES3[d.getMonth()]}` : '', dataL: d ? v.data.split('-').reverse().join('/') : '',
