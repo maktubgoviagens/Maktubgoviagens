@@ -163,9 +163,15 @@ export function blocoCancelar(e, X) {
   const regra = tipo ? `A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.` : 'A comissão é recalculada pelo percentual da venda sobre o que ficou.';
   const quem = tipo ? 'A agência paga' : 'O cliente paga';
   return `<details class="bloco" style="margin-top:12px" id="cancEm"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão</summary>
-    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. ${regra}${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
-    <div class="duas-col"><label class="fl"><span>${quem} no cancelamento (R$)</span><input id="cancVal" inputmode="decimal" value="0"></label><label class="fl"><span>Custo que não voltou (R$)</span><input id="cancCus" inputmode="decimal" value="0"></label></div>
-    <div class="sub" style="margin-top:2px">Ex.: multa, taxa de embarque ou tarifa não reembolsada. Milhas devolvidas não contam como custo.</div>
+    <div class="sub" style="margin-top:6px">A venda passa a ser só o que o cancelamento rendeu. ${regra}${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
+    <div class="seg" id="cancTipo"><button type="button" data-t="sem" class="on">Sem custo (até 24 h)</button><button type="button" data-t="com">Com custo</button></div>
+    <div id="cancCom" hidden>
+      <label class="fl"><span>Custo do cancelamento na companhia (R$)</span><input id="cancCus" inputmode="decimal" value="0"></label>
+      <div class="sub" style="margin-top:2px">Multa, taxa para devolver as milhas ou parte da tarifa que não volta. Varia pela companhia e pelo acordo.</div>
+      <label class="fl"><span>${quem} pelo cancelamento (R$)</span><input id="cancVal" inputmode="decimal" value="0"></label>
+      <div class="sub" style="margin-top:2px">O que a Maktub cobra. Pode ser maior que o custo: a diferença é lucro do cancelamento.</div>
+    </div>
+    <div class="resumo" id="cancRes"></div>
     <label class="fl"><span>Motivo</span><input id="cancMot" placeholder="Ex.: passageiro desistiu, mudança de data"></label>
     <button type="button" class="sec grande" id="cancOk" style="width:100%;margin-top:10px;color:var(--alerta)">Confirmar cancelamento</button></details>${est}`;
 }
@@ -227,13 +233,25 @@ function ligarEstorno(P, e, X, depois) {
 export function ligarCancelar(P, e, X, depois) {
   ligarEstorno(P, e, X, depois);
   const b = P.querySelector('#cancOk'); if (!b) return;
+  let comCusto = false;
+  const ler = () => comCusto ? { val: nb(P.querySelector('#cancVal').value) || 0, cus: nb(P.querySelector('#cancCus').value) || 0 } : { val: 0, cus: 0 };
+  const resumo = () => {
+    const { val, cus } = ler(), nv = novosValores(e, X, val, cus), res = r2(val - cus);
+    P.querySelector('#cancRes').innerHTML = `<div class="lin"><span>Recebe pelo cancelamento</span><span>${X.brl2(val)}</span></div>
+      <div class="lin"><span>Paga à companhia</span><span>− ${X.brl2(cus)}</span></div>
+      <div class="lin forte"><span>${res >= 0 ? 'Lucro' : 'Prejuízo'} do cancelamento</span><span style="${res < 0 ? 'color:var(--alerta)' : ''}">${X.brl2(res)}</span></div>
+      <div class="lin"><span>Comissão depois do cancelamento</span><span>${X.brl2(nv.com)}</span></div>`;
+  };
+  P.querySelector('#cancTipo').onclick = (ev) => { const x = ev.target.closest('button'); if (!x) return; comCusto = x.dataset.t === 'com'; P.querySelectorAll('#cancTipo button').forEach(y => y.classList.toggle('on', y === x)); P.querySelector('#cancCom').hidden = !comCusto; resumo(); };
+  P.querySelector('#cancCom').oninput = resumo; resumo();
   b.onclick = async () => {
-    const val = nb(P.querySelector('#cancVal').value) || 0, cus = nb(P.querySelector('#cancCus').value) || 0;
+    const { val, cus } = ler();
     const mot = P.querySelector('#cancMot').value.trim();
     if (!mot) { X.aviso('Informe o motivo do cancelamento.'); P.querySelector('#cancMot').focus(); return; }
     if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
     const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     const nv = novosValores(e, X, val, cus), b2b = ehB2B(e);
+    const det = comCusto ? `custo na cia ${X.brl2(cus)}, cobrado ${X.brl2(val)}, resultado ${X.brl2(val - cus)}` : 'sem custo';
     let dados;
     if (X.fechado) {
       // mês fechado não muda: linha nova no mês atual com as diferenças
@@ -243,11 +261,11 @@ export function ligarCancelar(P, e, X, depois) {
         'Contato': e.contato || '', 'Indicação': '', 'Localizador': String(e.localizador || '').toUpperCase(), 'Data da negociação': hojeISO(),
         'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus - custoDe(e)), 'Valor a receber': r2(val - (+e.valor_receber || 0)), 'Pago': true,
         'Comissão': r2(nv.com - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
-        'Observações': [b2b ? MARCA_OBS : '', `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)})`, mot].filter(Boolean).join(' · '),
+        'Observações': [b2b ? MARCA_OBS : '', `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)}), ${det}`, mot].filter(Boolean).join(' · '),
         'Serviço': e.servico || 'Passagens (Milhas)', 'Vendedor': X.nomeTime(e.vendedor_id) || '' };
       if (+e.repasse) dados['Repasse do parceiro'] = r2(nv.rep - (+e.repasse || 0));
     } else {
-      const obs = [e.observacoes || (b2b ? MARCA_OBS : ''), `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
+      const obs = [e.observacoes || (b2b ? MARCA_OBS : ''), `CANCELADA em ${quando}, ${det}`, mot].filter(Boolean).join(' · ');
       dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Observações': obs };
       if (b2b) dados['Comissão'] = nv.com; // B2C: a comissão continua pelo percentual e se recalcula sozinha
     }
