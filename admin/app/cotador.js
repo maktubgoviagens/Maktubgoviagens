@@ -796,16 +796,21 @@ const mostraEco = () => { const a = num(S.de), b = num(S.por); if (!(a > b && b 
 // cartão pelo link da InfinitePay com a taxa repassada: o valor do Pix é o que a Maktub recebe líquido.
 // total = Pix ÷ (1 − taxa da parcela), arredondado para cima no centavo; parcela = total ÷ parcelas (confere com a calculadora da InfinitePay)
 const parcTxt = () => { const pr = precoRapida(S); return pr ? `${brl(pr.cartao.total)} em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ''; };
-const rapVoos = () => (S.voos || []).filter(v => v.ocod);
+// ordem do calendário: data e horário de saída (trecho sem data fica no fim, na ordem em que entrou)
+const chaveTempo = (v) => v && v.data ? v.data + 'T' + (v.saida || '00:00') : '9999';
+const ordenarVoos = (vs) => { const L = vs.map((v, i) => [v, i]); L.sort((a, b) => chaveTempo(a[0]).localeCompare(chaveTempo(b[0])) || a[1] - b[1]); L.forEach(([v], i) => { vs[i] = v; }); return vs; };
+const rapVoos = () => ordenarVoos((S.voos || []).filter(v => v.ocod));
 const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', dcod: '', dnome: '', chegada: '', tipo: 'Direto', duracao: '', pax: '' });
 // passageiros de um trecho só aparecem quando são diferentes do total da cotação
 const paxTrecho = (v, total) => { const n = parseInt(v && v.pax) || 0; return n > 0 && n !== total ? n : 0; };
 // rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N. O que foi digitado à mão fica.
 function rotular(vs) {
-  const ori = vs[0] && vs[0].ocod, des = vs[0] && vs[0].dcod, voltas = vs.filter((v, i) => i && ori && v.dcod === ori), nv = voltas.length;
-  // mais de uma ida na mesma rota (ex.: um passageiro vai antes): Ida 1, Ida 2
-  const idas = vs.filter(v => ori && v.ocod === ori && v.dcod === des), ni = idas.length;
-  vs.forEach((v, i) => { if (v._rotM) return; v.rotulo = idas.includes(v) ? (ni > 1 ? 'Ida ' + (idas.indexOf(v) + 1) : 'Ida') : voltas.includes(v) ? (nv > 1 ? 'Volta ' + (voltas.indexOf(v) + 1) : 'Volta') : vs.length === 2 ? 'Volta' : 'Trecho ' + (i + 1); });
+  ordenarVoos(vs);
+  const ori = vs[0] && vs[0].ocod, n = vs.length;
+  // uma ida e uma ou mais voltas para a origem (ex.: volta em datas diferentes): Ida, Volta 1, Volta 2
+  const voltas = vs.slice(1), soVoltas = n > 1 && ori && voltas.every(v => v.dcod === ori);
+  vs.forEach((v, i) => { if (v._rotM) return;
+    v.rotulo = n === 1 ? 'Ida' : soVoltas ? (i === 0 ? 'Ida' : voltas.length > 1 ? 'Volta ' + i : 'Volta') : 'Trecho ' + (i + 1); });
 }
 function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
@@ -894,6 +899,8 @@ function editorRapida(P, X) {
     previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
+  // data ou horário mudou à mão: põe os trechos de novo na ordem do calendário
+  f.addEventListener('change', (e) => { const k = e.target.dataset.k || ''; if (/^voos\.\d+\.(data|saida)$/.test(k)) { const antes = S.voos.slice(); rotular(S.voos); if (S.voos.some((v, i) => v !== antes[i])) { ABERTOS.add('rpVoosD'); editorRapida(P, X); } } });
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
   ligarPrint(P, X);
   $('rpColar').onclick = async () => {
