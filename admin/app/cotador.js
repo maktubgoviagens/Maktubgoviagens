@@ -214,6 +214,8 @@ export function itensDaCotacao(d, k = 0) {
     itens.push(x);
   }
   if (go) (op.o.hoteis || []).filter(ht => ht.nome).forEach(ht => itens.push({ produto: 'Hotelaria', custo: null, venda: null, nome: ht.nome, destino: ht.cidade || '', data_ida: ht.entrada || null, data_volta: ht.saida || null }));
+  // carro: as opções da cotação viram um serviço só (o cliente fica com uma delas; ajuste o nome no fechamento)
+  if (go) { const cs = ((op.o.carro || {}).opcoes || []).filter(c => c.grupo); if (cs.length) itens.push({ produto: 'Aluguel de carro', custo: null, venda: null, nome: cs.map(c => c.grupo).join(' ou '), destino: d.destino || '', data_ida: op.o.embarque || null, data_volta: op.o.retorno || null }); }
   // com um serviço só, o valor da cotação já é a venda; com mais de um, o total vai para o valor fechado e a venda é dividida no fechamento
   if (itens.length === 1 && op.valor) itens[0].venda = op.valor;
   return { itens, valor: op.valor || 0, nome: op.nome };
