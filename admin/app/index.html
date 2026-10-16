@@ -1952,6 +1952,9 @@ function telaFormReuniao(P) {
     </form>`;
   const f = $('fRe');
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
+  // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
+  mostrar();
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
@@ -2046,7 +2049,6 @@ function telaFormReuniao(P) {
     const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
     f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
   }
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   mostrar(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
   if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
