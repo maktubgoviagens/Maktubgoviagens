@@ -3,10 +3,13 @@
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
 import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=3';
-let LISTA = null, ED = null, S = null, MARCA = null, PRE = null;
+let LISTA = null, ED = null, S = null, MARCA = null, PRE = null, PEDIR = null;
+// toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
-export function novaRapida() { PRE = null; S = NOVO_RAP(); ED = 'novo'; }
-export function preparar(pre) { PRE = pre || null; ED = null; S = null; }
+export function novaRapida() { PRE = null; S = null; ED = null; PEDIR = 'rapida'; }
+export function preparar(pre) { PRE = pre || null; ED = null; S = null; PEDIR = null; }
+// abre uma cotação já salva (vinda do card)
+export function abrir(row) { PRE = null; PEDIR = null; S = JSON.parse(JSON.stringify(row.dados || {})); S._id = row.id; ED = String(row.id); }
 const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d.destino || PRE.destino || ''; if (d.modelo === 'go') { d.para = PRE.cliente || ''; d.nomeZap = String(PRE.cliente || '').split(' ')[0]; } else if (d.modelo === 'corp') d.passageiro = PRE.cliente || ''; else d.cliente = PRE.cliente || '';
   (d.opcoes || []).forEach(o => { if (PRE.ida && !o.embarque) o.embarque = PRE.ida; if (PRE.volta && !o.retorno) o.retorno = PRE.volta; });
   const vs = d.voos || (d.opcoes && d.opcoes[0] && d.opcoes[0].voos) || [];
@@ -95,8 +98,115 @@ export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
 export async function tela(P, X) {
   if (!MARCA) { try { MARCA = (await import('/admin/app/cot-marca.js?v=1')).MARCA; } catch (e) { MARCA = { selo: '', ornato: '', assin: '', rodape: '' }; } }
   carregarAero();
+  if (PEDIR) { const tipo = PEDIR; PEDIR = null; return comCard(P, X, () => { S = comPre(tipo === 'rapida' ? NOVO_RAP() : tipo === 'corp' ? NOVO_CORP() : NOVO_GO()); PRE = null; ir(X, 'novo'); }); }
   if (ED) return editor(P, X);
   return lista(P, X);
+}
+
+/* ================= card do funil ================= */
+const cardDe = (X, id) => id ? (X.D.reunioes || []).find(r => r.id === id) : null;
+const numC = (r) => r && r.numero ? '#' + String(r.numero).padStart(3, '0') + ' ' : '';
+const preDe = (r) => ({ id: r.id, cliente: r.cliente, destino: r.trecho || '', ida: r.data_viagem || '', volta: r.data_volta || '' });
+// garante um card antes de seguir: se a cotação já saiu de um card, segue direto
+function comCard(P, X, depois) { if (PRE) return depois(); escolherCard(P, X, (r) => { PRE = preDe(r); depois(); }); }
+// escolher o card (atendimento em aberto) ou criar um na hora, com o mínimo: nome e WhatsApp
+function escolherCard(P, X, escolhido, voltar) {
+  const { esc, D } = X;
+  const abertos = (D.reunioes || []).filter(r => r.resultado === 'Em andamento' && r.produto !== 'Gestão de Milhas')
+    .sort((a, b) => String(b.created_at || b.data).localeCompare(String(a.created_at || a.data)));
+  P.innerHTML = `<button class="voltar" id="voltarCard">‹ ${voltar ? 'Cotação' : 'Cotações'}</button>
+    <h1 class="titulo" style="margin-top:6px">Para qual <em>atendimento</em>?</h1>
+    <div class="sub">Toda cotação fica ligada a um card do funil. Assim o card anda sozinho quando você envia e, no Fechou, a venda já vem preenchida.</div>
+    <label class="fl" style="margin-top:10px"><input id="buscaCard" placeholder="Buscar pelo nome ou destino" autocomplete="off"></label>
+    <div class="lista" id="lsCard"></div>
+    <div class="grupo" style="margin-top:14px">Cliente novo (cria o card agora)</div>
+    <form class="form" id="fCardNovo" autocomplete="off" onsubmit="return false">
+      <label class="fl"><span>Nome do cliente ou empresa</span><input name="cliente" list="dlCliC"></label>
+      <datalist id="dlCliC">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
+      <div class="duas-col"><label class="fl"><span>WhatsApp ou e-mail</span><input name="contato"></label><label class="fl"><span>Trecho ou destino</span><input name="trecho" placeholder="Rio → Lisboa"></label></div>
+      <button class="zap grande" id="criarCard" style="width:100%;margin-top:6px">Criar card e seguir para a cotação</button>
+    </form>`;
+  const desenha = (q) => {
+    const t = String(q || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const L = abertos.filter(r => !t || `${r.cliente} ${r.trecho || ''} ${r.numero || ''}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(t)).slice(0, 40);
+    X.$('lsCard').innerHTML = L.length ? L.map(r => `<button class="cli" data-card="${r.id}"><div><div class="nome">${esc(numC(r) + r.cliente)}</div><div class="meta">${esc([r.trecho, r.etapa].filter(Boolean).join(' · '))}</div></div></button>`).join('')
+      : '<div class="vazio">Nenhum atendimento em aberto com esse nome. Crie o card abaixo.</div>';
+    P.querySelectorAll('[data-card]').forEach(b => b.onclick = () => escolhido(abertos.find(r => r.id === b.dataset.card)));
+  };
+  desenha('');
+  X.$('buscaCard').oninput = (e) => desenha(e.target.value);
+  X.$('voltarCard').onclick = () => voltar ? voltar() : (S = null, ir(X, null));
+  X.$('criarCard').onclick = async () => {
+    const f = X.$('fCardNovo'), g = (n) => f.elements[n].value.trim();
+    const nome = g('cliente').replace(/\s+/g, ' ');
+    if (!nome) { X.aviso('Informe o nome do cliente.'); f.elements.cliente.focus(); return; }
+    const b = X.$('criarCard'); b.disabled = true; b.textContent = 'Criando...';
+    const ct = g('contato'), ehMail = /@/.test(ct), agora = new Date().toISOString();
+    const chave = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    let p = (D.pessoas || []).find(x => chave(x.nome) === chave(nome));
+    if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'] }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
+    const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: g('trecho') || null,
+      responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo: 'Montar e enviar a cotação', proximo_passo_data: hoje() };
+    if (p) row.pessoa_id = p.id;
+    const r = await X.sb.from('atendimentos').insert(row).select().single();
+    b.disabled = false; b.textContent = 'Criar card e seguir para a cotação';
+    if (r.error) { X.aviso('Não criou o card: ' + r.error.message); return; }
+    D.reunioes.unshift(r.data); X.aviso(`Card ${numC(r.data)}criado para ${r.data.cliente}.`);
+    escolhido(r.data);
+  };
+}
+// liga a cotação aberta a um card (ou troca de card)
+function ligarCard(P, X, r) {
+  S.reuniao_id = r.id;
+  if (S.modelo === 'go') { if (!S.para) { S.para = r.cliente; S.nomeZap = String(r.cliente || '').split(' ')[0]; } } else if (S.modelo === 'corp') { if (!S.passageiro) S.passageiro = r.cliente; } else if (!S.cliente) S.cliente = r.cliente;
+  if (!S.destino && r.trecho) S.destino = r.trecho;
+  editor(P, X);
+  if (S._id) salvar(X, true);
+  if (X.cotacaoEnviada) X.cotacaoEnviada(r.id, { iniciada: true });
+  X.aviso(`Cotação ligada ao card ${numC(r)}${r.cliente}.`);
+}
+function faixaCard(X) {
+  const r = cardDe(X, S.reuniao_id);
+  if (r) return `<div class="config" style="margin-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center"><span>Card <b>${X.esc(numC(r) + r.cliente)}</b>${r.etapa ? ' · ' + X.esc(r.etapa) : ''}</span><button type="button" data-trocacard="1" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer">trocar</button></div>`;
+  return `<div class="config" style="margin-top:8px;border-color:var(--alerta)"><b style="color:var(--alerta)">Cotação sem card.</b> Ligue a um atendimento antes de enviar ao cliente.<button type="button" class="zap" data-trocacard="1" style="width:100%;margin-top:8px">Ligar a um card</button></div>`;
+}
+function ligarFaixa(P, X) {
+  P.querySelectorAll('[data-trocacard]').forEach(b => b.onclick = () => escolherCard(P, X, (r) => ligarCard(P, X, r), () => editor(P, X)));
+}
+// antes de salvar, baixar, gerar link ou enviar: sem card, pede o card e depois segue com a ação
+function comCardNaCotacao(P, X, acao) {
+  if (S.reuniao_id && cardDe(X, S.reuniao_id)) return acao();
+  escolherCard(P, X, (r) => { ligarCard(P, X, r); acao(); }, () => editor(P, X));
+}
+
+/* ================= da cotação para a venda (usado no Fechou do card) ================= */
+// opções da cotação, cada uma com nome, valor e voos
+export function opcoesCotacao(d) {
+  if (!d) return [];
+  if (d.modelo === 'go') return (d.opcoes || []).map((o, i) => ({ nome: o.nome || (d.opcoes.length > 1 ? 'Opção ' + (i + 1) : ''), valor: precos(o).cartao, o }));
+  if (d.modelo === 'corp') return [{ nome: d.nome1 || ((d.extras || []).length ? 'Opção 1' : ''), valor: num(d.por), voos: d.voos || [] }].concat((d.extras || []).map((o, i) => ({ nome: o.nome || 'Opção ' + (i + 2), valor: num(o.por), voos: o.voos || [] })));
+  return [{ nome: '', valor: num(d.por), voos: (d.voos || []).filter(v => v.ocod) }];
+}
+export const valorCotacao = (d) => { const o = opcoesCotacao(d)[0]; return o ? o.valor : 0; };
+// serviços já preenchidos para o fechamento: voo (rota, datas, passageiros, companhia) e hotéis (nome e datas)
+export function itensDaCotacao(d, k = 0) {
+  const op = opcoesCotacao(d)[k] || opcoesCotacao(d)[0]; if (!op) return { itens: [], valor: 0 };
+  const go = d.modelo === 'go', vs = go ? (op.o.voos || []).filter(v => v.origem || v.destino) : op.voos.filter(v => v.ocod || v.dcod);
+  const ori = (v) => go ? v.origem : v.ocod, des = (v) => go ? v.destino : v.dcod;
+  const itens = [];
+  if (vs.length) {
+    const iv = vs.length === 2 && des(vs[1]) && des(vs[1]) === ori(vs[0]);
+    const tipo = vs.length === 1 ? 'ida' : iv ? 'iv' : 'multi';
+    const x = { produto: !go && (d.marca || (d.modelo === 'corp' ? 'Maktub Corporativo' : '')) === 'Maktub Corporativo' ? 'Maktub Corporativo' : 'Passagens',
+      custo: null, venda: null, tipo_trecho: tipo, origem: ori(vs[0]) || '', destino: des(vs[0]) || '', data_ida: vs[0].data || null, passageiros: parseInt(d.pessoas) || null, cia_emissora: d.cia || '' };
+    if (tipo === 'iv') x.data_volta = vs[1].data || null;
+    if (tipo === 'multi') { x.data_volta = vs[vs.length - 1].data || null; x.trechos = vs.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n'); }
+    itens.push(x);
+  }
+  if (go) (op.o.hoteis || []).filter(ht => ht.nome).forEach(ht => itens.push({ produto: 'Hotelaria', custo: null, venda: null, nome: ht.nome, destino: ht.cidade || '', data_ida: ht.entrada || null, data_volta: ht.saida || null }));
+  // com um serviço só, o valor da cotação já é a venda; com mais de um, o total vai para o valor fechado e a venda é dividida no fechamento
+  if (itens.length === 1 && op.valor) itens[0].venda = op.valor;
+  return { itens, valor: op.valor || 0, nome: op.nome };
 }
 function ir(X, id) { ED = id; history.pushState(null, '', '#cotador' + (id ? '/' + id : '')); tela(X.$('pagina'), X); scrollTo(0, 0); }
 
@@ -109,14 +219,14 @@ async function lista(P, X) {
     ${PRE ? `<div class="config" style="margin-top:10px">Cotação para <b>${esc(PRE.cliente || '')}</b>${PRE.destino ? ' · ' + esc(PRE.destino) : ''}. Ao enviar, o atendimento vai para "Cotação enviada" no funil.</div>` : ''}
     <div class="lista" id="lsC"><div class="vazio">Carregando...</div></div>`;
   $('voltar').onclick = () => X.ir('reunioes');
-  $('novoGo').onclick = () => { S = comPre(NOVO_GO()); PRE = null; ir(X, 'novo'); };
-  $('novoCorp').onclick = () => { S = comPre(NOVO_CORP()); PRE = null; ir(X, 'novo'); };
-  $('novoRap').onclick = () => { S = comPre(NOVO_RAP()); PRE = null; ir(X, 'novo'); };
+  $('novoGo').onclick = () => comCard(P, X, () => { S = comPre(NOVO_GO()); PRE = null; ir(X, 'novo'); });
+  $('novoCorp').onclick = () => comCard(P, X, () => { S = comPre(NOVO_CORP()); PRE = null; ir(X, 'novo'); });
+  $('novoRap').onclick = () => comCard(P, X, () => { S = comPre(NOVO_RAP()); PRE = null; ir(X, 'novo'); });
   const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').order('atualizado_em', { ascending: false }).limit(300);
   if (!$('lsC')) return;
   if (r.error) { $('lsC').innerHTML = '<div class="config">Rode o 1-cotador.sql no Supabase para guardar as cotações. Dá para montar e baixar mesmo sem ele.</div>'; LISTA = []; return; }
   LISTA = r.data || [];
-  $('lsC').innerHTML = LISTA.length ? LISTA.map(c => `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.titulo || 'Sem título')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'}${c.cliente ? ' · ' + esc(c.cliente) : ''}${c.destino ? ' · ' + esc(c.destino) : ''}</div></div><div class="val"><span>${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</span></div></button>`).join('')
+  $('lsC').innerHTML = LISTA.length ? LISTA.map(c => `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.titulo || 'Sem título')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'}${c.cliente ? ' · ' + esc(c.cliente) : ''}${c.destino ? ' · ' + esc(c.destino) : ''}${(k => k ? ' · card ' + esc(numC(k).trim() || k.cliente) : ' · <span style="color:var(--alerta)">sem card</span>')(cardDe(X, c.dados && c.dados.reuniao_id))}</div></div><div class="val"><span>${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</span></div></button>`).join('')
     : '<div class="vazio">Nenhuma cotação ainda. Comece pelo modelo Maktub Go ou Corporativo.</div>';
   P.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const c = LISTA.find(x => String(x.id) === b.dataset.c); S = JSON.parse(JSON.stringify(c.dados)); S._id = c.id; ir(X, String(c.id)); });
 }
@@ -141,7 +251,7 @@ function editor(P, X) {
   if (S.modelo === 'rapida') return editorRapida(P, X);
   const corp = S.modelo === 'corp';
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
-    <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>
+    <h1 class="titulo" style="margin-top:6px">${corp ? 'Cotação <em>corporativa</em>' : 'Cotação <em>Maktub Go</em>'}</h1>${faixaCard(X)}
     <form class="form" id="fCot" autocomplete="off" onsubmit="return false">${corp ? formCorp(X) : formGo(X)}</form>
     <div class="botoes4" style="margin-top:14px"><button class="zap" id="verC">Ver como o cliente</button><button class="sec" id="baixarC">Baixar HTML</button></div>
     ${S.modelo !== 'rapida' ? `<label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="${corp ? 'ian-santiago' : 'veronica-lisboa'}"></label>` : ''}
@@ -165,11 +275,12 @@ function editor(P, X) {
   });
   ligarPrint(P, X);
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
-  $('baixarC').onclick = () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); };
-  $('salvarC').onclick = () => salvar(X);
+  ligarFaixa(P, X);
+  $('baixarC').onclick = () => comCardNaCotacao(P, X, () => { enviada(X); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gerar(X)], { type: 'text/html' })); a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove(); X.aviso('Baixado como index.html, pronto para enviar.'); });
+  $('salvarC').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
   $('acervoC').onclick = () => acervo(X);
-  $('linkC').onclick = () => gerarLink(X);
-  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ajuste o cliente e salve.'); };
+  $('linkC').onclick = () => comCardNaCotacao(P, X, () => gerarLink(X));
+  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
 }
 
 function mais(a) {
@@ -375,6 +486,8 @@ async function salvar(X, quieto) {
   const r = S._id ? await X.sb.from('propostas').update(row).eq('id', S._id).select().single() : await X.sb.from('propostas').insert(row).select().single();
   if (r.error) { X.aviso('Não salvou: ' + r.error.message + (/relation|does not exist/.test(r.error.message) ? ' (rode o 1-cotador.sql)' : '')); return false; }
   S._id = r.data.id; ED = String(r.data.id); history.replaceState(null, '', '#cotador/' + ED);
+  if (X.cotSalva) X.cotSalva({ id: r.data.id, titulo: row.titulo, modelo: row.modelo, atualizado_em: row.atualizado_em, reuniao_id: S.reuniao_id || null });
+  if (S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { iniciada: true });
   // fotos de hotel entram no banco de fotos do fornecedor
   if (S.modelo === 'go') for (const o of S.opcoes) for (const ht of o.hoteis) { const urls = linhas(ht.fotos).filter(u => /^https?:/.test(u)); const f = ht.fornecedor_id && X.fornecedores && X.fornecedores.lista().find(x => x.id === ht.fornecedor_id); if (f && urls.length) { const todas = [...new Set([...(f.fotos_maktub || []), ...urls])].slice(0, 30); if (todas.length !== (f.fotos_maktub || []).length) { const u = await X.sb.from('fornecedores').update({ fotos_maktub: todas }).eq('id', f.id); if (!u.error) f.fotos_maktub = todas; } } }
   if (!quieto) X.aviso('Rascunho salvo.'); return true;
@@ -706,7 +819,7 @@ function editorRapida(P, X) {
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
-    <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>
+    <h1 class="titulo" style="margin-top:6px">Cotação <em>rápida</em></h1>${faixaCard(X)}
     <div class="sub">Cole a tela da companhia e digite o valor. Sai no mesmo visual da corporativa: voos, bagagem e valor total, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
@@ -768,18 +881,20 @@ function editorRapida(P, X) {
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
   const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor total com a Maktub.'); return false; } return true; };
-  $('rpEnviar').onclick = async () => {
-    if (!pronto()) return;
-    enviada(X); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
+  ligarFaixa(P, X);
+  $('rpEnviar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, enviarImagem); };
+  const enviarImagem = async () => {
+    enviada(X); salvar(X, true); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [arq] })) { try { await navigator.share({ files: [arq] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     baixar(blob); X.aviso('Imagem baixada. Anexe no WhatsApp.');
   };
-  $('rpBaixar').onclick = async () => { if (pronto()) baixar(await imagemRapida()); };
-  $('rpSalvar').onclick = () => salvar(X);
-  $('linkC').onclick = () => { if (pronto()) gerarLink(X); };
+  $('rpBaixar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, async () => { enviada(X); salvar(X, true); baixar(await imagemRapida()); }); };
+  $('rpSalvar').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
+  $('linkC').onclick = () => { if (pronto()) comCardNaCotacao(P, X, () => gerarLink(X)); };
   previa();
 }
-function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) { X.cotacaoEnviada(S.reuniao_id); S.reuniao_id = null; } }
+// cotação entregue ao cliente: o card vai para "Cotação enviada" com o valor cotado (a ligação com o card fica guardada)
+function enviada(X) { if (S && S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { valor: valorCotacao(S.modelo === 'go' ? autoGo(S) : S) }); }
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 

@@ -463,7 +463,7 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=18';
+import * as COT from '/admin/app/cotador.js?v=19';
 import * as VENDA from '/admin/app/venda.js?v=1';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
@@ -735,12 +735,30 @@ function ir(aba, extra) {
 }
 window.irCotador = () => { COT.preparar(null); ir('cotador'); };
 window.irFornecedores = () => ir('fornecedores', () => FORN.abrir(null));
-// cotação enviada pelo montador: o card do funil anda sozinho
-async function cotacaoEnviada(id) {
-  const r = D.reunioes.find(x => x.id === id); if (!r || r.resultado !== 'Em andamento' || !['Novo lead', 'Em cotação'].includes(r.etapa)) return;
-  const row = { etapa: 'Cotação enviada', proximo_passo: r.proximo_passo || 'Aguardando retorno da cotação', proximo_passo_data: maisDias(2) };
+// cotação montada no cotador: o card do funil anda sozinho.
+// iniciada: saiu do Novo lead para Em cotação (e fica com quem está cotando, se ninguém tinha assumido)
+// enviada: vai para Cotação enviada com o valor cotado
+async function cotacaoEnviada(id, o = {}) {
+  const r = D.reunioes.find(x => x.id === id); if (!r || r.resultado !== 'Em andamento') return;
+  const et = etapaDe(r), row = {};
+  if (!r.assumido_por) Object.assign(row, { assumido_por: D.meuId, assumido_em: new Date().toISOString(), responsavel_id: r.responsavel_id || D.meuId });
+  if (!r.cotacao_inicio) row.cotacao_inicio = hojeISO();
+  if (o.iniciada) { if (et === 'Novo lead') row.etapa = 'Em cotação'; }
+  else {
+    if (['Novo lead', 'Em cotação'].includes(et)) { row.etapa = 'Cotação enviada'; row.proximo_passo = 'Aguardando retorno da cotação'; row.proximo_passo_data = maisDias(2); }
+    if (o.valor > 0) row.valor_estimado = o.valor;
+  }
+  if (!Object.keys(row).length) return;
   const { data, error } = await sb.from('atendimentos').update(row).eq('id', id).select().single();
   if (!error && data) Object.assign(r, data);
+}
+// cotações do cotador ligadas a cada card (o card guarda só o vínculo, a cotação fica no cotador)
+const cotsDe = (id) => (D.cots || []).filter(c => c.reuniao_id === id);
+function cotSalva(c) { D.cots = (D.cots || []).filter(x => x.id !== c.id); D.cots.unshift(c); }
+async function abrirCotacao(id) {
+  const { data, error } = await sb.from('propostas').select('*').eq('id', id).single();
+  if (error) { aviso('Não abriu a cotação: ' + error.message); return; }
+  ir('cotador', () => COT.abrir(data));
 }
 // primeira compra: o lead vira cliente na ficha
 async function virarCliente(pid) {
@@ -793,6 +811,7 @@ async function carregar(silencioso, manterTela) {
     sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
   ]);
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
+  if (podeAba('cotador')) { const pc = await sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id').order('atualizado_em', { ascending: false }).limit(3000); D.cots = pc.error ? [] : (pc.data || []); }
   { const ar = await sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000); D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda; }
   { const tt = await sb.rpc('ticktick_situacao'); D.tt = tt.error ? null : tt.data; }
   { const cl = await sb.rpc('cal_links'); D.cal = cl.error ? null : (cl.data || []); }
@@ -944,7 +963,7 @@ function tela() {
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
-  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
+  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
@@ -1720,6 +1739,7 @@ function htmlKCard(r, etapas) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     <div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
+    ${D.cots && !ehGestao(r) ? (n => n ? `<div class="t" style="color:var(--verde)">Cotação no app${n > 1 ? ` (${n})` : ''}</div>` : ['Cotação enviada', 'Follow-up'].includes(et) ? '<div class="t alerta">Sem cotação ligada ao card</div>' : '')(cotsDe(r.id).length) : ''}
     ${r.assumido_por ? `<div class="t">Com ${esc(nomeTime(r.assumido_por) || '')}${r.cotacao_inicio ? ' · cotando desde ' + dataCurta(dia(r.cotacao_inicio)) : ''}</div>` : `<button class="zap" data-assumir-at="${r.id}" style="width:100%;margin:6px 0 2px;padding:8px">Assumir</button>`}
     ${resumoReunioes(r.id) ? `<div class="t">${esc(resumoReunioes(r.id))}</div>` : ''}
     <div class="t ${atr ? 'alerta' : ''}">${plural(diasDesde(r.etapa_desde || r.created_at), 'dia', 'dias')} nesta etapa · aberto há ${plural(diasDesde(r.created_at || r.data), 'dia', 'dias')}${r.proximo_passo_data ? ' · retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''}</div>
@@ -1836,7 +1856,7 @@ function telaFormReuniao(P) {
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
-    ${!nova && !G && podeAba('cotador') ? '<button class="zap grande" type="button" id="montarCot" style="width:100%;margin-top:10px">Montar cotação para este cliente ›</button>' : ''}
+    ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${new Date(c.atualizado_em).toLocaleDateString('pt-BR')}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
     <form id="fRe" class="form" autocomplete="off">
       <div class="grupo">Reunião</div>
       ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
@@ -1856,7 +1876,7 @@ function telaFormReuniao(P) {
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
-      <div id="blFechou">${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}${G ? '' : `<div class="grupo">Fechamento</div><div id="reFech"></div><div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
+      <div id="blFechou">${G ? '' : '<div id="reDaCot"></div>'}${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}${G ? '' : `<div class="grupo">Fechamento</div><div id="reFech"></div><div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><label class="fl"><span>Explique por que não fechou</span><textarea name="motivo_detalhe" rows="3" placeholder="O que o cliente disse, o que pesou na decisão e o que podemos fazer melhor na próxima.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       <div id="blAndamento">
         ${campo('valor_estimado', G ? 'Valor potencial (R$)' : 'Valor cotado (R$)', r.valor_estimado, 'number')}
@@ -1886,6 +1906,7 @@ function telaFormReuniao(P) {
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
+  P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
   if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '', ida: base.data_viagem || '', volta: base.data_volta || '' }));
   if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
   const resumoCli = () => {
@@ -1930,6 +1951,30 @@ function telaFormReuniao(P) {
     marcar();
     f._itens = () => IT;
     if ($('reFech')) FECH = VENDA.editorFechamento(XV, $('reFech'), F, { total: () => EDIT.tot(), cliente: () => f.elements.cliente.value, contato: () => f.elements.contato.value });
+    // Fechou: a venda vem preenchida da cotação ligada ao card (rota, datas, passageiros, companhia, hotéis e valor)
+    const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
+    const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
+    const desenhaCot = () => {
+      const el = $('reDaCot'), ops = opsCot(); if (!el) return;
+      el.innerHTML = ops.length ? `<div class="config" style="margin:6px 0 8px"><b>${SEL ? 'Venda preenchida com a cotação' : ops.length > 1 ? 'Qual cotação o cliente fechou?' : 'Preencher a venda com a cotação do card'}</b>${ops.map(({ c, k, o }) => `<button type="button" data-dacot="${c.id}|${k}" class="${SEL === c.id + '|' + k ? 'zap' : 'sec'}" style="width:100%;margin-top:6px;text-align:left">${esc(c.titulo || 'Cotação')}${o.nome ? ' · ' + esc(o.nome) : ''}${o.valor ? ' · ' + brl2(o.valor) : ''}</button>`).join('')}<div class="sub" style="margin:6px 0 0">${SEL ? 'Confira e salve. Na emissão, completa custo, localizador e print da tarifa.' : 'Toque na que o cliente fechou.'}</div></div>` : '';
+      el.querySelectorAll('[data-dacot]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.dacot.split('|'); aplicarCot(CDADOS.find(c => String(c.id) === id), +k); });
+    };
+    const aplicarCot = (c, k, auto) => {
+      if (IT.some(VENDA.enviado)) { aviso('Esse fechamento já tem serviço na planilha.'); return; }
+      const z = COT.itensDaCotacao(c.dados, k);
+      if (!z.itens.length) { aviso('Essa cotação não tem voos nem hotéis para trazer. Preencha os serviços abaixo.'); return; }
+      IT.splice(0, IT.length, ...z.itens); marcar(); EDIT.desenha();
+      if (z.valor && f.elements.valor_fechado) f.elements.valor_fechado.value = z.valor;
+      if (FECH) FECH.desenha();
+      SEL = c.id + '|' + k; desenhaCot();
+      if (!auto) aviso('Venda preenchida com a cotação. Confira e salve.');
+    };
+    f._prepFechou = async () => {
+      if (!CD.length || f.elements.etapa.value !== 'Fechou') return;
+      if (!CDADOS) { const q = await sb.from('propostas').select('id,titulo,modelo,dados,atualizado_em').in('id', CD.map(c => c.id)).order('atualizado_em', { ascending: false }); CDADOS = q.error ? [] : (q.data || []); }
+      const ops = opsCot(), vazio = !IT.some(x => x.venda || x.custo || x.localizador || VENDA.enviado(x));
+      if (!SEL && vazio && ops.length === 1) aplicarCot(ops[0].c, ops[0].k, true); else desenhaCot();
+    };
   }
   f._fech = () => F;
   if ($('segIV')) {
@@ -1938,8 +1983,8 @@ function telaFormReuniao(P) {
     const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
     f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
   }
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
-  mostrar();
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  mostrar(); if (f._prepFechou) f._prepFechou();
   $('voltar').onclick = () => history.back();
   if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
     const IT = f._itens ? f._itens() : [], Fh = f._fech();
