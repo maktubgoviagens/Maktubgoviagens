@@ -1,0 +1,129 @@
+// Maktub Go: emissão B2B (agências e revendedores que compram o bilhete direto, sem card e sem cotação).
+// Uma tela só: agência, voo, custo em milhas e preço. Ao salvar, vai para a fila da planilha
+// (aba Maktub GO) como "Passagens (Milhas)", com "B2B" na Cidade e nas Observações.
+// Comissão B2B: valor fixo em reais por emissão, pela tabela de milhas da antiga planilha B2B:
+// R$ 0,50 + R$ 0,50 a cada 10 mil milhas (arredonda para cima), teto de R$ 6,50; cancelada = R$ 2,00.
+// Sócios (administradores) não recebem comissão. O check-in é da agência: o app não cobra.
+
+export const MARCA = 'B2B';
+export const MARCA_OBS = 'B2B (check-in pela agência)';
+export const ehB2B = (e) => !!e && (/^B2B\b/.test(String(e.observacoes || '')) || String(e.cidade || '').trim().toUpperCase() === MARCA);
+export function comissaoB2B(milhas, cancelada) {
+  if (cancelada) return 2;
+  const m = +milhas || 0;
+  if (m <= 0) return 0;
+  return Math.min(0.5 + 0.5 * Math.ceil(m / 10000), 6.5);
+}
+
+const r2 = (n) => Math.round((+n || 0) * 100) / 100;
+const nb = (v) => { let x = String(v ?? '').trim(); if (x.includes(',')) x = x.replace(/\./g, '').replace(',', '.'); return x === '' || isNaN(+x) ? null : +x; };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const unicos = (arr) => [...new Set(arr.map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+// X: { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, voltar }
+export function tela(P, X) {
+  const { D, esc } = X;
+  const EM = D.emissoes || [];
+  const agencias = unicos(EM.filter(ehB2B).map(e => e.comprador));
+  const contas = unicos(EM.map(e => e.conta));
+  const gestores = unicos(EM.map(e => e.gestor));
+  const cias = unicos(['Azul', 'Gol', 'Latam', ...EM.map(e => e.cia)]);
+  const socio = !!X.ADMIN;
+  const S = { modo: 'milheiro', volta: true, pago: false };
+  const dl = (id, L) => `<datalist id="${id}">${L.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+  const inp = (n, rot, extra = '', tipo = 'text') => `<label class="fl"><span>${rot}</span><input name="${n}" type="${tipo}" ${tipo === 'text' && /milhas|milheiro|taxas|valor|pax/.test(n) ? 'inputmode="decimal"' : ''} ${extra}></label>`;
+  P.innerHTML = `
+    <button class="voltar" id="voltar">‹ Emissões</button>
+    <h1 class="titulo" style="margin-top:6px">Emissão <em>B2B</em></h1>
+    <div class="sub" style="margin-top:6px">Sem card e sem cotação. Vai direto para a planilha, com imposto, lucro e comissão calculados.</div>
+    <form id="fB2B" class="form" autocomplete="off">
+      <div class="grupo">Agência</div>
+      ${inp('comprador', 'Quem comprou', 'required list="dlAgB2B" placeholder="Nome da agência ou do revendedor"')}${dl('dlAgB2B', agencias)}
+      ${inp('contato', 'WhatsApp (opcional)', 'inputmode="tel"')}
+
+      <div class="grupo">Voo</div>
+      <div class="duas-col">${inp('localizador', 'Localizador', 'required style="text-transform:uppercase"')}${inp('cia', 'Companhia', 'required list="dlCiaB2B"')}</div>${dl('dlCiaB2B', cias)}
+      <div class="duas-col">${inp('origem', 'Origem', 'maxlength="40" placeholder="CNF" style="text-transform:uppercase"')}${inp('destino', 'Destino', 'maxlength="40" placeholder="GRU" style="text-transform:uppercase"')}</div>
+      <div class="seg" id="b2bIV"><button type="button" data-v="1" class="on">Ida e volta</button><button type="button" data-v="0">Só ida</button></div>
+      <div class="duas-col">${inp('data_ida', 'Data da ida', '', 'date')}<div id="b2bBlVolta">${inp('data_volta', 'Data da volta', '', 'date')}</div></div>
+      <div class="duas-col">${inp('sobrenome', 'Sobrenome do passageiro')}${inp('pax', 'Passageiros', 'value="1" inputmode="numeric"')}</div>
+
+      <div class="grupo">Custo</div>
+      <div class="duas-col">${inp('gestor', 'Gestor da conta', 'list="dlGesB2B"')}${inp('conta', 'Conta usada', 'list="dlContaB2B"')}</div>${dl('dlGesB2B', gestores)}${dl('dlContaB2B', contas)}
+      <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp('milhas', 'Milhas', 'required')}${inp('milheiro', 'Milheiro (R$)', 'required')}${inp('taxas', 'Taxas (R$)')}</div>
+
+      <div class="grupo">Preço para a agência</div>
+      <div class="seg" id="b2bModo"><button type="button" data-m="milheiro" class="on">Milheiro vendido</button><button type="button" data-m="valor">Valor fechado</button></div>
+      <div id="b2bBlMil">${inp('milheiro_venda', 'Milheiro vendido (R$)', 'placeholder="17,00"')}<div class="sub" style="margin-top:2px">Valor = milhas × milheiro vendido ÷ 1.000 + taxas.</div></div>
+      <div id="b2bBlVal" hidden>${inp('valor', 'Valor total do bilhete (R$)')}</div>
+      <label class="fc" style="margin:12px 0 4px"><input type="checkbox" name="pago"><span>A agência já pagou</span></label>
+      <label class="fl"><span>Observações (opcional)</span><textarea name="obs" rows="2"></textarea></label>
+      <div class="resumo" id="b2bRes"></div>
+      <button class="zap grande" type="submit" id="b2bSalvar" style="width:100%;margin-top:12px">Lançar emissão B2B</button>
+      <div class="sub" id="b2bMsg" style="margin-top:8px"></div>
+    </form>`;
+  const f = P.querySelector('#fB2B'), $ = (s) => P.querySelector(s);
+  const g = (n) => (f.elements[n].value || '').trim();
+  const calc = () => {
+    const milhas = nb(g('milhas')) || 0, mil = nb(g('milheiro')) || 0, taxas = nb(g('taxas')) || 0;
+    const custo = r2(milhas * mil / 1000 + taxas);
+    let valor, milVenda;
+    if (S.modo === 'milheiro') { milVenda = nb(g('milheiro_venda')); valor = milVenda != null ? r2(milhas * milVenda / 1000 + taxas) : 0; }
+    else { valor = r2(nb(g('valor')) || 0); milVenda = milhas ? r2((valor - taxas) * 1000 / milhas) : null; }
+    const imp = Number((D.cfg && D.cfg.imposto_pct) ?? 6) / 100;
+    const bruto = r2(valor - custo), imposto = r2(Math.max(bruto, 0) * imp);
+    const comissao = socio ? 0 : comissaoB2B(milhas);
+    return { milhas, mil, taxas, custo, valor, milVenda, bruto, imposto, comissao, liquido: r2(bruto - imposto - comissao) };
+  };
+  const resumo = () => {
+    const c = calc();
+    $('#b2bRes').innerHTML = !c.milhas && !c.valor ? '' : `
+      <div class="lin"><span>Custo</span><span>${X.brl2(c.custo)}</span></div>
+      <div class="lin"><span>Valor para a agência</span><span>${X.brl2(c.valor)}${S.modo === 'valor' && c.milVenda ? ` <small>(milheiro ${X.brl2(c.milVenda)})</small>` : ''}</span></div>
+      <div class="lin"><span>Lucro bruto</span><span>${X.brl2(c.bruto)}</span></div>
+      <div class="lin"><span>Imposto</span><span>− ${X.brl2(c.imposto)}</span></div>
+      <div class="lin"><span>Comissão B2B${socio ? ' (sócio)' : ''}</span><span>− ${X.brl2(c.comissao)}</span></div>
+      ${X.ADMIN ? `<div class="lin forte"><span>Lucro líquido</span><span>${X.brl2(c.liquido)}</span></div>` : `<div class="lin forte"><span>Sua comissão</span><span>${X.brl2(c.comissao)}</span></div>`}
+      ${c.valor && c.bruto < 0 ? '<div class="sub" style="color:var(--alerta)">Atenção: o valor está abaixo do custo.</div>' : ''}`;
+  };
+  f.oninput = resumo; resumo();
+  $('#b2bModo').onclick = (ev) => { const b = ev.target.closest('button'); if (!b) return; S.modo = b.dataset.m; $('#b2bModo').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('#b2bBlMil').hidden = S.modo !== 'milheiro'; $('#b2bBlVal').hidden = S.modo !== 'valor'; resumo(); };
+  $('#b2bIV').onclick = (ev) => { const b = ev.target.closest('button'); if (!b) return; S.volta = b.dataset.v === '1'; $('#b2bIV').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('#b2bBlVolta').hidden = !S.volta; if (!S.volta) f.elements.data_volta.value = ''; };
+  // agência já usada: puxa o WhatsApp da última emissão dela
+  f.elements.comprador.addEventListener('change', () => {
+    const ult = EM.filter(ehB2B).find(e => String(e.comprador || '').trim().toLowerCase() === g('comprador').toLowerCase());
+    if (ult && !g('contato') && ult.contato) f.elements.contato.value = ult.contato;
+  });
+  $('#voltar').onclick = () => X.voltar();
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const c = calc(), falta = [];
+    if (!g('comprador')) falta.push('quem comprou');
+    if (!g('localizador')) falta.push('localizador');
+    if (!g('cia')) falta.push('companhia');
+    if (!c.milhas) falta.push('milhas');
+    if (!c.mil) falta.push('milheiro de custo');
+    if (!c.valor) falta.push(S.modo === 'milheiro' ? 'milheiro vendido' : 'valor do bilhete');
+    if (falta.length) { $('#b2bMsg').innerHTML = '<b style="color:var(--alerta)">Falta:</b> ' + falta.join(', '); return; }
+    if (c.bruto < 0 && !confirm(`O valor (${X.brl2(c.valor)}) está abaixo do custo (${X.brl2(c.custo)}). Lançar mesmo assim?`)) return;
+    const id = uuid();
+    const obs = [MARCA_OBS, S.modo === 'milheiro' ? `milheiro vendido ${X.brl2(c.milVenda)}` : '', g('obs')].filter(Boolean).join(' · ');
+    const dados = {
+      'Gestor': g('gestor') || 'Maktub', 'Conta': g('conta'), 'Email ou Produto': '', 'Cidade': MARCA,
+      'Cia': g('cia'), 'Sobrenome': g('sobrenome'), 'CPF (NF)': '', 'Origem': g('origem').toUpperCase(), 'Destino': g('destino').toUpperCase(),
+      'Comprador': g('comprador'), 'Passageiros': parseInt(g('pax'), 10) || 1, 'Contato': g('contato'), 'Indicação': '',
+      'Localizador': g('localizador').toUpperCase(), 'Data da negociação': hojeISO(),
+      'Milhas': c.milhas, 'Milheiro': c.mil, 'Taxas': c.taxas, 'Valor a receber': c.valor, 'Pago': !!f.elements.pago.checked,
+      'Comissão': c.comissao,
+      'Data do Voo (Ida)': g('data_ida'), 'Data do Voo (Volta)': S.volta ? g('data_volta') : '',
+      'Observações': obs, 'Serviço': 'Passagens (Milhas)', 'Vendedor': X.nomeTime(D.meuId) || '', 'ID sistema': id
+    };
+    $('#b2bSalvar').disabled = true; $('#b2bMsg').textContent = 'Lançando...';
+    const { error } = await X.sb.from('fila_planilha').insert({ id, atendimento_id: null, item: 0, dados });
+    $('#b2bSalvar').disabled = false;
+    if (error) { $('#b2bMsg').textContent = 'Não lançou: ' + error.message + (/null value|not-null|atendimento_id|item/.test(error.message) ? ' (falta rodar o SQL da emissão B2B no Supabase)' : ''); return; }
+    X.aviso(`Emissão B2B lançada. Vai para a planilha em até 5 minutos.${socio ? '' : ` Comissão: ${X.brl2(c.comissao)}.`}`);
+    X.voltar();
+  };
+}

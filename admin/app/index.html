@@ -469,6 +469,7 @@ import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
+import * as B2B from '/admin/app/b2b.js?v=1';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -549,6 +550,7 @@ function acoesNovo() {
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial')) L.push(['Novo atendimento', 'Lead ou cliente no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]);
   if (podeAba('emissoes')) L.push([modoPlanilha() ? 'Registrar venda (planilha)' : 'Registrar venda', modoPlanilha() ? 'Abre a planilha B2C' : 'Nova emissão', () => { if (modoPlanilha()) { if (D.cfg && D.cfg.planilha_url) window.open(D.cfg.planilha_url, '_blank'); } else ir('emissoes', () => { EM_ED = 'nova'; }); }]);
+  if (podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => ir('emissoes', () => { EM_ED = 'b2b'; })]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
 }
@@ -839,7 +841,7 @@ async function carregar(silencioso, manterTela) {
   if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
-  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg);
+  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B();
   if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
   const G = pode('gestao'), LE = pode('leads');
   if (ADMIN || G || LE || pode('talentos')) {
@@ -1148,6 +1150,7 @@ function calcular(v) {
 const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
 let EM_PEND = 'todas';
 function telaEmissoes(P) {
+  if (EM_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, voltar: () => { EM_ED = null; history.back(); } });
   if (EM_ED) return telaFormEmissao(P);
   const VER = VER_TODAS(), LST = VER_LISTA(), minha = (e) => e.vendedor_id === D.meuId;
   let L = doMes(EM_MES);
@@ -1159,6 +1162,7 @@ function telaEmissoes(P) {
   P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${LST ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
+    <button class="sec grande" id="novaB2B" style="margin-top:8px;width:100%">+ Emissão B2B</button>
     ${infoSinc()}
     ${seletorMes('emMes')}
     ${LST ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
@@ -1186,6 +1190,7 @@ function telaEmissoes(P) {
         <button type="button" data-ck-nota="${e.id}" class="${e.nota_gerada ? 'ok' : ''}"><span class="cx">${e.nota_gerada ? '✓' : ''}</span><span>Nota emitida</span></button>
         <button type="button" data-nota-pdf="${e.id}" class="${e.nota_arquivo ? 'ok' : ''}"><span class="cx">${e.nota_arquivo ? '↓' : '+'}</span><span>${e.nota_arquivo ? 'Baixar nota' : 'Anexar PDF da nota'}</span></button></div>` : ''}`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
+  if ($('novaB2B')) $('novaB2B').onclick = () => { EM_ED = 'b2b'; history.pushState(null, '', '#emissoes/b2b'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
   if ($('emVend')) $('emVend').onchange = (e) => { EM_VEND = e.target.value; telaEmissoes(P); };
   if ($('emPend')) $('emPend').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { EM_PEND = b.dataset.p; telaEmissoes(P); } };
@@ -2678,12 +2683,30 @@ async function carregarAgendaEm() {
   const iso = (d) => d.toISOString().slice(0, 10);
   const r = await sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) });
   D.voosEm = r.data || [];
+  if (D.emissoes && D.emissoes.length) marcarCheckinB2B();
+}
+// check-in do B2B é feito pela agência: o app marca sozinho para não cobrar ninguém (nem no Telegram)
+let CK_B2B_FEITO = new Set();
+async function marcarCheckinB2B() {
+  if (!pode('checkin')) return;
+  for (const v of D.voosEm || []) {
+    const e = (D.emissoes || []).find(x => x.id === v.id);
+    if (!B2B.ehB2B(e)) continue;
+    for (const tr of ['ida', 'volta']) {
+      const k = v.id + tr;
+      if (!v['data_' + tr] || v['checkin_' + tr] || CK_B2B_FEITO.has(k)) continue;
+      CK_B2B_FEITO.add(k);
+      const { error } = await sb.rpc('marcar_checkin', { p_id: v.id, p_trecho: tr, p_feito: true });
+      if (!error) { v['checkin_' + tr] = true; e['checkin_' + tr] = true; }
+    }
+  }
 }
 
 /* trechos de voo das emissões (todo o time vê) */
 function trechosEm() {
   const T = [];
   D.voosEm.forEach(v => {
+    if (B2B.ehB2B((D.emissoes || []).find(x => x.id === v.id))) return;
     [['ida', v.data_ida, v.checkin_ida, v.origem, v.destino], ['volta', v.data_volta, v.checkin_volta, v.destino, v.origem]].forEach(([tr, data, feito, de, para]) => {
       if (!data) return;
       const d = dia(data), k = difDias(d);
