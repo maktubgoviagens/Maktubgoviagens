@@ -29,6 +29,19 @@ export function cpfValido(v) {
   return dv(9) === +c[9] && dv(10) === +c[10];
 }
 const fmtCpf = (v) => { const d = soDig(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : v; };
+// nascimento digitado só com números: a barra entra sozinha (dd/mm/aaaa); também aceita colar 21/02/2002, 21022002 ou 2002-02-21
+const isoBr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+function mascaraData(v) {
+  const t = String(v || '').trim(), iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  const d = iso ? iso[3] + iso[2] + iso[1] : t.replace(/\D/g, '').slice(0, 8);
+  return d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+}
+function brIso(txt) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(txt || ''); if (!m) return '';
+  const [dd, mm, aa] = [+m[1], +m[2], +m[3]], dt = new Date(aa, mm - 1, dd);
+  if (aa < 1900 || dt > new Date() || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return '';
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
 const nPax = (x) => Math.max(parseInt(x.passageiros, 10) || 0, 0);
 function paxAjustado(x) {
   const n = nPax(x); x.pax = Array.isArray(x.pax) ? x.pax : [];
@@ -167,7 +180,7 @@ function htmlPax(X, x, i, trava) {
     return `<div style="border-left:3px solid ${ok ? 'var(--verde)' : 'var(--linha)'};padding-left:8px;margin:6px 0">
       <label class="fl"><span>Passageiro ${k + 1}: nome completo</span><input data-pax="${i}|${k}|nome" value="${X.esc(p.nome || '')}" list="dlPaxV" ${trava ? 'disabled' : ''}></label>
       <div class="duas-col"><label class="fl"><span>CPF</span><input data-pax="${i}|${k}|cpf" inputmode="numeric" value="${X.esc(p.cpf || '')}" ${trava ? 'disabled' : ''}>${p.cpf && !cpfValido(p.cpf) ? '<small style="color:var(--alerta)">CPF inválido</small>' : ''}</label>
-      <label class="fl"><span>Nascimento</span><input type="date" data-pax="${i}|${k}|nasc" value="${X.esc(p.nasc || '')}" ${trava ? 'disabled' : ''}></label></div></div>`;
+      <label class="fl"><span>Nascimento</span><input data-pax="${i}|${k}|nasc" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" value="${X.esc(p.nasc ? isoBr(p.nasc) : (p.nasc_txt || ''))}" ${trava ? 'disabled' : ''}>${p.nasc_txt && !p.nasc ? '<small style="color:var(--alerta)">data incompleta ou inválida</small>' : ''}</label></div></div>`;
   }).join('')}`;
 }
 
@@ -202,13 +215,16 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
       const [i, k, campo] = e.dataset.ct.split('|'), x = IT[+i];
       e.oninput = () => { const l = x.ct[+k]; l[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : /^(milhas|taxas|custo|pax)$/.test(campo) ? nb(e.value) : e.value; somarTrechos(x);
         const c = el.querySelector(`input[data-it="${i}"][data-k="custo"]`); if (c) c.value = custoDe(x) || ''; resumo(); };
-      e.onchange = () => desenha();
+      // data: o navegador avisa a cada pedaço do ano digitado (0002, 0020...); só redesenha com o ano completo
+      e.onchange = () => { if (campo === 'data' && e.value && +e.value.slice(0, 4) < 1990) return; desenha(); };
     });
     // passageiros: muda a quantidade e redesenha os blocos; nome de quem tem ficha já traz CPF e nascimento
     el.querySelectorAll('input[data-k="passageiros"]').forEach(e => e.addEventListener('change', () => desenha()));
     el.querySelectorAll('[data-pax]').forEach(e => {
       const [i, k, campo] = e.dataset.pax.split('|'), x = IT[+i];
-      e.oninput = () => { paxAjustado(x); x.pax[+k][campo] = e.value.trim(); };
+      e.oninput = () => { paxAjustado(x); const p = x.pax[+k];
+        if (campo === 'nasc') { const m = mascaraData(e.value); if (m !== e.value) e.value = m; p.nasc_txt = m; p.nasc = brIso(m); return; }
+        p[campo] = e.value.trim(); };
       e.onchange = () => {
         paxAjustado(x); const p = x.pax[+k];
         if (campo === 'nome') {
@@ -218,6 +234,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
           else delete p.pessoa_id;
         }
         if (campo === 'cpf' && cpfValido(p.cpf)) p.cpf = fmtCpf(p.cpf);
+        if (campo === 'nasc' && p.nasc) delete p.nasc_txt;
         desenha();
       };
     });
