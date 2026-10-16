@@ -171,6 +171,7 @@ function faixaCard(X) {
   return `<div class="config" style="margin-top:8px;border-color:var(--alerta)"><b style="color:var(--alerta)">Cotação sem card.</b> Ligue a um atendimento antes de enviar ao cliente.<button type="button" class="zap" data-trocacard="1" style="width:100%;margin-top:8px">Ligar a um card</button></div>`;
 }
 function ligarFaixa(P, X) {
+  P.querySelectorAll('[data-verenvio]').forEach(b => b.onclick = () => verEnvio(X, b.dataset.verenvio));
   P.querySelectorAll('[data-trocacard]').forEach(b => b.onclick = () => escolherCard(P, X, (r) => ligarCard(P, X, r), () => editor(P, X)));
 }
 // antes de salvar, baixar, gerar link ou enviar: sem card, pede o card e depois segue com a ação
@@ -906,8 +907,39 @@ function enviada(X, canal, link) {
     // o mesmo envio repetido em poucos minutos (tocou duas vezes) não vira um registro novo
     if (ult && Date.now() - new Date(ult.em) < 10 * 6e4 && JSON.stringify(ult.opcoes) === JSON.stringify(reg.opcoes) && ult.voos === reg.voos) Object.assign(ult, { em: reg.em, canal: reg.canal, link: reg.link || ult.link });
     else H.push(reg);
+    fotoDoEnvio(X, S, H.includes(reg) ? reg : ult);
   }
   if (S.reuniao_id && X.cotacaoEnviada) X.cotacaoEnviada(S.reuniao_id, { valor: valorCotacao(d) });
+}
+// a "foto" do envio: a imagem (rápida) ou a página (Maktub Go e corporativo) exatamente como o cliente recebeu.
+// Vai sozinha para o arquivo privado, sem passo a mais para o time. Se falhar, o registro com os valores continua.
+async function fotoDoEnvio(X, alvo, reg) {
+  try {
+    const rap = alvo.modelo === 'rapida';
+    const antes = S; S = alvo; let corpo;
+    try { corpo = rap ? await imagemRapida() : new Blob([gerar(X)], { type: 'text/html' }); } finally { S = antes; }
+    const path = `cotacao/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${rap ? 'jpg' : 'html'}`;
+    const up = await X.sb.storage.from('vendas').upload(path, corpo, { contentType: rap ? 'image/jpeg' : 'text/html', upsert: false });
+    if (up.error) return;
+    reg.foto = path;
+    // espera a cotação existir no banco (o salvar roda junto com o envio) e grava o registro com a foto
+    for (let i = 0; i < 20 && !alvo._id; i++) await new Promise(ok => setTimeout(ok, 500));
+    if (!alvo._id) return;
+    await new Promise(ok => setTimeout(ok, 1500));
+    const dados = JSON.parse(JSON.stringify(alvo)); delete dados._id;
+    await X.sb.from('propostas').update({ dados }).eq('id', alvo._id);
+  } catch (e) { /* sem foto, fica só o registro */ }
+}
+async function verEnvio(X, path) {
+  const w = window.open('', '_blank');
+  if (/\.html$/.test(path)) {
+    const { data, error } = await X.sb.storage.from('vendas').download(path);
+    if (error || !data) { if (w) w.close(); X.aviso('Não abriu o envio.'); return; }
+    const html = await data.text(); if (w) { w.document.open(); w.document.write(html); w.document.close(); } return;
+  }
+  const { data, error } = await X.sb.storage.from('vendas').createSignedUrl(path, 600);
+  if (error) { if (w) w.close(); X.aviso('Não abriu o envio.'); return; }
+  if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
 }
 function resumoVoosCot(d) {
   const o = opcoesCotacao(d)[0]; if (!o) return '';
@@ -919,7 +951,7 @@ function htmlHistorico(X) {
   const H = (S.historico || []).slice().reverse(); if (!H.length) return '';
   const dh = (iso) => { const t = new Date(iso); return t.toLocaleDateString('pt-BR') + ' ' + t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
   return dobra('histEnv', `Histórico de envios (${H.length})`, H.map((r, i) => `<div style="border-top:${i ? '1px solid var(--linha)' : '0'};padding:6px 0;font-size:13px"><b>${dh(r.em)}</b> · ${X.esc(r.canal)}${r.por ? ' · ' + X.esc(r.por) : ''}
-    <div>${r.opcoes.map(o => `${o.nome ? X.esc(o.nome) + ': ' : ''}${o.valor ? brl(o.valor) : 'sem valor'}`).join(' · ')}</div>${r.voos ? `<div style="color:var(--tinta-3)">${X.esc(r.voos)}</div>` : ''}${r.link ? `<div style="word-break:break-all"><a href="${X.esc(r.link)}" target="_blank" rel="noopener">${X.esc(r.link)}</a></div>` : ''}</div>`).join(''));
+    <div>${r.opcoes.map(o => `${o.nome ? X.esc(o.nome) + ': ' : ''}${o.valor ? brl(o.valor) : 'sem valor'}`).join(' · ')}</div>${r.voos ? `<div style="color:var(--tinta-3)">${X.esc(r.voos)}</div>` : ''}${r.foto ? `<button type="button" data-verenvio="${X.esc(r.foto)}" class="sec" style="margin-top:4px;padding:6px 10px;font-size:12px">Ver como foi enviada</button>` : ''}</div>`).join(''));
 }
 function baixar(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cotacao-maktub.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 const carregar = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
