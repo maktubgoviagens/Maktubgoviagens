@@ -592,7 +592,7 @@ let SUJO = false, ULT_CARGA = 0;
 $('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 $('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 // versão publicada: se o celular ou o navegador ainda estiver com a tela antiga, recarrega sozinho (sem perder edição em andamento)
-const VERSAO_APP = '202610162031';
+const VERSAO_APP = '202610162036';
 async function conferirVersao() {
   try {
     const j = await (await fetch('/admin/app/versao.json?t=' + Date.now(), { cache: 'no-store' })).json();
@@ -2018,6 +2018,8 @@ function telaFormReuniao(P) {
   if ($('reProd')) {
     const base0 = Array.isArray(r.itens) && r.itens.length ? r.itens : String(r.produto || '').split(' + ').filter(Boolean).map(p => ({ produto: p, custo: null, venda: null }));
     const IT = JSON.parse(JSON.stringify(base0));
+    // cotações do card: declaradas antes de tudo que as usa (o bloco de pagamento consulta a cotação ao abrir)
+    const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
     const XV = ctxVenda();
     const ctxI = { get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); });
@@ -2065,7 +2067,6 @@ function telaFormReuniao(P) {
     $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IT.length > 1) { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); });
     f._ratear = () => { ratear(); EDIT.desenha(); desenhaModo(); };
     // Fechou: a venda vem preenchida da cotação ligada ao card (rota, datas, passageiros, companhia, hotéis e valor)
-    const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
     const desenhaCot = () => {
       const el = $('reDaCot'), ops = opsCot(); if (!el) return;
