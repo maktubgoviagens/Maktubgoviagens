@@ -591,6 +591,21 @@ $('clientesTopo').onclick = () => { CRM.abrir(null); ir('crm'); };
 let SUJO = false, ULT_CARGA = 0;
 $('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 $('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
+// versão publicada: se o celular ou o navegador ainda estiver com a tela antiga, recarrega sozinho (sem perder edição em andamento)
+const VERSAO_APP = '202610161945';
+async function conferirVersao() {
+  try {
+    const j = await (await fetch('/admin/app/versao.json?t=' + Date.now(), { cache: 'no-store' })).json();
+    if (!j || !j.v || j.v === VERSAO_APP) return;
+    let ja = null; try { ja = sessionStorage.getItem('mk_versao'); } catch (_) {}
+    if (ja === j.v) return;
+    if (typeof SUJO !== 'undefined' && SUJO) { aviso('Tem versão nova do app. Salve o que está fazendo e recarregue a página.'); return; }
+    try { sessionStorage.setItem('mk_versao', j.v); } catch (_) {}
+    location.reload();
+  } catch (_) { /* sem rede: segue na versão atual */ }
+}
+conferirVersao();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirVersao(); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, SUJO);
