@@ -466,10 +466,10 @@ import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=34';
 import * as VENDA from '/admin/app/venda.js?v=4';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=7';
+import * as CMP from '/admin/app/compromissos.js?v=8';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=2';
+import * as B2B from '/admin/app/b2b.js?v=3';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -2153,7 +2153,8 @@ function telaComissao(P) {
     const el = $('minhaRem'); if (!el || error || !data || EM_MES !== alvo || !(+data.fixo)) return;
     const [yy, mm] = EM_MES.split('-').map(Number), pg = new Date(yy, mm, data.dia || 5).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const itens = CMP.parcelas(D.emissoes, D.meuId).filter(x => x.comp === EM_MES);
-    el.innerHTML = `<section class="bloco"><h2>Sua remuneração de ${mesNome(EM_MES).toLowerCase()}</h2><div class="sub" style="margin-top:-4px">Paga em ${pg}. Fechamento do mês: salário fixo + 1ª metade das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div><div class="lin"><span>Salário fixo</span><span>${brl2(data.fixo)}</span></div><div class="lin"><span>Comissões (50/50)</span><span>${brl2(data.comissao)}</span></div><div class="lin forte"><span>Total</span><span>${brl2(+data.fixo + +data.comissao)}</span></div>
+    data.comissao = Math.round(itens.reduce((a, x) => a + (+x.valor || 0), 0) * 100) / 100;
+    el.innerHTML = `<section class="bloco"><h2>Sua remuneração de ${mesNome(EM_MES).toLowerCase()}</h2><div class="sub" style="margin-top:-4px">Paga em ${pg}. Fechamento do mês: salário fixo + 1ª metade das vendas do mês + 2ª metade das viagens que embarcaram no mês + comissão inteira das emissões B2B do mês.</div><div class="lin"><span>Salário fixo</span><span>${brl2(data.fixo)}</span></div><div class="lin"><span>Comissões (50/50)</span><span>${brl2(data.comissao)}</span></div><div class="lin forte"><span>Total</span><span>${brl2(+data.fixo + +data.comissao)}</span></div>
       ${itens.length ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Ver as comissões que entram</summary>${itens.map(i => `<div class="lin"><span>${esc(i.nome)}<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(i.tipo)}</small></span><span>${brl2(i.valor)}</span></div>`).join('')}</details>` : ''}</section>`;
   });
 }

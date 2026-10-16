@@ -4,11 +4,13 @@
 // 1ª metade: fechamento do mês da venda, paga no mês seguinte junto com o salário fixo.
 // 2ª metade: fechamento do mês em que o cliente embarcou, paga no mês seguinte ao embarque.
 // Venda ainda sem data de ida: a 2ª metade fica aguardando a data (não entra em nenhum pagamento).
+// Exceção: emissão B2B. A comissão inteira entra no fechamento do mês da venda (paga no mês seguinte), sem esperar o embarque.
 // O pagamento sai no dia de pagamento da pessoa (padrão: dia 5).
 
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
 import * as CX from './caixa.js?v=1';
+import { ehB2B } from './b2b.js?v=3';
 
 export const INICIO = '2026-09';
 const INICIO_CONTAS = '2026-10';
@@ -33,6 +35,7 @@ export function parcelas(emissoes, uid) {
     const c = Number(e.comissao) || 0; if (!c) return;
     const mv = mk(e.data_negociacao); if (!mv) return;
     const nome = e.comprador || e.produto || e.servico || 'Venda';
+    if (ehB2B(e)) { L.push({ e, nome, comp: mv, valor: r2(c), tipo: 'B2B, inteira no mês da venda' }); return; }
     const viagem = e.data_ida || e.data_volta; // trecho só de volta: vale a data da volta
     const h1 = r2(c / 2), mi = mk(viagem);
     L.push({ e, nome, comp: mv, valor: h1, tipo: '1ª metade, venda' });
