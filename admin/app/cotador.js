@@ -206,6 +206,11 @@ export function itensDaCotacao(d, k = 0) {
       custo: null, venda: null, tipo_trecho: tipo, origem: ori(vs[0]) || '', destino: des(vs[0]) || '', data_ida: vs[0].data || null, passageiros: parseInt(d.pessoas) || null, cia_emissora: d.cia || '' };
     if (tipo === 'iv') x.data_volta = vs[1].data || null;
     if (tipo === 'multi') { x.data_volta = vs[vs.length - 1].data || null; x.trechos = vs.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n'); }
+    // trechos da cotação já entram como linhas do custo por trecho (com os passageiros de cada um)
+    const tot = parseInt(d.pessoas) || 1;
+    x.ct = vs.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', pax: String(parseInt(v.pax) || tot) }));
+    // passageiros diferentes por trecho: já abre separado, porque o custo de cada perna é diferente
+    if (vs.length > 2 || x.ct.some(l => +l.pax !== tot)) { x.ct_on = true; x.passageiros = Math.max(tot, ...x.ct.map(l => +l.pax || 0)); }
     itens.push(x);
   }
   if (go) (op.o.hoteis || []).filter(ht => ht.nome).forEach(ht => itens.push({ produto: 'Hotelaria', custo: null, venda: null, nome: ht.nome, destino: ht.cidade || '', data_ida: ht.entrada || null, data_volta: ht.saida || null }));
