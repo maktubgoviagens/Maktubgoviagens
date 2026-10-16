@@ -464,7 +464,7 @@ import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=31';
-import * as VENDA from '/admin/app/venda.js?v=3';
+import * as VENDA from '/admin/app/venda.js?v=4';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -1890,6 +1890,7 @@ function telaFormReuniao(P) {
     : D.reunioes.find(x => x.id === RE_ED);
   if (!base) { RE_ED = null; return telaReunioes(P); }
   if (!nova) RE_VISTA = ehGestao(base) ? 'gestao' : 'viagens';
+  const RE_PRE_FECHOU = !!(RE_PRE && RE_PRE.etapa === 'Fechou');
   const r = { ...base, ...(RE_PRE || {}) }; RE_PRE = null;
   const G = r.produto === 'Gestão de Milhas';
   const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
@@ -1918,7 +1919,7 @@ function telaFormReuniao(P) {
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
-      <div id="blFechou">${G ? '' : '<div id="reDaCot"></div>'}${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}${G ? '' : `<div class="grupo">Fechamento</div><div id="reFech"></div><div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
+      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reFech"></div><div id="reDaCot"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><label class="fl"><span>Explique por que não fechou</span><textarea name="motivo_detalhe" rows="3" placeholder="O que o cliente disse, o que pesou na decisão e o que podemos fazer melhor na próxima.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       <div id="blAndamento">
         ${campo('valor_estimado', G ? 'Valor potencial (R$)' : 'Valor cotado (R$)', r.valor_estimado, 'number')}
@@ -2038,8 +2039,10 @@ function telaFormReuniao(P) {
     const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
     f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
   }
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   mostrar(); if (f._prepFechou) f._prepFechou();
+  // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
+  if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   $('voltar').onclick = () => history.back();
   if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
     const IT = f._itens ? f._itens() : [], Fh = f._fech();
