@@ -17,6 +17,10 @@ const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d
   if (vs[1] && PRE.volta && 'data' in vs[1] && !vs[1].data) vs[1].data = PRE.volta;
   return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
+// contatos clicáveis no rodapé de toda cotação: WhatsApp, Instagram e site (com origem "cotacao" para medir no Analytics)
+const INSTA = 'maktubgo_', SITE = 'maktubgo.com.br', SITE_URL = 'https://www.maktubgo.com.br/?utm_source=cotacao&utm_medium=link';
+const ctLinks = (cor) => { const a = (href, t) => `<a href="${href}" target="_blank" rel="noopener" style="color:${cor || 'inherit'};text-decoration:none">${t}</a>`;
+  return [a('https://wa.me/' + ZAP, 'WhatsApp ' + ZAP_TXT), a('https://www.instagram.com/' + INSTA + '/', '@' + INSTA), a(SITE_URL, SITE)].join(' &nbsp;·&nbsp; '); };
 const SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const h = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -712,7 +716,7 @@ ${S.opcoes.map(painel).join('')}
 <div class="difs"><div class="dif"><h4>Time com ${vcs}</h4><p>Um time inteiro acompanhando a viagem, do planejamento ao retorno.</p></div><div class="dif"><h4>Suporte humanizado</h4><p>${pax === 1 ? 'Você fala' : 'Vocês falam'} sempre com uma pessoa, do embarque ao retorno.</p></div><div class="dif"><h4>Pós-venda dedicado</h4><p>Check-in, documentos e ajustes resolvidos por nós.</p></div><div class="dif"><h4>Roteiro sob medida</h4><p>Cada dia desenhado junto com ${vcs}, no ritmo de ${vcs}.</p></div></div></div></section>
 <div class="avisos"><div class="wrap">${avisos.map(a => `<p>${h(a)}</p>`).join('')}</div></div>
 <div class="fecho"><img class="assin" src="${M.assin}" alt="Seu destino começa aqui."></div>
-<footer><img class="assin-footer" src="${M.rodape}" alt="Maktub Go"><div><a href="mailto:${EMAIL}">${EMAIL}</a> &nbsp;·&nbsp; <a href="https://wa.me/${ZAP}">${ZAP_TXT}</a> &nbsp;·&nbsp; @maktubgo_</div>
+<footer><img class="assin-footer" src="${M.rodape}" alt="Maktub Go"><div>${ctLinks()}</div>
 <p class="prop">Documento exclusivo Maktub Go, de uso restrito ${pax === 1 ? 'ao viajante indicado' : 'aos viajantes indicados'}. Proibida a reprodução ou distribuição a terceiros.</p></footer>
 <script>
 var NOMES=${JSON.stringify(nomes)},QUEM=${JSON.stringify(S.nomeZap || '')};
@@ -779,7 +783,7 @@ ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div s
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
 ${multi ? '' : resumo(OPS[0], 0)}
 <p class="cond">${h(S.bagagem ? 'Inclui ' + S.bagagem.charAt(0).toLowerCase() + S.bagagem.slice(1) + '. ' : '')}${h(S.rodape)}</p></div>
-<footer><div class="w"><div><b>${GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO'}</b><span class="g">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</span></div><div class="r">${EMAIL} · ${ZAP_TXT}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer>${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.offsetTop-10,behavior:'smooth'})}})</script>` : ''}</body></html>`;
+<footer><div class="w"><div><b>${GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO'}</b><span class="g">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</span></div><div class="r">${ctLinks()}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer>${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.offsetTop-10,behavior:'smooth'})}})</script>` : ''}</body></html>`;
 }
 // usado em testes e para gerar a partir de dados salvos
 export function gerarHTML(dados) { const antes = S; S = dados; try { return gerar({}); } finally { S = antes; } }
@@ -1225,7 +1229,7 @@ ${tr}
   <div class="rodape">
     ${R.selo ? `<div class="selo"><img src="${R.selo}" alt="Maktub Go"></div>` : ''}
     ${R.letreiro ? `<div class="lt"><img src="${R.letreiro}" alt="Seu destino começa aqui"></div>` : ''}
-    <div class="ct">WhatsApp ${ZAP_TXT} &nbsp;·&nbsp; @maktubgo_</div>
+    <div class="ct">${ctLinks()}</div>
   </div>
 </div>
 </body></html>`;
@@ -1320,11 +1324,11 @@ async function imagemRapida() {
   y += VH;
   // rodapé: selo, "Seu destino começa aqui" e contato
   const PE = 143; g.fillStyle = VERDE; g.fillRect(0, y, W, PE); g.fillStyle = 'rgba(235,224,196,.18)'; g.fillRect(0, y, W, 1);
-  g.font = jost(16); const ctW = Math.max(g.measureText(`WhatsApp ${ZAP_TXT}`).width, g.measureText('@maktubgo_').width);
+  g.font = jost(16); const ctW = Math.max(g.measureText(`WhatsApp ${ZAP_TXT}`).width, g.measureText('@' + INSTA).width, g.measureText(SITE).width);
   let sw = 0; if (selo) { const sh = 86; sw = selo.width * sh / selo.height; g.drawImage(selo, M, y + 28, sw, sh); }
   // como no modelo: o letreiro fica no meio do espaço entre o selo e o contato
   if (letreiro) { const lh = 56, lw = letreiro.width * lh / letreiro.height, cx = (M + sw + W - M - ctW) / 2; g.drawImage(letreiro, cx - lw / 2, y + 43, lw, lh); }
-  g.font = jost(16); g.fillStyle = 'rgba(235,224,196,.85)'; g.textAlign = 'right'; g.fillText(`WhatsApp ${ZAP_TXT}`, W - M, y + 60); g.fillText('@maktubgo_', W - M, y + 90); g.textAlign = 'left';
+  g.font = jost(16); g.fillStyle = 'rgba(235,224,196,.85)'; g.textAlign = 'right'; g.fillText(`WhatsApp ${ZAP_TXT}`, W - M, y + 48); g.fillText('@' + INSTA, W - M, y + 76); g.fillText(SITE, W - M, y + 104); g.textAlign = 'left';
   y += PE;
   const out = document.createElement('canvas'); out.width = W; out.height = Math.ceil(y); out.getContext('2d').drawImage(c, 0, 0);
   return new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.92));
