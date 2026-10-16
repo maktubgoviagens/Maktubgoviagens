@@ -100,7 +100,7 @@ function htmlItem(X, x, i, ctx) {
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
       ${htmlPax(X, x, i, trava)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
-      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa (obrigatório)'}</span></button>${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
+      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa (obrigatório)'}</span></button>${!x.print && !trava ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
       <div class="sub" style="margin:-4px 0 8px">Confira no print se a tarifa inclui a mala despachada. Às vezes o bilhete não mostra.</div>`;
   } else if (ehHotel(x)) {
     det += `${inp(X, 'nome', i, 'Hotel', x.nome)}${dupla(inp(X, 'data_ida', i, 'Check-in', x.data_ida ?? ctx.ida, 'd'), inp(X, 'data_volta', i, 'Check-out', x.data_volta ?? ctx.volta, 'd'))}
@@ -223,6 +223,8 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     });
     el.querySelectorAll('[data-print]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.print]; x.print ? verArquivo(X, x.print) : anexar(X, 'print', x, desenha); });
     el.querySelectorAll('[data-printtroca]').forEach(b => b.onclick = () => anexar(X, 'print', IT[+b.dataset.printtroca], desenha));
+    el.querySelectorAll('[data-printcola]').forEach(b => b.onclick = () => colar(X, 'print', IT[+b.dataset.printcola], desenha));
+    IT._proxAnexo = () => { const x = IT.find(y => ehVoo(y) && !y.print && !enviado(y)); return x ? { tipo: 'print', alvo: x, depois: desenha } : null; };
     resumo();
   };
   desenha();
@@ -236,19 +238,52 @@ export async function verArquivo(X, path) {
   if (error) { if (w) w.close(); X.aviso('Não abriu: ' + error.message); return; }
   if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
 }
+// imagem vai reduzida (lado maior 1600 px, JPEG): um print fica em ~150 a 300 KB e continua legível. PDF vai como está.
+async function reduzirImg(file) {
+  if (!/^image\//.test(file.type) || /gif|svg/.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const b = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.82));
+    return b && b.size < file.size ? new File([b], 'print.jpg', { type: 'image/jpeg' }) : file;
+  } catch (_) { return file; }
+}
+async function subir(X, tipo, alvo, depois, file) {
+  if (!file) return;
+  if (file.size > 15 * 1024 * 1024) { X.aviso('Arquivo acima de 15 MB.'); return; }
+  X.aviso('Enviando...');
+  file = await reduzirImg(file);
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `${tipo}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const up = await X.sb.storage.from('vendas').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+  if (up.error) { X.aviso('Não enviou: ' + up.error.message + (/bucket/i.test(up.error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
+  alvo[tipo] = path; X.aviso(tipo === 'print' ? 'Print anexado. Salve o atendimento.' : 'Comprovante anexado. Salve o atendimento.'); depois();
+}
 export function anexar(X, tipo, alvo, depois) {
   const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*,application/pdf';
-  i.onchange = async () => {
-    const file = i.files && i.files[0]; if (!file) return;
-    if (file.size > 15 * 1024 * 1024) { X.aviso('Arquivo acima de 15 MB.'); return; }
-    X.aviso('Enviando...');
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${tipo}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const up = await X.sb.storage.from('vendas').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
-    if (up.error) { X.aviso('Não enviou: ' + up.error.message + (/bucket/i.test(up.error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
-    alvo[tipo] = path; X.aviso(tipo === 'print' ? 'Print anexado. Salve o atendimento.' : 'Comprovante anexado. Salve o atendimento.'); depois();
-  };
+  i.onchange = () => subir(X, tipo, alvo, depois, i.files && i.files[0]);
   i.click();
+}
+// colar o print copiado (WhatsApp, banco, tela da companhia) sem precisar baixar
+export async function colar(X, tipo, alvo, depois) {
+  if (!navigator.clipboard || !navigator.clipboard.read) { X.aviso('Este navegador não deixa colar direto. Use Anexar ou aperte Ctrl+V com o card aberto.'); return; }
+  try {
+    for (const it of await navigator.clipboard.read()) { const t = it.types.find(x => /^image\//.test(x)); if (t) { const b = await it.getType(t); return subir(X, tipo, alvo, depois, new File([b], 'print.' + t.split('/')[1], { type: t })); } }
+    X.aviso('Não tem imagem copiada. No WhatsApp, abra a foto e escolha Copiar; no computador, use Win+Shift+S.');
+  } catch (_) { X.aviso('O navegador não liberou a colagem. Aperte Ctrl+V com o card aberto.'); }
+}
+// Ctrl+V com o card aberto: vai para o primeiro anexo que ainda falta (print da tarifa, depois comprovante)
+let colarCard = null;
+export function ligarColarCard(X, alvoFn) {
+  if (colarCard) document.removeEventListener('paste', colarCard);
+  colarCard = (e) => {
+    const a = alvoFn(); if (!a) { document.removeEventListener('paste', colarCard); colarCard = null; return; }
+    if (/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '') && !(e.clipboardData && [...e.clipboardData.items].some(x => x.kind === 'file'))) return;
+    const f = [...((e.clipboardData && e.clipboardData.items) || [])].find(x => x.kind === 'file' && /^image\/|pdf/.test(x.type));
+    if (!f) return; e.preventDefault(); const d = a(); if (d) subir(X, d.tipo, d.alvo, d.depois, f.getAsFile());
+  };
+  document.addEventListener('paste', colarCard);
 }
 
 // bloco do fechamento: pagamento, link, comprovante, conferência do financeiro
@@ -265,7 +300,7 @@ export function editorFechamento(X, el, F, ctx) {
       ${(() => { const alvo = ctx.alvo ? ctx.alvo(F.forma, +F.parcelas || 0) : null; return alvo && Math.abs(alvo - t.v) > 0.009 ? `<div class="config" style="margin:4px 0 8px">Pela cotação, ${F.forma === 'pix' ? 'no Pix' : `no cartão em ${F.parcelas}x`} o total é <b>${X.brl2(alvo)}</b>.<button type="button" class="zap" id="fUsarAlvo" style="width:100%;margin-top:6px">Usar ${X.brl2(alvo)} na venda</button></div>` : ''; })()}
       <div class="lin" style="margin-top:6px"><span>Valor total da venda</span><b>${X.brl2(t.v)}</b></div>
       ${F.forma ? `<button type="button" class="zap" id="fEnviar" style="width:100%;margin-top:8px">${F.enviado_em ? 'Enviar de novo ao cliente' : 'Enviar o pagamento ao cliente'}</button>${F.enviado_em ? `<div class="sub">Enviado em ${new Date(F.enviado_em).toLocaleDateString('pt-BR')}.</div>` : ''}` : ''}
-      <div class="emchk" style="margin:10px 0 4px;border-top:1px solid var(--linha)"><button type="button" id="fComp" class="${F.comprovante ? 'ok' : ''}"><span class="cx">${F.comprovante ? '✓' : '+'}</span><span>${F.comprovante ? 'Comprovante anexado (tocar para ver)' : 'Anexar comprovante de pagamento'}</span></button>${F.comprovante ? '<button type="button" id="fCompT" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>' : ''}</div>
+      <div class="emchk" style="margin:10px 0 4px;border-top:1px solid var(--linha)"><button type="button" id="fComp" class="${F.comprovante ? 'ok' : ''}"><span class="cx">${F.comprovante ? '✓' : '+'}</span><span>${F.comprovante ? 'Comprovante anexado (tocar para ver)' : 'Anexar comprovante de pagamento'}</span></button>${F.comprovante ? '<button type="button" id="fCompT" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>' : '<button type="button" id="fCompC"><span class="cx">⎘</span><span>Colar print</span></button>'}</div>
       <div class="sub" style="margin-top:0">${F.comprovante ? (F.conferido ? `Conferido pelo financeiro${F.conferido_por ? ' (' + X.esc(X.nomeTime(F.conferido_por) || '') + ')' : ''}.` : 'Aparece no Início dos administradores para conferir.') : 'Com o comprovante, a venda vai como paga para a planilha.'}</div>
       ${F.comprovante && X.ADMIN ? `<label class="fc" style="margin:6px 0"><input type="checkbox" id="fConf" ${F.conferido ? 'checked' : ''}><span>Conferido pelo financeiro</span></label>` : ''}
     </div>`;
@@ -295,6 +330,8 @@ export function editorFechamento(X, el, F, ctx) {
       F.enviado_em = new Date().toISOString(); window.open(link, '_blank'); desenha();
     };
     const comp = el.querySelector('#fComp'); if (comp) comp.onclick = () => F.comprovante ? verArquivo(X, F.comprovante) : anexar(X, 'comprovante', F, desenha);
+    const cc = el.querySelector('#fCompC'); if (cc) cc.onclick = () => colar(X, 'comprovante', F, desenha);
+    F._proxAnexo = () => F.comprovante ? null : { tipo: 'comprovante', alvo: F, depois: desenha };
     const ct = el.querySelector('#fCompT'); if (ct) ct.onclick = () => anexar(X, 'comprovante', F, () => { F.conferido = false; desenha(); });
     const cf = el.querySelector('#fConf'); if (cf) cf.onchange = () => { F.conferido = cf.checked; F.conferido_por = cf.checked ? X.meuId : null; F.conferido_em = cf.checked ? new Date().toISOString() : null; desenha(); };
   };

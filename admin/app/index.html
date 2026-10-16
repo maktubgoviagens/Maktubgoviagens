@@ -464,7 +464,7 @@ import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=40';
-import * as VENDA from '/admin/app/venda.js?v=8';
+import * as VENDA from '/admin/app/venda.js?v=9';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=11';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -592,7 +592,7 @@ let SUJO = false, ULT_CARGA = 0;
 $('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 $('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
 // versão publicada: se o celular ou o navegador ainda estiver com a tela antiga, recarrega sozinho (sem perder edição em andamento)
-const VERSAO_APP = '202610162036';
+const VERSAO_APP = '202610162039';
 async function conferirVersao() {
   try {
     const j = await (await fetch('/admin/app/versao.json?t=' + Date.now(), { cache: 'no-store' })).json();
@@ -2045,6 +2045,8 @@ function telaFormReuniao(P) {
         EDIT.desenha(); if (f.elements.valor_fechado) f.elements.valor_fechado.value = v;
       } };
     if ($('reFech')) FECH = VENDA.editorFechamento(XV, $('reFech'), F, ctxF);
+    // Ctrl+V com o card aberto anexa o print que falta (tarifa primeiro, depois comprovante)
+    { const el0 = $('reItens'); VENDA.ligarColarCard(XV, () => document.body.contains(el0) ? () => (IT._proxAnexo && IT._proxAnexo()) || (F._proxAnexo && F._proxAnexo()) : null); }
     // venda: valor integral (um total, rateado entre os serviços pelo custo) ou por serviço (cada um com o seu valor)
     const modoV = () => F.venda_modo || 'total';
     const ratear = () => {
