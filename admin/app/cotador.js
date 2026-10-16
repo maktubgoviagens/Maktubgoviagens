@@ -811,6 +811,12 @@ function rapParaCorp() {
     destino: v0 ? (cidadeDe(v0.dcod) || v0.dnome || '') : '', voos: rapVoos(), bagagem: S.bagagem || '', print: mostraEco() ? (S.prints[0] || '') : '',
     de: mostraEco() ? S.de : '', por: S.por, forma: [S.forma, parcTxt() ? 'ou ' + parcTxt() : ''].filter(Boolean).join(' · '), obs: S.obs || '', rodape: RAP_RODAPE };
 }
+const chipsBag = (k, ops, v) => `<div class="seg" style="margin:0 0 8px">${ops.map(([val, l]) => `<button type="button" data-bag="${k}|${val}" class="${String(v) === String(val) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+function textoBag(mao, desp) {
+  const p = [mao === 'cabine' ? '1 item pessoal + 1 mala de cabine de até 10 kg' : '1 item pessoal'];
+  if (+desp) p.push(`${desp} ${+desp === 1 ? 'mala despachada' : 'malas despachadas'} de até 23 kg`);
+  return p.join(' + ') + ' por passageiro';
+}
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
@@ -834,7 +840,9 @@ function editorRapida(P, X) {
         <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
       <div class="duas-col">${inp('cliente', 'Cliente (não aparece na cotação)', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
       <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
-      ${inp('bagagem', 'Bagagem incluída')}
+      <label class="fl" style="margin-bottom:2px"><span>Bagagem de mão</span></label>${chipsBag('mao', [['item', 'Só item pessoal'], ['cabine', '+ mala de cabine 10 kg']], S.bag_mao || (/cabine/i.test(S.bagagem || '') ? 'cabine' : 'item'))}
+      <label class="fl" style="margin-bottom:2px"><span>Mala despachada (23 kg)</span></label>${chipsBag('desp', [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas']], String(S.bag_desp ?? (/(\d)\s*malas?\s*despachada/i.exec(S.bagagem || '') || [, '0'])[1]))}
+      ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
       ${inp('por', 'Valor total com a Maktub', 'num', 'placeholder="1.700,00"')}
       <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', 'Ou parcelado em (opcional)', 'text', 'inputmode="numeric" placeholder="4 (calcula sozinho)"')}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
@@ -872,6 +880,9 @@ function editorRapida(P, X) {
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  // bagagem em dois toques: monta o texto da cotação (o texto continua editável para casos fora do padrão)
+  P.querySelectorAll('[data-bag]').forEach(bt => bt.onclick = () => { const [k, v] = bt.dataset.bag.split('|'); if (k === 'mao') S.bag_mao = v; else S.bag_desp = +v;
+    S.bagagem = textoBag(S.bag_mao || (/cabine/i.test(S.bagagem || '') ? 'cabine' : 'item'), S.bag_desp ?? 0); editorRapida(P, X); });
   $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
     S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
   P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => { S.voos.splice(+b.dataset.tira.split('#')[1], 1); rotular(S.voos); editorRapida(P, X); });
