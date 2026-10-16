@@ -823,11 +823,16 @@ function textoBag(mao, desp) {
   return p.join(' + ') + ' por passageiro';
 }
 // o que o vendedor vê ao escolher as parcelas: quanto o cliente paga e quanto a Maktub recebe
+// para o vendedor (não vai para o cliente): Pix, cartão sem juros e a tabela de 1x a 12x, já garantindo o mínimo da Maktub
 function resumoParc() {
   const pr = precoRapida(S), R = regraPix();
-  if (!pr) return `Digite o mínimo que a Maktub quer receber. O app monta o Pix com ${pct1(R.desc)}% de desconto e o cartão em até ${R.n}x sem juros.`;
-  const c = pr.cartao, e = pr.extra;
-  return `<b>Pix:</b> ${brl(pr.pix)} · <b>Cartão:</b> ${brl(c.total)} em até ${pr.n}x de ${brl(c.parcela)}${e ? ` · <b>ou ${e.n}x</b> de ${brl(e.parcela)} (total ${brl(e.total)})` : ''}<br>Spread no Pix: ${brl(pr.pix - pr.piso)}. Link da InfinitePay: ${brl(c.total)}, sem repassar a taxa, em até ${pr.n}x${e ? `; para ${e.n}x, ${brl(e.total)} em até ${e.n}x` : ''}. Em qualquer opção a Maktub recebe pelo menos ${brl(pr.piso)}.`;
+  if (!pr) return `<div class="sub" style="margin:0">Digite o mínimo que a Maktub quer receber. O app monta o Pix com ${pct1(R.desc)}% de desconto e o cartão em até ${R.n}x sem juros.</div>`;
+  const c = pr.cartao, lin = [];
+  for (let n = 1; n <= 12; n++) { const t = n <= pr.n ? c.total : cartao(pr.piso, n).total, par = Math.round(t * 100 / n) / 100;
+    lin.push(`<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--linha);${n <= pr.n ? 'font-weight:600' : ''}"><span>${n}x de ${brl(par)}</span><span>${brl(t)}${n <= pr.n ? ' · sem juros' : ''}</span></div>`); }
+  return `<div class="config" style="margin:0"><b>Pix:</b> ${brl(pr.pix)} (spread de ${brl(pr.pix - pr.piso)})<br><b>Na cotação:</b> ${brl(c.total)} em até ${pr.n}x de ${brl(c.parcela)} sem juros
+    ${dobra('rpTab', 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
+    <div class="sub" style="margin:6px 0 0">Link da InfinitePay: o total da linha escolhida, sem repassar a taxa, com o número de parcelas dela.</div></div>`;
 }
 function editorRapida(P, X) {
   const { $ } = X;
@@ -857,8 +862,7 @@ function editorRapida(P, X) {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px"><span>Malas despachadas de até 23 kg</span><span style="display:flex;align-items:center;gap:8px"><button type="button" class="sec" data-bagd="-1" style="width:40px;padding:6px 0">−</button><b style="min-width:18px;text-align:center">${bagDesp()}</b><button type="button" class="sec" data-bagd="1" style="width:40px;padding:6px 0">+</button></span></div></div>
       ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
       ${inp('por', 'Quanto a Maktub quer receber (mínimo)', 'num', 'placeholder="1.000,00"')}
-      <div class="duas-col">${inp('forma', 'Forma de pagamento')}${inp('parcelas', `Mais parcelas (opcional, acima de ${regraPix().n}x)`, 'text', `inputmode="numeric" placeholder="ex.: 10 (até 12x)"`)}</div>
-      <div class="sub" id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
+      <div id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
     </form>
     <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
@@ -877,7 +881,7 @@ function editorRapida(P, X) {
     if (vk) { const v = S.voos[+vk[1]]; if (vk[2] === 'rotulo') v._rotM = !!e.target.value.trim(); if (/^(ocod|dcod|data|saida|chegada)$/.test(vk[2])) completarVoo(v); if (/^(ocod|dcod)$/.test(vk[2])) { rotular(S.voos); S.voos.forEach((x, i) => { const el = f.querySelector(`[data-k="voos.${i}.rotulo"]`); if (el && el !== e.target) el.value = x.rotulo; }); } }
     if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
-    if ((k === 'parcelas' || k === 'por') && $('rpParc')) $('rpParc').innerHTML = resumoParc();
+    if (k === 'por' && $('rpParc')) $('rpParc').innerHTML = resumoParc();
     previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
@@ -1024,7 +1028,8 @@ function rapInfo() {
   // com cartão na cotação, o Pix aparece como o desconto
   // o valor grande é o do Pix; embaixo, o cartão de crédito por extenso (e o parcelamento maior, se o vendedor pediu)
   const pr = precoRapida(S), cc = pr;
-  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`, ...(pr.extra ? [`ou em até ${pr.extra.n}x de ${brl(pr.extra.parcela)}`] : []), 'Taxas inclusas'] : [S.forma || 'À vista via Pix', 'taxas inclusas'];
+  // a cotação nunca anuncia mais que as parcelas sem juros; parcelamento maior o vendedor passa na conversa (tabela no editor)
+  const pagto = pr ? [`No cartão de crédito: ${brl(pr.cartao.total)}${pr.n > 1 ? ` em até ${pr.n}x de ${brl(pr.cartao.parcela)} sem juros` : ' à vista'}`, 'Taxas inclusas'] : [S.forma || 'À vista via Pix', 'taxas inclusas'];
   const totalLbl = pr ? `No Pix · ${total}` : total, valor = pr ? pr.pix : num(S.por);
   const descTxt = pr && pr.desc > 0 ? `${pct1(pr.desc)}% de desconto por pagar no Pix` : '';
   const trechos = vs.map((v, i) => { const d = dt(v.data), np = parseInt(v.pax) || pax;
