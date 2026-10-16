@@ -463,8 +463,8 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=30';
-import * as VENDA from '/admin/app/venda.js?v=1';
+import * as COT from '/admin/app/cotador.js?v=31';
+import * as VENDA from '/admin/app/venda.js?v=2';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -839,7 +839,7 @@ async function carregar(silencioso, manterTela) {
   if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
-  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null;
+  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg);
   if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
   const G = pode('gestao'), LE = pode('leads');
   if (ADMIN || G || LE || pode('talentos')) {
@@ -1712,6 +1712,26 @@ function blocoConv(titulo, L, chave, rotulo) {
   const linhas = Object.entries(grupos).map(([k, arr]) => [k, conversao(arr), arr.length]).sort((a, b) => b[2] - a[2]);
   return `<section class="bloco"><h2>${titulo}</h2>${linhas.length ? linhas.map(([k, c, n]) => `<div class="conv"><span>${esc(rotulo ? rotulo(k) : k)}</span><b>${c.taxa === null ? '-' : pct(c.taxa)}</b><span class="m"><i style="width:${c.taxa || 0}%"></i></span><small>${c.fechou} fechou · ${c.perdeu} não fechou · ${c.andamento} em andamento${c.valor ? ' · ' + brl2(c.valor) : ''}</small></div>`).join('') : '<div class="vazio">Sem reuniões no período.</div>'}</section>`;
 }
+// como os clientes pagam e quanto vai para a maquininha (dado para negociar taxa)
+function blocoPagamentos(L) {
+  const F = L.filter(r => r.resultado === 'Fechou');
+  const val = (r) => { const v = (r.itens || []).reduce((a, x) => a + (+x.venda || 0), 0); return v || +r.valor_fechado || 0; };
+  const taxa = (r) => r.fech && r.fech.forma === 'cartao' ? +(r.fech.taxa_pct != null ? r.fech.taxa_pct : COT.taxaCartao(+r.fech.parcelas || 1)) || 0 : 0;
+  const pix = F.filter(r => r.fech && r.fech.forma === 'pix'), car = F.filter(r => r.fech && r.fech.forma === 'cartao' && +r.fech.parcelas), sem = F.length - pix.length - car.length;
+  if (!pix.length && !car.length) return `<section class="bloco"><h2>Pagamentos</h2><div class="vazio">Sem vendas fechadas com a forma de pagamento registrada no período.${sem ? ` ${sem} ${sem === 1 ? 'venda fechada' : 'vendas fechadas'} sem a forma marcada.` : ''}</div></section>`;
+  const vPix = pix.reduce((a, r) => a + val(r), 0), vCar = car.reduce((a, r) => a + val(r), 0), custo = car.reduce((a, r) => a + val(r) * taxa(r) / 100, 0);
+  const porN = {}; car.forEach(r => { const n = +r.fech.parcelas; const g = porN[n] = porN[n] || { q: 0, v: 0, c: 0 }; g.q++; g.v += val(r); g.c += val(r) * taxa(r) / 100; });
+  const tot = pix.length + car.length;
+  return `<section class="bloco"><h2>Pagamentos</h2>
+    <div class="numeros" style="margin-top:0">
+      <div class="num"><div class="l">Pix</div><div class="v">${pix.length}</div><div class="d">${brlC(vPix)} · ${pct(pix.length / tot * 100)} das vendas</div></div>
+      <div class="num"><div class="l">Cartão</div><div class="v">${car.length}</div><div class="d">${brlC(vCar)} · ${pct(car.length / tot * 100)} das vendas</div></div>
+      <div class="num destaque"><div class="l">Custo da maquininha</div><div class="v">${brlC(custo)}</div><div class="d">${vCar ? pct(custo / vCar * 100) + ' do vendido no cartão' : 'no período'}</div></div>
+    </div>
+    ${Object.keys(porN).length ? `<div class="sub" style="margin:10px 0 2px">Cartão por parcelas</div>${Object.entries(porN).sort((a, b) => a[0] - b[0]).map(([n, g]) => `<div class="lin"><span>${n}x · ${plural(g.q, 'venda', 'vendas')}</span><span>${brl2(g.v)} · taxa ${brl2(g.c)}</span></div>`).join('')}` : ''}
+    ${sem ? `<div class="sub">${sem} ${sem === 1 ? 'venda fechada' : 'vendas fechadas'} no período sem a forma de pagamento marcada no fechamento.</div>` : ''}
+  </section>`;
+}
 function htmlReuniao(r) {
   const tag = { 'Fechou': 'ok', 'Não fechou': 'alerta', 'Em andamento': 'ouro' }[r.resultado] || '';
   const auto = r.fechado_auto ? ' <span class="tag ok">fechou pela emissão</span>' : '';
@@ -1825,6 +1845,7 @@ function telaReunioes(P) {
     </div>
     ${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}
     ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
+    ${ADMIN && !G ? blocoPagamentos(base) : ''}
     ${ADMIN && semResp().length ? `<section class="bloco"><h2>Sem responsável</h2><div class="sub" style="margin-top:0">${semResp().length} ${semResp().length === 1 ? 'atendimento' : 'atendimentos'} de ${G ? 'Gestão de Milhas' : 'viagens'}, de todos os períodos, sem ninguém definido (a maioria veio do Iddas).</div>
       <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Passar para</span><select id="loteResp">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteRespB" style="align-self:end">Definir para todos</button></div></section>` : ''}
     ${blocoConv('Conversão por origem', base, r => r.origem)}
@@ -1971,7 +1992,20 @@ function telaFormReuniao(P) {
     });
     marcar();
     f._itens = () => IT;
-    if ($('reFech')) FECH = VENDA.editorFechamento(XV, $('reFech'), F, { total: () => EDIT.tot(), cliente: () => f.elements.cliente.value, contato: () => f.elements.contato.value });
+    // valor da venda pela cotação rápida ligada ao card: a escolhida no Fechou ou a mais recente
+    const cotFech = () => { const L = (CDADOS || []).filter(c => c.dados && c.dados.modelo === 'rapida'); return (SEL && L.find(c => SEL.startsWith(c.id + '|'))) || L[0] || null; };
+    const ctxF = { total: () => EDIT.tot(), cliente: () => f.elements.cliente.value, contato: () => f.elements.contato.value, taxa: (n) => COT.taxaCartao(n),
+      alvo: (forma, n) => { const c = cotFech(); return c ? COT.valorPelaCotacao(c.dados, forma, n) : null; },
+      // valores que vieram da cotação (Pix e cartão de 1x a 12x): se a venda está num deles, troca sozinha ao mudar a forma
+      presets: () => { const c = cotFech(); if (!c) return []; return [COT.valorPelaCotacao(c.dados, 'pix'), ...[...Array(12)].map((_, i) => COT.valorPelaCotacao(c.dados, 'cartao', i + 1))].filter(Boolean); },
+      aplicarTotal: (v) => {
+        // o total novo vale para a venda inteira: serviços já na planilha ficam como estão, o resto é dividido na proporção de hoje
+        const livres = IT.filter(x => !VENDA.enviado(x)); if (!livres.length) return;
+        const fixo = IT.filter(VENDA.enviado).reduce((a, x) => a + (+x.venda || 0), 0), alvo = v - fixo, soma = livres.reduce((a, x) => a + (+x.venda || 0), 0);
+        let resto = alvo; livres.forEach((x, k) => { const nv = k === livres.length - 1 ? Math.round(resto * 100) / 100 : Math.round((soma ? (+x.venda || 0) / soma : 1 / livres.length) * alvo * 100) / 100; resto -= nv; x.venda = nv; });
+        EDIT.desenha(); if (f.elements.valor_fechado) f.elements.valor_fechado.value = v;
+      } };
+    if ($('reFech')) FECH = VENDA.editorFechamento(XV, $('reFech'), F, ctxF);
     // Fechou: a venda vem preenchida da cotação ligada ao card (rota, datas, passageiros, companhia, hotéis e valor)
     const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
@@ -2630,7 +2664,7 @@ function telaEquipe(P) {
     if (isNaN(pd) || pd < 0 || pd >= 50 || !(ps >= 1 && ps <= 12)) { aviso('Confira o desconto do Pix (0 a 49%) e as parcelas sem juros (1 a 12).'); return; }
     const { error } = await sb.from('configuracoes').update({ taxas_cartao: tx, pix_desconto: pd, parcelas_sem_juros: ps, atualizado_em: new Date().toISOString() }).eq('id', 1);
     if (error) { aviso(/pix_desconto|parcelas_sem_juros/.test(error.message) ? 'Falta rodar no Supabase o SQL do desconto do Pix.' : /taxas_cartao/.test(error.message) ? 'Falta rodar no Supabase o SQL das taxas do cartão.' : 'Não salvou: ' + error.message); return; }
-    if (D.cfg) Object.assign(D.cfg, { taxas_cartao: tx, pix_desconto: pd, parcelas_sem_juros: ps }); aviso('Salvo. As próximas cotações já usam.');
+    if (D.cfg) Object.assign(D.cfg, { taxas_cartao: tx, pix_desconto: pd, parcelas_sem_juros: ps }); COT.configurar(D.cfg); aviso('Salvo. As próximas cotações já usam.');
   };
 }
 async function carregarEquipe() {

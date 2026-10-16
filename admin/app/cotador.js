@@ -1001,6 +1001,16 @@ const taxasCartao = () => Array.isArray(TAXAS) && TAXAS.length === 12 && TAXAS.e
 let REGRA = null;
 const regraPix = () => ({ desc: REGRA && REGRA.desc != null && +REGRA.desc >= 0 && +REGRA.desc < 50 ? +REGRA.desc : 5, n: REGRA && +REGRA.n >= 1 && +REGRA.n <= 12 ? Math.round(+REGRA.n) : 4 });
 const pct1 = (v) => String(v).replace('.', ',');
+// usado fora do cotador (fechamento e indicadores): aplica as taxas e a regra salvas e diz a taxa de cada parcela
+export function configurar(cfg) { cfg = cfg || {}; TAXAS = cfg.taxas_cartao; REGRA = { desc: cfg.pix_desconto, n: cfg.parcelas_sem_juros }; }
+export const taxaCartao = (n) => taxasCartao()[n - 1];
+// valor certo da venda pela cotação rápida: Pix, ou cartão em n vezes (até as sem juros, o preço do cartão; acima, o da tabela)
+export function valorPelaCotacao(d, forma, n) {
+  const pr = precoRapida(d); if (!pr) return null;
+  if (forma === 'pix') return pr.pix;
+  if (forma !== 'cartao' || !(n >= 1 && n <= 12)) return null;
+  return n <= pr.n ? pr.cartao.total : (cartao(pr.piso, n) || {}).total || null;
+}
 export function precoRapida(d) {
   const piso = num(d && d.por); if (!piso) return null;
   const { desc, n } = regraPix(), c = cartao(piso, n); if (!c) return null;

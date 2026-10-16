@@ -151,12 +151,22 @@ export function editorFechamento(X, el, F, ctx) {
       <div class="seg" style="margin:6px 0 8px"><button type="button" data-fp="pix" class="${F.forma === 'pix' ? 'on' : ''}">Pix</button><button type="button" data-fp="cartao" class="${cartao ? 'on' : ''}">Cartão</button></div>
       ${cartao ? `<div class="duas-col"><label class="fl"><span>Em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="10"></label><label class="fl"><span>Valor da parcela</span><input readonly value="${F.parcelas && t.v ? X.brl2(t.v / F.parcelas) : ''}"></label></div>
       <label class="fl"><span>Link de pagamento do cartão</span><input id="fLink" inputmode="url" value="${X.esc(F.link || '')}" placeholder="Cole o link gerado"></label>` : F.forma === 'pix' ? `<label class="fl"><span>Dados do Pix para o cliente</span><input id="fPix" value="${X.esc(F.pix || pixGuardado())}" placeholder="Chave Pix e nome do recebedor"></label>` : ''}
+      ${(() => { const alvo = ctx.alvo ? ctx.alvo(F.forma, +F.parcelas || 0) : null; return alvo && Math.abs(alvo - t.v) > 0.009 ? `<div class="config" style="margin:4px 0 8px">Pela cotação, ${F.forma === 'pix' ? 'no Pix' : `no cartão em ${F.parcelas}x`} o total é <b>${X.brl2(alvo)}</b>.<button type="button" class="zap" id="fUsarAlvo" style="width:100%;margin-top:6px">Usar ${X.brl2(alvo)} na venda</button></div>` : ''; })()}
       ${F.forma ? `<button type="button" class="zap" id="fEnviar" style="width:100%;margin-top:8px">${F.enviado_em ? 'Enviar de novo ao cliente' : 'Enviar o pagamento ao cliente'}</button>${F.enviado_em ? `<div class="sub">Enviado em ${new Date(F.enviado_em).toLocaleDateString('pt-BR')}.</div>` : ''}` : ''}
       <div class="emchk" style="margin:10px 0 4px;border-top:1px solid var(--linha)"><button type="button" id="fComp" class="${F.comprovante ? 'ok' : ''}"><span class="cx">${F.comprovante ? '✓' : '+'}</span><span>${F.comprovante ? 'Comprovante anexado (tocar para ver)' : 'Anexar comprovante de pagamento'}</span></button>${F.comprovante ? '<button type="button" id="fCompT" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>' : ''}</div>
       <div class="sub" style="margin-top:0">${F.comprovante ? (F.conferido ? `Conferido pelo financeiro${F.conferido_por ? ' (' + X.esc(X.nomeTime(F.conferido_por) || '') + ')' : ''}.` : 'Aparece no Início dos administradores para conferir.') : 'Com o comprovante, a venda vai como paga para a planilha.'}</div>
       ${F.comprovante && X.ADMIN ? `<label class="fc" style="margin:6px 0"><input type="checkbox" id="fConf" ${F.conferido ? 'checked' : ''}><span>Conferido pelo financeiro</span></label>` : ''}
     </div>`;
-    el.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => { F.forma = b.dataset.fp; desenha(); });
+    // troca de forma ou de parcelas: se a venda estava num valor da cotação, já passa para o valor certo da nova escolha
+    const ajusta = () => {
+      F.taxa_pct = F.forma === 'cartao' && F.parcelas && ctx.taxa ? ctx.taxa(+F.parcelas) : (F.forma === 'pix' ? 0 : F.taxa_pct);
+      const alvo = ctx.alvo ? ctx.alvo(F.forma, +F.parcelas || 0) : null, atual = ctx.total().v;
+      if (alvo && ctx.aplicarTotal && Math.abs(alvo - atual) > 0.009 && (ctx.presets ? ctx.presets() : []).some(v => Math.abs(v - atual) < 0.01)) { ctx.aplicarTotal(alvo); X.aviso(`Venda ajustada para ${X.brl2(alvo)}, o valor da cotação ${F.forma === 'pix' ? 'no Pix' : `em ${F.parcelas}x`}.`); }
+      desenha();
+    };
+    el.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => { F.forma = b.dataset.fp; ajusta(); });
+    const usar = el.querySelector('#fUsarAlvo'); if (usar) usar.onclick = () => { const alvo = ctx.alvo(F.forma, +F.parcelas || 0); if (alvo && ctx.aplicarTotal) { ctx.aplicarTotal(alvo); desenha(); } };
+    const fp = el.querySelector('#fParc'); if (fp) fp.onchange = () => ajusta();
     const liga = (id, k, fn) => { const e = el.querySelector('#' + id); if (e) e.oninput = () => { F[k] = fn ? fn(e.value) : e.value.trim(); if (id === 'fParc') { const v = el.querySelector('#fParc').parentElement.parentElement.querySelectorAll('input')[1]; v.value = F.parcelas && t.v ? X.brl2(t.v / F.parcelas) : ''; } }; };
     liga('fParc', 'parcelas', v => parseInt(v, 10) || null); liga('fLink', 'link'); liga('fPix', 'pix');
     const pix = el.querySelector('#fPix'); if (pix) { if (!F.pix && pix.value) F.pix = pix.value; pix.onchange = () => { try { localStorage.setItem('mk_pix', pix.value.trim()); } catch (_) {} }; }
