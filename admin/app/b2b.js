@@ -127,3 +127,41 @@ export function tela(P, X) {
     X.voltar();
   };
 }
+
+// ---------- cancelamento ----------
+// A linha da planilha é ajustada pelo script "script-vendas-do-app" (ação "atualizar" pelo ID sistema):
+// valor e custo passam a ser só o que ficou (multa recebida e taxa que não voltou) e a comissão vira R$ 2,00.
+export const ehCancelada = (e) => /CANCELADA/.test(String((e && e.observacoes) || ''));
+
+export function blocoCancelar(e, X) {
+  if (!ehB2B(e)) return '';
+  const pode = X.ADMIN || e.vendedor_id === X.D.meuId;
+  if (ehCancelada(e)) return `<section class="bloco" style="margin-top:12px"><h2>Emissão B2B cancelada</h2><div class="sub" style="margin:0">Comissão de cancelamento: ${X.brl2(e.comissao)}.</div></section>`;
+  if (!pode) return '';
+  const pendente = (X.D.b2bCanc || {})[e.id];
+  if (pendente) return `<section class="bloco" style="margin-top:12px"><h2>Cancelamento enviado</h2><div class="sub" style="margin:0">A planilha atualiza em até 5 minutos.</div></section>`;
+  return `<details class="bloco" style="margin-top:12px" id="b2bCanc"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão B2B</summary>
+    <div class="sub" style="margin-top:6px">Valor e custo passam a ser só o que ficou. A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.</div>
+    <div class="duas-col"><label class="fl"><span>A agência paga no cancelamento (R$)</span><input id="b2bCVal" inputmode="decimal" value="0"></label><label class="fl"><span>Custo que não voltou (R$)</span><input id="b2bCCus" inputmode="decimal" value="0"></label></div>
+    <div class="sub" style="margin-top:2px">Ex.: taxa de embarque não reembolsada. Milhas devolvidas não contam como custo.</div>
+    <label class="fl"><span>Motivo (opcional)</span><input id="b2bCMot"></label>
+    <button type="button" class="sec grande" id="b2bCOk" style="width:100%;margin-top:10px;color:var(--alerta)">Confirmar cancelamento</button></details>`;
+}
+const pctVend = (e, X) => e.vendedor_id === X.D.meuId ? (+(X.D.perfil || {}).comissao_pct || 0) : (+((X.D.equipe || []).find(x => x.user_id === e.vendedor_id) || {}).comissao_pct || 0);
+
+export function ligarCancelar(P, e, X, depois) {
+  const b = P.querySelector('#b2bCOk'); if (!b) return;
+  b.onclick = async () => {
+    const val = nb(P.querySelector('#b2bCVal').value) || 0, cus = nb(P.querySelector('#b2bCCus').value) || 0;
+    const mot = P.querySelector('#b2bCMot').value.trim();
+    if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
+    const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const obs = [e.observacoes || MARCA_OBS, `CANCELADA em ${quando}`, mot].filter(Boolean).join(' · ');
+    const dados = { _acao: 'atualizar', _alvo: e.id, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus), 'Valor a receber': r2(val), 'Comissão': pctVend(e, X) === 0 ? 0 : comissaoB2B(0, true), 'Observações': obs };
+    b.disabled = true; b.textContent = 'Enviando...';
+    const { error } = await X.sb.from('fila_planilha').insert({ id: uuid(), atendimento_id: null, item: 0, dados });
+    if (error) { b.disabled = false; b.textContent = 'Confirmar cancelamento'; X.aviso('Não cancelou: ' + error.message); return; }
+    X.D.b2bCanc = X.D.b2bCanc || {}; X.D.b2bCanc[e.id] = true;
+    X.aviso('Cancelamento enviado. A planilha atualiza em até 5 minutos.'); depois();
+  };
+}

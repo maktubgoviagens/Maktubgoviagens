@@ -469,7 +469,7 @@ import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=7';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=1';
+import * as B2B from '/admin/app/b2b.js?v=2';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -1178,7 +1178,7 @@ function telaEmissoes(P) {
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
-        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
+        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${B2B.ehB2B(e) ? ` <span class="tag">${B2B.ehCancelada(e) ? 'B2B cancelada' : 'B2B'}</span>` : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}${VER || minha(e) ? `<span>Comissão:</span> ${brl2(e.comissao)}` : ''}</div>
         ${!VER && LST ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}
@@ -1286,6 +1286,7 @@ function telaFormEmissao(P) {
     <h1 class="titulo" style="margin-top:6px">${nova ? 'Registrar <em>emissão</em>' : esc(e.comprador || e.produto || 'Emissão')}</h1>
     ${daPlanilha ? `<div class="config" style="margin-top:12px">${ADMIN ? 'Comissão, parceiro, vendedor e serviço você define aqui embaixo. Pago, nota, check-in e o acompanhamento você marca aqui mesmo. Os demais dados vêm da planilha: para alterar, edite a linha nela; o app atualiza em até 5 minutos.' : 'Os dados desta venda vêm da planilha. Pago, nota, check-in e o acompanhamento você marca aqui mesmo.'}${D.cfg && D.cfg.planilha_url ? ` <a href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener">Abrir a planilha</a>` : ''}</div>` : ''}
     ${daPlanilha ? blocoAjuste(e, travado) : ''}
+    ${B2B.blocoCancelar(e, { D, ADMIN, brl2 })}
     ${(() => { const at = D.reunioes.find(r => (r.itens || []).some(x => x.planilha_id === e.id)); if (!at) return ''; const x = at.itens.find(y => y.planilha_id === e.id);
       const l = (a, b) => b ? `<div class="lin"><span>${a}</span><span style="white-space:normal;text-align:right">${b}</span></div>` : '';
       return `<section class="bloco" style="margin-top:12px"><h2>Detalhes da venda <button type="button" data-r="${at.id}" style="font-size:12px;color:var(--verde);text-decoration:underline">${VENDA.numCard(at) || 'abrir card'} ›</button></h2>
@@ -1347,6 +1348,7 @@ function telaFormEmissao(P) {
       <div class="sub" id="msgEm" style="margin-top:8px"></div>
     </form>`;
   const f = $('fEm');
+  B2B.ligarCancelar(P, e, { D, sb, aviso, brl2 }, () => telaFormEmissao(P));
   P.querySelectorAll('[data-vprint]').forEach(b => b.onclick = () => VENDA.verArquivo(ctxVenda(), b.dataset.vprint));
   P.querySelectorAll('section [data-r]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.r));
   const reabrir = () => telaEmissoes(P);
