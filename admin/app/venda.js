@@ -233,7 +233,8 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         if (e.dataset.k === 'emitido' && e.checked && ehVoo(x) && !x.print) { e.checked = false; X.aviso('Anexe o print da tarifa antes de marcar como emitido.'); return; }
         set(); desenha();
       };
-      else { e.oninput = () => { set(); resumo(); }; e.onchange = () => { if (['milhas', 'milheiro', 'taxas', 'cia_voo', 'cia_emissora'].includes(e.dataset.k)) desenha(); }; }
+      // milhas, milheiro e taxas: atualiza só o custo calculado, sem redesenhar a tela (não fecha o teclado nem pula a página)
+      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { if (['cia_voo', 'cia_emissora'].includes(e.dataset.k)) desenha(); }; }
     });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { IT[+b.dataset.it][b.dataset.k] = b.dataset.set; desenha(); });
     // custo por trecho
