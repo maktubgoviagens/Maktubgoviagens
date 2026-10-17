@@ -333,6 +333,20 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .mini{background:none;border:1px solid var(--linha);padding:3px 8px;font-size:11px;margin-left:6px;cursor:pointer;color:var(--tinta-2)}
 .ev .ck{grid-column:2;justify-self:start;margin-top:8px;background:var(--branco);border:1px solid var(--linha);padding:7px 12px;font-size:12px;cursor:pointer;color:var(--tinta-2)}
 .ev .ck.feito{background:var(--verde);border-color:var(--verde);color:var(--creme)}
+/* agenda da operação em calendário (mesmo desenho do calendário do marketing) */
+.ag-cm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--linha);border-top:1px solid var(--linha);margin:10px -10px 0;background:var(--branco)}
+.ag-cm .h{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);text-align:center;padding:6px 0;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);background:var(--creme-2)}
+.ag-cm .d{min-height:92px;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);padding:3px 2px 4px;display:flex;flex-direction:column;gap:2px;cursor:pointer;min-width:0}
+.ag-cm .d.fora{background:var(--creme-2);cursor:default}.ag-cm .d.hj .n{background:var(--dourado);color:#fff;border-radius:9px;padding:0 5px}
+.ag-cm .d.sel{outline:2px solid var(--verde);outline-offset:-2px}
+.ag-cm .n{align-self:flex-end;font-size:11px;color:var(--tinta-2);line-height:16px;margin:0 2px 1px}
+.ag-chip{display:block;width:100%;border-radius:3px;padding:2px 4px;font-size:10px;line-height:1.3;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.ag-chip.alerta{box-shadow:inset 4px 0 0 var(--alerta);padding-left:8px}.ag-chip.passado{opacity:.55}
+.ag-chip.voo{background:var(--verde)}.ag-chip.reuniao{background:var(--dourado)}.ag-chip.viagem{background:#5c5c55}.ag-chip.milhas{background:#8a6d3b}.ag-chip.aniv,.ag-chip.doc{background:#86867c}
+.ag-mais{font-size:10px;color:var(--tinta-3);padding-left:3px}
+.ag-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.ag-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+@media (max-width:699px){.ag-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word}.ag-chip .hr{display:none}}
+@media (min-width:700px){.ag-cm{margin:10px 0 0}.ag-cm .d{min-height:128px;padding:4px}.ag-chip{font-size:12px;padding:3px 6px}}
 @media (min-width:640px){
   .numeros{grid-template-columns:repeat(4,1fr)}
   .duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -968,7 +982,7 @@ const semContrato = () => D.clientes.filter(c => !c.gestao_inicio);
 const dataBR = (d) => d ? dia(d).toLocaleDateString('pt-BR') : '';
 const semAtualizacao = () => D.clientes.filter(c => !c.ultima_atualizacao || (Date.now() - new Date(c.ultima_atualizacao)) / 864e5 > 30);
 
-function eventos() {
+function eventos(todos) {
   const E = [];
   D.voos.forEach(v => {
     const d = dia(v.data_voo);
@@ -992,7 +1006,7 @@ function eventos() {
   (D.agenda || []).filter(x => x.status === 'Agendada').forEach(x => { const d = new Date(x.data), d0 = new Date(d); d0.setHours(0, 0, 0, 0); E.push({ d: d0, hora: d.toTimeString().slice(0, 5), ic: 'reuniao', t: x.titulo + (x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + x.cliente : ''), s: [x.tipo, (x.participantes || []).map(nomeTime).filter(Boolean).join(', ')].filter(Boolean).join(' · '), href: '#agenda/' + x.id }); });
   vencimentos(90).forEach(({ p, d }) => E.push({ cid: p.cliente_id, d, hora: '', ic: 'milhas', alerta: difDias(d) <= 30, t: `${num(p.vencimento_quantidade)} ${p.unidade || 'milhas'} ${p.programa} vencem`, s: nomeCli(p.cliente_id), href: adminLink(p.cliente_id, 'programas_milhas') }));
   if (podeAba('crm')) CRM.eventos(D).forEach(x => E.push({ d: x.d, hora: '', ic: x.ic, alerta: x.alerta || (x.aniv && difDias(x.d) === 0), t: x.t, s: x.s, href: '#crm/' + x.pid }));
-  return E.filter(e => e.d && difDias(e.d) >= -1).sort((a, b) => a.d - b.d || String(a.hora).localeCompare(String(b.hora)));
+  return E.filter(e => e.d && (todos || difDias(e.d) >= -1)).sort((a, b) => a.d - b.d || String(a.hora).localeCompare(String(b.hora)));
 }
 function agrupar(lista) { let u = ''; return lista.map(e => { const k = nomeDia(e.d); const h = k !== u ? `<div class="dia">${k}</div>` : ''; u = k; return h + htmlEvento(e); }).join(''); }
 function htmlEvento(e) {
@@ -3847,7 +3861,8 @@ function telaAgenda(P) {
   if (AG_ED === 'cal') return telaCal(P);
   if (AG_ED) return telaFormAgenda(P);
   if (AG_VISTA === 'reunioes') return telaReunioesAgenda(P);
-  const E = eventos();
+  const CAL = AG_MODO === 'cal';
+  const E = CAL ? [] : eventos();
   let ultimo = '';
   P.innerHTML = `${segOp('agenda')}
     <h1 class="titulo">Agenda da <em>operação</em></h1>
@@ -3859,8 +3874,40 @@ function telaAgenda(P) {
       <div class="num"><div class="l">Voos em 30 dias</div><div class="v">${D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length + trechosEm().filter(t => difDias(t.d) >= 0 && difDias(t.d) <= 30).length}</div></div>
       ${pode('gestao') ? `<div class="num ${vencimentos(30).length ? 'alerta' : ''}"><div class="l">Vencimentos em 30 dias</div><div class="v">${vencimentos(30).length}</div></div>` : ''}
     </div>
-    <div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`;
+    <div class="seg" id="agModo" style="margin-top:12px"><button data-m="cal" class="${CAL ? 'on' : ''}">Calendário</button><button data-m="lista" class="${CAL ? '' : 'on'}">Lista</button></div>
+    ${CAL ? agCalendario() : `<div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`}`;
   $('agVista').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.v === 'reunioes') { AG_VISTA = 'reunioes'; telaAgenda(P); } };
+  $('agModo').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.m !== AG_MODO) { AG_MODO = b.dataset.m; telaAgenda(P); } };
+  if (CAL) {
+    $('agCMes').onclick = (e) => { const b = e.target.closest('button'); if (b) { AG_CMES = mesMais(AG_CMES, +b.dataset.n); AG_DIA = null; telaAgenda(P); } };
+    P.querySelectorAll('.ag-cm [data-dia]').forEach(c => c.onclick = () => { AG_DIA = c.dataset.dia; telaAgenda(P); const el = $('agDiaLista'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  }
+}
+
+/* calendário do mês: voos, viagens, reuniões, vencimentos e aniversários; toque no dia abre tudo detalhado */
+let AG_MODO = 'cal', AG_CMES = mesKey(new Date()), AG_DIA = null;
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function agCalendario() {
+  const k = AG_CMES, [y, mm] = k.split('-').map(Number);
+  const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate(), hj = isoLocal(new Date());
+  const doMes = eventos(true).filter(e => isoLocal(e.d).slice(0, 7) === k);
+  if (!AG_DIA && hj.slice(0, 7) === k) AG_DIA = hj;
+  if (AG_DIA && AG_DIA.slice(0, 7) !== k) AG_DIA = null;
+  const chip = (e, iso) => `<span class="ag-chip ${e.ic || ''} ${e.alerta ? 'alerta' : ''} ${iso < hj ? 'passado' : ''}">${e.hora ? `<span class="hr">${esc(e.hora)} </span>` : ''}${esc(e.t)}</span>`;
+  let cel = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(d => `<div class="h">${d}</div>`).join('');
+  for (let i = 0; i < prim; i++) cel += '<div class="d fora"></div>';
+  for (let d = 1; d <= dias; d++) {
+    const iso = `${k}-${String(d).padStart(2, '0')}`, L = doMes.filter(e => isoLocal(e.d) === iso);
+    cel += `<div class="d ${iso === hj ? 'hj' : ''} ${iso === AG_DIA ? 'sel' : ''}" data-dia="${iso}"><span class="n">${d}</span>${L.slice(0, 4).map(e => chip(e, iso)).join('')}${L.length > 4 ? `<span class="ag-mais">+${L.length - 4}</span>` : ''}</div>`;
+  }
+  const resto = (prim + dias) % 7; if (resto) for (let i = resto; i < 7; i++) cel += '<div class="d fora"></div>';
+  const doDia = AG_DIA ? doMes.filter(e => isoLocal(e.d) === AG_DIA) : [];
+  const tipos = [['voo', 'Voos'], ['reuniao', 'Reuniões'], ['viagem', 'Início de viagem'], ['milhas', 'Vencimentos'], ['aniv', 'Aniversários e documentos']].filter(([t]) => t !== 'milhas' || pode('gestao'));
+  return `<div class="mesnav" id="agCMes" style="margin-top:12px"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
+    <div class="ag-cm">${cel}</div>
+    <div class="ag-leg">${tipos.map(([t, n]) => `<span><i class="ag-chip ${t}" style="display:inline-block;width:10px;padding:0"></i>${n}</span>`).join('')}<span>Faixa vermelha: precisa de ação</span></div>
+    <div class="sub">Toque no dia para ver tudo detalhado.</div>
+    <div id="agDiaLista">${AG_DIA ? `<div class="secao">${new Date(AG_DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} · ${doDia.length} ${doDia.length === 1 ? 'item' : 'itens'}</div>${doDia.length ? doDia.map(htmlEvento).join('') : '<div class="vazio">Nada neste dia.</div>'}` : ''}</div>`;
 }
 
 /* ---------- reuniões da empresa ---------- */
