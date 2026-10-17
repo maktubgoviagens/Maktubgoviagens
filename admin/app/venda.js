@@ -429,8 +429,21 @@ export async function enviarParaPlanilha(X, r, IT, F) {
 
 // horário de saída de cada emissão de voo (ida e volta/último trecho): é o que faz o aviso de check-in sair 24 h antes.
 // Sem horário, o aviso sai à meia-noite do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
+// O horário digitado é o local do aeroporto de saída; o fuso dele vai junto para o aviso converter para Brasília.
+let FUSOS = null;
+export async function fusoDe(cod) {
+  const c = String(cod || '').trim().toUpperCase(); if (!/^[A-Z]{3}$/.test(c)) return null;
+  try { if (!FUSOS) FUSOS = await (await fetch('/admin/app/aeroportos-fuso.json?v=1')).json(); } catch (_) { return null; }
+  const i = FUSOS.a[c]; return i == null ? null : FUSOS.f[i];
+}
+// origem do trecho de volta: na ida e volta é o destino; no multitrecho, a origem do último trecho
+const origemVolta = (x) => x.tipo_trecho === 'multi' ? ((x.ct || []).length ? x.ct[x.ct.length - 1].o : (String(x.trechos || '').trim().split('\n').pop().match(/[A-Za-z]{3}/) || [''])[0]) : x.destino;
 export async function salvarHorarios(X, L) {
-  const rows = L.filter(({ x }) => ehVoo(x) && (x.hora_ida || x.hora_volta)).map(({ id, x }) => ({ emissao_id: String(id), hora_ida: x.hora_ida || null, hora_volta: x.tipo_trecho === 'ida' ? null : (x.hora_volta || null) }));
+  const rows = [];
+  for (const { id, x } of L.filter(({ x }) => ehVoo(x) && (x.hora_ida || x.hora_volta))) {
+    const volta = x.tipo_trecho === 'ida' ? null : (x.hora_volta || null);
+    rows.push({ emissao_id: String(id), hora_ida: x.hora_ida || null, hora_volta: volta, tz_ida: x.hora_ida ? await fusoDe(x.origem) : null, tz_volta: volta ? await fusoDe(origemVolta(x)) : null });
+  }
   if (!rows.length) return;
   try { const { error } = await X.sb.from('voo_horarios').upsert(rows); if (!error) rows.forEach(r => { (X.D.horas = X.D.horas || {})[r.emissao_id] = r; }); } catch (_) { /* a venda segue; o aviso usa a meia-noite */ }
 }
