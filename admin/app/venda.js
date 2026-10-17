@@ -108,7 +108,7 @@ function htmlItem(X, x, i, ctx) {
       ${dupla(inp(X, 'cia_emissora', i, 'Emitido na cia', x.cia_emissora, 's', 'placeholder="Azul"'), inp(X, 'cia_voo', i, 'Voa de (se for aliança)', x.cia_voo, 's', 'placeholder="Turkish"'))}
       ${x.cia_voo && x.cia_emissora && x.cia_voo.trim().toLowerCase() !== x.cia_emissora.trim().toLowerCase() ? `<div class="config" style="margin:4px 0 8px">Aliança: emitido na ${X.esc(x.cia_emissora)}, voa de ${X.esc(x.cia_voo)}. O check-in e o bilhete são pela ${X.esc(x.cia_voo)}.</div>` : ''}
       ${usaMilhas(x) ? `${dupla(inp(X, 'conta', i, 'Conta usada', x.conta), inp(X, 'gestor', i, 'Gestor da conta', x.gestor))}
-      <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, x.ct_on ? 'Milhas (soma)' : 'Milhas', x.milhas, 'n', x.ct_on ? 'readonly' : '')}${inp(X, 'milheiro', i, 'Milheiro (R$)', x.milheiro, 'n')}${inp(X, 'taxas', i, x.ct_on ? 'Taxas (soma)' : 'Taxas (R$)', x.taxas, 'n', x.ct_on ? 'readonly' : '')}</div>` : ''}
+      <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, x.ct_on ? 'Milhas (soma)' : 'Milhas', x.milhas, 'n', x.ct_on ? 'readonly' : '')}${inp(X, 'milheiro', i, x.ct_on ? 'Milheiro (média)' : 'Milheiro (R$)', x.milheiro, 'n', x.ct_on && (x.ct || []).some(l => l.milheiro != null && l.milheiro !== '') ? 'readonly' : '')}${inp(X, 'taxas', i, x.ct_on ? 'Taxas (soma)' : 'Taxas (R$)', x.taxas, 'n', x.ct_on ? 'readonly' : '')}</div>` : ''}
       ${htmlTrechos(X, x, i, trava, ctx)}
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
       ${htmlPax(X, x, i, trava)}
@@ -151,7 +151,9 @@ function separarTrecho(IT, i, k) {
 // cada trecho com o seu custo (milhas e taxas, ou valor pagante) e passageiros; o custo do serviço vira a soma.
 // Fica guardado no atendimento, e o app mostra quanto já se pagou no mesmo trecho em vendas anteriores.
 const up3 = (t) => String(t || '').trim().toUpperCase().slice(0, 3);
-export const custoLinha = (x, l) => r2(usaMilhas(x) ? (+l.milhas || 0) * (+x.milheiro || 0) / 1000 + (+l.taxas || 0) : (+l.custo || 0));
+// cada trecho tem o próprio milheiro (conta e programa podem ser diferentes); sem milheiro no trecho, vale o da emissão
+const milheiroDe = (x, l) => (l.milheiro != null && l.milheiro !== '' ? +l.milheiro : +x.milheiro) || 0;
+export const custoLinha = (x, l) => r2(usaMilhas(x) ? (+l.milhas || 0) * milheiroDe(x, l) / 1000 + (+l.taxas || 0) : (+l.custo || 0));
 function linhasPadrao(x, ctx) {
   const o = up3(x.origem), d = up3(x.destino), tipo = x.tipo_trecho || ctx.tipoPadrao, pax = String(x.passageiros || ctx.pax || '');
   if (tipo === 'multi' && x.trechos) return String(x.trechos).split('\n').map(t => t.trim()).filter(Boolean).map(t => {
@@ -160,12 +162,17 @@ function linhasPadrao(x, ctx) {
     return { o: up3(m[1]), d: up3(m[2]), data: m[3] ? `${ano}-${m[4].padStart(2, '0')}-${m[3].padStart(2, '0')}` : '', pax };
   });
   const L = [{ o, d, data: x.data_ida || ctx.ida || '', pax }];
-  if (tipo !== 'ida') L.push({ o: d, d: o, data: x.data_volta || ctx.volta || '', pax });
+  if (tipo !== 'ida' || x.data_volta) L.push({ o: d, d: o, data: x.data_volta || ctx.volta || '', pax });
   return L;
 }
 function somarTrechos(x) {
   if (!x.ct_on || !Array.isArray(x.ct)) return;
-  if (usaMilhas(x)) { x.milhas = x.ct.reduce((a, l) => a + (+l.milhas || 0), 0) || null; x.taxas = r2(x.ct.reduce((a, l) => a + (+l.taxas || 0), 0)) || null; }
+  if (usaMilhas(x)) {
+    const mi = x.ct.reduce((a, l) => a + (+l.milhas || 0), 0), valorMilhas = x.ct.reduce((a, l) => a + (+l.milhas || 0) * milheiroDe(x, l), 0);
+    x.milhas = mi || null; x.taxas = r2(x.ct.reduce((a, l) => a + (+l.taxas || 0), 0)) || null;
+    // milheiro da emissão = média ponderada dos trechos, para o custo da planilha (milhas x milheiro + taxas) bater com a soma
+    if (mi && x.ct.some(l => l.milheiro != null && l.milheiro !== '')) x.milheiro = Math.round(valorMilhas / mi * 10000) / 10000;
+  }
   else x.custo = r2(x.ct.reduce((a, l) => a + (+l.custo || 0), 0)) || null;
 }
 function histTrecho(X, o, d, atual) {
@@ -178,13 +185,15 @@ function histTrecho(X, o, d, atual) {
 function htmlTrechos(X, x, i, trava, ctx) {
   const milhas = usaMilhas(x);
   if (!x.ct_on) return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" ${trava ? 'disabled' : ''}><span>Separar o custo por trecho</span></label>`;
-  if (!Array.isArray(x.ct) || !x.ct.length) x.ct = linhasPadrao(x, ctx);
+  // todos os trechos da viagem entram de uma vez; se ainda não tem custo digitado e a viagem mudou (ex.: virou ida e volta), refaz
+  const pad = linhasPadrao(x, ctx), semCusto = (x.ct || []).every(l => !+l.milhas && !+l.taxas && !+l.custo);
+  if (!Array.isArray(x.ct) || !x.ct.length || (semCusto && pad.length > x.ct.length)) x.ct = pad;
   const dd = (v) => v ? v.split('-').reverse().slice(0, 2).join('/') : '';
   return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" checked ${trava ? 'disabled' : ''}><span>Separar o custo por trecho</span></label>
     ${x.ct.map((l, k) => { const hs = histTrecho(X, up3(l.o), up3(l.d), x), c = custoLinha(x, l), p = +l.pax || 1;
       return `<div style="border-left:3px solid var(--linha);padding-left:8px;margin:6px 0">
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase" ${trava ? 'disabled' : ''}></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}" ${trava ? 'disabled' : ''}></label></div>
-      <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 1fr 0.8fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}" ${trava ? 'disabled' : ''}></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}" ${trava ? 'disabled' : ''}></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}" ${trava ? 'disabled' : ''}></label></div>
+      <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 0.9fr 0.9fr 0.7fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Milheiro (R$)</span><input data-ct="${i}|${k}|milheiro" inputmode="decimal" value="${X.esc(l.milheiro ?? '')}" placeholder="${X.esc(x.milheiro ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}" ${trava ? 'disabled' : ''}></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}" ${trava ? 'disabled' : ''}></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}" ${trava ? 'disabled' : ''}></label></div>
       <div class="sub" style="margin:2px 0 0">${c ? `Este trecho: ${X.brl2(c)}${p > 1 ? ` (${X.brl2(c / p)} por passageiro)` : ''}` : ''}${hs.length ? `<br>Já pago em ${X.esc(l.o)} → ${X.esc(l.d)}: ${hs.map(hh => `${X.brl2(hh.pax)}/pax${hh.milhas ? ` (${hh.milhas.toLocaleString('pt-BR')} milhas)` : ''}${hh.cia ? ' · ' + X.esc(hh.cia) : ''}${hh.data ? ' · ' + dd(hh.data) : ''}`).join(' | ')}` : ''}</div>
       ${trava || x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button><button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}</div>`; }).join('')}
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
@@ -234,7 +243,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cttira.split('|'); IT[+i].ct.splice(+k, 1); desenha(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
       const [i, k, campo] = e.dataset.ct.split('|'), x = IT[+i];
-      e.oninput = () => { const l = x.ct[+k]; l[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : /^(milhas|taxas|custo|pax)$/.test(campo) ? nb(e.value) : e.value; somarTrechos(x);
+      e.oninput = () => { const l = x.ct[+k]; l[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : /^(milhas|milheiro|taxas|custo|pax)$/.test(campo) ? nb(e.value) : e.value; somarTrechos(x);
         const c = el.querySelector(`input[data-it="${i}"][data-k="custo"]`); if (c) c.value = custoDe(x) || ''; resumo(); };
       // data: o navegador avisa a cada pedaço do ano digitado (0002, 0020...); só redesenha com o ano completo
       e.onchange = () => { if (campo === 'data' && e.value && +e.value.slice(0, 4) < 1990) return; desenha(); };
