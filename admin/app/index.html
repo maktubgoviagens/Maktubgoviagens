@@ -550,7 +550,7 @@ function acoesNovo() {
   const L = [];
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
-  if (podeAba('emissoes')) L.push([modoPlanilha() ? 'Registrar venda (planilha)' : 'Registrar venda', modoPlanilha() ? 'Abre a planilha B2C' : 'Nova emissão', () => { if (modoPlanilha()) { if (D.cfg && D.cfg.planilha_url) window.open(D.cfg.planilha_url, '_blank'); } else ir('emissoes', () => { EM_ED = 'nova'; }); }]);
+  if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar venda', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
   if (!pode('comercial') && podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => abrirB2B()]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
@@ -1142,7 +1142,7 @@ const soma = (arr, c) => arr.reduce((s, e) => s + (Number(e[c]) || 0), 0);
 const modoPlanilha = () => !!(D.cfg && D.cfg.origem_emissoes === 'planilha');
 function botaoLancar(id) {
   if (!modoPlanilha()) return `<button class="zap grande" id="${id}" style="margin-top:14px">+ Registrar emissão</button>`;
-  return D.cfg.planilha_url ? `<a class="zap grande" href="${esc(D.cfg.planilha_url)}" target="_blank" rel="noopener" style="margin-top:14px">Abrir a planilha para lançar</a>` : '';
+  return ''; // vendas entram pelo Fechou do atendimento e pela emissão B2B; a planilha recebe sozinha
 }
 function infoSinc() {
   if (!modoPlanilha()) return '';
