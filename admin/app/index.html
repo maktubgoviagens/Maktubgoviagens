@@ -911,6 +911,7 @@ async function carregar(silencioso, manterTela) {
   } else D.pessoas = [];
   if (podeAba('compromissos')) await CMP.carregar(ctxCMP());
   if (podeAba('marketing')) await MKT.carregar(sb);
+  if (ADMIN) { const ag = await sb.from('avaliacoes_google').select('*').limit(3000); D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
   await recarregarGravar();
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
@@ -1047,6 +1048,7 @@ function telaInicio(P) {
     ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
     ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
     ['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))],
+    ...(ADMIN ? [['Avaliações no Google para responder', D.avGoogle ? avgPend().length : undefined, () => { const el = $('avgInicio'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
@@ -1058,6 +1060,7 @@ function telaInicio(P) {
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
+    ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
     ${blocoMetasAdmin(D.metas, true)}
@@ -1074,6 +1077,7 @@ function telaInicio(P) {
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   ligarPosViagem(P, () => telaInicio(P));
+  ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   ligarAvisos(P);
   carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div>${podeAba('leads') ? `<button class="lin" id="irLeadsSite" style="font-size:14px"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}<span class="seta">›</span></span></button>` : `<div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div>`}<div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div><div class="sub">Cliques no WhatsApp são anônimos: a pessoa aparece direto na conversa do WhatsApp da Maktub.</div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; if ($('irLeadsSite')) $('irLeadsSite').onclick = () => ir('leads'); });
@@ -3934,6 +3938,74 @@ function blocoAtendimento(base) {
     <div class="sub">Nota dada pelo cliente depois da reunião; auto = média da autoavaliação do vendedor.</div>
   </section>`;
 }
+/* ---------- avaliações recebidas no Google (n8n grava em avaliacoes_google) ---------- */
+let AVG_FILTRO = 'pend';
+const avgData = (a) => a.recebida_em || a.created_at || '';
+const avgOrdem = (L) => [...L].sort((a, b) => (a.recebida_em ? 0 : 1) - (b.recebida_em ? 0 : 1) || String(avgData(b)).localeCompare(String(avgData(a))) || (a.ordem || 0) - (b.ordem || 0));
+const avgPend = () => avgOrdem((D.avGoogle || []).filter(a => !a.respondida));
+const avgEstrelas = (n) => n ? `<span style="color:var(--dourado);letter-spacing:2px;white-space:nowrap">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>` : '';
+const avgQuando = (a) => a.recebida_em ? dataBR(a.recebida_em) : (a.data_texto || '');
+const LINK_RESPONDER_GOOGLE = 'https://business.google.com/reviews';
+function avgSugestao(a) {
+  const prim = String(a.cliente || '').trim().split(/\s+/)[0] || 'Olá';
+  const n = Number(a.nota) || 0;
+  if (n && n <= 3) return `${prim}, obrigado por compartilhar a sua experiência. Não era isso que a gente queria para a sua viagem, e queremos entender o que aconteceu para corrigir. Pode nos chamar no WhatsApp (21) 97627-5225 para conversarmos? Equipe Maktub Go`;
+  if (n === 4) return `${prim}, obrigado pela avaliação! Ficamos felizes que a experiência tenha sido boa, e queremos que a próxima seja perfeita. Se houver algo que poderíamos ter feito melhor, conta pra gente no WhatsApp. Equipe Maktub Go`;
+  if (a.comentario) return `${prim}, que alegria ler isso! Obrigado por confiar na Maktub Go para cuidar da sua viagem. Cada detalhe é pensado para que você só precise aproveitar, e saber que deu certo é o que move a gente. Esperamos acompanhar você na próxima! Equipe Maktub Go`;
+  return `${prim}, muito obrigado pelas 5 estrelas! Foi um prazer cuidar da sua viagem. Conte com a gente na próxima. Equipe Maktub Go`;
+}
+function avgCard(a, comResposta) {
+  return `<div class="card ${a.respondida ? '' : 'novo'}" style="margin-top:8px">
+    <div class="cab"><div><div class="nome">${esc(a.cliente)}</div>${avgEstrelas(Number(a.nota) || 0)}</div><span class="quando">${esc(avgQuando(a))}</span></div>
+    <div style="margin-top:6px;white-space:pre-wrap;color:var(--tinta-2);font-size:14px">${a.comentario ? esc(a.comentario) : '<span style="color:var(--tinta-3)">Só a nota, sem comentário.</span>'}</div>
+    ${comResposta ? `<div style="margin-top:12px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600">Resposta sugerida (pode editar)</div>
+    <textarea data-avgtxt="${esc(a.codigo)}" rows="5" style="width:100%;margin-top:6px;padding:10px;border:1px solid var(--linha);font:inherit;font-size:14px;background:var(--branco)">${esc(avgSugestao(a))}</textarea>
+    <div class="botoes4" style="margin-top:10px"><button class="zap" type="button" data-avgresp="${esc(a.codigo)}">Copiar e responder no Google</button><button class="sec" type="button" data-avgok="${esc(a.codigo)}">Já respondi</button></div>
+    ${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:13px;color:var(--verde);text-decoration:underline">Abrir o e-mail do Google desta avaliação</a>` : ''}`
+    : `<div style="margin-top:8px"><button class="sec" type="button" data-avgok="${esc(a.codigo)}" style="padding:6px 10px;font-size:11px">${a.respondida ? 'Respondida ✓ (desfazer)' : 'Marcar como respondida'}</button></div>`}
+  </div>`;
+}
+function blocoAvgInicio() {
+  if (D.avGoogle === null) return `<div class="secao" id="avgInicio">Avaliações no Google</div><div class="config">As avaliações do Google não carregaram no app${D.avGoogleErro ? ': ' + esc(D.avGoogleErro) : ''}. Falta configurar a tabela avaliacoes_google no Supabase.</div>`;
+  const L = avgPend();
+  if (!L.length) return '';
+  return `<div class="secao" id="avgInicio">Avaliações no Google para responder <button data-ir="site">Ver todas ›</button></div>
+    <div class="sub" style="margin-top:0">Responda logada na conta maktubgoviagens. O botão copia a resposta e abre o Google: é só colar e publicar.</div>
+    ${L.map(a => avgCard(a, true)).join('')}`;
+}
+function blocoAvgTodas() {
+  if (D.avGoogle === null) return '';
+  const T = avgOrdem(D.avGoogle), pend = T.filter(a => !a.respondida);
+  const notas = T.filter(a => a.nota).map(a => Number(a.nota)), media = notas.length ? notas.reduce((s, n) => s + n, 0) / notas.length : null;
+  const vis = AVG_FILTRO === 'pend' ? pend : T;
+  return `<div class="secao" id="avgTodas">Avaliações recebidas no Google</div>
+    <div class="numeros"><div class="num destaque"><div class="l">Nota média</div><div class="v">${media === null ? '-' : media.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</div><div class="d">${T.length} avaliações</div></div>
+    <div class="num ${pend.length ? 'alerta' : ''}"><div class="l">Para responder</div><div class="v">${pend.length}</div><div class="d">${pend.length ? 'responda no Google' : 'tudo em dia'}</div></div></div>
+    <div class="seg" id="avgFiltro"><button data-f="pend" class="${AVG_FILTRO === 'pend' ? 'on' : ''}">Para responder (${pend.length})</button><button data-f="todas" class="${AVG_FILTRO === 'todas' ? 'on' : ''}">Todas (${T.length})</button></div>
+    ${vis.length ? vis.map(a => avgCard(a, !a.respondida)).join('') : `<div class="vazio">${AVG_FILTRO === 'pend' ? 'Nenhuma avaliação esperando resposta.' : 'Nenhuma avaliação ainda.'}</div>`}`;
+}
+async function avgMarcar(a, v) {
+  const row = { respondida: v, respondida_em: v ? new Date().toISOString() : null, respondida_por: v ? (D.meuId || null) : null };
+  const { error } = await sb.from('avaliacoes_google').update(row).eq('codigo', a.codigo);
+  if (error) { aviso('Não salvou: ' + error.message); return false; }
+  Object.assign(a, row); return true;
+}
+function ligarAvg(P, render) {
+  const f = P.querySelector('#avgFiltro'); if (f) f.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; AVG_FILTRO = b.dataset.f; render(); };
+  const achar = (c) => (D.avGoogle || []).find(x => x.codigo === c);
+  P.querySelectorAll('[data-avgresp]').forEach(b => b.onclick = async () => {
+    const a = achar(b.dataset.avgresp); if (!a) return;
+    const t = P.querySelector(`[data-avgtxt="${CSS.escape(a.codigo)}"]`), texto = t ? t.value : avgSugestao(a);
+    try { await navigator.clipboard.writeText(texto); } catch (_) { if (t) { t.focus(); t.select(); document.execCommand('copy'); } }
+    window.open(LINK_RESPONDER_GOOGLE, '_blank', 'noopener');
+    aviso('Resposta copiada. Cole no Google e publique; depois toque em "Já respondi".');
+  });
+  P.querySelectorAll('[data-avgok]').forEach(b => b.onclick = async () => {
+    const a = achar(b.dataset.avgok); if (!a) return;
+    b.disabled = true;
+    if (await avgMarcar(a, !a.respondida)) { aviso(a.respondida ? 'Marcada como respondida.' : 'Voltou para a lista de responder.'); render(); } else b.disabled = false;
+  });
+}
 /* ---------- pós-viagem: avaliação no Google ---------- */
 function voltaramDeViagem() {
   if (!D.posViagem || !D.pessoas) return [];
@@ -4229,8 +4301,8 @@ function ligarAvalGoogle() {
   };
 }
 async function telaSite(P) {
-  P.innerHTML = `<h1 class="titulo">Números do <em>site</em></h1><div class="seg" id="sdias">${[[7, '7 dias'], [28, '28 dias'], [90, '90 dias']].map(([d, l]) => `<button data-d="${d}" class="${d === SITE_DIAS ? 'on' : ''}">${l}</button>`).join('')}</div><div id="sconteudo"><div class="vazio">Carregando...</div></div>${blocoAvalGoogle()}`;
-  ligarAvalGoogle();
+  P.innerHTML = `<h1 class="titulo">Números do <em>site</em></h1><div class="seg" id="sdias">${[[7, '7 dias'], [28, '28 dias'], [90, '90 dias']].map(([d, l]) => `<button data-d="${d}" class="${d === SITE_DIAS ? 'on' : ''}">${l}</button>`).join('')}</div><div id="sconteudo"><div class="vazio">Carregando...</div></div>${ADMIN ? blocoAvgTodas() : ''}${blocoAvalGoogle()}`;
+  ligarAvalGoogle(); ligarAvg(P, () => telaSite(P));
   $('sdias').onclick = (e) => { const b = e.target.closest('button'); if (b) { SITE_DIAS = +b.dataset.d; telaSite(P); } };
   const [, cl] = await Promise.all([carregarSite(), sb.from('clarity_dias').select('*').order('dia', { ascending: false }).limit(90)]);
   const el = $('sconteudo'); if (!el || ABA !== 'site') return;
