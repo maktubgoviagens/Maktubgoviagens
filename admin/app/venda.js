@@ -101,7 +101,7 @@ function htmlItem(X, x, i, ctx) {
   let det = '';
   if (ehVoo(x)) {
     det += `<div class="sub" style="margin:6px 0 0">Trecho</div>${seg('tipo_trecho', i, [['iv', 'Ida e volta'], ['ida', 'Só ida'], ['multi', 'Multitrecho']], x.tipo_trecho || ctx.tipoPadrao)}
-      ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="GIG"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="LIS"'))}
+      ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'))}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
       ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
       ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}

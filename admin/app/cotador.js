@@ -2,7 +2,8 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-import { lerColado, completarVoo, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=3';
+import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=4';
+export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
 // toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
 // atendimento do funil de onde a cotação saiu: nome, destino e o id para mover o card
@@ -197,7 +198,8 @@ export const valorCotacao = (d) => { const o = opcoesCotacao(d)[0]; return o ? o
 export function itensDaCotacao(d, k = 0) {
   const op = opcoesCotacao(d)[k] || opcoesCotacao(d)[0]; if (!op) return { itens: [], valor: 0 };
   const go = d.modelo === 'go', vs = go ? (op.o.voos || []).filter(v => v.origem || v.destino) : op.voos.filter(v => v.ocod || v.dcod);
-  const ori = (v) => go ? v.origem : v.ocod, des = (v) => go ? v.destino : v.dcod;
+  // no modelo Maktub Go o voo tem a cidade escrita: vira o código do aeroporto para a venda (fuso, planilha, check-in)
+  const ori = (v) => go ? (codigoDe(v.origem) || v.origem) : v.ocod, des = (v) => go ? (codigoDe(v.destino) || v.destino) : v.dcod;
   const itens = [];
   // passageiros diferentes por trecho costumam ser emissões diferentes (ex.: um vai antes): cada grupo vira uma emissão,
   // com o próprio custo, companhia, forma de pagamento e localizador
@@ -323,8 +325,8 @@ function formGo(X) {
       ${resumoVoos}
       ${dobra(b + '.voos', `Editar voos (${vs.length})`, `${o.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(`${b}.voos#${j}`)}
         ${duas(inp(`${b}.voos.${j}.rotulo`, 'Rótulo', 'text', 'placeholder="Ida, Volta, Entre países"'), inp(`${b}.voos.${j}.data`, 'Data', 'date'))}
-        ${duas(inp(`${b}.voos.${j}.origem`, 'Saída de', 'text', 'placeholder="Uberlândia"'), inp(`${b}.voos.${j}.saida`, 'Horário', 'time'))}
-        ${duas(inp(`${b}.voos.${j}.destino`, 'Chegada em', 'text', 'placeholder="Lisboa"'), inp(`${b}.voos.${j}.chegada`, 'Horário', 'time'))}
+        ${duas(inp(`${b}.voos.${j}.origem`, 'Saída de', 'text', 'placeholder="Uberlândia" data-aero="cidade" autocomplete="off"'), inp(`${b}.voos.${j}.saida`, 'Horário', 'time'))}
+        ${duas(inp(`${b}.voos.${j}.destino`, 'Chegada em', 'text', 'placeholder="Lisboa" data-aero="cidade" autocomplete="off"'), inp(`${b}.voos.${j}.chegada`, 'Horário', 'time'))}
         ${duas(sel(`${b}.voos.${j}.tipo`, 'Tipo', ['Voo direto', 'Com 1 conexão', 'Com 2 conexões', 'Com 3 conexões']), sel(`${b}.voos.${j}.periodo`, 'Período', ['', 'Voo diurno', 'Voo noturno']))}
         ${inp(`${b}.voos.${j}.mais1`, 'Chega no dia seguinte (+1)', 'check')}</div>`).join('')}
         ${btnMais(`${b}.voos|voo`, '+ Trecho')}
@@ -436,8 +438,8 @@ function resumoValores(o) {
 function voosCorp(pre) {
   return `${get(pre + 'voos').map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(pre + 'voos#' + j)}
       ${duas(inp(`${pre}voos.${j}.rotulo`, 'Rótulo'), inp(`${pre}voos.${j}.data`, 'Data', 'date'))}
-      ${duas(inp(`${pre}voos.${j}.ocod`, 'Origem (código)', 'text', 'placeholder="GIG" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.onome`, 'Aeroporto', 'text', 'placeholder="Galeão"'))}
-      ${duas(inp(`${pre}voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="SCL" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.dnome`, 'Aeroporto', 'text', 'placeholder="Santiago"'))}
+      ${duas(inp(`${pre}voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.onome`, 'Aeroporto', 'text', 'placeholder="Galeão"'))}
+      ${duas(inp(`${pre}voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.dnome`, 'Aeroporto', 'text', 'placeholder="Santiago"'))}
       ${duas(inp(`${pre}voos.${j}.saida`, 'Saída', 'time'), inp(`${pre}voos.${j}.chegada`, 'Chegada', 'time'))}
       ${duas(sel(`${pre}voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`${pre}voos.${j}.duracao`, 'Duração', 'text', 'placeholder="4h40"'))}</div>`).join('')}
     ${btnMais(pre + 'voos|vooc', '+ Trecho')}`;
@@ -877,8 +879,8 @@ function editorRapida(P, X) {
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
-        ${duas(inp(`voos.${j}.ocod`, 'Origem (código)', 'text', 'placeholder="GIG" maxlength="3" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
-        ${duas(inp(`voos.${j}.dcod`, 'Destino (código)', 'text', 'placeholder="SCL" maxlength="3" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
+        ${duas(inp(`voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
+        ${duas(inp(`voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
         ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`))}</div>`).join('')}
         <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
       <div class="duas-col">${inp('cliente', 'Cliente (não aparece na cotação)', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>

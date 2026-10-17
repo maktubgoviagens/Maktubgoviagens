@@ -44,7 +44,7 @@ export function tela(P, X) {
 
       <div class="grupo">Voo</div>
       <div class="duas-col">${inp('localizador', 'Localizador', 'required style="text-transform:uppercase"')}${inp('cia', 'Companhia', 'required list="dlCiaB2B"')}</div>${dl('dlCiaB2B', cias)}
-      <div class="duas-col">${inp('origem', 'Origem', 'maxlength="40" placeholder="CNF" style="text-transform:uppercase"')}${inp('destino', 'Destino', 'maxlength="40" placeholder="GRU" style="text-transform:uppercase"')}</div>
+      <div class="duas-col">${inp('origem', 'Origem', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" style="text-transform:uppercase"')}${inp('destino', 'Destino', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" style="text-transform:uppercase"')}</div>
       <div class="seg" id="b2bIV"><button type="button" data-v="1" class="on">Ida e volta</button><button type="button" data-v="0">Só ida</button></div>
       <div class="duas-col">${inp('data_ida', 'Data da ida', '', 'date')}<div id="b2bBlVolta">${inp('data_volta', 'Data da volta', '', 'date')}</div></div>
       <div class="duas-col">${inp('sobrenome', 'Sobrenome do passageiro')}${inp('pax', 'Passageiros', 'value="1" inputmode="numeric"')}</div>

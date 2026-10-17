@@ -236,3 +236,83 @@ export async function lerColado(texto) {
   opcoes.forEach(o => o.voos.forEach(completarVoo));
   return { cliente: cli ? cli[1].trim() : '', cia, opcoes };
 }
+
+/* ================= busca de aeroporto por cidade, código ou nome ================= */
+// Digite "rio", "lisboa", "galeão" ou "GIG": aparecem os aeroportos e, ao tocar, entra o código certo.
+// Se sair do campo com uma cidade escrita, o app troca sozinho pelo código do aeroporto principal.
+let NOMES = null, IDX = null;
+const semAc = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+// aeroportos mais usados pela Maktub: em empate, aparecem primeiro e são o padrão quando se escreve só a cidade
+const PRINC = new Set(('GIG SDU GRU CGH VCP CNF PLU BSB SSA REC FOR POA CWB FLN BEL MAO NAT MCZ JPA AJU SLZ THE CGB CGR GYN VIX IGU ' +
+  'PMW BPS IOS NVT JOI UDI RAO LDB MGF STM PVH RBR BVB MCP FEN JDO IMP CAC CXJ XAP CPV PNZ PHB ' +
+  'LIS OPO FAO MAD BCN CDG ORY LHR LGW FCO MXP VCE FRA MUC AMS ZRH GVA BRU VIE PRG BUD ATH IST DXB DOH ' +
+  'MIA MCO FLL JFK EWR LGA BOS IAD ATL ORD DFW IAH LAX SFO LAS SEA YYZ YUL CUN MEX PTY BOG LIM SCL EZE AEP MVD ASU UIO ' +
+  'PUJ AUA CUR HAV SJO NAS SJU BRC MDZ USH FTE COR IGR').split(' '));
+// aeroporto padrão quando a cidade tem mais de um (escrever só a cidade leva para ele)
+const PADRAO = new Set('GIG CNF GRU JFK EZE LHR CDG FCO MXP MAD SCL MCO MIA ORD IAD'.split(' '));
+// apelidos comuns
+const APELIDOS = { floripa: 'FLN', bh: 'CNF', sampa: 'GRU', 'sp': 'GRU', 'rj': 'GIG', 'ny': 'JFK', nyc: 'JFK', 'nova iorque': 'JFK', 'new york': 'JFK',
+  noronha: 'FEN', 'fernando de noronha': 'FEN', 'foz': 'IGU', 'porto de galinhas': 'REC', 'jeri': 'JJD', 'jericoacoara': 'JJD', 'gramado': 'POA', 'bariloche': 'BRC', 'punta cana': 'PUJ' };
+export async function carregarNomes() {
+  await carregarAero();
+  if (!NOMES) { try { NOMES = await (await fetch('/admin/app/aeroportos-nomes.json?v=1')).json(); } catch (e) { NOMES = {}; } }
+  if (!IDX) IDX = Object.entries(AERO || {}).map(([c, a]) => { const cid = CIDADE_PT[a[0]] || a[0], nome = NOME_AER[c] || NOMES[c] || '';
+    return { c, cid, nome, pais: a[1], k1: semAc(cid), k2: semAc(a[0]), k3: semAc(nome) }; });
+  return IDX;
+}
+export function buscarAero(q, n = 6) {
+  const t = semAc(q); if (!IDX || t.length < 2) return [];
+  const up = t.toUpperCase(), L = [], ap = APELIDOS[t];
+  for (const x of IDX) {
+    let s = 0;
+    if (x.c === up) s = 1000;
+    else if (ap === x.c) s = 900;
+    else if (x.k1 === t || x.k2 === t) s = 600;
+    else if (x.k1.startsWith(t) || x.k2.startsWith(t)) s = 400;
+    else if (x.k3 && (x.k3.startsWith(t) || x.k3.includes(' ' + t))) s = 320;
+    else if (t.length >= 4 && (x.k1.includes(t) || x.k3.includes(t))) s = 120;
+    if (!s) continue;
+    if (PRINC.has(x.c)) s += 80;
+    if (PADRAO.has(x.c)) s += 40;
+    if (x.pais === 'BR') s += 15;
+    L.push([s, x]);
+  }
+  return L.sort((a, b) => b[0] - a[0] || a[1].cid.localeCompare(b[1].cid)).slice(0, n).map(([s, x]) => ({ ...x, s }));
+}
+// texto livre (cidade ou código) -> código do aeroporto; vazio quando não dá para ter certeza
+export function codigoDe(txt) {
+  const t = String(txt || '').trim(); if (!t) return '';
+  if (/^[A-Za-z]{3}$/.test(t) && AERO && AERO[t.toUpperCase()]) return t.toUpperCase();
+  const m = t.match(/\(([A-Z]{3})\)|\b([A-Z]{3})\b/); if (m && AERO && AERO[m[1] || m[2]]) return m[1] || m[2];
+  const r = IDX ? buscarAero(t, 1)[0] : null;
+  return r && r.s >= 400 ? r.c : '';
+}
+let CSS_AERO = false;
+export function ligarBuscaAero(raiz) {
+  if (!CSS_AERO) { CSS_AERO = true; const st = document.createElement('style'); st.textContent = `.aero-sug{position:absolute;left:0;right:0;top:100%;z-index:60;background:var(--branco,#fff);border:1px solid var(--linha,#ddd);box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+.aero-sug button{display:flex;gap:8px;align-items:baseline;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-bottom:1px solid var(--linha,#eee);cursor:pointer;font:inherit;font-size:13px;color:var(--tinta,#222)}
+.aero-sug button b{font-weight:700;color:var(--verde,#1B4332);min-width:34px}.aero-sug button small{color:var(--tinta-3,#888);margin-left:auto;white-space:nowrap}.aero-pos{position:relative}`; document.head.appendChild(st); }
+  const fecha = () => document.querySelectorAll('.aero-sug').forEach(x => x.remove());
+  const aplica = (el, x) => {
+    el.value = el.dataset.aero === 'cidade' ? x.cid : x.c;
+    el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  raiz.addEventListener('input', async (e) => {
+    const el = e.target; if (!el.matches || !el.matches('input[data-aero]') || el._aeroAplicando) return;
+    await carregarNomes(); fecha();
+    const L = buscarAero(el.value); if (!L.length || (L[0].s >= 1000 && L.length === 1)) return;
+    const box = document.createElement('div'); box.className = 'aero-sug';
+    box.innerHTML = L.map((x, i) => `<button type="button" data-i="${i}"><b>${x.c}</b><span>${x.cid}${x.nome ? ' · ' + x.nome : ''}</span><small>${x.pais}</small></button>`).join('');
+    const pai = el.closest('label') || el.parentElement; pai.classList.add('aero-pos'); pai.appendChild(box);
+    box.addEventListener('pointerdown', (ev) => { const b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); fecha(); el._aeroAplicando = true; aplica(el, L[+b.dataset.i]); el._aeroAplicando = false; });
+  });
+  // ao sair do campo de código com uma cidade escrita, troca pelo código do aeroporto principal
+  raiz.addEventListener('focusout', async (e) => {
+    const el = e.target; if (!el.matches || !el.matches('input[data-aero]')) return;
+    setTimeout(fecha, 150);
+    if (el.dataset.aero !== 'cod') return;
+    const v = el.value.trim(); if (!v || (/^[A-Za-z]{3}$/.test(v) && AERO && AERO[v.toUpperCase()])) return;
+    await carregarNomes(); const c = codigoDe(v);
+    if (c && c !== v) { el._aeroAplicando = true; el.value = c; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); el._aeroAplicando = false; }
+  });
+}
