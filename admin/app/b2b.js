@@ -21,7 +21,7 @@ const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xx
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const unicos = (arr) => [...new Set(arr.map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-// X: { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, voltar }
+// X: { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, voltar, rotuloVoltar }
 export function tela(P, X) {
   const { D, esc } = X;
   const EM = D.emissoes || [];
@@ -34,7 +34,7 @@ export function tela(P, X) {
   const dl = (id, L) => `<datalist id="${id}">${L.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
   const inp = (n, rot, extra = '', tipo = 'text') => `<label class="fl"><span>${rot}</span><input name="${n}" type="${tipo}" ${tipo === 'text' && /milhas|milheiro|taxas|valor|pax/.test(n) ? 'inputmode="decimal"' : ''} ${extra}></label>`;
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Emissões</button>
+    <button class="voltar" id="voltar">‹ ${esc(X.rotuloVoltar || 'Emissões')}</button>
     <h1 class="titulo" style="margin-top:6px">Emissão <em>B2B</em></h1>
     <div class="sub" style="margin-top:6px">Sem card e sem cotação. Vai direto para a planilha, com imposto, lucro e comissão calculados.</div>
     <form id="fB2B" class="form" autocomplete="off">

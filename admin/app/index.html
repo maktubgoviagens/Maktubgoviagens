@@ -470,7 +470,7 @@ import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=11';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=6';
+import * as B2B from '/admin/app/b2b.js?v=7';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -549,13 +549,31 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-fecha]')
 function acoesNovo() {
   const L = [];
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
-  if (pode('comercial')) L.push(['Novo atendimento', 'Lead ou cliente no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]);
+  if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
   if (podeAba('emissoes')) L.push([modoPlanilha() ? 'Registrar venda (planilha)' : 'Registrar venda', modoPlanilha() ? 'Abre a planilha B2C' : 'Nova emissão', () => { if (modoPlanilha()) { if (D.cfg && D.cfg.planilha_url) window.open(D.cfg.planilha_url, '_blank'); } else ir('emissoes', () => { EM_ED = 'nova'; }); }]);
-  if (podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => ir('emissoes', () => { EM_ED = 'b2b'; })]);
+  if (!pode('comercial') && podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => abrirB2B()]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
 }
+// Novo atendimento: um botão só, com a escolha logo no início (cotação B2C no funil ou emissão B2B direta).
+// A emissão B2B mora no Comercial, onde o time trabalha; não depende do acesso à Operação.
+function abrirB2B() {
+  if (pode('comercial')) { ir('reunioes', () => { RE_ED = 'b2b'; }); history.replaceState(null, '', '#reunioes/b2b'); }
+  else ir('emissoes', () => { EM_ED = 'b2b'; });
+}
+function escolherAtendimento() {
+  const L = [
+    ['Cotação para cliente', 'Viagem ou passagem: entra no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })],
+    ['Emissão B2B', 'Agência ou revendedor: só emite, sem cotação', () => abrirB2B()]
+  ];
+  document.querySelector('#folhaMais .folha-tit').textContent = 'Novo atendimento';
+  $('folhaItens').innerHTML = L.map(([t, d], i) => `<button class="folha-item" data-acao="${i}"><span>${t}<small>${d}</small></span><span class="seta">›</span></button>`).join('');
+  $('folhaItens').querySelectorAll('[data-acao]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.acao][2](); scrollTo(0, 0); });
+  $('folhaBusca').hidden = true; $('folhaMais').hidden = false;
+}
+window.escolherAtendimento = escolherAtendimento;
 $('fab').onclick = () => {
+  document.querySelector('#folhaMais .folha-tit').textContent = 'Novo';
   const L = acoesNovo();
   $('folhaItens').innerHTML = L.map(([t, d], i) => `<button class="folha-item" data-acao="${i}"><span>${t}<small>${d}</small></span><span class="seta">›</span></button>`).join('');
   $('folhaItens').querySelectorAll('[data-acao]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.acao][2](); scrollTo(0, 0); });
@@ -1102,7 +1120,7 @@ function telaInicioColab(P) {
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
-  if ($('novaReuniao')) $('novaReuniao').onclick = () => ir('reunioes', () => { RE_ED = 'nova'; });
+  if ($('novaReuniao')) $('novaReuniao').onclick = () => escolherAtendimento();
   ligarCardsReuniao(P);
   ligarPosViagem(P, () => telaInicioColab(P));
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
@@ -1182,7 +1200,7 @@ function telaEmissoes(P) {
   P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${LST ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
-    <button class="sec grande" id="novaB2B" style="margin-top:8px;width:100%">+ Emissão B2B</button>
+    ${pode('comercial') ? '' : '<button class="sec grande" id="novaB2B" style="margin-top:8px;width:100%">+ Emissão B2B</button>'}
     ${infoSinc()}
     ${seletorMes('emMes')}
     ${LST ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
@@ -1838,6 +1856,7 @@ async function moverEtapa(id, etapa) {
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
 let RE_PARTE = 'funil';
 function telaReunioes(P) {
+  if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => ir('reunioes') });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
     if (x ? ehGestao(x) : RE_ED === 'nova' && RE_PRE && RE_PRE.produto === 'Gestão de Milhas') { ABA = 'gestao'; GE_FUNIL = true; history.replaceState(null, '', reHash(RE_ED)); marcarNav(); }
@@ -1885,7 +1904,7 @@ function telaReunioes(P) {
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => ir('gestao');
-  $('novaR').onclick = () => { RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
+  $('novaR').onclick = () => { if (!G) return escolherAtendimento(); RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
   if ($('reModo')) $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
   if ($('reMes')) ligarMes('reMes', () => telaReunioes(P));
   if ($('reFiltro')) $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
