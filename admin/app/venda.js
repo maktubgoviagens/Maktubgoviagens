@@ -88,7 +88,7 @@ export function pendenciasFechamento(r) {
 export const concluida = (r) => r.resultado === 'Fechou' && (r.itens || []).length > 0 && (r.itens || []).every(enviado) && !!(r.fech || {}).comprovante;
 
 const seg = (k, i, ops, v) => `<div class="seg" style="margin:6px 0 8px">${ops.map(([val, l]) => `<button type="button" data-it="${i}" data-k="${k}" data-set="${val}" class="${String(v ?? '') === String(val) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
-const inp = (X, k, i, rot, v, t = 's', extra = '') => `<label class="fl"><span>${rot}</span><input data-it="${i}" data-k="${k}" data-t="${t}" value="${X.esc(v ?? '')}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'd' ? 'type="date"' : ''} ${extra}></label>`;
+const inp = (X, k, i, rot, v, t = 's', extra = '') => `<label class="fl"><span>${rot}</span><input data-it="${i}" data-k="${k}" data-t="${t}" value="${X.esc(v ?? '')}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'd' ? 'type="date"' : ''} ${t === 'h' ? 'type="time"' : ''} ${extra}></label>`;
 const dupla = (a, b) => `<div class="duas-col">${a}${b}</div>`;
 const chk = (X, k, i, rot, v, dis) => `<label class="fc" style="margin:8px 0"><input type="checkbox" data-it="${i}" data-k="${k}" data-t="b" ${v ? 'checked' : ''} ${dis ? 'disabled' : ''}><span>${rot}</span></label>`;
 
@@ -104,6 +104,8 @@ function htmlItem(X, x, i, ctx) {
       ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="GIG"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="LIS"'))}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
       ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
+      ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
+      <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo.</div>
       <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']], x.pago_em || 'milhas')}
       ${dupla(inp(X, 'cia_emissora', i, 'Emitido na cia', x.cia_emissora, 's', 'placeholder="Azul"'), inp(X, 'cia_voo', i, 'Voa de (se for aliança)', x.cia_voo, 's', 'placeholder="Turkish"'))}
       ${x.cia_voo && x.cia_emissora && x.cia_voo.trim().toLowerCase() !== x.cia_emissora.trim().toLowerCase() ? `<div class="config" style="margin:4px 0 8px">Aliança: emitido na ${X.esc(x.cia_emissora)}, voa de ${X.esc(x.cia_voo)}. O check-in e o bilhete são pela ${X.esc(x.cia_voo)}.</div>` : ''}
@@ -409,7 +411,7 @@ export async function enviarParaPlanilha(X, r, IT, F) {
       'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
       'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
       'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
-'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : ''].filter(Boolean).join(' · '),
+'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : ''].filter(Boolean).join(' · '),
       'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : '',
       'Quantas vezes': F.forma === 'cartao' && F.parcelas ? +F.parcelas : '',
       'Serviço': servicoPlanilha(x), 'Vendedor': vendedor, 'ID sistema': id
@@ -419,9 +421,18 @@ export async function enviarParaPlanilha(X, r, IT, F) {
   await salvarPassageiros(X, novos);
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
+  await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
   const agora = new Date().toISOString();
   linhas.forEach(l => { IT[l.item].planilha_id = l.id; IT[l.item].enviado_em = agora; });
   return { ok: true, n: linhas.length };
+}
+
+// horário de saída de cada emissão de voo (ida e volta/último trecho): é o que faz o aviso de check-in sair 24 h antes.
+// Sem horário, o aviso sai à meia-noite do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
+export async function salvarHorarios(X, L) {
+  const rows = L.filter(({ x }) => ehVoo(x) && (x.hora_ida || x.hora_volta)).map(({ id, x }) => ({ emissao_id: String(id), hora_ida: x.hora_ida || null, hora_volta: x.tipo_trecho === 'ida' ? null : (x.hora_volta || null) }));
+  if (!rows.length) return;
+  try { const { error } = await X.sb.from('voo_horarios').upsert(rows); if (!error) rows.forEach(r => { (X.D.horas = X.D.horas || {})[r.emissao_id] = r; }); } catch (_) { /* a venda segue; o aviso usa a meia-noite */ }
 }
 
 // cada passageiro vira (ou atualiza) uma ficha no CRM com papel de passageiro, CPF e nascimento

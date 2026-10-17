@@ -478,8 +478,8 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=41';
-import * as VENDA from '/admin/app/venda.js?v=12';
+import * as COT from '/admin/app/cotador.js?v=42';
+import * as VENDA from '/admin/app/venda.js?v=13';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=11';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -998,7 +998,7 @@ function eventos(todos) {
     if (a.status === 'confirmada' && a.data_confirmada) { const d = new Date(a.data_confirmada); const d0 = new Date(d); d0.setHours(0, 0, 0, 0); if (difDias(d0) >= -1) E.push({ cid: a.cliente_id, d: d0, hora: d.toTimeString().slice(0, 5), ic: 'reuniao', t: `Reunião com ${nomeCli(a.cliente_id)}`, s: a.link_reuniao ? 'Link da reunião pronto' : 'Sem link cadastrado', href: a.link_reuniao || adminLink(a.cliente_id, 'agendamentos_reuniao'), ext: !!a.link_reuniao }); }
     if (a.status === 'solicitada') E.push({ cid: a.cliente_id, d: dia(a.data_preferida) || HOJE(), hora: '', ic: 'reuniao', alerta: true, t: `Reunião a confirmar: ${nomeCli(a.cliente_id)}`, s: `Preferência ${a.periodo ? 'pela ' + a.periodo.toLowerCase() : 'sem período'}${a.formato ? ' · ' + a.formato : ''}`, href: adminLink(a.cliente_id, 'agendamentos_reuniao') });
   });
-  trechosEm().forEach(t => E.push({ d: t.d, hora: '', ic: 'voo', alerta: t.pendente,
+  trechosEm().forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: t.pendente,
     t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.tr === 'volta' ? ' · volta' : ''}`,
     s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
     href: (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
@@ -1349,6 +1349,9 @@ function telaFormEmissao(P) {
         ${l('Onde comprou', esc(x.fornecedor || ''))}
         ${VENDA.HOTEL === x.produto ? l('Carta de boas-vindas', x.carta ? 'Enviada' : '<b style="color:var(--alerta)">Pendente</b>') : ''}
         ${x.print ? `<button type="button" class="sec" data-vprint="${esc(x.print)}" style="width:100%;margin-top:8px">Ver print da tarifa</button>` : ''}</section>`; })()}
+    ${!nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Com o horário, o aviso de check-in chega 24 h antes do voo. Sem ele, chega à meia-noite do dia anterior.</div>
+      <div class="duas-col">${e.data_ida ? `<label class="fl"><span>Saída da ida (${dataCurta(dia(e.data_ida))})</span><input type="time" id="hrIda" value="${esc(String(h.hora_ida || '').slice(0, 5))}"></label>` : '<div></div>'}${e.data_volta ? `<label class="fl"><span>Saída da volta (${dataCurta(dia(e.data_volta))})</span><input type="time" id="hrVolta" value="${esc(String(h.hora_volta || '').slice(0, 5))}"></label>` : '<div></div>'}</div>
+      <button type="button" class="sec grande" id="hrSalvar" style="width:100%;margin-top:6px">Salvar horário</button></section>`)((D.horas || {})[String(e.id)] || {}) : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
     <form id="fEm" class="form" autocomplete="off">
       <div class="grupo">Serviço</div>
@@ -1401,6 +1404,12 @@ function telaFormEmissao(P) {
     </form>`;
   const f = $('fEm');
   B2B.ligarCancelar(P, e, { D, sb, aviso, brl2, nomeTime, fechado: travado }, () => telaFormEmissao(P));
+  if ($('hrSalvar')) $('hrSalvar').onclick = async () => {
+    const row = { emissao_id: String(e.id), hora_ida: ($('hrIda') || {}).value || null, hora_volta: ($('hrVolta') || {}).value || null };
+    const { error } = await sb.from('voo_horarios').upsert(row);
+    if (error) { aviso('Não salvou: ' + error.message + (/voo_horarios/.test(error.message) ? ' (rode o SQL do horário do voo no Supabase)' : '')); return; }
+    (D.horas = D.horas || {})[row.emissao_id] = row; aviso('Horário salvo. O aviso de check-in passa a sair 24 h antes do voo.');
+  };
   P.querySelectorAll('[data-vprint]').forEach(b => b.onclick = () => VENDA.verArquivo(ctxVenda(), b.dataset.vprint));
   P.querySelectorAll('section [data-r]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.r));
   const reabrir = () => telaEmissoes(P);
@@ -2782,6 +2791,7 @@ async function carregarAgendaEm() {
   const iso = (d) => d.toISOString().slice(0, 10);
   const r = await sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) });
   D.voosEm = r.data || [];
+  { const h = await sb.from('voo_horarios').select('emissao_id,hora_ida,hora_volta'); D.horas = h.error ? null : Object.fromEntries((h.data || []).map(x => [String(x.emissao_id), x])); }
   if (D.emissoes && D.emissoes.length) marcarCheckinB2B();
 }
 // check-in do B2B é feito pela agência: o app marca sozinho para não cobrar ninguém (nem no Telegram)
@@ -2810,7 +2820,8 @@ function trechosEm() {
       if (!data) return;
       const d = dia(data), k = difDias(d);
       if (k < -1) return;
-      T.push({ id: v.id, tr, d, feito, pendente: !feito && k >= 0 && k <= 2, de, para, v });
+      const hr = ((D.horas || {})[String(v.id)] || {})['hora_' + tr];
+      T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: !feito && k >= 0 && k <= 2, de, para, v });
     });
   });
   return T;

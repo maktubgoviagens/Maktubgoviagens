@@ -207,11 +207,11 @@ export function itensDaCotacao(d, k = 0) {
     const iv = gv.length === 2 && des(gv[1]) && des(gv[1]) === ori(gv[0]);
     const tipo = gv.length === 1 ? 'ida' : iv ? 'iv' : 'multi';
     const x = { produto: !go && (d.marca || (d.modelo === 'corp' ? 'Maktub Corporativo' : '')) === 'Maktub Corporativo' ? 'Maktub Corporativo' : 'Passagens',
-      custo: null, venda: null, tipo_trecho: tipo, origem: ori(gv[0]) || '', destino: des(gv[0]) || '', data_ida: gv[0].data || null, passageiros: pax, cia_emissora: grupos.length > 1 ? '' : (d.cia || '') };
-    if (tipo === 'iv') x.data_volta = gv[1].data || null;
-    if (tipo === 'multi') { x.data_volta = gv[gv.length - 1].data || null; x.trechos = gv.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n'); }
-    // trechos da emissão já entram como linhas do custo por trecho
-    x.ct = gv.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', pax: String(pax) }));
+      custo: null, venda: null, tipo_trecho: tipo, origem: ori(gv[0]) || '', destino: des(gv[0]) || '', data_ida: gv[0].data || null, hora_ida: gv[0].saida || '', passageiros: pax, cia_emissora: grupos.length > 1 ? '' : (d.cia || '') };
+    if (tipo === 'iv') { x.data_volta = gv[1].data || null; x.hora_volta = gv[1].saida || ''; }
+    if (tipo === 'multi') { x.data_volta = gv[gv.length - 1].data || null; x.hora_volta = gv[gv.length - 1].saida || ''; x.trechos = gv.map(v => `${ori(v)}-${des(v)}${v.data ? ' ' + ddmm(v.data) : ''}${v.saida ? ' ' + v.saida : ''}`).join('\n'); }
+    // trechos da emissão já entram como linhas do custo por trecho (com o horário de saída, para o aviso de check-in)
+    x.ct = gv.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', hora: v.saida || '', pax: String(pax) }));
     if (tipo === 'multi') x.ct_on = true;
     itens.push(x);
   });
