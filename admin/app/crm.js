@@ -68,6 +68,8 @@ export function novo() { VISTA = 'nova'; PID = null; MSG = ''; }
 export function emLista() { return VISTA === 'lista'; }
 export function buscar(t) { BUSCA = t || ''; FILTRO = 'todos'; }
 export function abrir(id) { PID = id; VISTA = id ? 'ficha' : 'lista'; }
+// pedaço do endereço da tela aberta (para o voltar do celular voltar para a ficha certa)
+export function hash() { return VISTA === 'nova' ? '/nova' : VISTA === 'dups' ? '/duplicadas' : PID && (VISTA === 'ficha' || VISTA === 'editar') ? '/' + PID + (VISTA === 'editar' ? '/editar' : '') : ''; }
 export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } else if (h[1] === 'duplicadas') { VISTA = 'dups'; PID = null; } else if (h[1]) { VISTA = h[2] === 'editar' ? 'editar' : 'ficha'; PID = h[1]; } else { VISTA = 'lista'; PID = null; } }
 
 export function telaCRM(P, X) {
@@ -392,7 +394,7 @@ function telaForm(P, X) {
     $('salvarP').disabled = true; $('msgP').textContent = 'Salvando...';
     const q = nova ? X.sb.from('pessoas').insert(row).select().single() : X.sb.from('pessoas').update(row).eq('id', p.id).select().single();
     const { data, error } = await q;
-    if (error) { $('salvarP').disabled = false; $('msgP').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('salvarP').disabled = false; $('msgP').textContent = X.limparTec ? X.limparTec('Não salvou: ' + error.message) : 'Não salvou: ' + error.message; return; }
     if (X.ADMIN) {
       const eraParc = (p.papeis || []).includes('parceiro'), ehParc = papeis.has('parceiro');
       if (ehParc) {

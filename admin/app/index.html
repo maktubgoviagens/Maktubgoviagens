@@ -473,19 +473,19 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=11';
+import * as MKT from '/admin/app/marketing.js?v=12';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=14';
+import * as CRM from '/admin/app/crm.js?v=15';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=45';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
 import * as VENDA from '/admin/app/venda.js?v=19';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=12';
+import * as CMP from '/admin/app/compromissos.js?v=13';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=9';
+import * as B2B from '/admin/app/b2b.js?v=10';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -494,7 +494,11 @@ CART.usar(sb);
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s === null || s === undefined ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 const jwtAmr = (t) => { try { return (JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).amr || []).map(a => a.method); } catch (_) { return []; } };
-const aviso = (m) => { $('aviso').textContent = m; $('aviso').hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => $('aviso').hidden = true, 2600); };
+// para a equipe, nada de mensagem técnica (SQL, Supabase, erro em inglês): vira uma frase simples; administradores veem o detalhe
+const limparTec = (m) => { m = String(m == null ? '' : m); try { if (ADMIN) return m; } catch (_) {} if (!/(rode o|\.sql\b|supabase|não está publicada|violates|permission denied|row-level|relation "|column "|failed to fetch|networkerror|jwt|duplicate key|null value|syntax error|schema cache|could not find|function .* does not exist)/i.test(m)) return m;
+  const pre = (m.match(/^[^:]{1,40}:/) || [''])[0], motivo = /failed to fetch|networkerror/i.test(m) ? 'sem conexão. Confira a internet e tente de novo.' : /jwt/i.test(m) ? 'sua sessão expirou. Saia e entre de novo.' : /permission denied|row-level/i.test(m) ? 'seu acesso não permite essa ação.' : 'não deu certo. Tente de novo e, se continuar, avise o administrador.';
+  return (pre ? pre + ' ' : '') + motivo; };
+const aviso = (m) => { m = limparTec(m); $('aviso').textContent = m; $('aviso').hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => $('aviso').hidden = true, 2600); };
 const num = (n) => Number(n || 0).toLocaleString('pt-BR');
 const brl = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 const brlC = (n) => { n = Number(n || 0); if (Math.abs(n) >= 1e6) return 'R$ ' + (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi'; if (Math.abs(n) >= 1e4) return 'R$ ' + (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil'; return brl(n); };
@@ -604,13 +608,19 @@ const semAc = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g
 function buscaGeral(q) {
   const k = semAc(q).trim(), dig = String(q).replace(/\D/g, ''); if (k.length < 2) return [];
   const G = [];
-  if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
+  // CPF: só para quem trabalha com emissão; procura nos documentos das fichas
+  const cpfPids = dig.length >= 6 && (ADMIN || pode('emissoes') || pode('checkin')) ? new Set((D.docs || []).filter(d => String(d.cpf || '').replace(/\D/g, '').includes(dig)).map(d => d.pessoa_id)) : new Set();
+  if (podeAba('crm')) G.push(['Clientes', (D.pessoas || []).filter(p => semAc(p.nome).includes(k) || (dig.length >= 4 && String(p.celular || '').replace(/\D/g, '').includes(dig)) || semAc(p.email).includes(k) || cpfPids.has(p.id)).slice(0, 6).map(p => [p.nome, [p.celular, p.email].filter(Boolean).join(' · '), () => ir('crm', () => CRM.abrir(p.id))])]);
   if (podeAba('emissoes')) G.push(['Vendas', (D.emissoes || []).filter(e => VER_LISTA() || (e.vendedor_app || e.vendedor_id) === D.meuId).filter(e => semAc([e.localizador, e.comprador, e.sobrenome, e.destino, e.origem, e.produto].join(' ')).includes(k)).slice(0, 6).map(e => [`${e.comprador || e.produto || e.servico}${e.localizador ? ' · ' + e.localizador : ''}`, [e.origem && e.destino ? e.origem + ' → ' + e.destino : e.servico, e.data_ida ? 'ida ' + dataCurta(dia(e.data_ida)) : ''].filter(Boolean).join(' · '), () => ir('emissoes', () => { EM_ED = e.id; })])]);
-  if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
+  // número do card: "014", "#14" ou "14" acham o card #014
+  const nCard = /^#?\d{1,5}$/.test(String(q).trim()) ? +String(q).replace(/\D/g, '') : null;
+  if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => (nCard && +r.numero === nCard) || semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
+  if (pode('gestao')) G.push(['Gestão de Milhas', (D.clientes || []).filter(c => semAc([c.nome_completo, c.email].join(' ')).includes(k) || (dig.length >= 4 && String(c.telefone || c.celular || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(c => [c.nome_completo, 'Carteira da Gestão', () => ir('clientes', () => { CLI = c.id; })])]);
+  if (podeAba('leads')) G.push(['Leads do site', (D.leads || []).filter(l => semAc([l.nome, l.email, l.destino].join(' ')).includes(k) || (dig.length >= 4 && String(l.whatsapp || l.telefone || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(l => [l.nome || 'Lead', [l.destino, l.status].filter(Boolean).join(' · '), () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'todos'; })])]);
   if (podeAba('fornecedores')) G.push(['Hotéis e serviços', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
 }
-$('buscaTopo').onclick = () => { $('folhaBusca').hidden = false; $('buscaRes').innerHTML = '<div class="sub">Digite pelo menos 2 letras. Busca em clientes, fornecedores, vendas, atendimentos, hotéis e serviços.</div>'; $('buscaG').value = ''; setTimeout(() => $('buscaG').focus(), 50); };
+$('buscaTopo').onclick = () => { $('folhaBusca').hidden = false; $('buscaRes').innerHTML = '<div class="sub">Digite pelo menos 2 letras. Busca em clientes (nome, celular, e-mail ou CPF), vendas, atendimentos (inclusive pelo número do card), Gestão de Milhas, leads, hotéis e serviços.</div>'; $('buscaG').value = ''; setTimeout(() => $('buscaG').focus(), 50); };
 $('buscaG').oninput = () => {
   const G = buscaGeral($('buscaG').value), acoes = [];
   $('buscaRes').innerHTML = G.length ? G.map(([t, L]) => `<div class="res-grupo">${t}</div>${L.map(([n, d, fn]) => { acoes.push(fn); return `<button class="folha-item" data-res="${acoes.length - 1}"><span>${esc(n)}<small>${esc(d || '')}</small></span><span class="seta">›</span></button>`; }).join('')}`).join('')
@@ -656,7 +666,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
 });
-window.addEventListener('popstate', () => { lerHash(); marcarNav(); tela(); });
+window.addEventListener('popstate', () => { ANTERIOR = null; lerHash(); marcarNav(); tela(); });
 $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
@@ -821,14 +831,20 @@ function montarNav() {
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
 
+// voltar de uma tela interna: se veio da tela de destino, volta no histórico (sem empilhar telas); senão, vai para ela
+let ANTERIOR = null;
+function voltarA(dest) { if (ANTERIOR === dest) { ANTERIOR = null; history.back(); } else ir(dest); }
 function ir(aba, extra) {
+  const antes = ABA;
   if (soMarketing() && !MKT_ABAS().includes(aba)) aba = 'marketing';
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
   ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
   if (extra) extra();
-  history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
+  // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
+  const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : '';
+  ANTERIOR = antes; history.pushState(null, '', '#' + aba + sub);
   marcarNav(); tela(); scrollTo(0, 0);
 }
 window.irCotador = () => { COT.preparar(null); ir('cotador'); };
@@ -990,7 +1006,7 @@ function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: ()
 function ctxCMP() { return { D, sb, $, esc, aviso, brl2, ir, aba: () => ABA, aPagar, nomeTime }; }
 
 function ctxCRM() {
-  return { D, $, esc, sb, aviso, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
+  return { D, $, esc, sb, aviso, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true),
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
@@ -1112,7 +1128,7 @@ function telaInicio(P) {
     ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')],
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
-    ['Aniversários de clientes hoje', aniversariosHoje().length, () => ir('crm', () => CRM.filtrar('aniv'))],
+    ['Aniversários de clientes hoje', aniversariosHoje().length, () => { const el = $('anivHoje'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }],
     ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
     ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
     ['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))],
@@ -1128,6 +1144,7 @@ function telaInicio(P) {
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
+    ${blocoAnivHoje()}
     ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
@@ -1144,6 +1161,7 @@ function telaInicio(P) {
     <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
+  ligarAnivHoje(P);
   ligarPosViagem(P, () => telaInicio(P));
   ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -1170,6 +1188,7 @@ function telaInicioColab(P) {
       return `${pv ? `<div class="pend" style="margin-top:12px"><button data-ir="reunioes"><span>Vendas fechadas aguardando emissão</span><span><b class="tem">${pv}</b><span class="seta">›</span></span></button></div>` : ''}
       ${ck.length ? `<div class="secao">Check-ins para fazer</div>${agrupar(ck)}` : ''}`; })()}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
+    ${blocoAnivHoje()}
     ${blocoPosViagem()}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
@@ -1177,6 +1196,7 @@ function telaInicioColab(P) {
   if ($('novaReuniao')) $('novaReuniao').onclick = () => escolherAtendimento();
   ligarCardsReuniao(P);
   ligarPosViagem(P, () => telaInicioColab(P));
+  ligarAnivHoje(P);
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   // provisionado do próximo pagamento: salário fixo + metades de comissão do fechamento deste mês
@@ -1244,7 +1264,7 @@ function calcular(v) {
 const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
 let EM_PEND = 'todas';
 function telaEmissoes(P) {
-  if (EM_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, voltar: () => { EM_ED = null; history.back(); } });
+  if (EM_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, voltar: () => { EM_ED = null; history.back(); } });
   if (EM_ED) return telaFormEmissao(P);
   const VER = VER_TODAS(), LST = VER_LISTA(), minha = (e) => e.vendedor_id === D.meuId;
   let L = doMes(EM_MES);
@@ -1554,7 +1574,7 @@ function telaFormEmissao(P) {
     const q = nova ? sb.from('emissoes').insert(row).select().single() : sb.from('emissoes').update(row).eq('id', e.id).select().single();
     const { data, error } = await q;
     $('salvar').disabled = false;
-    if (error) { $('msgEm').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgEm').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.emissoes.findIndex(x => x.id === data.id); if (i >= 0) D.emissoes[i] = data; else D.emissoes.unshift(data);
     aviso(nova ? `Emissão registrada. Comissão: ${brl2(data.comissao)}.` : 'Emissão atualizada.');
     if (data.pessoa_id) virarCliente(data.pessoa_id);
@@ -1630,7 +1650,7 @@ function ligarAjuste(e, travado) {
     $('salvarAj').disabled = true; $('msgAj').textContent = 'Salvando...';
     const { data, error } = await sb.from('emissoes').update(row).eq('id', e.id).select().single();
     $('salvarAj').disabled = false;
-    if (error) { $('msgAj').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgAj').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.emissoes.findIndex(x => x.id === data.id); if (i >= 0) D.emissoes[i] = data;
     aviso(`Salvo. Comissão: ${brl2(data.comissao)} · parceiro: ${brl2(data.repasse)} · líquido: ${brl2(data.lucro_liquido)}.`);
     telaFormEmissao($('pagina'));
@@ -1693,7 +1713,7 @@ async function telaAvisos(P) {
   const pendente = !s;
   const tg = s && s.telegram_bot ? `https://t.me/${s.telegram_bot}?start=${s.telegram_codigo}` : '';
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Empresa</button>
+    <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">Avisos da <em>Maktub</em></h1>
     <div class="sub">Vendas, pagamentos, leads, reuniões, check-ins, milhas vencendo e o resumo do dia, na hora em que acontecem.</div>
     ${pendente ? '<div class="config" style="margin-top:12px">Os avisos ainda não foram ativados no Supabase. Siga o guia de ativação.</div>' : `
@@ -1705,7 +1725,7 @@ async function telaAvisos(P) {
     </section>`}
     <div class="secao">Histórico ${D.avisos.length ? `<span>${D.avisos.length} mais recentes</span>` : ''}</div>
     <div id="lista">${D.avisos.length ? D.avisos.map(htmlAviso).join('') : '<div class="vazio">Nenhum aviso ainda.</div>'}</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => { if (ANTERIOR) { ANTERIOR = null; history.back(); } else ir('empresa'); };
   ligarAvisos(P);
   if (D.avisos.length && D.avSit && D.avisos[0].id > (D.avSit.visto_ate || 0)) {
     const ate = D.avisos[0].id;
@@ -1755,7 +1775,7 @@ let MT_MES = mesKey(new Date());
 async function telaMetas(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   const { data: m, error } = await sb.rpc('metas_progresso', { p_mes: MT_MES + '-01' });
   if (ABA !== 'metas') return;
   if (error) { P.querySelector('.vazio').textContent = tec('Metas ainda não ativadas no Supabase. Rode o 9-funil-e-metas.sql.'); return; }
@@ -1788,7 +1808,7 @@ async function telaMetas(P) {
       <div class="sub">Deixe em branco o que não tiver meta. O time vê só a porcentagem das metas da Maktub e a própria meta. Quando uma meta da Maktub é batida, você recebe um aviso.</div>
       <div class="sub" id="msgMeta"></div>
     </form>` : ''}`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   $('mtMes').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { MT_MES = mesMais(MT_MES, +b.dataset.n); telaMetas(P); } };
   if (!ADMIN) return;
   $('abrirMetas').onclick = () => { $('fMeta').hidden = false; $('abrirMetas').hidden = true; $('fMeta').scrollIntoView({ behavior: 'smooth' }); };
@@ -1800,7 +1820,7 @@ async function telaMetas(P) {
     f.querySelectorAll('[data-u]').forEach(d => chamadas.push(sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: d.dataset.u, p_lucro1: n(d.querySelector('[name=pl]').value), p_lucro2: null, p_vendas: n(d.querySelector('[name=pv]').value), p_qtd: n(d.querySelector('[name=pq]').value) })));
     const r = await Promise.all(chamadas); const erro = r.find(x => x.error);
     $('salvarMeta').disabled = false;
-    if (erro) { $('msgMeta').textContent = 'Não salvou: ' + erro.error.message; return; }
+    if (erro) { $('msgMeta').textContent = limparTec('Não salvou: ' + erro.error.message); return; }
     if (MT_MES === mesKey(new Date())) { const mp = await sb.rpc('metas_progresso', { p_mes: MT_MES + '-01' }); if (!mp.error) D.metas = mp.data; }
     aviso('Metas salvas.'); telaMetas(P);
   };
@@ -1883,7 +1903,7 @@ function htmlReuniao(r) {
     ${r.resultado === 'Em andamento' ? `<div class="resq"><button class="f" data-mv="${r.id}" data-et="Fechou">Fechou</button><button class="n" data-mv="${r.id}" data-et="Não fechou">Não fechou</button></div>` : ''}
   </div>`;
 }
-const ctxVenda = () => ({ sb, D, esc, brl2, aviso, ADMIN, meuId: D.meuId, zapLink, nomeTime, fornecedores: () => fornecedoresFichas().map(p => p.nome) });
+const ctxVenda = () => ({ sb, D, esc, brl2, aviso, limparTec, ADMIN, meuId: D.meuId, zapLink, nomeTime, fornecedores: () => fornecedoresFichas().map(p => p.nome) });
 const posVenda = () => D.reunioes.filter(r => r.resultado === 'Fechou' && !ehGestao(r) && (r.itens || []).length && !VENDA.concluida(r));
 const compParaConferir = () => D.reunioes.filter(r => r.fech && r.fech.comprovante && !r.fech.conferido);
 async function assumirAtendimento(id) {
@@ -1945,7 +1965,7 @@ async function moverEtapa(id, etapa) {
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
 let RE_PARTE = 'funil';
 function telaReunioes(P) {
-  if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => ir('reunioes') });
+  if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => ir('reunioes') });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
     if (x ? ehGestao(x) : RE_ED === 'nova' && RE_PRE && RE_PRE.produto === 'Gestão de Milhas') { ABA = 'gestao'; GE_FUNIL = true; history.replaceState(null, '', reHash(RE_ED)); marcarNav(); }
@@ -1992,7 +2012,7 @@ function telaReunioes(P) {
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
-  if ($('voltarG')) $('voltarG').onclick = () => ir('gestao');
+  if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
   $('novaR').onclick = () => { if (!G) return escolherAtendimento(); RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
   if ($('reModo')) $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
   if ($('reMes')) ligarMes('reMes', () => telaReunioes(P));
@@ -2307,8 +2327,9 @@ function telaFormReuniao(P) {
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
     $('salvarRe').disabled = false;
-    if (error) { $('msgRe').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    if (nova && data.lead_id) { const ld = (D.leads || []).find(x => x.id === data.lead_id); if (ld && ld.status === 'novo') { const u = await sb.from('leads').update({ status: 'em conversa' }).eq('id', ld.id); if (!u.error) ld.status = 'em conversa'; } }
     // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
     if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
     if (data.pessoa_id) { if (res === 'Fechou') virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
@@ -2430,7 +2451,7 @@ function mostrarLinkAcesso(el, nome, link) {
 }
 async function telaAcessos(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   const { data, error } = await sb.rpc('equipe_acessos_listar');
   if (ABA !== 'acessos') return;
   if (error) { P.querySelector('.vazio').textContent = tec('Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'); return; }
@@ -2455,7 +2476,7 @@ async function telaAcessos(P) {
       ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
     </form>`; }).join('')}</div>
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
   P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (k === 'mkt_aprovar' && c.checked); }); aviso('Só o marketing marcado (a coordenação, se já estava marcada, continua). Salve para valer.'); });
   P.querySelectorAll('form[data-u]').forEach(f => {
@@ -2564,7 +2585,7 @@ const periodoFixa = (x) => 'desde ' + mesCurto(x.desde) + (x.ate ? ' até ' + me
 async function telaCustos(P) {
   const hoje = mesKey(new Date());
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   const [sl, fx] = await Promise.all([sb.rpc('salarios_listar'), sb.from('despesas_fixas').select('*').order('desde', { ascending: false })]);
   if (ABA !== 'custos') return;
   if (sl.error || fx.error) { P.querySelector('.vazio').textContent = tec('Rode o 27-dre-e-salarios.sql no Supabase para ativar.'); return; }
@@ -2595,7 +2616,7 @@ async function telaCustos(P) {
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
       ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', '', 'number', 'min="1" max="31"')}
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
     ev.preventDefault();
     const { error } = await sb.rpc('salario_definir', { p_user: f.dataset.sal, p_valor: Number(String(f.elements.valor.value || 0).replace(',', '.')), p_desde: (f.elements.desde.value || hoje) + '-01' });
@@ -2652,7 +2673,7 @@ function telaPagar(P) {
     ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
       ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
       ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   const marcar = async (ids, msg) => {
     for (let i = 0; i < ids.length; i += 100) {
       const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: new Date().toISOString() }).in('id', ids.slice(i, i + 100));
@@ -2685,7 +2706,7 @@ function telaReceber(P) {
         ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
       <button class="zap grande" data-ok="${e.id}" style="margin-top:10px;width:100%">Recebido</button>
     </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div>`;
-  $('voltar').onclick = () => ir('financeiro');
+  $('voltar').onclick = () => voltarA('financeiro');
   P.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ok;
     if (RC_CONF !== id) { RC_CONF = id; b.textContent = 'Toque de novo para confirmar'; return; }
@@ -2831,7 +2852,7 @@ function telaEquipe(P) {
       <div class="sub">Na cotação rápida, o vendedor digita o mínimo que a Maktub quer receber. O cartão sai em até essas vezes sem juros e o Pix com esse desconto.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar taxas</button>
     </form>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => voltarA('empresa');
   P.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
     const c = b.closest('[data-u]'), u = b.dataset.salvar;
     const { error } = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: c.querySelector('[name=papel]').value, p_pct: Number(c.querySelector('[name=pct]').value || 0), p_ativo: c.querySelector('[name=ativo]').checked });
@@ -3019,14 +3040,16 @@ function listaLeads() {
     const R = noPeriodo(D.leads).filter(r => FILTRO === 'todos' || r.status === FILTRO);
     el.innerHTML = R.length ? R.map(r => {
       const d = r.detalhes || {};
+      // a pessoa já tem ficha? mostra desde quando é cliente e liga o atendimento à ficha
+      const pj = VENDA.acharPessoa(D, { nome: r.nome, contato: r.whatsapp || r.email }), comp = pj ? (D.emissoes || []).filter(e => e.pessoa_id === pj.id && !e.outra).map(e => String(e.data_negociacao || '')).filter(Boolean).sort()[0] : null;
       const linhas = r.tipo === 'corporativo'
         ? [['Empresa', r.empresa], ['Perfil', d.segmento], ['Volume', d.volume], ['Trechos', d.trechos], ['Demanda', d.demanda]]
         : [['Destino', r.destino || 'ainda não sabe'], ['Quando', r.quando], ['Viajantes', r.viajantes]];
       return `<article class="card ${r.status === 'novo' ? 'novo' : ''}">
         <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span> ${r.responsavel_id ? `<span class="tag ok">com ${esc(nomeTime(r.responsavel_id) || 'equipe')}</span>` : r.status === 'novo' ? '<span class="tag alerta">sem dono</span>' : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
-        <div class="info">${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
+        <div class="info">${pj ? `<div style="color:var(--verde);font-weight:600">${comp ? 'Já é cliente desde ' + comp.slice(5, 7) + '/' + comp.slice(0, 4) : 'Já tem ficha no CRM'} · <a href="#crm/${pj.id}">ver ficha</a></div>` : ''}${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
         ${!r.responsavel_id && r.status === 'novo' ? `<button class="zap grande" data-assumir="${r.id}" style="width:100%;margin-top:12px">Assumir este lead</button>` : ''}
-        <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: r.tipo === 'corporativo' ? 'Maktub Corporativo' : 'Passagens', tipo: 'Reunião de venda' }))}">Registrar reunião</button></div>
+        <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: (pj && pj.nome) || r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: r.tipo === 'corporativo' ? 'Maktub Corporativo' : 'Passagens', tipo: 'Reunião de venda', ...(pj ? { pessoa_id: pj.id } : {}) }))}">Abrir atendimento</button></div>
         <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
       </article>`;
     }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
@@ -3272,7 +3295,7 @@ function abrirFicha(id, aba) {
 
 /* ---------- clientes ---------- */
 function telaClientes(P) {
-  setTimeout(() => { if ($('voltarCli')) $('voltarCli').onclick = () => ir('gestao'); });
+  setTimeout(() => { if ($('voltarCli')) $('voltarCli').onclick = () => voltarA('gestao'); });
   const ordem = FILTRO === 'implantacao' ? implantacoesAbertas().map(x => x.c) : FILTRO === 'atrasados' ? semAtualizacao() : FILTRO === 'renovar' ? renovacoes(90) : FILTRO === 'semcontrato' ? semContrato() : D.clientes;
   const lista = ordem.filter(c => !BUSCA || String(c.nome_completo || '').toLowerCase().includes(BUSCA.toLowerCase()))
     .map(c => ({ c, pat: patrimonio(c.id), mi: milhas(c.id), v: progsDe(c.id).filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => dia(p.vencimento_data)).filter(d => difDias(d) >= 0).sort((a, b) => a - b)[0] }))
@@ -3354,7 +3377,7 @@ async function fiCarteira(el, c) {
   if (!c._W) el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando a carteira...</div>';
   const [ex, refs] = await Promise.all([sb.from('extrato_milhas').select('*').eq('cliente_id', c.id), CART.valoresRef()]);
   if (CLI !== c.id || FI_ABA !== 'carteira' || !$('fiCorpo')) return;
-  if (ex.error) { el.innerHTML = `<div class="vazio">Não carregou a carteira: ${esc(ex.error.message)}</div>`; return; }
+  if (ex.error) { el.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou a carteira: ' + ex.error.message))}</div>`; return; }
   c._ex = ex.data || []; c._refs = refs; c._W = CART.calcCarteira(c._ex);
   const W = c._W, L = c._ex.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || ''))).slice(0, 20);
   const patr = W.programas.reduce((t, p) => t + (refs[p.key] !== undefined ? p.saldo * refs[p.key] / 1000 : 0), 0);
@@ -3633,7 +3656,7 @@ async function fiRelatorio(el, c) {
   el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando...</div>';
   const { data, error } = await sb.from('relatorios_mensais').select('*').eq('cliente_id', c.id).order('mes', { ascending: false });
   if (CLI !== c.id || FI_ABA !== 'relatorio' || !$('fiCorpo')) return;
-  if (error) { el.innerHTML = `<div class="vazio">Não carregou: ${esc(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou: ' + error.message))}</div>`; return; }
   const r = (data || []).find(x => String(x.mes).slice(0, 7) === mes) || {};
   const prev = `/painel/relatorio.html?mes=${mes}&cliente=${encodeURIComponent(c.id)}`;
   el.innerHTML = `
@@ -3667,7 +3690,7 @@ async function fiDocs(el, c) {
   el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando...</div>';
   const { data, error } = await sb.from('documentos').select('*').eq('cliente_id', c.id).order('created_at', { ascending: false });
   if (CLI !== c.id || FI_ABA !== 'docs' || !$('fiCorpo')) return;
-  if (error) { el.innerHTML = `<div class="vazio">Não carregou: ${esc(error.message)}</div>`; return; }
+  if (error) { el.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou: ' + error.message))}</div>`; return; }
   el.innerHTML = `
     <form class="bloco form" id="fDoc" style="margin-top:12px"><h2>Enviar para o painel do cliente</h2>
       ${campo('titulo', 'Título', '', 'text', 'required placeholder="Ex.: Bilhete GRU-SCL"')}
@@ -3887,7 +3910,7 @@ async function fiTarefas(el, c) {
   const desenharCartoes = async () => {
     const r = await sb.from('cartoes').select('*').eq('cliente_id', c.id).order('ordem');
     const box = $('gtCartLista'); if (!box || CLI !== c.id) return;
-    if (r.error) { box.innerHTML = `<div class="vazio">${esc(r.error.message)}</div>`; return; }
+    if (r.error) { box.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou: ' + r.error.message))}</div>`; return; }
     c._ncart = (r.data || []).length;
     const C = r.data || [], tot = C.reduce((s, x) => s + (Number(x.limite) || 0), 0);
     box.innerHTML = C.length ? C.map(x => `<div class="lin"><span><b style="font-weight:600">${esc(x.banco)}</b>${x.categoria ? ' · ' + esc(x.categoria) : ''}${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span><span>${x.limite !== null && x.limite !== undefined ? brl(x.limite) : 'sem limite'} <button class="mini" data-ca-del="${x.id}">excluir</button></span></div>`).join('')
@@ -4282,6 +4305,14 @@ function htmlIndicacoes(trecho) {
     ${L.map(({ f, m, n }) => `<button type="button" class="lin" data-fornid="${f.id}" style="width:100%;font-size:14px;text-align:left"><span>${esc(f.nome)}<small style="display:block;color:var(--tinta-3)">${esc(FORN.TIPOS[f.tipo] || f.tipo)}${f.cidade ? ' · ' + esc(f.cidade) : ''}</small></span><span>${m !== null ? 'clientes ' + um(m) + ' (' + n + ')' : ''}${m !== null && f.google_nota ? ' · ' : ''}${f.google_nota ? 'Google ' + um(+f.google_nota) : ''}${m === null && !f.google_nota ? 'sem nota' : ''}<span class="seta">›</span></span></button>`).join('')}</div>`;
 }
 const avaliacoesParaPedir = (so) => D.avaliacoes ? (D.agenda || []).filter(x => x.status === 'Realizada' && new Date(x.data) > Date.now() - 14 * 864e5 && (x.pessoa_id || x.atendimento_id || x.cliente_id) && !(avDe(x.id) || {}).enviada_em && (!so || [x.vendedor_id, ...(x.participantes || [])].includes(D.meuId))) : [];
+// aniversariantes de hoje no Início, com o botão de mandar parabéns; os do mês ficam em Clientes
+function blocoAnivHoje() {
+  const L = podeAba('crm') ? aniversariosHoje() : []; if (!L.length) return '';
+  return `<div class="secao" id="anivHoje">Aniversários de hoje <button data-ir-aniv="1">Ver os do mês ›</button></div><div class="bloco" style="margin-top:0">${L.map(p => { const pr = String(p.nome || '').split(' ')[0], z = p.celular ? zapLink(p.celular, p.nome, `Oi, ${pr}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`) : '';
+    return `<div class="lin" style="align-items:center"><button type="button" data-ficha-aniv="${p.id}" style="text-align:left;color:var(--verde);font-weight:600">${esc(p.nome)}<small style="display:block;color:var(--tinta-3);font-weight:400">faz ${idadeAnos(p.nascimento)} anos</small></button>${z ? `<a class="zap" href="${esc(z)}" target="_blank" rel="noopener" style="padding:8px 12px">Mandar parabéns</a>` : '<span class="sub" style="margin:0">sem WhatsApp</span>'}</div>`; }).join('')}</div>`;
+}
+function ligarAnivHoje(P) { P.querySelectorAll('[data-ficha-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fichaAniv))); P.querySelectorAll('[data-ir-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.filtrar('aniv'))); }
+const idadeAnos = (n) => { const d = new Date(n + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - d.getFullYear(); if (h.getMonth() < d.getMonth() || (h.getMonth() === d.getMonth() && h.getDate() < d.getDate())) a--; return a; };
 const aniversariosHoje = () => { const h = new Date(); return (D.pessoas || []).filter(p => p.nascimento && +p.nascimento.slice(5, 7) === h.getMonth() + 1 && +p.nascimento.slice(8, 10) === h.getDate()); };
 const meuCal = () => ((D.cal || []).find(x => x.user_id === D.meuId) || {}).cal_link || '';
 function blocoCal() {
@@ -4472,7 +4503,7 @@ function telaFormAgenda(P) {
     const q = nova ? sb.from('agenda_reunioes').insert(row).select().single() : sb.from('agenda_reunioes').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
     $('salvarAg').disabled = false;
-    if (error) { $('msgAg').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgAg').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.agenda.findIndex(y => y.id === data.id); if (i >= 0) D.agenda[i] = data; else D.agenda.unshift(data);
     if (row.agendamento_id) { const a = D.ags.find(y => String(y.id) === row.agendamento_id); if (a) a.status = 'confirmada'; }
     aviso(row.status === 'Agendada' ? (D.tt && D.tt.conectado ? 'Reunião agendada e enviada para o TickTick.' : 'Reunião agendada.') : row.status === 'Realizada' && !row.resumo ? 'Registrada. Falta colar o resumo.' : 'Reunião salva.');

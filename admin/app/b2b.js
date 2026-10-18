@@ -122,7 +122,7 @@ export function tela(P, X) {
     $('#b2bSalvar').disabled = true; $('#b2bMsg').textContent = 'Lançando...';
     const { error } = await X.sb.from('fila_planilha').insert({ id, atendimento_id: null, item: 0, dados });
     $('#b2bSalvar').disabled = false;
-    if (error) { $('#b2bMsg').textContent = 'Não lançou: ' + error.message + (/null value|not-null|atendimento_id|item/.test(error.message) ? ' (falta rodar o SQL da emissão B2B no Supabase)' : ''); return; }
+    if (error) { const m = 'Não lançou: ' + error.message + (/null value|not-null|atendimento_id|item/.test(error.message) ? ' (falta rodar o SQL da emissão B2B no Supabase)' : ''); $('#b2bMsg').textContent = X.limparTec ? X.limparTec(m) : m; return; }
     X.aviso(`Emissão B2B lançada. Vai para a planilha em até 5 minutos.${socio ? '' : ` Comissão: ${X.brl2(c.comissao)}.`}`);
     X.voltar();
   };

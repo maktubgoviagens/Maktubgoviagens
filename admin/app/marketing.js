@@ -74,7 +74,12 @@ export function pend() {
     atrasados: LISTA.filter(atrasado).length
   };
 }
-export function rota(h) { VIEW = h[1] || null; ED = null; ED_EST = null; PRE = null; CONF = null; }
+// endereço: #marketing/<visão>, #marketing/<visão>/post/<id> ou #marketing/<visão>/nova (o voltar do celular não sai do app)
+export function rota(h) { VIEW = h[1] || null; ED = h[2] === 'post' && h[3] ? h[3] : h[2] === 'nova' ? (ED === 'nova' ? 'nova' : null) : null; ED_EST = null; if (!ED) PRE = null; CONF = null; }
+const endereco = () => '#marketing/' + VIEW + (ED ? (ED === 'nova' ? '/nova' : '/post/' + ED) : '');
+// abre um post (ou um novo) criando uma entrada no histórico; fechar volta no histórico
+function abrirPost(id, pre) { ED = id; PRE = pre || null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); }
+function fecharPost() { const h = location.hash; ED = null; PRE = null; if (/\/(post|nova)/.test(h)) history.back(); else rerender(); scrollTo(0, 0); }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
 const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0] + (p.formato === 'reels' && p.reels_teste ? ' teste' : '');
@@ -208,7 +213,7 @@ export function tela(P, ctx) {
     : (VIEW === 'semana' ? '' : `<h1 class="titulo">Estúdio de <em>conteúdo</em></h1>`) + (VIEW === 'semana' ? '' : seg);
   P.innerHTML = topo + html + (X.so ? sairBtn() : '');
   if (VIEW === 'semana') { const h = P.querySelector('.mk-hero'); if (h) h.insertAdjacentHTML('afterend', seg); }
-  history.replaceState(null, '', '#marketing/' + VIEW);
+  if (location.hash !== endereco()) history.replaceState(null, '', endereco());
   ligar(P);
 }
 const sairBtn = () => '<button class="sec" data-sair style="width:100%;margin-top:28px">Sair do app</button>';
@@ -494,7 +499,7 @@ function formPost(P) {
   };
   mostrar(); f.addEventListener('change', mostrar);
   f.querySelectorAll('[name=conta]').forEach(r => r.addEventListener('change', () => f.style.setProperty('--kc', contaCor({ conta: r.value }))));
-  document.getElementById('mkVoltarF').onclick = () => { ED = null; PRE = null; rerender(); scrollTo(0, 0); };
+  document.getElementById('mkVoltarF').onclick = () => fecharPost();
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
@@ -509,7 +514,7 @@ function formPost(P) {
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     const r = await salvar(nova ? null : base.id, reg);
     if (!r) return;
-    ED = null; PRE = null; X.aviso(nova ? (reg.status === 'ideia' ? 'Ideia guardada.' : 'Post criado.') : 'Post atualizado.'); rerender(); scrollTo(0, 0);
+    X.aviso(nova ? (reg.status === 'ideia' ? 'Ideia guardada.' : 'Post criado.') : 'Post atualizado.'); fecharPost();
   };
   const msg = (t) => { document.getElementById('mkMsg').textContent = t; };
   if (document.getElementById('mkExcluir')) document.getElementById('mkExcluir').onclick = async () => {
@@ -518,7 +523,7 @@ function formPost(P) {
     CONF = null;
     const { error } = await X.sb.from('marketing_posts').delete().eq('id', base.id);
     if (error) { X.aviso('Não excluiu: ' + error.message); return; }
-    LISTA = LISTA.filter(x => x.id !== base.id); ED = null; X.aviso('Post excluído.'); rerender();
+    LISTA = LISTA.filter(x => x.id !== base.id); X.aviso('Post excluído.'); fecharPost();
   };
 }
 async function salvar(id, reg) {
@@ -590,18 +595,18 @@ async function guardarEst(chave, tipo, valores, titulo) {
 function ligar(P) {
   const q = (s) => P.querySelectorAll(s), by = (id) => document.getElementById(id);
   if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('empresa');
-  q('[data-v]').forEach(b => b.onclick = () => { VIEW = b.dataset.v; DIA = null; rerender(); scrollTo(0, 0); });
-  q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); ED = b.dataset.p; PRE = null; rerender(); scrollTo(0, 0); });
-  q('[data-novo]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: b.dataset.novo }; rerender(); scrollTo(0, 0); });
-  q('[data-novo-dia]').forEach(b => b.onclick = () => { ED = 'nova'; PRE = { status: 'ideia', data_prevista: b.dataset.novoDia }; rerender(); scrollTo(0, 0); });
+  q('[data-v]').forEach(b => b.onclick = () => { if (VIEW === b.dataset.v) return; VIEW = b.dataset.v; DIA = null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); });
+  q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); abrirPost(b.dataset.p); });
+  q('[data-novo]').forEach(b => b.onclick = () => abrirPost('nova', { status: b.dataset.novo }));
+  q('[data-novo-dia]').forEach(b => b.onclick = () => abrirPost('nova', { status: 'ideia', data_prevista: b.dataset.novoDia }));
   q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', aprovacao: 'Enviado para aprovação. A coordenação recebe o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
   q('[name=fconta]').forEach(r => r.onchange = () => { FCONTA = r.value; rerender(); });
   q('[data-mover]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); mover(b.dataset.mover, b.dataset.g); });
   q('[data-gravar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const pp = LISTA.find(x => x.id === b.dataset.gravar); if (!pp) return;
-    if (!equipeG(pp).length) { ED = pp.id; PRE = { status: 'gravacao' }; rerender(); scrollTo(0, 0); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
+    if (!equipeG(pp).length) { abrirPost(pp.id, { status: 'gravacao' }); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
     mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${nomesG(pp)}.`); });
   q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
-  q('[data-publicar]').forEach(b => b.onclick = () => { ED = b.dataset.publicar; PRE = { status: 'publicado' }; rerender(); scrollTo(0, 0); X.aviso('Cole o link do post e salve.'); });
+  q('[data-publicar]').forEach(b => b.onclick = () => { abrirPost(b.dataset.publicar, { status: 'publicado' }); X.aviso('Cole o link do post e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
   q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; { const pp = LISTA.find(x => x.id === b.dataset.ajok) || {}; mudar(b.dataset.ajok, { status: voltaAjuste(pp), ajuste: t }, ehVideo(pp) ? 'Devolvido para a edição com o ajuste.' : 'Devolvido para a criação com o ajuste.'); } });
