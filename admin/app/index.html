@@ -751,7 +751,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -815,7 +815,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
+const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -1114,6 +1114,7 @@ function tela() {
   if (ABA === 'compromissos') return CMP.tela(P, ctxCMP());
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()) });
   if (ABA === 'pagar') return telaPagar(P);
+  if (ABA === 'conferir') return telaConferir(P);
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
@@ -1143,7 +1144,7 @@ function telaInicio(P) {
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Cotações esperando alguém assumir', D.reunioes.filter(r => r.resultado === 'Em andamento' && !ehGestao(r) && !r.assumido_por && etapaDe(r) === 'Novo lead').length, () => ir('reunioes')],
     ['Vendas fechadas aguardando emissão ou planilha', posVenda().length, () => ir('reunioes')],
-    ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('reunioes')]] : []),
+    ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
     ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')],
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
@@ -2715,6 +2716,45 @@ function telaPagar(P) {
     aviso('Voltou para a lista de a pagar.'); telaPagar(P);
   });
 }
+// comprovantes anexados no fechamento que o financeiro ainda não conferiu (só administradores).
+// A venda com comprovante sai da coluna "Fechou · em emissão" do Comercial, por isso a lista vive aqui.
+let CF_CONF = null;
+function telaConferir(P) {
+  const qd = (r) => (r.fech || {}).enviado_em || r.data || '';
+  const val = (r) => +r.valor_fechado || (r.itens || []).reduce((t, x) => t + (+x.venda || 0), 0);
+  const forma = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
+  const L = compParaConferir().sort((a, b) => String(qd(a)).localeCompare(String(qd(b))));
+  const R = D.reunioes.filter(r => r.fech && r.fech.comprovante && r.fech.conferido && r.fech.conferido_em && Date.now() - new Date(r.fech.conferido_em) < 30 * 864e5).sort((a, b) => String(b.fech.conferido_em).localeCompare(String(a.fech.conferido_em)));
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Início</button><h1 class="titulo" style="margin-top:6px">Comprovantes para <em>conferir</em></h1>
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">Para conferir</div><div class="v">${brlC(L.reduce((t, r) => t + val(r), 0))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
+    </div>
+    <div class="sub">Abra o comprovante, confira com o extrato e toque em "Conferido". Toque no nome para abrir o card da venda.</div>
+    ${R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Conferidos nos últimos 30 dias (${R.length})</summary>${R.map(r => `<div class="lin" style="align-items:center"><span>${VENDA.numCard(r) ? VENDA.numCard(r) + ' · ' : ''}${esc(r.cliente)}<small style="display:block;color:var(--tinta-3)">conferido em ${new Date(r.fech.conferido_em).toLocaleDateString('pt-BR')}${r.fech.conferido_por && nomeTime(r.fech.conferido_por) ? ' por ' + esc(nomeTime(r.fech.conferido_por)) : ''}</small></span><span style="white-space:nowrap">${brl2(val(r))} <button class="sec" data-cfdesf="${r.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : ''}
+    <div class="lista">${L.length ? L.map(r => { const F = r.fech || {}; return `<div class="card">
+      <div class="cab"><div><button class="nome" data-cfab="${r.id}" style="background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)} ›</button>${forma(F) ? `<span class="tag ouro">${esc(forma(F))}</span>` : ''}</div><span class="quando">${qd(r) ? dataCurta(new Date(qd(r))) : ''}</span></div>
+      <div class="info"><div><span>Valor:</span> ${brl2(val(r))}${F.forma === 'cartao' && +F.bruto ? ' · cliente pagou ' + brl2(F.bruto) + ' no cartão' : ''}</div>
+        ${r.trecho ? `<div>${esc(r.trecho)}</div>` : ''}
+        ${nomeTime(r.responsavel_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(r.responsavel_id))}</div>` : ''}</div>
+      <div class="botoes4" style="margin-top:10px"><button class="sec" data-cfver="${esc(F.comprovante)}">Ver comprovante</button><button class="zap" data-cfok="${r.id}">Conferido</button></div>
+    </div>`; }).join('') : '<div class="vazio">Nenhum comprovante para conferir.</div>'}</div>`;
+  $('voltar').onclick = () => voltarA('inicio');
+  const salvar = async (id, ok) => {
+    const r = D.reunioes.find(x => x.id === id); if (!r) return false;
+    const fech = Object.assign({}, r.fech, ok ? { conferido: true, conferido_por: D.meuId, conferido_em: new Date().toISOString() } : { conferido: false, conferido_por: null, conferido_em: null });
+    const { error } = await sb.from('atendimentos').update({ fech }).eq('id', id);
+    if (error) { aviso('Não salvou: ' + error.message); return false; }
+    r.fech = fech; return true;
+  };
+  P.querySelectorAll('[data-cfver]').forEach(b => b.onclick = () => VENDA.verArquivo(ctxVenda(), b.dataset.cfver));
+  P.querySelectorAll('[data-cfab]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.cfab));
+  P.querySelectorAll('[data-cfok]').forEach(b => b.onclick = async () => {
+    if (CF_CONF !== b.dataset.cfok) { CF_CONF = b.dataset.cfok; b.textContent = 'Toque de novo para confirmar'; return; }
+    CF_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
+    if (await salvar(b.dataset.cfok, true)) { aviso('Comprovante conferido.'); telaConferir(P); } else { b.disabled = false; b.textContent = 'Conferido'; }
+  });
+  P.querySelectorAll('[data-cfdesf]').forEach(b => b.onclick = async () => { b.disabled = true; if (await salvar(b.dataset.cfdesf, false)) { aviso('Voltou para a lista de conferir.'); telaConferir(P); } else b.disabled = false; });
+}
 function telaReceber(P) {
   const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Financeiro</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
@@ -2773,10 +2813,10 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
