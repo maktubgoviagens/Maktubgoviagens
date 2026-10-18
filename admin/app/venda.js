@@ -375,12 +375,12 @@ export function editorFechamento(X, el, F, ctx) {
     const ajusta = () => {
       const n = +F.parcelas || 0;
       F.taxa_pct = F.forma === 'cartao' && n && ctx.taxa ? ctx.taxa(n) : (F.forma === 'pix' ? 0 : F.taxa_pct);
-      if (F.forma === 'cartao') { const alvo = ctx.alvo ? ctx.alvo('cartao', n) : null; if (alvo && !F.bruto_manual) F.bruto = alvo; aplica(liq()); }
+      if (F.forma === 'cartao') { const alvo = ctx.alvo ? ctx.alvo('cartao', n) : null; if (!F.bruto_manual) F.bruto = alvo || null; aplica(liq()); }
       else if (F.forma === 'pix') { F.bruto = null; F.bruto_manual = false; aplica(ctx.alvo ? ctx.alvo('pix', 0) : null); }
       desenha();
     };
     el.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => { F.forma = b.dataset.fp; ajusta(); });
-    const fp = el.querySelector('#fParc'); if (fp) { fp.oninput = () => { F.parcelas = parseInt(fp.value, 10) || null; }; fp.onchange = () => ajusta(); }
+    const fp = el.querySelector('#fParc'); if (fp) { fp.oninput = () => { const v = parseInt(fp.value, 10); F.parcelas = v ? Math.min(Math.max(v, 1), 12) : null; }; fp.onchange = () => { if (F.parcelas && +fp.value !== F.parcelas) { fp.value = F.parcelas; X.aviso('Parcelamento de 1 a 12 vezes.'); } ajusta(); }; }
     const fb = el.querySelector('#fBruto'); if (fb) { fb.oninput = () => { const v = String(fb.value).trim(); F.bruto = v ? Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v) || null : null; F.bruto_manual = !!F.bruto; }; fb.onchange = () => ajusta(); }
     const liga = (id, k) => { const e = el.querySelector('#' + id); if (e) e.oninput = () => { F[k] = e.value.trim(); }; };
     liga('fLink', 'link'); liga('fPix', 'pix');
@@ -479,8 +479,10 @@ export async function salvarHorarios(X, L) {
 export async function salvarVoos(X, L) {
   const rows = [];
   for (const { id, x } of L.filter(({ x }) => ehVoo(x))) {
-    let ls = Array.isArray(x.ct) && x.ct.length ? x.ct.map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' })) : null;
-    if (!ls) { ls = [{ o: up3(x.origem), d: up3(x.destino), data: x.data_ida || '', hora: x.hora_ida || '' }]; if (x.tipo_trecho !== 'ida' && x.data_volta) ls.push({ o: up3(x.destino), d: up3(x.origem), data: x.data_volta, hora: x.hora_volta || '' }); }
+    // rota e datas como estão no fechamento (podem ter mudado desde a cotação); o horário de cada voo vem da cotação quando bate a rota
+    const ct = Array.isArray(x.ct) ? x.ct : [];
+    let ls = (x.ct_on && ct.length ? ct : linhasPadrao(x, { tipoPadrao: x.tipo_trecho || 'iv' })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
+    ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
     ls = ls.filter(l => l.data);
     if (!ls.length) continue;
     // horário digitado no fechamento vale para o primeiro e o último voo
@@ -494,16 +496,21 @@ export async function salvarVoos(X, L) {
 
 // ficha que já existe para a mesma pessoa: CPF primeiro (não muda), depois celular, e-mail e nome
 // (nome igual, ou o nome digitado contido no da ficha, como "Ana Paula" e "Ana Paula Souza", quando só uma ficha bate)
+let CACHE_P = null;
 export function acharPessoa(D, q) {
   const P = (D && D.pessoas) || [], n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  // nomes já normalizados (a lista de leads chama isto para cada lead)
+  if (!CACHE_P || CACHE_P.P !== P || CACHE_P.len !== P.length) CACHE_P = { P, len: P.length, k: new Map(P.map(o => [o, n(o.nome)])) };
+  const nk = (o) => CACHE_P.k.get(o) || n(o.nome);
   const cpf = soDig(q.cpf); if (cpf.length === 11) { const d = ((D && D.docs) || []).find(o => soDig(o.cpf) === cpf); const p = d && P.find(o => o.id === d.pessoa_id); if (p) return p; }
   const ct = String(q.contato || '').trim(), dig = soDig(ct);
   if (/@/.test(ct)) { const p = P.find(o => n(o.email) === n(ct)); if (p) return p; }
   else if (dig.length >= 8) { const p = P.find(o => soDig(o.celular).slice(-8) === dig.slice(-8)); if (p) return p; }
   const k = n(q.nome); if (!k) return null;
-  const ex = P.find(o => n(o.nome) === k); if (ex) return ex;
+  const ex = P.find(o => nk(o) === k); if (ex) return ex;
+  if (q.exato || cpf.length === 11) return null;
   const tk = k.split(' '); if (tk.length < 2) return null;
-  const c = P.filter(o => { const t = n(o.nome).split(' '); return t[0] === tk[0] && tk.every(x => t.includes(x)); });
+  const c = P.filter(o => { const t = nk(o).split(' '); return t[0] === tk[0] && tk.every(x => t.includes(x)); });
   return c.length === 1 ? c[0] : null;
 }
 
@@ -513,7 +520,7 @@ export async function salvarPassageiros(X, itens) {
   const todos = itens.filter(ehVoo).flatMap(x => paxAjustado(x).map(p => ({ x, p }))).filter(({ p }) => String(p.nome || '').trim().includes(' '));
   for (const { p } of todos) {
     try {
-      let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : acharPessoa(X.D, { nome: p.nome, cpf: p.cpf });
+      let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : acharPessoa(X.D, { nome: p.nome, cpf: p.cpf, exato: true });
       if (!f) {
         const ins = await X.sb.from('pessoas').insert({ nome: p.nome.replace(/\s+/g, ' ').trim(), nascimento: p.nasc || null, papeis: ['passageiro'] }).select().single();
         if (ins.error) continue; f = ins.data; (X.D.pessoas = X.D.pessoas || []).push(f);

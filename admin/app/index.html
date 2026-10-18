@@ -478,11 +478,11 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=45';
+import * as COT from '/admin/app/cotador.js?v=46';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
-import * as VENDA from '/admin/app/venda.js?v=19';
+import * as VENDA from '/admin/app/venda.js?v=20';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=14';
+import * as CMP from '/admin/app/compromissos.js?v=15';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=6';
 import * as B2B from '/admin/app/b2b.js?v=10';
@@ -583,7 +583,7 @@ function acoesNovo() {
 // Novo atendimento: um botão só, com a escolha logo no início (cotação B2C no funil ou emissão B2B direta).
 // A emissão B2B mora no Comercial, onde o time trabalha; não depende do acesso à Operação.
 function abrirB2B() {
-  if (pode('comercial')) { ir('reunioes', () => { RE_ED = 'b2b'; }); history.replaceState(null, '', '#reunioes/b2b'); }
+  if (pode('comercial')) ir('reunioes', () => { RE_ED = 'b2b'; });
   else ir('emissoes', () => { EM_ED = 'b2b'; });
 }
 function escolherAtendimento() {
@@ -661,7 +661,7 @@ async function conferirVersao() {
 conferirVersao();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirVersao(); });
 // com um formulário ou ficha aberta (fechamento, emissão, cotação...), atualiza os dados mas nunca redesenha a tela
-const editando = () => SUJO || location.hash.replace('#', '').split('/').filter(Boolean).length > 1;
+const editando = () => { if (SUJO) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
@@ -1012,10 +1012,17 @@ async function fecharMes(k) {
 }
 // no dia 5 o mês anterior fecha sozinho (dá para fechar antes no Financeiro)
 let FECH_AUTO = false;
+// mês reaberto de propósito no Financeiro não fecha de novo sozinho (fica registrado até ser fechado outra vez)
+const reabertos = () => { let L = []; try { L = JSON.parse(localStorage.getItem('mk_reabertos') || '[]'); } catch (_) {} return new Set([...L, ...((D.cfg && D.cfg.meses_reabertos) || [])]); };
+async function marcarReaberto(k, sim) {
+  const S = reabertos(); if (sim) S.add(k); else S.delete(k); const L = [...S];
+  try { localStorage.setItem('mk_reabertos', JSON.stringify(L)); } catch (_) {}
+  try { const { error } = await sb.from('configuracoes').update({ meses_reabertos: L }).eq('id', 1); if (!error && D.cfg) D.cfg.meses_reabertos = L; } catch (_) {}
+}
 async function fecharMesesAuto() {
   if (FECH_AUTO || !ADMIN || !D.fech) return; FECH_AUTO = true;
-  const h = new Date(); let k = CMP.INICIO;
-  while (true) { const [y, m] = k.split('-').map(Number), fim5 = new Date(y, m, 5); if (fim5 > h) break; if (!mesFechado(k)) await fecharMes(k); k = mesMais(k, 1); }
+  const h = new Date(), R = reabertos(); let k = CMP.INICIO;
+  while (true) { const [y, m] = k.split('-').map(Number), fim5 = new Date(y, m, 5); if (fim5 > h) break; if (!mesFechado(k) && !R.has(k)) await fecharMes(k); k = mesMais(k, 1); }
 }
 
 function ctxCRM() {
@@ -1531,6 +1538,8 @@ function telaFormEmissao(P) {
                            : await sb.from('emissoes').update({ [n]: cx.checked }).eq('id', e.id);
       if (error) { cx.checked = !cx.checked; aviso('Não salvou: ' + error.message); return; }
       e[n] = cx.checked; const v = D.voosEm.find(x => x.id === e.id); if (v && ck) v[n] = cx.checked;
+      if (ck) { const R = ((D.trechos || {})[String(e.id)] || []).slice().sort((a, b) => a.n - b.n), r = n === 'checkin_ida' ? R[0] : R.length > 1 ? R[R.length - 1] : null;
+        if (r) { const u = await sb.from('voos_emissao').update({ checkin: cx.checked, checkin_em: cx.checked ? new Date().toISOString() : null, checkin_por: cx.checked ? D.meuId : null }).eq('emissao_id', String(e.id)).eq('n', r.n); if (!u.error) r.checkin = cx.checked; } }
       const nome = { pago: 'Pagamento', nota_gerada: 'Nota fiscal', checkin_ida: 'Check-in da ida', checkin_volta: 'Check-in da volta', monitorado: 'Monitoramento', voado: 'Voado', feito_pos: 'Pós-venda' }[n];
       aviso(cx.checked ? `${nome} marcado. Vai para a planilha em até 5 minutos.` : `${nome} desmarcado no app. Desmarque também na planilha.`);
     };
@@ -1978,7 +1987,7 @@ async function moverEtapa(id, etapa) {
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
 let RE_PARTE = 'funil';
 function telaReunioes(P) {
-  if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => ir('reunioes') });
+  if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => { if (location.hash === '#reunioes/b2b' && ANTERIOR !== null) { ANTERIOR = null; history.back(); } else { RE_ED = null; ir('reunioes'); } } });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
     if (x ? ehGestao(x) : RE_ED === 'nova' && RE_PRE && RE_PRE.produto === 'Gestão de Milhas') { ABA = 'gestao'; GE_FUNIL = true; history.replaceState(null, '', reHash(RE_ED)); marcarNav(); }
@@ -2314,7 +2323,7 @@ function telaFormReuniao(P) {
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
     const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
-      motivo_detalhe: res === 'Não fechou' ? ([g('motivo_frase'), g('motivo_detalhe')].filter(Boolean).join('. ') || null) : null,
+      motivo_detalhe: res === 'Não fechou' ? ((fr, ob) => (fr && ob.startsWith(fr) ? ob : [fr, ob].filter(Boolean).join('. ')) || null)(g('motivo_frase'), g('motivo_detalhe')) : null,
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
@@ -2353,13 +2362,13 @@ function telaFormReuniao(P) {
       if (nr.error) aviso('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
     aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Lead da Gestão registrado.' : 'Cotação registrada.') : 'Atualizado.');
-    RE_ED = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
+    RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
   if ($('excluirRe')) $('excluirRe').onclick = async () => {
     if (CONFIRMA !== 're' + base.id) { CONFIRMA = 're' + base.id; $('excluirRe').textContent = 'Toque de novo para confirmar'; return; }
     const { error } = await sb.from('atendimentos').delete().eq('id', base.id);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
-    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; history.replaceState(null, '', reHash()); telaReunioes(P);
+    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P);
   };
 }
 
@@ -2440,6 +2449,7 @@ function telaFinanceiro(P) {
     CONFIRMA = null;
     const r = fech ? await sb.from('fechamentos').delete().eq('mes', k) : await sb.from('fechamentos').insert({ mes: k });
     if (r.error) { aviso('Não foi possível: ' + r.error.message); return; }
+    await marcarReaberto(EM_MES, !!fech);
     const f = await sb.from('fechamentos').select('*'); D.fech = f.data || [];
     aviso(fech ? 'Mês reaberto.' : 'Mês fechado.'); telaFinanceiro(P);
   };
@@ -2932,7 +2942,10 @@ async function marcarVoados() {
   const hj = hojeISO();
   const ids = (D.emissoes || []).filter(e => !e.voado && !e.outra && !B2B.ehAjuste(e) && !B2B.ehCancelada(e, D) && (e.data_volta || e.data_ida) && String(e.data_volta || e.data_ida).slice(0, 10) < hj).map(e => e.id);
   if (!ids.length) return;
-  try { const { error } = await sb.from('emissoes').update({ voado: true }).in('id', ids.slice(0, 200)); if (!error) D.emissoes.forEach(e => { if (ids.includes(e.id)) e.voado = true; }); } catch (_) {}
+  for (let i = 0; i < ids.length; i += 200) {
+    const lote = ids.slice(i, i + 200);
+    try { const { error } = await sb.from('emissoes').update({ voado: true }).in('id', lote); if (error) return; D.emissoes.forEach(e => { if (lote.includes(e.id)) e.voado = true; }); } catch (_) { return; }
+  }
 }
 // check-in do B2B é feito pela agência: o app marca sozinho para não cobrar ninguém (nem no Telegram)
 let CK_B2B_FEITO = new Set();
@@ -2958,7 +2971,9 @@ function instanteVoo(iso, hhmm, tz) {
     const s = new Intl.DateTimeFormat('en-US', { timeZone: tz || 'America/Sao_Paulo', timeZoneName: 'longOffset' }).formatToParts(new Date(utc)).find(x => x.type === 'timeZoneName').value;
     const r = s.match(/GMT([+-])(\d{1,2}):?(\d{2})?/), off = r ? (r[1] === '-' ? -1 : 1) * (+r[2] * 60 + (+r[3] || 0)) : 0;
     return utc - off * 6e4;
-  } catch (_) { return utc + 3 * 36e5; }
+  } catch (_) {
+    try { const loc = new Date(new Date(utc).toLocaleString('en-US', { timeZone: tz || 'America/Sao_Paulo' })), ref = new Date(new Date(utc).toLocaleString('en-US', { timeZone: 'UTC' })); return utc - (loc - ref); } catch (__) { return utc + 3 * 36e5; }
+  }
 }
 /* trechos de voo das emissões (todo o time vê) */
 function trechosEm() {
@@ -4523,7 +4538,7 @@ function telaFormAgenda(P) {
     const i = D.agenda.findIndex(y => y.id === data.id); if (i >= 0) D.agenda[i] = data; else D.agenda.unshift(data);
     if (row.agendamento_id) { const a = D.ags.find(y => String(y.id) === row.agendamento_id); if (a) a.status = 'confirmada'; }
     aviso(row.status === 'Agendada' ? (D.tt && D.tt.conectado ? 'Reunião agendada e enviada para o TickTick.' : 'Reunião agendada.') : row.status === 'Realizada' && !row.resumo ? 'Registrada. Falta colar o resumo.' : 'Reunião salva.');
-    AG_ED = null; AG_VISTA = 'reunioes'; history.replaceState(null, '', '#agenda'); telaAgenda(P); scrollTo(0, 0);
+    AG_ED = null; ANTERIOR = null; AG_VISTA = 'reunioes'; history.replaceState(null, '', '#agenda'); telaAgenda(P); scrollTo(0, 0);
   };
   if ($('excluirAg')) $('excluirAg').onclick = async () => {
     const cancelar = base.status === 'Agendada';

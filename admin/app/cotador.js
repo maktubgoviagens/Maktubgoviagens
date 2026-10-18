@@ -3,7 +3,7 @@
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
 import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=4';
-import { acharPessoa } from '/admin/app/venda.js?v=19';
+import { acharPessoa } from '/admin/app/venda.js?v=20';
 export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
 // toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
@@ -1068,6 +1068,7 @@ export function valorDaOpcao(d, k, forma, n) {
     if (forma === 'pix') return p.pix || null;
     return forma === 'cartao' && p.cartao && n >= 1 && n <= p.parc ? p.cartao : null;
   }
+  if (d.modelo === 'corp') { const op = opcoesCotacao(d)[k || 0] || opcoesCotacao(d)[0]; return forma === 'pix' && op ? op.valor || null : null; }
   return valorPelaCotacao(d, forma, n);
 }
 export function valorPelaCotacao(d, forma, n) {

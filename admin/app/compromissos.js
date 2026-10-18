@@ -35,7 +35,12 @@ const obs = (e) => String((e && e.observacoes) || '');
 const refDe = (e) => (obs(e).match(/ref ([0-9a-f-]{8,})/i) || [])[1] || null;
 export function parcelas(emissoes, uid) {
   const L = [], todas = emissoes || [];
-  const canceladasFechadas = new Set(todas.filter(e => /CANCELAMENTO/.test(obs(e)) && !ehB2B(e)).map(refDe).filter(Boolean));
+  // mês do ajuste de cancelamento de cada venda original
+  const mesAjuste = new Map(todas.filter(e => /CANCELAMENTO/.test(obs(e)) && !ehB2B(e) && refDe(e)).map(e => [refDe(e), mk(e.data_negociacao)]));
+  const embarque = (o) => { const v = o && (o.data_ida || o.data_volta); const mv = mk(o && o.data_negociacao), mi = mk(v); return v ? (mi > mv ? mi : mv) : null; };
+  // a 2ª metade só é cancelada se ainda não tinha entrado num fechamento anterior ao cancelamento
+  const h2Cancelada = (o) => { const ma = mesAjuste.get(o.id); if (!ma) return false; const me = embarque(o); return !me || me >= ma; };
+  const canceladasFechadas = new Set(todas.filter(e => mesAjuste.has(e.id) && h2Cancelada(e)).map(e => e.id));
   todas.forEach(e => {
     if (e.vendedor_id !== uid) return;
     const mv = mk(e.data_negociacao); if (!mv) return;
@@ -44,6 +49,7 @@ export function parcelas(emissoes, uid) {
     // linhas de ajuste (cancelamento ou estorno de mês fechado): inteiras no mês do ajuste
     if (/CANCELAMENTO|AJUSTE ESTORNO/.test(obs(e))) {
       if (/CANCELAMENTO/.test(obs(e)) && !ehB2B(e)) { const o = todas.find(x => x.id === refDe(e)); if (o) c = r2(c + (Number(o.comissao) || 0) - r2((Number(o.comissao) || 0) / 2)); }
+      // 2ª metade já paga antes do cancelamento: fica com o vendedor, então o ajuste não a desconta
       if (c) L.push({ e, nome, comp: mv, valor: r2(c), tipo: /CANCELAMENTO/.test(obs(e)) ? 'ajuste de cancelamento' : 'ajuste de estorno' });
       return;
     }
@@ -174,7 +180,7 @@ export async function tela(P, ctx) {
     const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, data)
       : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: data || undefined });
     // pagou o fechamento do time: o mês fecha sozinho (nada daquele mês muda depois de pago)
-    if (!error && x.tipo === 'time' && ctx.fecharMes) await ctx.fecharMes(x.comp);
+    if (!error && x.tipo === 'time' && ctx.fecharMes && x.comp < mk(new Date().toISOString())) await ctx.fecharMes(x.comp);
     return error;
   };
   P.querySelectorAll('form[data-pg]').forEach(f => f.onsubmit = async (ev) => {
