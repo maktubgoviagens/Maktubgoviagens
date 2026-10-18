@@ -69,6 +69,24 @@ export function emLista() { return VISTA === 'lista'; }
 export function buscar(t) { BUSCA = t || ''; FILTRO = 'todos'; }
 export function abrir(id) { PID = id; VISTA = id ? 'ficha' : 'lista'; }
 // pedaço do endereço da tela aberta (para o voltar do celular voltar para a ficha certa)
+// resumo que aparece no topo da ficha única: aniversário, cliente desde e viagens (como comprador ou passageiro)
+export function resumoPessoa(D, p) {
+  if (!p) return '';
+  const fora = (e) => /CANCELAD|CANCELAMENTO|AJUSTE/.test(String(e.observacoes || ''));
+  const ids = new Set((D.emissoes || []).filter(e => e.pessoa_id === p.id && !fora(e)).map(e => e.id));
+  (D.reunioes || []).forEach(r => (r.itens || []).forEach(x => { if (x.planilha_id && (x.pax || []).some(q => q && q.pessoa_id === p.id)) ids.add(x.planilha_id); }));
+  const em = (D.emissoes || []).filter(e => ids.has(e.id) && !fora(e));
+  const viagens = em.filter(e => /passag|pacote|corporativo/i.test(String(e.servico_app || e.servico || ''))).length;
+  const desde = em.map(e => String(e.data_negociacao || '')).filter(Boolean).sort()[0];
+  let aniv = '';
+  if (p.nascimento) { const d = new Date(p.nascimento + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - d.getFullYear(); if (h.getMonth() < d.getMonth() || (h.getMonth() === d.getMonth() && h.getDate() < d.getDate())) a--; aniv = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} (${a} anos)`; }
+  const it = [aniv && `<div class="num"><div class="l">Aniversário</div><div class="v" style="font-size:17px">${aniv}</div></div>`,
+    `<div class="num"><div class="l">Cliente desde</div><div class="v" style="font-size:17px">${desde ? desde.slice(5, 7) + '/' + desde.slice(0, 4) : '-'}</div></div>`,
+    `<div class="num"><div class="l">Viagens com a Maktub</div><div class="v" style="font-size:17px">${viagens}</div></div>`].filter(Boolean);
+  return `<div class="numeros" style="margin-top:10px">${it.join('')}</div>`;
+}
+// abas da ficha única: dados e compras (Clientes) e, para quem é da Gestão, a carteira
+export const abasFicha = (atual) => `<div class="seg" id="fichaAbas" style="margin-top:10px"><button type="button" data-fa="dados" class="${atual === 'dados' ? 'on' : ''}">Dados e compras</button><button type="button" data-fa="gestao" class="${atual === 'gestao' ? 'on' : ''}">Gestão de Milhas</button></div>`;
 export function hash() { return VISTA === 'nova' ? '/nova' : VISTA === 'dups' ? '/duplicadas' : PID && (VISTA === 'ficha' || VISTA === 'editar') ? '/' + PID + (VISTA === 'editar' ? '/editar' : '') : ''; }
 export function rota(h) { if (h[1] === 'nova') { VISTA = 'nova'; PID = null; } else if (h[1] === 'duplicadas') { VISTA = 'dups'; PID = null; } else if (h[1]) { VISTA = h[2] === 'editar' ? 'editar' : 'ficha'; PID = h[1]; } else { VISTA = 'lista'; PID = null; } }
 
@@ -185,6 +203,8 @@ function telaFicha(P, X) {
     <button class="voltar" id="voltar">‹ Clientes</button>
     <h1 class="titulo" style="margin-top:6px">${esc(p.nome)}</h1>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${rotulos(D, p).map((t, i) => `<span class="tag ${i === 0 && ehCliente(D, p) ? 'ok' : t === 'Gestão' ? 'ouro' : ''}">${esc(t)}</span>`).join('')}${diasAniv !== null && diasAniv <= 7 ? `<span class="tag alerta">${diasAniv === 0 ? 'Aniversário hoje' : 'Aniversário em ' + diasAniv + (diasAniv === 1 ? ' dia' : ' dias')}</span>` : ''}</div>
+    ${p.cliente_id && pode('gestao') ? abasFicha('dados') : ''}
+    ${resumoPessoa(D, p)}
     <div class="botoes4" style="margin-top:12px">
       ${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">${X.ZAP}WhatsApp</a>` : ''}
       <button class="sec" id="novaCot">Nova cotação</button>
@@ -200,7 +220,7 @@ function telaFicha(P, X) {
     ${(p.papeis || []).includes('fornecedor') && verValor(X) ? (() => { const k = norm(p.nome), em = (D.emissoes || []).filter(e => norm(e.fornecedor) === k && (+e.custo || 0) > 0), ap = em.filter(e => !e.pago_fornecedor), sm = (L) => L.reduce((t, e) => t + (+e.custo || 0), 0);
       return `<section class="bloco"><h2>Como fornecedor</h2><div class="lin"><span>Compras da Maktub</span><span>${em.length} · ${brlC(sm(em))}</span></div><div class="lin"><span>A pagar</span><span style="color:${ap.length ? 'var(--alerta)' : 'inherit'}">${ap.length ? ap.length + ' · ' + brlC(sm(ap)) : 'nada'}</span></div>${ap.length && X.irPagar ? '<button class="sec" type="button" id="irPagarF" style="width:100%;margin-top:8px">Ver e pagar ›</button>' : ''}</section>`; })() : ''}
     ${(() => { const em = (D.emissoes || []).filter(e => e.pessoa_id === p.id); const g = {}; em.forEach(e => { const k = serv(e); g[k] = g[k] || { n: 0, v: 0 }; g[k].n++; g[k].v += Number(e.valor_receber) || 0; }); const L = Object.entries(g).sort((a, b) => b[1].v - a[1].v); return L.length ? `<section class="bloco"><h2>O que já comprou</h2>${L.map(([k, x]) => `<div class="lin"><span>${esc(k)}</span><span>${verValor(X) ? brlC(x.v) + ' · ' : ''}${x.n}</span></div>`).join('')}</section>` : ''; })()}
-    ${p.cliente_id && pode('gestao') ? `<button class="sec grande" id="irGestao" style="margin-top:10px;width:100%">Abrir carteira da Gestão de Milhas ›</button>` : ''}
+
     <section class="bloco"><h2>Contato</h2>
       ${lin('Celular', esc(p.celular))}${lin('E-mail', esc(p.email))}${lin('Instagram', esc(p.instagram))}
       ${lin('Aceita comunicação', p.aceita_comunicacao ? 'Sim' : 'Não informado')}
@@ -261,7 +281,7 @@ function telaFicha(P, X) {
   };
   $('novaCot').onclick = () => X.novaCotacao({ cliente: p.nome, contato: p.celular || p.email || '', pessoa_id: p.id, origem: p.origem || '' });
   $('linkCad').onclick = () => gerarLink(P, X, p);
-  if ($('irGestao')) $('irGestao').onclick = () => X.abrirFicha(p.cliente_id);
+  if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); if (b && b.dataset.fa === 'gestao') X.abrirFicha(p.cliente_id); };
   P.querySelectorAll('[data-p]').forEach(b => b.onclick = () => ir(X, 'ficha', b.dataset.p));
   P.querySelectorAll('[data-at]').forEach(b => b.onclick = () => X.abrirAtendimento(b.dataset.at));
   P.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => X.abrirReuniao(b.dataset.ag));

@@ -476,7 +476,7 @@ import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as MKT from '/admin/app/marketing.js?v=12';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=15';
+import * as CRM from '/admin/app/crm.js?v=16';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=45';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
@@ -3350,12 +3350,14 @@ function telaFicha(P, id) {
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
+    ${(pf => pf && podeAba('crm') ? CRM.abasFicha('gestao') + CRM.resumoPessoa(D, pf) : '')((D.pessoas || []).find(x => x.cliente_id === c.id))}
     <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
     <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}${(() => { const T = tarefasDe(c.id), f = T.filter(t => t.feito).length; return T.length && f < T.length ? ' ' + pilula(false, `Implantação ${f} de ${T.length}`) : ''; })()}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
   $('voltar').onclick = () => history.back();
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
+  if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
   ({ resumo: fiResumo, tarefas: fiTarefas, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
