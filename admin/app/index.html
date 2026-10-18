@@ -480,7 +480,7 @@ import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=44';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
-import * as VENDA from '/admin/app/venda.js?v=17';
+import * as VENDA from '/admin/app/venda.js?v=18';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=12';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -500,6 +500,10 @@ const brl = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { maximumFract
 const brlC = (n) => { n = Number(n || 0); if (Math.abs(n) >= 1e6) return 'R$ ' + (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi'; if (Math.abs(n) >= 1e4) return 'R$ ' + (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil'; return brl(n); };
 const milC = (n) => { n = Number(n || 0); if (n >= 1e6) return (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi'; if (n >= 1e4) return Math.round(n / 1e3).toLocaleString('pt-BR') + ' mil'; return num(n); };
 const dia = (s) => { if (!s) return null; const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+// data local do aparelho (fuso de quem usa), sem passar por UTC
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// cada pessoa vê e digita os horários no fuso do próprio celular; fora do Brasil, o campo avisa qual é
+const fusoRotulo = () => { try { const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; if (!tz || /Sao_Paulo|Bahia|Fortaleza|Recife|Belem|Maceio|Araguaina/.test(tz)) return ''; return '(seu horário: ' + tz.split('/').pop().replace(/_/g, ' ') + ')'; } catch (_) { return ''; } };
 const HOJE = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const difDias = (d) => Math.round((d - HOJE()) / 864e5);
 const dataCurta = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
@@ -657,8 +661,19 @@ $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
   if (!pode('checkin')) { aviso('Seu acesso não inclui marcar check-in.'); return; }
-  const feito = !b.classList.contains('feito');
-  if (feito && !(await perguntarBilhete(b.dataset.tr, refEmissao(b.dataset.id)))) return;
+  const feito = !b.classList.contains('feito'), tr = b.dataset.tr;
+  // voo registrado um a um: o check-in é desse voo; o primeiro e o último também marcam a ida e a volta da planilha
+  if (/^t\d+$/.test(tr)) {
+    const R = ((D.trechos || {})[String(b.dataset.id)] || []).slice().sort((a, c) => a.n - c.n), n = +tr.slice(1), r = R.find(x => x.n === n); if (!r) return;
+    if (feito && !(await perguntarBilhete(tr, refEmissao(b.dataset.id), { de: r.origem, para: r.destino, data: r.data, n, total: R.length }))) return;
+    const { error } = await sb.from('voos_emissao').update({ checkin: feito, checkin_em: feito ? new Date().toISOString() : null, checkin_por: feito ? D.meuId : null }).eq('emissao_id', String(b.dataset.id)).eq('n', n);
+    if (error) { aviso(tec('Não salvou: ' + error.message)); return; }
+    r.checkin = feito;
+    const lado = n === 1 ? 'ida' : n === R.length ? 'volta' : null;
+    if (lado) { const { error: e2 } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: lado, p_feito: feito }); if (!e2) { const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + lado] = feito; const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + lado] = feito; } }
+    aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela(); return;
+  }
+  if (feito && !(await perguntarBilhete(tr, refEmissao(b.dataset.id)))) return;
   const { error } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: b.dataset.tr, p_feito: feito });
   if (error) { aviso('Não salvou: ' + error.message); return; }
   const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + b.dataset.tr] = feito;
@@ -702,15 +717,24 @@ document.addEventListener('click', async (e) => {
 function logEvento(tabela, registro, rotulo, detalhe) {
   try { sb.from('log_atividades').insert({ acao: 'evento', tabela, registro: registro ? String(registro) : null, rotulo: rotulo || null, detalhe }).then(() => {}, () => {}); } catch (_) {}
 }
-const refEmissao = (id) => { const e = (D.emissoes || []).find(x => x.id === id) || (D.voosEm || []).find(x => x.id === id) || {}; return { id, rotulo: [e.comprador, e.sobrenome].filter(Boolean).join(' ') || e.passageiro || '' }; };
+const refEmissao = (id) => { const e = (D.emissoes || []).find(x => x.id === id) || {}, v = (D.voosEm || []).find(x => x.id === id) || {};
+  return { id, rotulo: [e.comprador, e.sobrenome].filter(Boolean).join(' ') || v.passageiro || '', nome: e.comprador || v.passageiro || '', contato: e.contato || v.contato || '',
+    origem: e.origem || v.origem || '', destino: e.destino || v.destino || '', loc: String(e.localizador || v.localizador || '').toUpperCase(), ida: e.data_ida || v.data_ida, volta: e.data_volta || v.data_volta }; };
 /* check-in só fecha depois de confirmar que o bilhete foi enviado ao cliente */
-function perguntarBilhete(tr, ref) {
+function perguntarBilhete(tr, ref, voo) {
   return new Promise((ok) => {
     const el = document.createElement('div');
     el.className = 'folha';
-    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="folha-tit">Check-in ${tr === 'volta' ? 'da volta' : 'da ida'}</div>
-      <div style="font-size:17px;color:var(--verde);margin:4px 0 14px">Você já enviou o bilhete para o cliente?</div>
-      <div class="botoes4"><button class="zap" type="button" data-r="1">Sim, já enviei</button><button class="sec" type="button" data-r="0">Ainda não</button></div></div>`;
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="folha-tit">Check-in ${voo ? `do voo ${voo.n} de ${voo.total}${voo.de || voo.para ? ' · ' + esc([voo.de, voo.para].filter(Boolean).join(' → ')) : ''}` : tr === 'volta' ? 'da volta' : 'da ida'}</div>
+      <div style="font-size:17px;color:var(--verde);margin:4px 0 14px">O check-in só fecha com o bilhete enviado ao cliente.</div>
+      ${ref && zapNum(ref.contato) ? `<button class="zap grande" type="button" id="bZap" style="width:100%;margin-bottom:8px">Enviar bilhete pelo WhatsApp</button><div class="sub" style="margin:-2px 0 10px">Abre a conversa com a mensagem pronta. Anexe o cartão de embarque e envie.</div>` : '<div class="sub" style="margin:0 0 10px">Esta venda não tem o WhatsApp do cliente: envie o bilhete pelo canal de sempre.</div>'}
+      <div class="botoes4"><button class="sec" type="button" data-r="1">Já enviei o bilhete</button><button class="sec" type="button" data-r="0">Voltar</button></div></div>`;
+    const bz = el.querySelector('#bZap'); if (bz) bz.onclick = () => {
+      const de = voo ? voo.de : tr === 'volta' ? ref.destino : ref.origem, para = voo ? voo.para : tr === 'volta' ? ref.origem : ref.destino, dt = voo ? voo.data : tr === 'volta' ? ref.volta : ref.ida;
+      const txt = `Oi, ${String(ref.nome || '').split(' ')[0]}! O check-in do seu voo ${[de, para].filter(Boolean).join(' → ')}${dt ? ' de ' + dataCurta(dia(dt)) : ''} está feito${ref.loc ? ' (localizador ' + ref.loc + ')' : ''}. Segue o seu cartão de embarque. Boa viagem!`;
+      window.open(zapLink(ref.contato, ref.nome, txt), '_blank');
+      bz.textContent = 'Abrir o WhatsApp de novo'; el.querySelector('[data-r="1"]').className = 'zap'; el.querySelector('[data-r="1"]').textContent = 'Enviei o bilhete: fechar o check-in';
+    };
     const fim = (r) => { el.remove(); if (!r) aviso('Check-in não marcado. Envie o bilhete ao cliente e marque de novo.'); logEvento('checkin', ref && ref.id, ref && ref.rotulo, r ? `Confirmou que enviou o bilhete da ${tr === 'volta' ? 'volta' : 'ida'}${ref && ref.rotulo ? ' de ' + ref.rotulo : ''}` : `Ainda não tinha enviado o bilhete da ${tr === 'volta' ? 'volta' : 'ida'}${ref && ref.rotulo ? ' de ' + ref.rotulo : ''}`); ok(r); };
     el.querySelector('.folha-fundo').onclick = () => fim(false);
     el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
@@ -802,7 +826,7 @@ function ir(aba, extra) {
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
-  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
   if (extra) extra();
   history.pushState(null, '', '#' + aba + (aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : ''));
   marcarNav(); tela(); scrollTo(0, 0);
@@ -879,7 +903,7 @@ async function carregar(silencioso, manterTela) {
     D.time = q[1].data || []; D.leads = q[2].data || []; D.sols = q[3].data || []; D.tal = q[4].data || []; D.talErro = q[4].error || null;
     $('pagina').classList.remove('carregando'); D.atual = new Date(); return manterTela ? null : tela();
   }
-  const hoje = HOJE(), iso = (d) => d.toISOString().slice(0, 10);
+  const hoje = HOJE(), iso = (d) => isoLocal(d);
   const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
   const inicioAno = `${hoje.getFullYear()}-01-01`, desde = `${hoje.getFullYear() - 1}-01-01`;
   const comum = await Promise.all([
@@ -899,7 +923,7 @@ async function carregar(silencioso, manterTela) {
   if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
-  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B();
+  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B(); marcarVoados();
   if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
   const G = pode('gestao'), LE = pode('leads');
   if (ADMIN || G || LE || pode('talentos')) {
@@ -1009,7 +1033,7 @@ function eventos(todos) {
     if (a.status === 'solicitada') E.push({ cid: a.cliente_id, d: dia(a.data_preferida) || HOJE(), hora: '', ic: 'reuniao', alerta: true, t: `Reunião a confirmar: ${nomeCli(a.cliente_id)}`, s: `Preferência ${a.periodo ? 'pela ' + a.periodo.toLowerCase() : 'sem período'}${a.formato ? ' · ' + a.formato : ''}`, href: adminLink(a.cliente_id, 'agendamentos_reuniao') });
   });
   trechosEm().forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: t.pendente,
-    t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.tr === 'volta' ? ' · volta' : ''}`,
+    t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? (t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '') : t.tr === 'volta' ? ' · volta' : ''}`,
     s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
     href: (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
   D.clientes.filter(c => c.gestao_vencimento && diasPara(c.gestao_vencimento) >= -1 && diasPara(c.gestao_vencimento) <= 120).forEach(c => E.push({ cid: c.id, d: dia(c.gestao_vencimento), hora: '', ic: 'milhas', alerta: diasPara(c.gestao_vencimento) <= 30, t: `Vence o contrato da Gestão: ${c.nome_completo}`, s: 'Reunião de renovação', href: '#clientes/' + c.id }));
@@ -1073,7 +1097,7 @@ function telaInicio(P) {
   const itens = [
     ['Leads esperando alguém assumir', leadsSemDono().length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
-    ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
+    ['Check-ins para fazer', checkinsTotal(), () => ir('agenda', () => { AG_VISTA = 'checkins'; })],
     ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
     ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
@@ -1140,6 +1164,9 @@ function telaInicioColab(P) {
     </div>
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
     ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Novo atendimento</button>' : ''}
+    ${(() => { const ck = eventos().filter(e => e.ic === 'voo' && e.alerta), pv = pode('comercial') ? posVenda().length : 0;
+      return `${pv ? `<div class="pend" style="margin-top:12px"><button data-ir="reunioes"><span>Vendas fechadas aguardando emissão</span><span><b class="tem">${pv}</b><span class="seta">›</span></span></button></div>` : ''}
+      ${ck.length ? `<div class="secao">Check-ins para fazer</div>${agrupar(ck)}` : ''}`; })()}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${blocoPosViagem()}
     ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
@@ -1248,7 +1275,7 @@ function telaEmissoes(P) {
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}${VER || minha(e) ? `<span>Comissão:</span> ${brl2(e.comissao)}` : ''}</div>
         ${!VER && LST ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}
         ${VER ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')} · ${pct(e.comissao_pct)}${e.parceiro_id ? ` · <span>Parceiro:</span> ${esc(nomeParc(e.parceiro_id))} ${pct(e.parceiro_pct)}` : ''}</div>` : ''}
-        ${VER || minha(e) ? `<div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div>` : ''}</div>
+        ${VER || minha(e) || pode('checkin') || LST ? `<div class="toque">${ADMIN ? 'Comissão e parceiro' : 'Ver detalhes'} ›</div>` : ''}</div>
       </button>${pode('financeiro') ? `<div class="emchk">
         <button type="button" data-ck-cli="${e.id}" class="${e.pago ? 'ok' : ''}" ${e.pago ? 'disabled' : ''}><span class="cx">${e.pago ? '✓' : ''}</span><span>Recebido do cliente</span></button>
         ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}
@@ -1274,7 +1301,7 @@ function telaEmissoes(P) {
     await carregar(true); aviso('Vendedor definido.'); if (ABA === 'emissoes') telaEmissoes(P);
   };
   $('emServ').onchange = (e) => { EM_SERV = e.target.value; telaEmissoes(P); };
-  P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const em = D.emissoes.find(x => x.id === b.dataset.e); if (!VER && em && !minha(em)) return; EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
+  P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const em = D.emissoes.find(x => x.id === b.dataset.e); if (!VER && em && !minha(em) && !pode('checkin') && !LST) return; EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
   // checks financeiros direto no card: um toque marca, desmarcar pede confirmação
   P.querySelectorAll('[data-ck-cli]').forEach(b => b.onclick = async () => {
     if (!b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo: cliente pagou'; return; }
@@ -1339,9 +1366,10 @@ function caixa(nome, rotulo, valor) { return `<label class="fc"><input type="che
 
 function telaFormEmissao(P) {
   const nova = EM_ED === 'nova';
-  const e = nova ? { servico: 'Passagens (Milhas)', data_negociacao: new Date().toISOString().slice(0, 10), passageiros: 1, vendedor_id: D.meuId } : D.emissoes.find(x => x.id === EM_ED);
+  const e = nova ? { servico: 'Passagens (Milhas)', data_negociacao: hojeISO(), passageiros: 1, vendedor_id: D.meuId } : D.emissoes.find(x => x.id === EM_ED);
   if (!e) { EM_ED = null; return telaEmissoes(P); }
-  if (!nova && !VER_TODAS() && (e.vendedor_app || e.vendedor_id) !== D.meuId) { EM_ED = null; aviso('Essa venda é de outra pessoa da equipe.'); return telaEmissoes(P); }
+  // quem faz check-in ou vê as vendas da Maktub abre qualquer emissão (para fazer o check-in e acompanhar)
+  if (!nova && !VER_TODAS() && !pode('checkin') && !VER_LISTA() && (e.vendedor_app || e.vendedor_id) !== D.meuId) { EM_ED = null; aviso('Essa venda é de outra pessoa da equipe.'); return telaEmissoes(P); }
   const travado = !nova && mesFechado(String(e.data_negociacao).slice(0, 7));
   if (nova && modoPlanilha()) { EM_ED = null; return telaEmissoes(P); }
   const daPlanilha = modoPlanilha() || e.fonte === 'planilha';
@@ -1362,7 +1390,10 @@ function telaFormEmissao(P) {
         ${l('Onde comprou', esc(x.fornecedor || ''))}
         ${VENDA.HOTEL === x.produto ? l('Carta de boas-vindas', x.carta ? 'Enviada' : '<b style="color:var(--alerta)">Pendente</b>') : ''}
         ${x.print ? `<button type="button" class="sec" data-vprint="${esc(x.print)}" style="width:100%;margin-top:8px">Ver print da tarifa</button>` : ''}</section>`; })()}
-    ${!nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega à meia-noite do dia anterior.</div>
+    ${!nova && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) && ((D.trechos || {})[String(e.id)] || []).length ? `<section class="bloco" style="margin-top:12px"><h2>Voos e horários</h2><div class="sub" style="margin-top:-4px">Horário local de saída, como está no bilhete. O aviso de check-in chega 24 h antes de cada voo.</div>
+      ${D.trechos[String(e.id)].slice().sort((a, b) => a.n - b.n).map(r => `<div class="duas-col" style="align-items:end"><div class="sub" style="margin:0 0 10px"><b>Voo ${r.n}</b> · ${esc([r.origem, r.destino].filter(Boolean).join(' → '))} · ${dataCurta(dia(r.data))}${r.checkin ? ' · check-in feito' : ''}</div><label class="fl"><span>Saída</span><input type="time" data-hrv="${r.n}" value="${esc(String(r.hora || '').slice(0, 5))}"></label></div>`).join('')}
+      <button type="button" class="sec grande" id="hrSalvarV" style="width:100%;margin-top:6px">Salvar horários</button></section>`
+    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega à meia-noite do dia anterior.</div>
       <div class="duas-col">${e.data_ida ? `<label class="fl"><span>Saída da ida (${dataCurta(dia(e.data_ida))})</span><input type="time" id="hrIda" value="${esc(String(h.hora_ida || '').slice(0, 5))}"></label>` : '<div></div>'}${e.data_volta ? `<label class="fl"><span>Saída da volta (${dataCurta(dia(e.data_volta))})</span><input type="time" id="hrVolta" value="${esc(String(h.hora_volta || '').slice(0, 5))}"></label>` : '<div></div>'}</div>
       <button type="button" class="sec grande" id="hrSalvar" style="width:100%;margin-top:6px">Salvar horário</button></section>`)((D.horas || {})[String(e.id)] || {}) : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
@@ -1417,6 +1448,18 @@ function telaFormEmissao(P) {
     </form>`;
   const f = $('fEm');
   B2B.ligarCancelar(P, e, { D, sb, aviso, brl2, nomeTime, fechado: travado }, () => telaFormEmissao(P));
+  if ($('hrSalvarV')) $('hrSalvarV').onclick = async () => {
+    const R = (D.trechos || {})[String(e.id)] || [];
+    for (const r of R) {
+      const el = P.querySelector(`[data-hrv="${r.n}"]`); if (!el) continue; const hora = el.value || null;
+      if ((r.hora ? String(r.hora).slice(0, 5) : null) === hora) continue;
+      const tz = r.tz || await VENDA.fusoDe(r.origem);
+      const { error } = await sb.from('voos_emissao').update({ hora, tz }).eq('emissao_id', String(e.id)).eq('n', r.n);
+      if (error) { aviso(ADMIN ? 'Não salvou: ' + error.message : 'Não salvou. Tente de novo ou avise o administrador.'); return; }
+      r.hora = hora; r.tz = tz;
+    }
+    aviso('Horários salvos. O aviso de check-in sai 24 h antes de cada voo.');
+  };
   if ($('hrSalvar')) $('hrSalvar').onclick = async () => {
     const hi = ($('hrIda') || {}).value || null, hv = ($('hrVolta') || {}).value || null, ant = (D.horas || {})[String(e.id)] || {};
     // fuso do aeroporto de saída: o horário é o local; mantém o que já veio do fechamento (mais preciso no multitrecho)
@@ -1988,7 +2031,7 @@ function telaFormReuniao(P) {
     ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
     <form id="fRe" class="form" autocomplete="off">
       <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
-      ${campo('data', 'Data e hora', dl(r.data), 'datetime-local', 'required')}
+      ${campo('data', 'Data e hora ' + fusoRotulo(), dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
       ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
@@ -2021,7 +2064,7 @@ function telaFormReuniao(P) {
       ${!nova && meuCal() ? '<button class="zap" type="button" id="calAtd" style="margin-top:8px;width:100%">Agendar pelo meu Cal.com</button>' : ''}
       <div class="sub" style="margin-top:8px">${nova ? 'Já tem reunião marcada ou feita com este cliente? Registre aqui.' : meuCal() ? 'Ou registre uma reunião sem o Cal.com:' : 'Nova reunião com este cliente:'}</div>
       ${campo('nr_assunto', 'Assunto da reunião', '', 'text', 'placeholder="Ex.: diagnóstico das milhas, apresentação da cotação"')}
-      ${campo('nr_data', 'Data e hora', '', 'datetime-local')}
+      ${campo('nr_data', 'Data e hora ' + fusoRotulo(), '', 'datetime-local')}
       <label class="fc"><input type="checkbox" name="nr_feita"><span>Essa reunião já aconteceu</span></label>
       <label class="fl" id="nrResumo" hidden><span>Resumo da reunião</span><textarea name="nr_abordado" rows="5" placeholder="Cole aqui o resumo do Granola."></textarea></label>
       <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}</div>
@@ -2809,11 +2852,21 @@ async function carregarEquipe() {
   D.equipe = eq.data || []; D.parceirosAdm = pa.data || []; D.parc = pr.data || []; D.cfg = cf.data || D.cfg; D.time = tn.data || [];
 }
 async function carregarAgendaEm() {
-  const iso = (d) => d.toISOString().slice(0, 10);
+  const iso = (d) => isoLocal(d);
   const r = await sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) });
   D.voosEm = r.data || [];
   { const h = await sb.from('voo_horarios').select('*'); D.horas = h.error ? null : Object.fromEntries((h.data || []).map(x => [String(x.emissao_id), x])); }
+  { const t = await sb.from('voos_emissao').select('*'); if (!t.error) { D.trechos = {}; (t.data || []).forEach(x => (D.trechos[String(x.emissao_id)] = D.trechos[String(x.emissao_id)] || []).push(x)); } else D.trechos = null; }
   if (D.emissoes && D.emissoes.length) marcarCheckinB2B();
+}
+// voado: marca sozinho quando a data do último voo já passou (venda cancelada não conta). Mudança de voo, a equipe ajusta.
+let VOADO_FEITO = false;
+async function marcarVoados() {
+  if (VOADO_FEITO || !(ADMIN || pode('checkin'))) return; VOADO_FEITO = true;
+  const hj = hojeISO();
+  const ids = (D.emissoes || []).filter(e => !e.voado && !e.outra && !B2B.ehAjuste(e) && !B2B.ehCancelada(e, D) && (e.data_volta || e.data_ida) && String(e.data_volta || e.data_ida).slice(0, 10) < hj).map(e => e.id);
+  if (!ids.length) return;
+  try { const { error } = await sb.from('emissoes').update({ voado: true }).in('id', ids.slice(0, 200)); if (!error) D.emissoes.forEach(e => { if (ids.includes(e.id)) e.voado = true; }); } catch (_) {}
 }
 // check-in do B2B é feito pela agência: o app marca sozinho para não cobrar ninguém (nem no Telegram)
 let CK_B2B_FEITO = new Set();
@@ -2832,17 +2885,40 @@ async function marcarCheckinB2B() {
   }
 }
 
+// instante real de saída: data e hora locais do aeroporto de saída, no fuso dele
+function instanteVoo(iso, hhmm, tz) {
+  const [y, m, d] = iso.split('-').map(Number), [hh, mm] = hhmm.split(':').map(Number), utc = Date.UTC(y, m - 1, d, hh, mm);
+  try {
+    const s = new Intl.DateTimeFormat('en-US', { timeZone: tz || 'America/Sao_Paulo', timeZoneName: 'longOffset' }).formatToParts(new Date(utc)).find(x => x.type === 'timeZoneName').value;
+    const r = s.match(/GMT([+-])(\d{1,2}):?(\d{2})?/), off = r ? (r[1] === '-' ? -1 : 1) * (+r[2] * 60 + (+r[3] || 0)) : 0;
+    return utc - off * 6e4;
+  } catch (_) { return utc + 3 * 36e5; }
+}
 /* trechos de voo das emissões (todo o time vê) */
 function trechosEm() {
   const T = [];
   D.voosEm.forEach(v => {
     { const em = (D.emissoes || []).find(x => x.id === v.id); if (B2B.ehB2B(em) || B2B.ehCancelada(em, D)) return; }
+    // voos registrados um a um (vendas novas): um check-in por voo, com a rota, a data e o horário reais
+    const R = ((D.trechos || {})[String(v.id)] || []).slice().sort((a, b) => a.n - b.n);
+    if (R.length) {
+      R.forEach(r => {
+        const d = dia(r.data), k = difDias(d); if (k < -1) return;
+        const hr = r.hora ? String(r.hora).slice(0, 5) : '', feito = !!r.checkin;
+        let pend = !feito && k >= 0 && k <= 2;
+        if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
+        T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, de: r.origem, para: r.destino, v });
+      });
+      return;
+    }
     [['ida', v.data_ida, v.checkin_ida, v.origem, v.destino], ['volta', v.data_volta, v.checkin_volta, v.destino, v.origem]].forEach(([tr, data, feito, de, para]) => {
       if (!data) return;
       const d = dia(data), k = difDias(d);
       if (k < -1) return;
-      const hr = ((D.horas || {})[String(v.id)] || {})['hora_' + tr];
-      T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: !feito && k >= 0 && k <= 2, de, para, v });
+      const H = (D.horas || {})[String(v.id)] || {}, hr = H['hora_' + tr];
+      let pend = !feito && k >= 0 && k <= 2;
+      if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
+      T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, de, para, v });
     });
   });
   return T;
@@ -3893,6 +3969,14 @@ function telaAgenda(P) {
   if (AG_ED === 'cal') return telaCal(P);
   if (AG_ED) return telaFormAgenda(P);
   if (AG_VISTA === 'reunioes') return telaReunioesAgenda(P);
+  if (AG_VISTA === 'checkins') {
+    const E = eventos().filter(e => e.ic === 'voo' && e.alerta);
+    P.innerHTML = `<button class="voltar" id="voltarCk">‹ Agenda</button><h1 class="titulo" style="margin-top:6px">Check-ins <em>para fazer</em></h1>
+      <div class="sub">Voos nas próximas 48 horas sem check-in marcado. Faça o check-in, envie o bilhete ao cliente e marque aqui.</div>
+      <div style="margin-top:6px">${E.length ? agrupar(E) : '<div class="vazio" style="margin-top:14px">Nenhum check-in pendente.</div>'}</div>`;
+    $('voltarCk').onclick = () => { AG_VISTA = 'tudo'; telaAgenda(P); };
+    return;
+  }
   const CAL = AG_MODO === 'cal';
   const E = CAL ? [] : eventos();
   let ultimo = '';
@@ -3918,7 +4002,6 @@ function telaAgenda(P) {
 
 /* calendário do mês: voos, viagens, reuniões, vencimentos e aniversários; toque no dia abre tudo detalhado */
 let AG_MODO = 'cal', AG_CMES = mesKey(new Date()), AG_DIA = null;
-const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function agCalendario() {
   const k = AG_CMES, [y, mm] = k.split('-').map(Number);
   const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate(), hj = isoLocal(new Date());
@@ -4111,7 +4194,7 @@ function voltaramDeViagem() {
   const recente = new Set(D.posViagem.filter(x => x.situacao === 'avaliou' || Date.now() - new Date(x.pedido_em) < 120 * 864e5).map(x => x.pessoa_id));
   const por = {};
   D.emissoes.forEach(e => {
-    const fim = e.data_volta || e.data_ida; if (!e.pessoa_id || !fim || (e.servico_app || e.servico) === 'Gestão de Milhas') return;
+    const fim = e.data_volta || e.data_ida; if (!e.pessoa_id || !fim || (e.servico_app || e.servico) === 'Gestão de Milhas' || B2B.ehB2B(e) || B2B.ehAjuste(e) || B2B.ehCancelada(e, D)) return;
     const k = difDias(dia(fim)); if (k > -1 || k < -15) return;
     if (pedidos.has(e.id) || recente.has(e.pessoa_id)) return;
     if (!por[e.pessoa_id] || String(fim) > String(por[e.pessoa_id].fim)) por[e.pessoa_id] = { e, fim, k };
@@ -4315,7 +4398,7 @@ function telaFormAgenda(P) {
       <div class="grupo">Reunião</div>
       ${campo('titulo', 'Assunto', x.titulo, 'text', 'required placeholder="Ex.: diagnóstico das milhas, apresentação da cotação"')}
       <label class="fl"><span>Tipo</span><select name="tipo">${AG_TIPOS.map(t => `<option ${t === x.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      <div class="duas-col">${campo('data', 'Data e hora', dl(x.data), 'datetime-local', 'required')}${campo('duracao_min', 'Duração (min)', x.duracao_min || 60, 'number')}</div>
+      <div class="duas-col">${campo('data', 'Data e hora ' + fusoRotulo(), dl(x.data), 'datetime-local', 'required')}${campo('duracao_min', 'Duração (min)', x.duracao_min || 60, 'number')}</div>
       ${campo('link', 'Link da reunião (Meet, Zoom)', x.link, 'url', 'placeholder="https://"')}
       <div class="grupo">Com quem</div>
       ${pode('gestao') && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === x.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}

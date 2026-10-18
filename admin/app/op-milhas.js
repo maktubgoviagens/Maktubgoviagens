@@ -76,7 +76,7 @@ export async function telaOpMilhas(P, X) {
 function form(P, X) {
   const { sb, $, esc, aviso, brl2, num, pct, campo } = X;
   const nova = OM_ED === 'nova';
-  const o = nova ? { data: new Date().toISOString().slice(0, 10), programa: 'Azul Fidelidade', titular: X.eu || '', milheiro_venda: 15.5 } : LISTA.find(x => x.id === OM_ED);
+  const o = nova ? { data: ((d) => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10))(new Date()), programa: 'Azul Fidelidade', titular: X.eu || '', milheiro_venda: 15.5 } : LISTA.find(x => x.id === OM_ED);
   if (!o) { OM_ED = null; return telaOpMilhas(P, X); }
   const conhecido = PROGRAMAS.some(p => p[0] === o.programa);
   P.innerHTML = `<button class="voltar" id="voltar">‹ Operação de milhas</button><h1 class="titulo" style="margin-top:6px">${nova ? 'Nova <em>compra</em>' : 'Editar <em>compra</em>'}</h1>

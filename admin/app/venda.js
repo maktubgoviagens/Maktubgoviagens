@@ -429,6 +429,7 @@ export async function enviarParaPlanilha(X, r, IT, F) {
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
   await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
+  await salvarVoos(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
   const agora = new Date().toISOString();
   linhas.forEach(l => { IT[l.item].planilha_id = l.id; IT[l.item].enviado_em = agora; });
   return { ok: true, n: linhas.length };
@@ -453,6 +454,24 @@ export async function salvarHorarios(X, L) {
   }
   if (!rows.length) return;
   try { const { error } = await X.sb.from('voo_horarios').upsert(rows); if (!error) rows.forEach(r => { (X.D.horas = X.D.horas || {})[r.emissao_id] = r; }); } catch (_) { /* a venda segue; o aviso usa a meia-noite */ }
+}
+
+// cada voo da emissão (ida, volta, cada trecho do multitrecho) vira uma linha com rota, data, horário e fuso:
+// é por ela que o check-in e o aviso de 24 h funcionam voo a voo. Conexão dentro do mesmo trecho é um check-in só.
+export async function salvarVoos(X, L) {
+  const rows = [];
+  for (const { id, x } of L.filter(({ x }) => ehVoo(x))) {
+    let ls = Array.isArray(x.ct) && x.ct.length ? x.ct.map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' })) : null;
+    if (!ls) { ls = [{ o: up3(x.origem), d: up3(x.destino), data: x.data_ida || '', hora: x.hora_ida || '' }]; if (x.tipo_trecho !== 'ida' && x.data_volta) ls.push({ o: up3(x.destino), d: up3(x.origem), data: x.data_volta, hora: x.hora_volta || '' }); }
+    ls = ls.filter(l => l.data);
+    if (!ls.length) continue;
+    // horário digitado no fechamento vale para o primeiro e o último voo
+    if (x.hora_ida) ls[0].hora = x.hora_ida;
+    if (ls.length > 1 && x.tipo_trecho !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
+    for (let n = 0; n < ls.length; n++) { const l = ls[n]; rows.push({ emissao_id: String(id), n: n + 1, origem: l.o || null, destino: l.d || null, data: l.data, hora: l.hora || null, tz: await fusoDe(l.o) }); }
+  }
+  if (!rows.length) return;
+  try { const { error } = await X.sb.from('voos_emissao').upsert(rows); if (!error) { X.D.trechos = X.D.trechos || {}; rows.forEach(r => { (X.D.trechos[r.emissao_id] = (X.D.trechos[r.emissao_id] || []).filter(o => o.n !== r.n)).push(r); }); } } catch (_) { /* sem a tabela: segue o check-in de ida e volta */ }
 }
 
 // cada passageiro vira (ou atualiza) uma ficha no CRM com papel de passageiro, CPF e nascimento
