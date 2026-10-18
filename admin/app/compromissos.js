@@ -119,6 +119,7 @@ export function alertas(ctx) {
   return montar(ctx).L.filter(x => !x.pago && difDias(x.venc) <= 3).length;
 }
 
+const hojeLocal = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 const quando = (d) => { const n = difDias(d); return n < 0 ? `<span class="tag">atrasado ${-n} ${-n === 1 ? 'dia' : 'dias'}</span>` : n === 0 ? '<span class="tag ouro">vence hoje</span>' : n <= 7 ? `<span class="tag ouro">em ${n} ${n === 1 ? 'dia' : 'dias'}</span>` : `<span class="quando">em ${n} dias</span>`; };
 
 export async function tela(P, ctx) {
@@ -143,8 +144,8 @@ export async function tela(P, ctx) {
       <div class="cab"><div class="nome" style="font-size:19px">${esc(x.titulo)}</div>${quando(x.venc)}</div>
       <div class="lin"><span>${esc(x.desc)} · ${x.tipo === 'time' ? 'pagar em' : 'vence'} ${dd(x.venc)}</span><span><b>${brl2(x.valor)}</b></span></div>
       ${detalhe(x)}
-      <div class="duas-col" style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><label class="fl"><span>Pago em</span><input name="pago_em" type="date" value="${new Date(Math.min(Date.now(), x.venc.getTime() < Date.now() ? x.venc.getTime() : Date.now()) - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10)}" required></label></div>
-      <button class="zap" type="submit" style="margin-top:8px;width:100%">Marcar como pago</button>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="zap" type="submit" style="flex:1">Pago</button><details style="flex:1" data-outro><summary class="sub" style="cursor:pointer;margin:0">Outro valor ou data</summary></details></div>
+      <div class="duas-col" data-campos hidden style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><label class="fl"><span>Pago em</span><input name="pago_em" type="date" value="${hojeLocal()}"></label></div>
     </form>`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
     <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento, despesas avulsas lançadas no DRE e parcelas dos empréstimos para o caixa. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
@@ -152,6 +153,7 @@ export async function tela(P, ctx) {
       <div class="num destaque"><div class="l">Próximos 7 dias</div><div class="v">${brl2(vence7.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${vence7.length} ${vence7.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
       <div class="num"><div class="l">Atrasados</div><div class="v">${brl2(atras.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${atras.length} ${atras.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
     </div>
+    ${(h => h.length > 1 ? `<button class="zap grande" id="pagarHoje" style="width:100%;margin-top:12px">Marcar como pagos os ${h.length} de hoje · ${brl2(h.reduce((a, x) => a + x.valor, 0))}</button>` : '')(aPagar.filter(x => x.tipo !== 'emprestimo' && difDias(x.venc) === 0))}
     <div class="secao">A pagar</div>
     <div class="lista" style="margin-top:0">${aPagar.length ? aPagar.map(card).join('') : '<div class="vazio">Nada a pagar por enquanto.</div>'}</div>
     ${forn.length ? `<div class="pend" style="margin-top:10px"><button data-irpagar><span>Fornecedores a pagar · ${forn.length} ${forn.length === 1 ? 'venda' : 'vendas'}</span><span><b class="tem">${brl2(forn.reduce((a, e) => a + (Number(e.custo) || 0), 0))}</b><span class="seta">›</span></span></button></div>` : ''}
@@ -166,16 +168,30 @@ export async function tela(P, ctx) {
       <div class="sub">Despesas fixas entram aqui quando têm dia de vencimento, em Salários e despesas fixas. Despesas avulsas entram ao serem lançadas no DRE.</div></section>`;
   $('voltar').onclick = () => ir('empresa');
   P.querySelectorAll('details[data-det]').forEach(d => d.ontoggle = () => { if (d.open) ABERTO = d.dataset.det; else if (ABERTO === d.dataset.det) ABERTO = null; });
+  // um toque marca como pago (valor previsto, data de hoje); "outro valor ou data" abre os campos
+  P.querySelectorAll('details[data-outro]').forEach(d => d.ontoggle = () => { const c = d.closest('form').querySelector('[data-campos]'); if (c) c.hidden = !d.open; });
+  const pagar = async (x, valor, data) => {
+    const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, data)
+      : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: data || undefined });
+    // pagou o fechamento do time: o mês fecha sozinho (nada daquele mês muda depois de pago)
+    if (!error && x.tipo === 'time' && ctx.fecharMes) await ctx.fecharMes(x.comp);
+    return error;
+  };
   P.querySelectorAll('form[data-pg]').forEach(f => f.onsubmit = async (ev) => {
     ev.preventDefault();
     const x = L.find(y => chave(y) === f.dataset.pg); if (!x) return;
     const valor = Number(String(f.elements.valor.value).replace(',', '.'));
     if (!(valor >= 0)) { aviso('Valor inválido.'); return; }
-    const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, f.elements.pago_em.value)
-      : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: f.elements.pago_em.value || undefined });
+    const error = await pagar(x, valor, f.elements.pago_em.value);
     if (error) { aviso('Não salvou: ' + error.message); return; }
-    aviso('Marcado como pago.'); tela(P, ctx);
+    aviso('Marcado como pago. Para desfazer, use "desfazer" em Pagos.'); tela(P, ctx);
   });
+  if ($('pagarHoje')) $('pagarHoje').onclick = async () => {
+    const H = aPagar.filter(x => x.tipo !== 'emprestimo' && difDias(x.venc) === 0);
+    if (!confirm(`Marcar como pagos ${H.length} pagamentos de hoje, nos valores previstos?`)) return;
+    for (const x of H) { const e = await pagar(x, x.valor, hojeLocal()); if (e) { aviso('Parou no pagamento de ' + x.titulo + ': ' + e.message); tela(P, ctx); return; } }
+    aviso('Pagamentos de hoje marcados como pagos.'); tela(P, ctx);
+  };
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
     if (CONF !== b.dataset.desf) { CONF = b.dataset.desf; b.textContent = 'confirmar'; return; }
     CONF = null;

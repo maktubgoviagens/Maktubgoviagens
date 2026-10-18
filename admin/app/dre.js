@@ -118,7 +118,7 @@ export async function tela(P, ctx) {
 
   P.innerHTML = cab + `
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Resultado</div><div class="v" style="color:${res < 0 ? 'var(--alerta)' : 'inherit'}">${brlS(brl2, res)}</div><div class="d">${rec ? 'margem final de ' + pct(res / rec * 100) : 'sem vendas no período'}</div></div>
+      <div class="num destaque"><div class="l">Resultado da empresa</div><div class="v" style="color:${res < 0 ? 'var(--alerta)' : 'inherit'}">${brlS(brl2, res)}</div><div class="d">${rec ? 'margem final de ' + pct(res / rec * 100) : 'sem vendas no período'}</div></div>
       <div class="num"><div class="l">Vendas</div><div class="v">${brl2(rec)}</div><div class="d">${E.length} ${E.length === 1 ? 'emissão' : 'emissões'}</div></div>
     </div>
     <section class="bloco dre"><h2>DRE ${mesModo ? 'de ' + mesNome(mes).toLowerCase() : 'de ' + ano}</h2>

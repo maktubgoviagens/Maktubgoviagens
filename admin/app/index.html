@@ -482,9 +482,9 @@ import * as COT from '/admin/app/cotador.js?v=45';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
 import * as VENDA from '/admin/app/venda.js?v=19';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=13';
+import * as CMP from '/admin/app/compromissos.js?v=14';
 import * as CX from '/admin/app/caixa.js?v=1';
-import * as DRE from '/admin/app/dre.js?v=5';
+import * as DRE from '/admin/app/dre.js?v=6';
 import * as B2B from '/admin/app/b2b.js?v=10';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
@@ -942,7 +942,7 @@ async function carregar(silencioso, manterTela) {
   { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
   if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
   D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B(); marcarVoados();
-  if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; D.parc = comum[3].data || []; D.time = comum[4].data || [];
+  if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; fecharMesesAuto(); D.parc = comum[3].data || []; D.time = comum[4].data || [];
   const G = pode('gestao'), LE = pode('leads');
   if (ADMIN || G || LE || pode('talentos')) {
     const nada = Promise.resolve({ data: [], error: null, count: 0 });
@@ -1003,7 +1003,20 @@ async function carregar(silencioso, manterTela) {
 }
 
 function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: () => ABA, mesNome, nomeTime, CAT_DESP, mes: () => EM_MES, setMes: (k) => { EM_MES = k; }, seletorMes, ligarMes, folha: (k) => CMP.folha(ctxCMP(), k), mesCaixa: CMP.MES_CAIXA }; }
-function ctxCMP() { return { D, sb, $, esc, aviso, brl2, ir, aba: () => ABA, aPagar, nomeTime }; }
+function ctxCMP() { return { D, sb, $, esc, aviso, brl2, ir, aba: () => ABA, aPagar, nomeTime, fecharMes }; }
+// fecha um mês (trava vendas e comissões dele); usado ao pagar o fechamento do time e no dia 5
+async function fecharMes(k) {
+  if (!ADMIN || mesFechado(k)) return;
+  const r = await sb.from('fechamentos').insert({ mes: k + '-01' }); if (r.error) return;
+  const f = await sb.from('fechamentos').select('*'); if (!f.error) D.fech = f.data || [];
+}
+// no dia 5 o mês anterior fecha sozinho (dá para fechar antes no Financeiro)
+let FECH_AUTO = false;
+async function fecharMesesAuto() {
+  if (FECH_AUTO || !ADMIN || !D.fech) return; FECH_AUTO = true;
+  const h = new Date(); let k = CMP.INICIO;
+  while (true) { const [y, m] = k.split('-').map(Number), fim5 = new Date(y, m, 5); if (fim5 > h) break; if (!mesFechado(k)) await fecharMes(k); k = mesMais(k, 1); }
+}
 
 function ctxCRM() {
   return { D, $, esc, sb, aviso, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
@@ -1152,7 +1165,7 @@ function telaInicio(P) {
     <div class="secao">A Maktub hoje</div>
     <div class="numeros">
       ${(c => `<div class="num destaque"><div class="l">Conversão do mês</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} reuniões decididas</div></div>`)(conversao(reunioesDoPeriodo(mesKey(new Date()), 'mes')))}
-      <div class="num destaque"><div class="l">Lucro líquido do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
+      <div class="num destaque"><div class="l">Lucro das vendas do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
       <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">geradas no mês, pagas 50/50</div></div>
       <div class="num"><div class="l">Leads em 30 dias</div><div class="v">${leads30}</div><div class="d">${(n => n + (n === 1 ? ' fechado' : ' fechados'))(D.leads.filter(r => r.status === 'fechado' && Date.now() - new Date(r.created_at) <= 30 * 864e5).length)}</div></div>
     </div>
@@ -1288,7 +1301,7 @@ function telaEmissoes(P) {
     <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : LST ? L.filter(minha).length + ' suas no mês' : 'no mês'}</div></div>
-      ${VER ? `<div class="num"><div class="l">Lucro líquido</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
+      ${VER ? `<div class="num"><div class="l">Lucro das vendas</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
@@ -2397,7 +2410,7 @@ function telaFinanceiro(P) {
     <div class="seg" id="finModo"><button data-m="mes" class="${FIN_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${FIN_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${FIN_MODO === 'mes' ? seletorMes('finMes') : `<div class="mesnav" id="finMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Lucro líquido</div><div class="v">${brlC(liq)}</div><div class="d">margem de ${vendas ? pct(liq / vendas * 100) : '0%'} sobre vendas</div></div>
+      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(liq)}</div><div class="d">margem de ${vendas ? pct(liq / vendas * 100) : '0%'} sobre vendas</div></div>
       <div class="num"><div class="l">Vendas</div><div class="v">${brlC(vendas)}</div><div class="d">${L.length} emissões</div></div>
       <div class="num"><div class="l">Lucro bruto</div><div class="v">${brlC(soma(L, 'lucro_bruto'))}</div><div class="d">custo ${brlC(soma(L, 'custo'))}</div></div>
       <div class="num"><div class="l">Imposto</div><div class="v">${brlC(soma(L, 'imposto'))}</div><div class="d">${pct(D.cfg ? D.cfg.imposto_pct : 6)} sobre o lucro</div></div>
@@ -2469,7 +2482,7 @@ async function telaAcessos(P) {
     <div class="lista">${L.map(p => { const eu = p.user_id === D.meuId, adm = p.papel === 'admin'; return `<form class="card form" data-u="${p.user_id}">
       <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:2px 0 0">${esc(p.email || '')}</div></div><div style="text-align:right">${eu ? '<span class="tag">você</span> ' : ''}<span class="tag ${adm ? 'ouro' : ''}">${adm ? 'Administrador' : 'Colaborador'}</span>${p.ativo ? '' : ' <span class="tag alerta">sem acesso</span>'}</div></div>
       <div class="sub" style="margin-top:4px">${p.ultimo_acesso ? 'Último acesso em ' + new Date(p.ultimo_acesso).toLocaleDateString('pt-BR') : 'Ainda não entrou no app'}</div>
-      <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Perfil</span><select name="papel" ${eu ? 'disabled' : ''}><option value="colaborador" ${!adm ? 'selected' : ''}>Colaborador</option><option value="admin" ${adm ? 'selected' : ''}>Administrador</option></select></label>${campo('pct', 'Comissão (%)', p.comissao_pct, 'number')}</div>
+      <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Perfil</span><select name="papel" ${eu ? 'disabled' : ''}><option value="colaborador" ${!adm ? 'selected' : ''}>Colaborador</option><option value="admin" ${adm ? 'selected' : ''}>Administrador</option></select></label><input type="hidden" name="pct" value="${esc(p.comissao_pct ?? 0)}"><div class="sub" style="align-self:end;margin:0 0 12px">Comissão: ${pct(p.comissao_pct || 0)} (em Comissões e regras)</div></div>
       <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div><button class="sec" type="button" data-somkt="p" style="width:100%;margin:6px 0">Liberar só o marketing</button>${htmlPerms(p.permissoes, 'p')}</div>
       <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${eu ? 'disabled' : ''}><span>Acesso ativo</span></label>
       <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar ${esc(String(p.nome).split(' ')[0])}</button>
@@ -2785,7 +2798,7 @@ function telaEmpresa(P) {
     ${EMP_MODO === 'mes' ? seletorMes('empMes') : `<div class="mesnav" id="empMes"><button data-n="-12">‹</button><span>${ano}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
-      <div class="num destaque"><div class="l">Lucro líquido</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
+      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>${ADMIN || pode('dre') ? `<button class="num" data-irdre style="text-align:left;cursor:pointer"><div class="l">Resultado da empresa</div><div class="v" style="font-size:15px">no DRE ›</div><div class="d">depois de salários e despesas</div></button>` : ''}
       <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
@@ -2807,6 +2820,7 @@ function telaEmpresa(P) {
   if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
   if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
   P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
+  P.querySelectorAll('[data-irdre]').forEach(b => b.onclick = () => ir('dre'));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
 }
@@ -2821,11 +2835,11 @@ function telaEquipe(P) {
     <div class="lista" style="margin-top:0">${D.equipe.map(p => `<div class="card" data-u="${p.user_id}">
       <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:0">${esc(p.email || '')}</div></div>${p.user_id === D.meuId ? '<span class="tag">você</span>' : ''}</div>
       <div class="duas-col" style="margin-top:10px">
-        <label class="fl"><span>Perfil</span><select name="papel" ${p.user_id === D.meuId ? 'disabled' : ''}><option value="colaborador" ${p.papel === 'colaborador' ? 'selected' : ''}>Colaborador</option><option value="admin" ${p.papel === 'admin' ? 'selected' : ''}>Administrador</option></select></label>
+        <input type="hidden" name="papel" value="${esc(p.papel)}"><label class="fl" hidden><span>Perfil</span><select disabled><option value="colaborador" ${p.papel === 'colaborador' ? 'selected' : ''}>Colaborador</option><option value="admin" ${p.papel === 'admin' ? 'selected' : ''}>Administrador</option></select></label>
         <label class="fl"><span>Comissão (%)</span><input name="pct" type="number" step="0.1" min="0" max="100" inputmode="decimal" value="${p.comissao_pct}"></label>
       </div>
-      <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${p.user_id === D.meuId ? 'disabled' : ''}><span>Acesso ativo</span></label>
-      <button class="sec" data-salvar="${p.user_id}" style="margin-top:8px">Salvar</button>
+      <label class="fc" hidden><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}><span>Acesso ativo</span></label>
+      <button class="sec" data-salvar="${p.user_id}" style="margin-top:8px">Salvar percentual</button>
       <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Aplicar este percentual às vendas já registradas</summary>
         <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Vendas a partir de</span><input type="date" name="desde" value="${EM_MES}-01"></label><button class="zap" type="button" data-aplicar="${p.user_id}" style="align-self:end">Aplicar ${pct(p.comissao_pct)}</button></div>
         <div class="sub" style="margin-top:2px">Recalcula a comissão das vendas dessa pessoa a partir da data. Meses já fechados não mudam.</div></details>
