@@ -478,14 +478,14 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=43';
+import * as COT from '/admin/app/cotador.js?v=44';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
-import * as VENDA from '/admin/app/venda.js?v=16';
+import * as VENDA from '/admin/app/venda.js?v=17';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=11';
+import * as CMP from '/admin/app/compromissos.js?v=12';
 import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=5';
-import * as B2B from '/admin/app/b2b.js?v=8';
+import * as B2B from '/admin/app/b2b.js?v=9';
 const EXIGIR_CODIGO = true;
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
 CART.usar(sb);
@@ -729,7 +729,8 @@ const PERMS = [
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
 const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
-const pode = (k) => { if (ADMIN) return true; const v = ((D.perfil && D.perfil.permissoes) || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
+// perfil de marketing (Maju, Jéssica): o que não está salvo fica fechado, então uma permissão nova nunca abre o resto do app sozinha
+const pode = (k) => { if (ADMIN) return true; const P0 = (D.perfil && D.perfil.permissoes) || {}; const v = P0[k]; const mkt = P0.marketing === true || P0.marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 /* aba -> permissão que libera */
 const ABA_PERM = { marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
@@ -1073,7 +1074,7 @@ function telaInicio(P) {
     ['Leads esperando alguém assumir', leadsSemDono().length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins nas próximas 48 h', checkinsTotal(), () => ir('agenda')],
-    ['Pagamentos de clientes a receber', D.emissoes.filter(e => !e.pago).length, () => ir('receber')],
+    ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
     ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
     ['Fornecedores a pagar', aPagar().length, () => ir('pagar')],
@@ -1133,7 +1134,8 @@ function telaInicioColab(P) {
     ${botaoLancar('nova')}
     ${blocoGravar()}
     <div class="numeros" style="margin-top:12px">
-      <div class="num destaque"><div class="l">Sua comissão em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'} no mês</div></div>
+      ${(() => { const itens = CMP.parcelas(D.emissoes, D.meuId).filter(x => x.comp === k), com = itens.reduce((a, x) => a + (+x.valor || 0), 0), [yy, mm] = k.split('-').map(Number), pg = new Date(yy, mm, 5).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        return `<button class="num destaque" data-ir="comissao" style="text-align:left;cursor:pointer"><div class="l">Você recebe em ${pg}</div><div class="v" id="recebeIni" data-com="${com}">${brlC(com)}</div><div class="d">Gerado em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}: ${brlC(soma(L, 'comissao'))}</div></button>`; })()}
       <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
@@ -1148,6 +1150,8 @@ function telaInicioColab(P) {
   ligarPosViagem(P, () => telaInicioColab(P));
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  // provisionado do próximo pagamento: salário fixo + metades de comissão do fechamento deste mês
+  sb.rpc('minha_remuneracao', { p_mes: k + '-01' }).then(({ data, error }) => { const el = $('recebeIni'); if (!el || error || !data) return; el.textContent = brlC((+el.dataset.com || 0) + (+data.fixo || 0)); });
 }
 
 /* ================= operação: emissões, comissão, financeiro, equipe ================= */
@@ -1218,7 +1222,7 @@ function telaEmissoes(P) {
   if (!LST) L = L.filter(minha);
   if (LST && EM_VEND !== 'todos') L = L.filter(e => (e.vendedor_id || '') === (EM_VEND === 'sem' ? '' : EM_VEND));
   if (EM_SERV !== 'todos') L = L.filter(e => e.servico === EM_SERV);
-  if (EM_PEND === 'forn') L = L.filter(e => devePagar(e) && !e.pago_fornecedor); else if (EM_PEND === 'cli') L = L.filter(e => !e.pago);
+  if (EM_PEND === 'forn') L = L.filter(e => devePagar(e) && !e.pago_fornecedor); else if (EM_PEND === 'cli') L = L.filter(aReceberCli);
   L = L.slice().sort((a, b) => String(b.data_negociacao).localeCompare(String(a.data_negociacao)) || String(b.created_at).localeCompare(String(a.created_at)));
   P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${LST ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
@@ -1239,7 +1243,7 @@ function telaEmissoes(P) {
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
-        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${B2B.ehB2B(e) ? ' <span class="tag">B2B</span>' : ''}${B2B.ehAjuste(e) ? ` <span class="tag">${/AJUSTE ESTORNO/.test(e.observacoes || '') ? 'ajuste de estorno' : 'ajuste de cancelamento'}</span>` : B2B.ehCancelada(e, D) ? ' <span class="tag">cancelada</span>' : B2B.ehEstorno(e) ? ' <span class="tag">no-show, estorno</span>' : ''}${e.pago ? '' : ' <span class="tag alerta">a receber</span>'}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
+        <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span>${VER && devePagar(e) && !e.pago_fornecedor ? ' <span class="tag">fornecedor a pagar</span>' : ''}${B2B.ehB2B(e) ? ' <span class="tag">B2B</span>' : ''}${B2B.ehAjuste(e) ? ` <span class="tag">${/AJUSTE ESTORNO/.test(e.observacoes || '') ? 'ajuste de estorno' : 'ajuste de cancelamento'}</span>` : B2B.ehCancelada(e, D) ? ' <span class="tag">cancelada</span>' : B2B.ehEstorno(e) ? ' <span class="tag">no-show, estorno</span>' : ''}${aReceberCli(e) ? ' <span class="tag alerta">a receber</span>' : ''}</div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
         <div class="info">${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}${e.cia ? ' · ' + esc(e.cia) : ''}</div>` : ''}
         <div>${VER ? `<span>Venda:</span> ${brl2(e.valor_receber)} · <span>Líquido:</span> ${brl2(e.lucro_liquido)} · ` : ''}${VER || minha(e) ? `<span>Comissão:</span> ${brl2(e.comissao)}` : ''}</div>
         ${!VER && LST ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id) || 'sem vendedor')}</div>` : ''}
@@ -1798,8 +1802,10 @@ function blocoPagamentos(L) {
   const taxa = (r) => r.fech && r.fech.forma === 'cartao' ? +(r.fech.taxa_pct != null ? r.fech.taxa_pct : COT.taxaCartao(+r.fech.parcelas || 1)) || 0 : 0;
   const pix = F.filter(r => r.fech && r.fech.forma === 'pix'), car = F.filter(r => r.fech && r.fech.forma === 'cartao' && +r.fech.parcelas), sem = F.length - pix.length - car.length;
   if (!pix.length && !car.length) return `<section class="bloco"><h2>Pagamentos</h2><div class="vazio">Sem vendas fechadas com a forma de pagamento registrada no período.${sem ? ` ${sem} ${sem === 1 ? 'venda fechada' : 'vendas fechadas'} sem a forma marcada.` : ''}</div></section>`;
-  const vPix = pix.reduce((a, r) => a + val(r), 0), vCar = car.reduce((a, r) => a + val(r), 0), custo = car.reduce((a, r) => a + val(r) * taxa(r) / 100, 0);
-  const porN = {}; car.forEach(r => { const n = +r.fech.parcelas; const g = porN[n] = porN[n] || { q: 0, v: 0, c: 0 }; g.q++; g.v += val(r); g.c += val(r) * taxa(r) / 100; });
+  // taxa: com o total do cartão registrado, é o total menos o que entrou; nas vendas antigas, estimada pelo percentual
+  const tx = (r) => +r.fech.bruto ? Math.max(+r.fech.bruto - val(r), 0) : val(r) * taxa(r) / 100;
+  const vPix = pix.reduce((a, r) => a + val(r), 0), vCar = car.reduce((a, r) => a + (+r.fech.bruto || val(r)), 0), custo = car.reduce((a, r) => a + tx(r), 0);
+  const porN = {}; car.forEach(r => { const n = +r.fech.parcelas; const g = porN[n] = porN[n] || { q: 0, v: 0, c: 0 }; g.q++; g.v += +r.fech.bruto || val(r); g.c += tx(r); });
   const tot = pix.length + car.length;
   return `<section class="bloco"><h2>Pagamentos</h2>
     <div class="numeros" style="margin-top:0">
@@ -2090,11 +2096,11 @@ function telaFormReuniao(P) {
     marcar();
     f._itens = () => IT;
     // valor da venda pela cotação rápida ligada ao card: a escolhida no Fechou ou a mais recente
-    const cotFech = () => { const L = (CDADOS || []).filter(c => c.dados && c.dados.modelo === 'rapida'); return (SEL && L.find(c => SEL.startsWith(c.id + '|'))) || L[0] || null; };
+    // cotação de onde vem o valor: a escolhida no Fechou ou a última enviada (qualquer modelo)
+    const cotFech = () => { const L = (CDADOS || []).filter(c => c.dados); const c = (SEL && L.find(c => SEL.startsWith(c.id + '|'))) || L[0] || null; return c ? { c, k: SEL && SEL.startsWith(c.id + '|') ? +SEL.split('|')[1] || 0 : 0 } : null; };
     const ctxF = { total: () => EDIT.tot(), cliente: () => f.elements.cliente.value, contato: () => f.elements.contato.value, taxa: (n) => COT.taxaCartao(n),
-      alvo: (forma, n) => { const c = cotFech(); return c ? COT.valorPelaCotacao(c.dados, forma, n) : null; },
-      // valores que vieram da cotação (Pix e cartão de 1x a 12x): se a venda está num deles, troca sozinha ao mudar a forma
-      presets: () => { const c = cotFech(); if (!c) return []; return [COT.valorPelaCotacao(c.dados, 'pix'), ...[...Array(12)].map((_, i) => COT.valorPelaCotacao(c.dados, 'cartao', i + 1))].filter(Boolean); },
+      // o que o cliente paga na forma escolhida (no cartão, o total da maquininha); a venda recebe sempre o líquido
+      alvo: (forma, n) => { const z = cotFech(); return z ? COT.valorDaOpcao(z.c.dados, z.k, forma, n) : null; },
       aplicarTotal: (v) => {
         // o total novo vale para a venda inteira: serviços já na planilha ficam como estão, o resto é dividido na proporção de hoje
         const livres = IT.filter(x => !VENDA.enviado(x)); if (!livres.length) return;
@@ -2108,21 +2114,22 @@ function telaFormReuniao(P) {
     // venda: valor integral (um total, rateado entre os serviços pelo custo) ou por serviço (cada um com o seu valor)
     const modoV = () => F.venda_modo || 'total';
     const ratear = () => {
-      if (modoV() !== 'total' || IT.length < 2 || !f.elements.valor_fechado) return;
+      // com um serviço só, "Valor fechado" e a venda do serviço são o mesmo número
+      if ((IT.length > 1 && modoV() !== 'total') || !IT.length || !f.elements.valor_fechado) return;
       const total = Number(String(f.elements.valor_fechado.value || '').replace(',', '.')) || 0; if (!total) return;
       const livres = IT.filter(x => !VENDA.enviado(x)); if (!livres.length) return;
       const fixo = IT.filter(VENDA.enviado).reduce((a, x) => a + (+x.venda || 0), 0), alvo = total - fixo;
       const pesos = livres.map(x => VENDA.custoDe(x) || 0), sp = pesos.reduce((a, b) => a + b, 0);
       let resto = alvo; livres.forEach((x, k) => { const v = k === livres.length - 1 ? Math.round(resto * 100) / 100 : Math.round((sp ? pesos[k] / sp : 1 / livres.length) * alvo * 100) / 100; resto -= v; x.venda = v; });
     };
-    const somaVenda = () => { if (modoV() === 'servico' && f.elements.valor_fechado) { const v = EDIT.tot().v; if (v) f.elements.valor_fechado.value = v; } };
+    const somaVenda = () => { if ((modoV() === 'servico' || IT.length === 1) && f.elements.valor_fechado) { const v = EDIT.tot().v; if (v) f.elements.valor_fechado.value = v; } };
     const desenhaModo = () => {
       let el = $('vendaModo'); if (!el) { if (!$('reDaCot')) return; $('reDaCot').insertAdjacentHTML('afterend', '<div id="vendaModo"></div>'); el = $('vendaModo'); }
       el.innerHTML = IT.length > 1 ? `<div class="sub" style="margin:4px 0 0">Valor de venda</div><div class="seg" style="margin:4px 0 6px"><button type="button" data-vm="total" class="${modoV() === 'total' ? 'on' : ''}">Valor integral</button><button type="button" data-vm="servico" class="${modoV() === 'servico' ? 'on' : ''}">Por serviço</button></div><div class="sub" style="margin:0 0 6px">${modoV() === 'total' ? 'Digite o total em "Valor fechado": o app divide entre os serviços pelo custo de cada um.' : 'Digite a venda de cada serviço: o valor fechado é a soma.'}</div>` : '';
       el.querySelectorAll('[data-vm]').forEach(b => b.onclick = () => { F.venda_modo = b.dataset.vm; if (F.venda_modo === 'total') ratear(); EDIT.desenha(); somaVenda(); desenhaModo(); });
     };
     desenhaModo();
-    if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (modoV() === 'total' && IT.length > 1) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
+    if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (IT.length === 1 || (modoV() === 'total' && IT.length > 1)) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
     $('reItens').addEventListener('input', () => somaVenda());
     $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IT.length > 1) { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); });
     f._ratear = () => { ratear(); EDIT.desenha(); desenhaModo(); };
@@ -2267,7 +2274,7 @@ function telaComissao(P) {
   ligarMes('coMes', () => telaComissao(P));
   const alvo = EM_MES;
   sb.rpc('minha_remuneracao', { p_mes: EM_MES + '-01' }).then(({ data, error }) => {
-    const el = $('minhaRem'); if (!el || error || !data || EM_MES !== alvo || !(+data.fixo)) return;
+    const el = $('minhaRem'); if (!el || error || !data || EM_MES !== alvo) return;
     const [yy, mm] = EM_MES.split('-').map(Number), pg = new Date(yy, mm, data.dia || 5).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const itens = CMP.parcelas(D.emissoes, D.meuId).filter(x => x.comp === EM_MES);
     data.comissao = Math.round(itens.reduce((a, x) => a + (+x.valor || 0), 0) * 100) / 100;
@@ -2282,7 +2289,7 @@ function telaFinanceiro(P) {
   const vendas = soma(L, 'valor_receber'), liq = soma(L, 'lucro_liquido');
   const porServ = {}; L.forEach(e => { porServ[e.servico] = (porServ[e.servico] || 0) + (+e.lucro_liquido || 0); });
   const porVend = {}; L.forEach(e => { const k = e.vendedor_id || ''; porVend[k] = porVend[k] || { n: 0, v: 0, c: 0, b: 0 }; porVend[k].n++; porVend[k].v += +e.valor_receber || 0; porVend[k].c += +e.comissao || 0; porVend[k].b += +e.lucro_bruto || 0; });
-  const aReceber = D.emissoes.filter(e => !e.pago), semNota = D.emissoes.filter(e => !e.nota_gerada && String(e.data_negociacao) >= new Date().getFullYear() + '-01-01');
+  const aReceber = D.emissoes.filter(aReceberCli), semNota = D.emissoes.filter(e => !e.nota_gerada && String(e.data_negociacao) >= new Date().getFullYear() + '-01-01');
   const fech = mesFechado(EM_MES);
   let meses = '';
   if (FIN_MODO === 'ano') {
@@ -2334,7 +2341,7 @@ function telaFinanceiro(P) {
 /* ---------- equipe e acessos (administradores) ---------- */
 let AC_NOVO = false;
 const permPadrao = () => ({ ...PERM_PADRAO });
-const marcado = (perm, k) => { const v = (perm || {})[k]; return v === undefined || v === null ? !!PERM_PADRAO[k] : v === true || v === 'true'; };
+const marcado = (perm, k) => { const v = (perm || {})[k], mkt = (perm || {}).marketing === true || (perm || {}).marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([g, L]) => `<div class="pgrupo">${g}</div>${L.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${marcado(perm, k) ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}`).join('')}
   <div class="perm off"><span><b>Equipe e acessos, comissões e regras, avisos e fechamento do mês</b><small>Só administradores</small></span></div></div>`;
 const lerPerms = (box, nome) => Object.fromEntries(PERM_LISTA.map(([k]) => [k, !!box.querySelector(`[name="${nome || 'p'}_${k}"]`).checked]));
@@ -2376,7 +2383,7 @@ async function telaAcessos(P) {
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
   $('voltar').onclick = () => ir('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
-  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing'; }); aviso('Só o marketing marcado. Salve para valer.'); });
+  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (k === 'mkt_aprovar' && c.checked); }); aviso('Só o marketing marcado (a coordenação, se já estava marcada, continua). Salve para valer.'); });
   P.querySelectorAll('form[data-u]').forEach(f => {
     f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
     f.onsubmit = async (ev) => {
@@ -2553,6 +2560,8 @@ const nNome = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g
 const fornecedoresFichas = () => (D.pessoas || []).filter(p => (p.papeis || []).includes('fornecedor')).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 const fichaFornecedor = (nome) => { const k = nNome(nome); return k ? fornecedoresFichas().find(p => nNome(p.nome) === k) || null : null; };
 const devePagar = (e) => (+e.custo || 0) > 0;
+// a receber: só o que ainda tem valor para o cliente pagar (cancelamento sem custo e linhas de ajuste não entram)
+function aReceberCli(e) { return !e.pago && (+e.valor_receber || 0) > 0.009 && !B2B.ehAjuste(e); }
 const aPagar = () => D.emissoes.filter(e => devePagar(e) && !e.pago_fornecedor);
 let PG_CONF = null;
 function telaPagar(P) {
@@ -2562,7 +2571,7 @@ function telaPagar(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A pagar</div><div class="v">${brlC(soma(L, 'custo'))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'} · ${G.length} ${G.length === 1 ? 'fornecedor' : 'fornecedores'}</div></div>
-      <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(e => !e.pago), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
+      <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(aReceberCli), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
     </div>
     <div class="sub">O valor a pagar é o custo de cada venda. Pague venda por venda ou tudo de um fornecedor de uma vez.</div>
     ${(R => R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Pagos nos últimos 30 dias (${R.length})</summary>${R.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.fornecedor || 'Fornecedor não informado')} · ${esc(e.comprador || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">pago em ${new Date(e.pago_fornecedor_em).toLocaleDateString('pt-BR')}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-desf="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : '')(D.emissoes.filter(e => e.pago_fornecedor && e.pago_fornecedor_em && Date.now() - new Date(e.pago_fornecedor_em) < 30 * 864e5).sort((a, b) => String(b.pago_fornecedor_em).localeCompare(String(a.pago_fornecedor_em))))}
@@ -2589,7 +2598,7 @@ function telaPagar(P) {
   });
 }
 function telaReceber(P) {
-  const L = D.emissoes.filter(e => !e.pago).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
+  const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Financeiro</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(soma(L, 'valor_receber'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>

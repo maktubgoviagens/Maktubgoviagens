@@ -339,41 +339,47 @@ export function ligarColarCard(X, alvoFn) {
 // bloco do fechamento: pagamento, link, comprovante, conferência do financeiro
 export function editorFechamento(X, el, F, ctx) {
   const pixGuardado = () => { try { return localStorage.getItem('mk_pix') || ''; } catch (_) { return ''; } };
+  // no cartão o cliente paga o total da maquininha, mas a venda (o que vai para a planilha) é sempre o que entra na conta
+  const liq = () => F.forma === 'cartao' && +F.bruto ? Math.round(+F.bruto * (100 - (+F.taxa_pct || 0))) / 100 : null;
+  const aplica = (v) => { if (v && ctx.aplicarTotal && Math.abs(v - ctx.total().v) > 0.009) ctx.aplicarTotal(v); };
   const desenha = () => {
     const t = ctx.total();
-    const cartao = F.forma === 'cartao';
+    const cartao = F.forma === 'cartao', lq = liq();
     el.innerHTML = `<div class="bloco" style="margin:8px 0;padding:10px 12px">
       <div class="sub" style="margin:0">Forma de pagamento${F.forma ? '' : ': escolha primeiro, o valor da venda se ajusta sozinho'}</div>
       <div class="seg" style="margin:6px 0 8px"><button type="button" data-fp="pix" class="${F.forma === 'pix' ? 'on' : ''}">Pix</button><button type="button" data-fp="cartao" class="${cartao ? 'on' : ''}">Cartão</button></div>
-      ${cartao ? `<div class="duas-col"><label class="fl"><span>Em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="10"></label><label class="fl"><span>Valor da parcela</span><input readonly value="${F.parcelas && t.v ? X.brl2(t.v / F.parcelas) : ''}"></label></div>
+      ${cartao ? `<div class="duas-col"><label class="fl"><span>Em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="4"></label><label class="fl"><span>Total no cartão (cliente paga)</span><input id="fBruto" inputmode="decimal" value="${X.esc(F.bruto || '')}" placeholder="0,00"></label></div>
+      <div class="sub" id="fCartaoInfo" style="margin:0 0 6px">${F.parcelas && +F.bruto ? `${F.parcelas}x de ${X.brl2(F.bruto / F.parcelas)}. Taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${X.brl2(F.bruto - lq)}.` : 'Com as parcelas e o total, o app calcula o que entra na conta.'}</div>
       <label class="fl"><span>Link de pagamento do cartão</span><input id="fLink" inputmode="url" value="${X.esc(F.link || '')}" placeholder="Cole o link gerado"></label>` : F.forma === 'pix' ? `<label class="fl"><span>Dados do Pix para o cliente</span><input id="fPix" value="${X.esc(F.pix || pixGuardado())}" placeholder="Chave Pix e nome do recebedor"></label>` : ''}
-      ${(() => { const alvo = ctx.alvo ? ctx.alvo(F.forma, +F.parcelas || 0) : null; return alvo && Math.abs(alvo - t.v) > 0.009 ? `<div class="config" style="margin:4px 0 8px">Pela cotação, ${F.forma === 'pix' ? 'no Pix' : `no cartão em ${F.parcelas}x`} o total é <b>${X.brl2(alvo)}</b>.<button type="button" class="zap" id="fUsarAlvo" style="width:100%;margin-top:6px">Usar ${X.brl2(alvo)} na venda</button></div>` : ''; })()}
-      <div class="lin" style="margin-top:6px"><span>Valor total da venda</span><b>${X.brl2(t.v)}</b></div>
+      <div class="lin" style="margin-top:6px"><span>Entra na conta (vai para a planilha)</span><b>${X.brl2(t.v)}</b></div>
       ${F.forma ? `<button type="button" class="zap" id="fEnviar" style="width:100%;margin-top:8px">${F.enviado_em ? 'Enviar de novo ao cliente' : 'Enviar o pagamento ao cliente'}</button>${F.enviado_em ? `<div class="sub">Enviado em ${new Date(F.enviado_em).toLocaleDateString('pt-BR')}.</div>` : ''}` : ''}
       <div class="emchk" style="margin:10px 0 4px;border-top:1px solid var(--linha)"><button type="button" id="fComp" class="${F.comprovante ? 'ok' : ''}"><span class="cx">${F.comprovante ? '✓' : '+'}</span><span>${F.comprovante ? 'Comprovante anexado (tocar para ver)' : 'Anexar comprovante de pagamento'}</span></button>${F.comprovante ? '<button type="button" id="fCompT" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>' : '<button type="button" id="fCompC"><span class="cx">⎘</span><span>Colar print</span></button>'}</div>
       <div class="sub" style="margin-top:0">${F.comprovante ? (F.conferido ? `Conferido pelo financeiro${F.conferido_por ? ' (' + X.esc(X.nomeTime(F.conferido_por) || '') + ')' : ''}.` : 'Aparece no Início dos administradores para conferir.') : 'Com o comprovante, a venda vai como paga para a planilha.'}</div>
       ${F.comprovante && X.ADMIN ? `<label class="fc" style="margin:6px 0"><input type="checkbox" id="fConf" ${F.conferido ? 'checked' : ''}><span>Conferido pelo financeiro</span></label>` : ''}
     </div>`;
-    // troca de forma ou de parcelas: se a venda estava num valor da cotação, já passa para o valor certo da nova escolha
+    // troca de forma ou de parcelas: o total do cartão vem da cotação e a venda passa sozinha para o líquido (ou para o Pix)
     const ajusta = () => {
-      F.taxa_pct = F.forma === 'cartao' && F.parcelas && ctx.taxa ? ctx.taxa(+F.parcelas) : (F.forma === 'pix' ? 0 : F.taxa_pct);
-      const alvo = ctx.alvo ? ctx.alvo(F.forma, +F.parcelas || 0) : null, atual = ctx.total().v;
-      if (alvo && ctx.aplicarTotal && Math.abs(alvo - atual) > 0.009 && (ctx.presets ? ctx.presets() : []).some(v => Math.abs(v - atual) < 0.01)) { ctx.aplicarTotal(alvo); X.aviso(`Venda ajustada para ${X.brl2(alvo)}, o valor da cotação ${F.forma === 'pix' ? 'no Pix' : `em ${F.parcelas}x`}.`); }
+      const n = +F.parcelas || 0;
+      F.taxa_pct = F.forma === 'cartao' && n && ctx.taxa ? ctx.taxa(n) : (F.forma === 'pix' ? 0 : F.taxa_pct);
+      if (F.forma === 'cartao') { const alvo = ctx.alvo ? ctx.alvo('cartao', n) : null; if (alvo && !F.bruto_manual) F.bruto = alvo; aplica(liq()); }
+      else if (F.forma === 'pix') { F.bruto = null; F.bruto_manual = false; aplica(ctx.alvo ? ctx.alvo('pix', 0) : null); }
       desenha();
     };
     el.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => { F.forma = b.dataset.fp; ajusta(); });
-    const usar = el.querySelector('#fUsarAlvo'); if (usar) usar.onclick = () => { const alvo = ctx.alvo(F.forma, +F.parcelas || 0); if (alvo && ctx.aplicarTotal) { ctx.aplicarTotal(alvo); desenha(); } };
-    const fp = el.querySelector('#fParc'); if (fp) fp.onchange = () => ajusta();
-    const liga = (id, k, fn) => { const e = el.querySelector('#' + id); if (e) e.oninput = () => { F[k] = fn ? fn(e.value) : e.value.trim(); if (id === 'fParc') { const v = el.querySelector('#fParc').parentElement.parentElement.querySelectorAll('input')[1]; v.value = F.parcelas && t.v ? X.brl2(t.v / F.parcelas) : ''; } }; };
-    liga('fParc', 'parcelas', v => parseInt(v, 10) || null); liga('fLink', 'link'); liga('fPix', 'pix');
+    const fp = el.querySelector('#fParc'); if (fp) { fp.oninput = () => { F.parcelas = parseInt(fp.value, 10) || null; }; fp.onchange = () => ajusta(); }
+    const fb = el.querySelector('#fBruto'); if (fb) { fb.oninput = () => { const v = String(fb.value).trim(); F.bruto = v ? Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v) || null : null; F.bruto_manual = !!F.bruto; }; fb.onchange = () => ajusta(); }
+    const liga = (id, k) => { const e = el.querySelector('#' + id); if (e) e.oninput = () => { F[k] = e.value.trim(); }; };
+    liga('fLink', 'link'); liga('fPix', 'pix');
     const pix = el.querySelector('#fPix'); if (pix) { if (!F.pix && pix.value) F.pix = pix.value; pix.onchange = () => { try { localStorage.setItem('mk_pix', pix.value.trim()); } catch (_) {} }; }
     const env = el.querySelector('#fEnviar'); if (env) env.onclick = () => {
       const nome = String(ctx.cliente() || '').split(' ')[0];
       if (cartao && !F.link) { X.aviso('Cole o link de pagamento antes de enviar.'); return; }
       if (cartao && !F.parcelas) { X.aviso('Informe em quantas vezes.'); return; }
       if (!cartao && !F.pix) { X.aviso('Informe os dados do Pix.'); return; }
+      if (cartao && !+F.bruto) { X.aviso('Informe o total no cartão.'); return; }
+      const t = ctx.total();
       const txt = cartao
-        ? `Oi, ${nome}! Tudo pronto para garantir a sua viagem. O investimento total ficou em ${X.brl2(t.v)}, em ${F.parcelas}x de ${X.brl2(t.v / F.parcelas)} no cartão. É só pagar por este link:\n${F.link}\nAssim que o pagamento cair, a gente emite e te manda tudo.`
+        ? `Oi, ${nome}! Tudo pronto para garantir a sua viagem. O investimento total ficou em ${X.brl2(F.bruto)}, em ${F.parcelas}x de ${X.brl2(F.bruto / F.parcelas)} no cartão. É só pagar por este link:\n${F.link}\nAssim que o pagamento cair, a gente emite e te manda tudo.`
         : `Oi, ${nome}! Tudo pronto para garantir a sua viagem. O investimento total ficou em ${X.brl2(t.v)} no Pix.\n${F.pix}\nAssim que o pagamento cair, me manda o comprovante por aqui que a gente emite e te manda tudo.`;
       const link = X.zapLink(ctx.contato(), ctx.cliente(), txt);
       if (!link) { X.aviso('O atendimento não tem WhatsApp do cliente.'); return; }
@@ -412,7 +418,7 @@ export async function enviarParaPlanilha(X, r, IT, F) {
       'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
       'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
       'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
-'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : ''].filter(Boolean).join(' · '),
+'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : ''].filter(Boolean).join(' · '),
       'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : '',
       'Quantas vezes': F.forma === 'cartao' && F.parcelas ? +F.parcelas : '',
       'Serviço': servicoPlanilha(x), 'Vendedor': vendedor, 'ID sistema': id

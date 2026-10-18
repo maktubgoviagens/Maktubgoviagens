@@ -10,7 +10,7 @@
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
 import * as CX from './caixa.js?v=1';
-import { ehB2B } from './b2b.js?v=6';
+import { ehB2B } from '/admin/app/b2b.js?v=9';
 
 export const INICIO = '2026-09';
 const INICIO_CONTAS = '2026-10';
@@ -28,14 +28,28 @@ const nomeMes = (k) => { const [y, m] = k.split('-').map(Number); return new Dat
 const dd = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
 /* Parcelas de comissão de uma pessoa: em que mês trabalhado cada metade entra. */
+// Cancelamento de venda de mês já fechado (regra de out/2026, rever com o contador em dez/2026):
+// a 1ª metade, já paga, fica com a pessoa; a 2ª metade (do voado) é cancelada. A linha de ajuste do
+// cancelamento entra inteira no mês dela, com a 2ª metade da venda original devolvida ao cálculo.
+const obs = (e) => String((e && e.observacoes) || '');
+const refDe = (e) => (obs(e).match(/ref ([0-9a-f-]{8,})/i) || [])[1] || null;
 export function parcelas(emissoes, uid) {
-  const L = [];
-  (emissoes || []).forEach(e => {
+  const L = [], todas = emissoes || [];
+  const canceladasFechadas = new Set(todas.filter(e => /CANCELAMENTO/.test(obs(e)) && !ehB2B(e)).map(refDe).filter(Boolean));
+  todas.forEach(e => {
     if (e.vendedor_id !== uid) return;
-    const c = Number(e.comissao) || 0; if (!c) return;
     const mv = mk(e.data_negociacao); if (!mv) return;
     const nome = e.comprador || e.produto || e.servico || 'Venda';
+    let c = Number(e.comissao) || 0;
+    // linhas de ajuste (cancelamento ou estorno de mês fechado): inteiras no mês do ajuste
+    if (/CANCELAMENTO|AJUSTE ESTORNO/.test(obs(e))) {
+      if (/CANCELAMENTO/.test(obs(e)) && !ehB2B(e)) { const o = todas.find(x => x.id === refDe(e)); if (o) c = r2(c + (Number(o.comissao) || 0) - r2((Number(o.comissao) || 0) / 2)); }
+      if (c) L.push({ e, nome, comp: mv, valor: r2(c), tipo: /CANCELAMENTO/.test(obs(e)) ? 'ajuste de cancelamento' : 'ajuste de estorno' });
+      return;
+    }
+    if (!c) return;
     if (ehB2B(e)) { L.push({ e, nome, comp: mv, valor: r2(c), tipo: 'B2B, inteira no mês da venda' }); return; }
+    if (canceladasFechadas.has(e.id)) { L.push({ e, nome, comp: mv, valor: r2(c / 2), tipo: '1ª metade, venda (cancelada depois: 2ª metade não é paga)' }); return; }
     const viagem = e.data_ida || e.data_volta; // trecho só de volta: vale a data da volta
     const h1 = r2(c / 2), mi = mk(viagem);
     L.push({ e, nome, comp: mv, valor: h1, tipo: '1ª metade, venda' });

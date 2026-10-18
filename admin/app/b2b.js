@@ -158,9 +158,9 @@ export function blocoCancelar(e, X) {
   if (aj) return sec(`Emissão ${tipo} cancelada`.replace('  ', ' '), `Mês fechado: o ajuste entrou em ${String(aj.data_negociacao || '').slice(0, 7).split('-').reverse().join('/')}.`);
   if (ehCancelada(e)) return sec(`Emissão ${tipo} cancelada`.replace('  ', ' '), `Comissão depois do cancelamento: ${X.brl2(e.comissao)}.`);
   if (!(X.ADMIN || e.vendedor_id === X.D.meuId)) return '';
-  if ((X.D.cancPend || {})[e.id]) return sec('Cancelamento enviado', 'A planilha atualiza em até 5 minutos.');
+  if ((X.D.cancPend || {})[e.id]) return sec(X.D.cancPend[e.id] === 'est' ? 'Estorno enviado' : 'Cancelamento enviado', 'A planilha atualiza em até 5 minutos.');
   const est = blocoEstorno(e, X);
-  const regra = tipo ? `A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.` : 'A comissão é recalculada pelo percentual da venda sobre o que ficou.';
+  const regra = tipo ? `A comissão vira ${X.brl2(2)} fixos${pctVend(e, X) === 0 ? ' (sócio: fica R$ 0,00)' : ''}.` : X.fechado ? 'Comissão: a 1ª metade, já paga, fica com o vendedor; a 2ª metade (do voado) é cancelada.' : 'A comissão é recalculada pelo percentual da venda sobre o que ficou.';
   const quem = tipo ? 'A agência paga' : 'O cliente paga';
   return `<details class="bloco" style="margin-top:12px" id="cancEm"><summary style="cursor:pointer;color:var(--alerta);font-weight:600">Cancelar esta emissão</summary>
     <div class="sub" style="margin-top:6px">A venda passa a ser só o que o cancelamento rendeu. ${regra}${X.fechado ? ' <b>Esta venda é de um mês fechado: ele não muda. A diferença entra como ajuste no mês atual.</b>' : ''}</div>
@@ -225,12 +225,31 @@ function ligarEstorno(P, e, X, depois) {
     const nid = uuid(); if (X.fechado) dados['ID sistema'] = nid;
     const { error } = await X.sb.from('fila_planilha').insert({ id: nid, atendimento_id: null, item: 0, dados });
     if (error) { b.disabled = false; b.textContent = 'Registrar estorno'; X.aviso('Não registrou: ' + error.message); return; }
-    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = true;
+    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = 'est';
     X.aviso('Estorno registrado. A planilha atualiza em até 5 minutos.'); depois();
   };
 }
 
+// cancelamento ou estorno já enviado e ainda não sincronizado com a planilha (vale em qualquer aparelho):
+// some o botão para não mandar duas vezes
+async function jaEnviado(X, e) {
+  try {
+    // só o que entrou na fila nos últimos 20 minutos (a planilha sincroniza em até 5)
+    const desde = new Date(Date.now() - 20 * 6e4).toISOString();
+    const [a, b] = await Promise.all([
+      X.sb.from('fila_planilha').select('id,dados').eq('dados->>_alvo', String(e.id)).gte('created_at', desde).limit(5),
+      X.sb.from('fila_planilha').select('id,dados').ilike('dados->>Observações', `%${REF(e.id)}%`).gte('created_at', desde).limit(5)]);
+    const L = [...(a.data || []), ...(b.data || [])].map(r => String((r.dados || {})['Observações'] || ''));
+    return L.some(o => /CANCELAD|CANCELAMENTO/.test(o)) ? 'canc' : L.some(o => /ESTORNO/.test(o)) ? 'est' : null;
+  } catch (_) { return null; }
+}
 export function ligarCancelar(P, e, X, depois) {
+  if (!ehAjuste(e) && !ehCancelada(e, X.D) && !(X.D.cancPend || {})[e.id]) jaEnviado(X, e).then(k => {
+    if (!k) return; X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = k;
+    const c = P.querySelector('#cancEm'), es = P.querySelector('#estEm');
+    const aviso = `<section class="bloco" style="margin-top:12px"><h2>${k === 'canc' ? 'Cancelamento enviado' : 'Estorno enviado'}</h2><div class="sub" style="margin:0">A planilha atualiza em até 5 minutos.</div></section>`;
+    if (c) { c.insertAdjacentHTML('beforebegin', aviso); c.remove(); if (es) es.remove(); } else if (es) { es.insertAdjacentHTML('beforebegin', aviso); es.remove(); }
+  });
   ligarEstorno(P, e, X, depois);
   const b = P.querySelector('#cancOk'); if (!b) return;
   let comCusto = false;
@@ -240,7 +259,7 @@ export function ligarCancelar(P, e, X, depois) {
     P.querySelector('#cancRes').innerHTML = `<div class="lin"><span>Recebe pelo cancelamento</span><span>${X.brl2(val)}</span></div>
       <div class="lin"><span>Paga à companhia</span><span>− ${X.brl2(cus)}</span></div>
       <div class="lin forte"><span>${res >= 0 ? 'Lucro' : 'Prejuízo'} do cancelamento</span><span style="${res < 0 ? 'color:var(--alerta)' : ''}">${X.brl2(res)}</span></div>
-      <div class="lin"><span>Comissão depois do cancelamento</span><span>${X.brl2(nv.com)}</span></div>`;
+      <div class="lin"><span>Comissão depois do cancelamento</span><span>${X.brl2(X.fechado && !ehB2B(e) ? r2(nv.com + r2((+e.comissao || 0) / 2)) : nv.com)}</span></div>`;
   };
   P.querySelector('#cancTipo').onclick = (ev) => { const x = ev.target.closest('button'); if (!x) return; comCusto = x.dataset.t === 'com'; P.querySelectorAll('#cancTipo button').forEach(y => y.classList.toggle('on', y === x)); P.querySelector('#cancCom').hidden = !comCusto; resumo(); };
   P.querySelector('#cancCom').oninput = resumo; resumo();
@@ -260,7 +279,8 @@ export function ligarCancelar(P, e, X, depois) {
         'Sobrenome': e.sobrenome || '', 'CPF (NF)': e.cpf_nf || '', 'Origem': e.origem || '', 'Destino': e.destino || '', 'Comprador': e.comprador || '', 'Passageiros': +e.passageiros || 1,
         'Contato': e.contato || '', 'Indicação': '', 'Localizador': String(e.localizador || '').toUpperCase(), 'Data da negociação': hojeISO(),
         'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(cus - custoDe(e)), 'Valor a receber': r2(val - (+e.valor_receber || 0)), 'Pago': true,
-        'Comissão': r2(nv.com - (+e.comissao || 0)), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
+        // B2C: a 1ª metade já paga fica; sai só a 2ª metade (do voado), e entra a comissão sobre o que o cancelamento rendeu
+        'Comissão': r2(nv.com - (b2b ? (+e.comissao || 0) : (+e.comissao || 0) - r2((+e.comissao || 0) / 2))), 'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '',
         'Observações': [b2b ? MARCA_OBS : '', `CANCELAMENTO em ${quando} da venda de ${mes} (${REF(e.id)}), ${det}`, mot].filter(Boolean).join(' · '),
         'Serviço': e.servico || 'Passagens (Milhas)', 'Vendedor': X.nomeTime(e.vendedor_id) || '' };
       if (+e.repasse) dados['Repasse do parceiro'] = r2(nv.rep - (+e.repasse || 0));
@@ -273,7 +293,7 @@ export function ligarCancelar(P, e, X, depois) {
     const nid = uuid(); if (X.fechado) dados['ID sistema'] = nid;
     const { error } = await X.sb.from('fila_planilha').insert({ id: nid, atendimento_id: null, item: 0, dados });
     if (error) { b.disabled = false; b.textContent = 'Confirmar cancelamento'; X.aviso('Não cancelou: ' + error.message + (/null value|not-null/.test(error.message) ? ' (falta rodar o SQL da emissão B2B no Supabase)' : '')); return; }
-    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = true;
+    X.D.cancPend = X.D.cancPend || {}; X.D.cancPend[e.id] = 'canc';
     X.aviso('Cancelamento enviado. A planilha atualiza em até 5 minutos.'); depois();
   };
 }

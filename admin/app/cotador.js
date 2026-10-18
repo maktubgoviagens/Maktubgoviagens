@@ -189,7 +189,8 @@ function comCardNaCotacao(P, X, acao) {
 // opções da cotação, cada uma com nome, valor e voos
 export function opcoesCotacao(d) {
   if (!d) return [];
-  if (d.modelo === 'go') return (d.opcoes || []).map((o, i) => ({ nome: o.nome || (d.opcoes.length > 1 ? 'Opção ' + (i + 1) : ''), valor: precos(o).cartao, o }));
+  // valor da opção = o que entra na conta: Pix quando existe; só cartão, o valor do cartão sem a taxa da maquininha
+  if (d.modelo === 'go') return (d.opcoes || []).map((o, i) => { const p = precos(o), t = taxasCartao()[p.parc - 1]; return { nome: o.nome || (d.opcoes.length > 1 ? 'Opção ' + (i + 1) : ''), valor: p.pix || (p.cartao && t != null ? Math.round(p.cartao * (100 - t)) / 100 : p.cartao), o }; });
   if (d.modelo === 'corp') return [{ nome: d.nome1 || ((d.extras || []).length ? 'Opção 1' : ''), valor: num(d.por), voos: d.voos || [] }].concat((d.extras || []).map((o, i) => ({ nome: o.nome || 'Opção ' + (i + 2), valor: num(o.por), voos: o.voos || [] })));
   return [{ nome: '', valor: (precoRapida(d) || {}).pix || num(d.por), voos: (d.voos || []).filter(v => v.ocod) }];
 }
@@ -1053,6 +1054,16 @@ const pct1 = (v) => String(v).replace('.', ',');
 export function configurar(cfg) { cfg = cfg || {}; TAXAS = cfg.taxas_cartao; REGRA = { desc: cfg.pix_desconto, n: cfg.parcelas_sem_juros }; }
 export const taxaCartao = (n) => taxasCartao()[n - 1];
 // valor certo da venda pela cotação rápida: Pix, ou cartão em n vezes (até as sem juros, o preço do cartão; acima, o da tabela)
+// valor pago pelo cliente na forma escolhida, para qualquer modelo (no cartão é o total que passa na maquininha)
+export function valorDaOpcao(d, k, forma, n) {
+  if (!d) return null;
+  if (d.modelo === 'go') {
+    const op = opcoesCotacao(d)[k || 0] || opcoesCotacao(d)[0]; if (!op) return null; const p = precos(op.o);
+    if (forma === 'pix') return p.pix || null;
+    return forma === 'cartao' && p.cartao && n >= 1 && n <= p.parc ? p.cartao : null;
+  }
+  return valorPelaCotacao(d, forma, n);
+}
 export function valorPelaCotacao(d, forma, n) {
   const pr = precoRapida(d); if (!pr) return null;
   if (forma === 'pix') return pr.pix;
