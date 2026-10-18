@@ -427,7 +427,8 @@ export async function enviarParaPlanilha(X, r, IT, F) {
   const linhas = novos.map(x => {
     const id = uuid(), milhas = usaMilhas(x);
     return { id, atendimento_id: r.id, item: IT.indexOf(x), dados: {
-      'Gestor': milhas ? (x.gestor || '') : '', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
+      // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
+      'Gestor': (milhas && x.gestor) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
       'Email ou Produto': ehVoo(x) ? '' : (x.nome || x.produto), 'Cidade': x.destino || '',
       'Cia': ehVoo(x) ? (x.cia_voo && x.cia_voo !== x.cia_emissora ? `${x.cia_emissora} (voa ${x.cia_voo})` : (x.cia_emissora || '')) : (x.fornecedor || ''),
       'Sobrenome': sobrenome(r.cliente), 'CPF (NF)': doc && doc.cpf ? (d => d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : doc.cpf)(String(doc.cpf).replace(/\D/g, '')) : '',
