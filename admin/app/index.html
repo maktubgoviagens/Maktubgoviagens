@@ -478,9 +478,9 @@ import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=14';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=44';
+import * as COT from '/admin/app/cotador.js?v=45';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=4';
-import * as VENDA from '/admin/app/venda.js?v=18';
+import * as VENDA from '/admin/app/venda.js?v=19';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=12';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -844,6 +844,8 @@ async function cotacaoEnviada(id, o = {}) {
   if (o.iniciada) { if (et === 'Novo lead') row.etapa = 'Em cotação'; }
   else {
     if (['Novo lead', 'Em cotação'].includes(et)) { row.etapa = 'Cotação enviada'; row.proximo_passo = 'Aguardando retorno da cotação'; row.proximo_passo_data = maisDias(2); }
+    // cotação nova no follow-up (ou reenviada): o retorno renova para 2 dias depois
+    else if (['Cotação enviada', 'Follow-up'].includes(et)) { row.proximo_passo = 'Aguardando retorno da nova cotação'; row.proximo_passo_data = maisDias(2); }
     if (o.valor > 0) row.valor_estimado = o.valor;
   }
   if (!Object.keys(row).length) return;
@@ -1810,6 +1812,10 @@ const RE_PRODUTOS = ['Passagens', 'Viagem completa / pacote', 'Hotelaria', 'Segu
 const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
 const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
+// frases prontas por motivo: um toque registra o porquê; a observação escrita é opcional (só "Outro" pede texto)
+const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar', 'Fora do orçamento agora'], 'Fechou com outro': ['Comprou direto no site da companhia', 'Fechou com outra agência', 'Usou milhas próprias'],
+  'Desistiu ou adiou a viagem': ['Adiou a viagem', 'Mudou o destino', 'Motivo pessoal'], 'Parou de responder': ['Não respondeu depois da cotação', 'Sumiu no follow-up'],
+  'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
 const ETAPAS_G = ['Novo lead', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
@@ -2049,7 +2055,7 @@ function telaFormReuniao(P) {
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reFech"></div><div id="reDaCot"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
-      <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><label class="fl"><span>Explique por que não fechou</span><textarea name="motivo_detalhe" rows="3" placeholder="O que o cliente disse, o que pesou na decisão e o que podemos fazer melhor na próxima.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
+      <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       <div id="blAndamento">
         ${campo('valor_estimado', G ? 'Valor potencial (R$)' : 'Valor cotado (R$)', r.valor_estimado, 'number')}
         ${G ? '' : campo('cotacao_inicio', 'Começou a cotar em', r.cotacao_inicio, 'date')}
@@ -2070,6 +2076,7 @@ function telaFormReuniao(P) {
       <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}</div>
       <label class="fl"><span>Anotações gerais</span><textarea name="observacoes" rows="3">${esc(r.observacoes || '')}</textarea></label>
       <button class="zap grande" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
+      ${nova ? '' : '<div class="sub" id="rascInfo" style="margin-top:4px;text-align:center"></div>'}
       ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
       <div class="sub" id="msgRe"></div>
     </form>`;
@@ -2128,7 +2135,14 @@ function telaFormReuniao(P) {
     // cotações do card: declaradas antes de tudo que as usa (o bloco de pagamento consulta a cotação ao abrir)
     const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
     const XV = ctxVenda();
-    const ctxI = { get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
+    // rascunho: serviços, passageiros, anexos e pagamento ficam salvos no card enquanto se preenche (sem precisar tocar em Salvar)
+    if (!nova) {
+      let tm = null;
+      const gravar = async () => { const IT2 = f._itens ? f._itens() : null; if (!IT2 || !f._fech) return; const { data, error } = await sb.from('atendimentos').update({ itens: IT2, fech: f._fech() }).eq('id', base.id).select().single(); if (error) return; const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = data; const el = $('rascInfo'); if (el) el.textContent = 'Rascunho salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+      XV.rascunho = (ja) => { clearTimeout(tm); tm = setTimeout(gravar, ja ? 0 : 1500); };
+      ['input', 'change', 'click'].forEach(ev => f.addEventListener(ev, () => XV.rascunho()));
+    }
+    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); });
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
@@ -2215,6 +2229,14 @@ function telaFormReuniao(P) {
   mostrar(); f._reunVis(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
   if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  // frases do "não fechou": mudam com o motivo, um toque escolhe
+  if ($('frasesPerda') && f.elements.motivo_perda) {
+    const desenhaFrases = () => { const L = RE_FRASES[f.elements.motivo_perda.value] || [], atual = f.elements.motivo_frase.value;
+      $('frasesPerda').innerHTML = L.map(t => `<button type="button" data-frase="${esc(t)}" class="${t === atual ? 'on' : ''}">${esc(t)}</button>`).join('');
+      $('rotObsPerda').textContent = f.elements.motivo_perda.value === 'Outro' ? 'Qual foi o motivo?' : 'Observação (opcional)'; };
+    $('frasesPerda').onclick = (ev) => { const b = ev.target.closest('[data-frase]'); if (!b) return; f.elements.motivo_frase.value = f.elements.motivo_frase.value === b.dataset.frase ? '' : b.dataset.frase; desenhaFrases(); };
+    f.elements.motivo_perda.addEventListener('change', () => { f.elements.motivo_frase.value = ''; desenhaFrases(); }); desenhaFrases();
+  }
   $('voltar').onclick = () => history.back();
   if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
     const IT = f._itens ? f._itens() : [], Fh = f._fech();
@@ -2250,12 +2272,16 @@ function telaFormReuniao(P) {
     const IT = f._itens ? f._itens() : null;
     if (IT && !IT.length) { $('msgRe').textContent = 'Marque pelo menos um produto.'; return; }
     const et = g('etapa'), res = FINAIS.includes(et) ? et : 'Em andamento';
-    if (res === 'Não fechou' && !g('motivo_detalhe')) { $('msgRe').textContent = 'Explique por que não fechou. Isso é o que nos faz melhorar.'; f.elements.motivo_detalhe.focus(); return; }
+    if (res === 'Não fechou') {
+      if (!g('motivo_perda')) { $('msgRe').textContent = 'Escolha o motivo principal.'; f.elements.motivo_perda.focus(); return; }
+      if (g('motivo_perda') === 'Outro' && !g('motivo_detalhe')) { $('msgRe').textContent = 'Escreva o motivo.'; f.elements.motivo_detalhe.focus(); return; }
+      if (!g('motivo_frase') && !g('motivo_detalhe')) { $('msgRe').textContent = 'Toque numa das frases ou escreva uma observação.'; return; }
+    }
     if ((g('nr_abordado') || g('nr_data')) && !g('nr_assunto')) { $('msgRe').textContent = 'Informe o assunto da reunião.'; f.elements.nr_assunto.focus(); return; }
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
     const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
-      motivo_detalhe: res === 'Não fechou' ? (g('motivo_detalhe') || null) : null,
+      motivo_detalhe: res === 'Não fechou' ? ([g('motivo_frase'), g('motivo_detalhe')].filter(Boolean).join('. ') || null) : null,
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
@@ -2266,6 +2292,11 @@ function telaFormReuniao(P) {
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
+    if (!row.pessoa_id) {
+      // antes de criar: a pessoa já tem ficha (CPF, celular, e-mail ou nome parecido)? liga com um toque
+      const ja = VENDA.acharPessoa(D, { nome: g('cliente'), contato: g('contato') });
+      if (ja && confirm(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?\n\nOK: usar esta ficha. Cancelar: criar uma ficha nova.`)) { row.pessoa_id = ja.id; f.elements.pessoa_id.value = ja.id; }
+    }
     if (!row.pessoa_id) {
       // cliente novo: cria a ficha no CRM antes de salvar o atendimento
       const ct = g('contato'), ehMail = /@/.test(ct);

@@ -113,7 +113,7 @@ function htmlItem(X, x, i, ctx) {
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, x.ct_on ? 'Milhas (soma)' : 'Milhas', x.milhas, 'n', x.ct_on ? 'readonly' : '')}${inp(X, 'milheiro', i, x.ct_on ? 'Milheiro (média)' : 'Milheiro (R$)', x.milheiro, 'n', x.ct_on && (x.ct || []).some(l => l.milheiro != null && l.milheiro !== '') ? 'readonly' : '')}${inp(X, 'taxas', i, x.ct_on ? 'Taxas (soma)' : 'Taxas (R$)', x.taxas, 'n', x.ct_on ? 'readonly' : '')}</div>` : ''}
       ${htmlTrechos(X, x, i, trava, ctx)}
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
-      ${htmlPax(X, x, i, trava)}
+      ${htmlPax(X, x, i, trava, ctx)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
       <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa (obrigatório)'}</span></button>${!x.print && !trava ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
       <div class="sub" style="margin:-4px 0 8px">Confira no print se a tarifa inclui a mala despachada. Às vezes o bilhete não mostra.</div>`;
@@ -160,7 +160,8 @@ function linhasPadrao(x, ctx) {
   const o = up3(x.origem), d = up3(x.destino), tipo = x.tipo_trecho || ctx.tipoPadrao, pax = String(x.passageiros || ctx.pax || '');
   if (tipo === 'multi' && x.trechos) return String(x.trechos).split('\n').map(t => t.trim()).filter(Boolean).map(t => {
     const m = /([A-Za-z]{3})\s*[-–>→ ]+\s*([A-Za-z]{3})(?:\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?)?/.exec(t) || [];
-    const ano = m[5] ? (m[5].length === 2 ? '20' + m[5] : m[5]) : String(new Date().getFullYear());
+    // sem ano: data que já passou neste ano é do ano que vem (ex.: em outubro, 10/01 é janeiro do próximo ano)
+    const ano = m[5] ? (m[5].length === 2 ? '20' + m[5] : m[5]) : ((y) => m[3] && new Date(y, +m[4] - 1, +m[3]) < new Date(new Date().setHours(0, 0, 0, 0)) ? String(y + 1) : String(y))(new Date().getFullYear());
     return { o: up3(m[1]), d: up3(m[2]), data: m[3] ? `${ano}-${m[4].padStart(2, '0')}-${m[3].padStart(2, '0')}` : '', pax };
   });
   const L = [{ o, d, data: x.data_ida || ctx.ida || '', pax }];
@@ -202,9 +203,10 @@ function htmlTrechos(X, x, i, trava, ctx) {
 }
 
 // um bloco por passageiro: nome (puxa da ficha), CPF e nascimento
-function htmlPax(X, x, i, trava) {
+function htmlPax(X, x, i, trava, ctx) {
   const L = paxAjustado(x); if (!L.length) return '';
-  return `<div class="sub" style="margin:6px 0 0">Dados dos passageiros (${L.length})</div>${L.map((p, k) => {
+  const cli = ctx && ctx.cliente ? String(ctx.cliente).trim() : '';
+  return `<div class="sub" style="margin:6px 0 0">Dados dos passageiros (${L.length})</div>${cli && !trava ? `<label class="fc" style="margin:6px 0"><input type="checkbox" data-clipax="${i}" ${x.cliente_pax ? 'checked' : ''}><span>O cliente (${X.esc(cli.split(' ')[0])}) é o passageiro 1</span></label>` : ''}${L.map((p, k) => {
     const ok = String(p.nome || '').trim().includes(' ') && cpfValido(p.cpf) && p.nasc;
     return `<div style="border-left:3px solid ${ok ? 'var(--verde)' : 'var(--linha)'};padding-left:8px;margin:6px 0">
       <label class="fl"><span>Passageiro ${k + 1}: nome completo</span><input data-pax="${i}|${k}|nome" value="${X.esc(p.nome || '')}" list="dlPaxV" ${trava ? 'disabled' : ''}></label>
@@ -271,6 +273,18 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         desenha();
       };
     });
+    // "o cliente é o passageiro": puxa nome, CPF e nascimento da ficha do cliente do card
+    el.querySelectorAll('[data-clipax]').forEach(c => c.onchange = () => {
+      const x = IT[+c.dataset.clipax]; paxAjustado(x); x.cliente_pax = c.checked; if (!x.pax.length) { desenha(); return; }
+      if (c.checked) {
+        const n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const f = (ctx.pessoaId && (X.D.pessoas || []).find(o => o.id === ctx.pessoaId)) || (X.D.pessoas || []).find(o => n(o.nome) === n(ctx.cliente));
+        const d = f ? (X.D.docs || []).find(o => o.pessoa_id === f.id) : null;
+        x.pax[0] = { nome: (f && f.nome) || String(ctx.cliente || '').trim(), cpf: d && d.cpf ? fmtCpf(d.cpf) : '', nasc: (f && f.nascimento) || '', ...(f ? { pessoa_id: f.id } : {}) };
+        if (!x.pax[0].cpf || !x.pax[0].nasc) X.aviso('Complete o que faltar do passageiro 1: a ficha do cliente não tem ' + [!x.pax[0].cpf && 'CPF', !x.pax[0].nasc && 'nascimento'].filter(Boolean).join(' nem ') + '.');
+      } else x.pax[0] = { nome: '', cpf: '', nasc: '' };
+      desenha();
+    });
     el.querySelectorAll('[data-print]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.print]; x.print ? verArquivo(X, x.print) : anexar(X, 'print', x, desenha); });
     el.querySelectorAll('[data-printtroca]').forEach(b => b.onclick = () => anexar(X, 'print', IT[+b.dataset.printtroca], desenha));
     el.querySelectorAll('[data-printcola]').forEach(b => b.onclick = () => colar(X, 'print', IT[+b.dataset.printcola], desenha));
@@ -308,7 +322,7 @@ async function subir(X, tipo, alvo, depois, file) {
   const path = `${tipo}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const up = await X.sb.storage.from('vendas').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
   if (up.error) { X.aviso('Não enviou: ' + up.error.message + (/bucket/i.test(up.error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
-  alvo[tipo] = path; X.aviso(tipo === 'print' ? 'Print anexado. Salve o atendimento.' : 'Comprovante anexado. Salve o atendimento.'); depois();
+  alvo[tipo] = path; X.aviso(tipo === 'print' ? 'Print anexado.' : 'Comprovante anexado.'); depois(); if (X.rascunho) X.rascunho(true);
 }
 export function anexar(X, tipo, alvo, depois) {
   const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*,application/pdf';
@@ -400,8 +414,13 @@ const sobrenome = (n) => { const p = String(n || '').trim().split(/\s+/); return
 
 // manda os serviços emitidos para a fila da planilha. Devolve os itens atualizados.
 export async function enviarParaPlanilha(X, r, IT, F) {
+  // passageiros primeiro: o CPF digitado no fechamento já vale para a nota (cliente novo não fica sem CPF)
+  await salvarPassageiros(X, IT.filter(x => !enviado(x)));
   const p = r.pessoa_id ? (X.D.pessoas || []).find(x => x.id === r.pessoa_id) : null;
-  const doc = p ? (X.D.docs || []).find(d => d.pessoa_id === p.id) : null;
+  const nrm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const paxComprador = IT.flatMap(x => (x.pax || [])).find(q => q && cpfValido(q.cpf) && (nrm(q.nome) === nrm(r.cliente) || (p && q.pessoa_id === p.id)));
+  const doc0 = p ? (X.D.docs || []).find(d => d.pessoa_id === p.id) : null;
+  const doc = doc0 && doc0.cpf ? doc0 : paxComprador ? { cpf: paxComprador.cpf } : doc0;
   const vendedor = X.nomeTime(r.assumido_por || r.responsavel_id) || '';
   const hoje = new Date(); const dataNeg = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
   const novos = IT.filter(x => !enviado(x));
@@ -425,7 +444,6 @@ export async function enviarParaPlanilha(X, r, IT, F) {
     } };
   });
   if (!linhas.length) return { ok: true, n: 0 };
-  await salvarPassageiros(X, novos);
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
   await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
@@ -474,13 +492,28 @@ export async function salvarVoos(X, L) {
   try { const { error } = await X.sb.from('voos_emissao').upsert(rows); if (!error) { X.D.trechos = X.D.trechos || {}; rows.forEach(r => { (X.D.trechos[r.emissao_id] = (X.D.trechos[r.emissao_id] || []).filter(o => o.n !== r.n)).push(r); }); } } catch (_) { /* sem a tabela: segue o check-in de ida e volta */ }
 }
 
+// ficha que já existe para a mesma pessoa: CPF primeiro (não muda), depois celular, e-mail e nome
+// (nome igual, ou o nome digitado contido no da ficha, como "Ana Paula" e "Ana Paula Souza", quando só uma ficha bate)
+export function acharPessoa(D, q) {
+  const P = (D && D.pessoas) || [], n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const cpf = soDig(q.cpf); if (cpf.length === 11) { const d = ((D && D.docs) || []).find(o => soDig(o.cpf) === cpf); const p = d && P.find(o => o.id === d.pessoa_id); if (p) return p; }
+  const ct = String(q.contato || '').trim(), dig = soDig(ct);
+  if (/@/.test(ct)) { const p = P.find(o => n(o.email) === n(ct)); if (p) return p; }
+  else if (dig.length >= 8) { const p = P.find(o => soDig(o.celular).slice(-8) === dig.slice(-8)); if (p) return p; }
+  const k = n(q.nome); if (!k) return null;
+  const ex = P.find(o => n(o.nome) === k); if (ex) return ex;
+  const tk = k.split(' '); if (tk.length < 2) return null;
+  const c = P.filter(o => { const t = n(o.nome).split(' '); return t[0] === tk[0] && tk.every(x => t.includes(x)); });
+  return c.length === 1 ? c[0] : null;
+}
+
 // cada passageiro vira (ou atualiza) uma ficha no CRM com papel de passageiro, CPF e nascimento
 export async function salvarPassageiros(X, itens) {
   const n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   const todos = itens.filter(ehVoo).flatMap(x => paxAjustado(x).map(p => ({ x, p }))).filter(({ p }) => String(p.nome || '').trim().includes(' '));
   for (const { p } of todos) {
     try {
-      let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : (X.D.pessoas || []).find(o => n(o.nome) === n(p.nome));
+      let f = p.pessoa_id ? (X.D.pessoas || []).find(o => o.id === p.pessoa_id) : acharPessoa(X.D, { nome: p.nome, cpf: p.cpf });
       if (!f) {
         const ins = await X.sb.from('pessoas').insert({ nome: p.nome.replace(/\s+/g, ' ').trim(), nascimento: p.nasc || null, papeis: ['passageiro'] }).select().single();
         if (ins.error) continue; f = ins.data; (X.D.pessoas = X.D.pessoas || []).push(f);

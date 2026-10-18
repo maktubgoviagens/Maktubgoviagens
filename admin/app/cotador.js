@@ -3,6 +3,7 @@
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
 import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=4';
+import { acharPessoa } from '/admin/app/venda.js?v=19';
 export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
 // toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
@@ -149,6 +150,7 @@ function escolherCard(P, X, escolhido, voltar) {
     const ct = g('contato'), ehMail = /@/.test(ct), agora = new Date().toISOString();
     const chave = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
     let p = (D.pessoas || []).find(x => chave(x.nome) === chave(nome));
+    if (!p) { const ja = acharPessoa(D, { nome, contato: ct }); if (ja && confirm(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?\n\nOK: usar esta ficha. Cancelar: criar uma ficha nova.`)) p = ja; }
     if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'] }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
     const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: g('trecho') || null,
       responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo: 'Montar e enviar a cotação', proximo_passo_data: hoje() };
@@ -216,6 +218,10 @@ export function itensDaCotacao(d, k = 0) {
     // trechos da emissão já entram como linhas do custo por trecho (com o horário de saída, para o aviso de check-in)
     x.ct = gv.map(v => ({ o: String(ori(v) || '').toUpperCase(), d: String(des(v) || '').toUpperCase(), data: v.data || '', hora: v.saida || '', pax: String(pax) }));
     if (tipo === 'multi') x.ct_on = true;
+    // bagagem despachada já informada na cotação: vem para o fechamento (editável lá), sem perguntar de novo
+    { const tb = String(d.bagagem || ''), m = /(\d)\s*malas?\s*despachada/i.exec(tb);
+      const nb = d.bag_desp != null && d.bag_desp !== '' ? +d.bag_desp || 0 : m ? +m[1] : /sem\s+mala\s+despachada|n[aã]o\s+inclui\s+mala/i.test(tb) ? 0 : null;
+      if (nb != null) x.bagagem = String(Math.min(nb, 3)); }
     itens.push(x);
   });
   if (go) (op.o.hoteis || []).filter(ht => ht.nome).forEach(ht => itens.push({ produto: 'Hotelaria', custo: null, venda: null, nome: ht.nome, destino: ht.cidade || '', data_ida: ht.entrada || null, data_volta: ht.saida || null }));
