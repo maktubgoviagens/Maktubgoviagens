@@ -792,6 +792,7 @@ function lerHash() {
   RE_ED = ABA === 'reunioes' && h[1] ? h[1] : GE_FUNIL && h[2] ? h[2] : null;
   AG_ED = ABA === 'agenda' && h[1] && !h[1].startsWith('?') ? h[1].split('?')[0] : null;
   if (ABA === 'agenda' && (h[1] || location.hash.includes('ticktick='))) AG_VISTA = 'reunioes';
+  if (ABA === 'leads') LSUB = ['leads', 'convites', 'talentos'].includes(h[1]) ? h[1] : 'auto';
 }
 const NAV_IC = {
   crm: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/>',
@@ -836,6 +837,7 @@ let ANTERIOR = null;
 function voltarA(dest) { if (ANTERIOR === dest) { ANTERIOR = null; history.back(); } else ir(dest); }
 function ir(aba, extra) {
   const antes = ABA;
+  if (antes === 'leads' && aba !== 'leads') TAL_DESTAQUE = null;
   if (soMarketing() && !MKT_ABAS().includes(aba)) aba = 'marketing';
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
@@ -1091,8 +1093,8 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false;
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
-  if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
-  if ($('bLeads')) { $('bLeads').textContent = leadsSemResposta().length; $('bLeads').hidden = !(+$('bLeads').textContent); }
+  if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
+  if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
   if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
@@ -1690,13 +1692,14 @@ async function carregarAvisos() {
 const avisosNovos = () => D.avSit ? D.avisos.filter(a => a.id > (D.avSit.visto_ate || 0)) : [];
 function htmlAviso(a) {
   const novo = D.avSit && a.id > (D.avSit.visto_ate || 0);
-  return `<button class="av ${novo ? 'novo' : ''}" data-av="${esc(a.link || '')}"><span class="ic">${esc(AV_IC[a.tipo] || '•')}</span><span><span class="t" style="display:block">${esc(a.titulo)}</span>${a.texto ? `<span class="d" style="display:block">${esc(a.texto)}</span>` : ''}<span class="q" style="display:block">${quando(a.created_at)}</span></span></button>`;
+  return `<button class="av ${novo ? 'novo' : ''}" data-av="${esc(a.link || '')}" data-tipo="${esc(a.tipo || '')}"><span class="ic">${esc(AV_IC[a.tipo] || '•')}</span><span><span class="t" style="display:block">${esc(a.titulo)}</span>${a.texto ? `<span class="d" style="display:block">${esc(a.texto)}</span>` : ''}<span class="q" style="display:block">${quando(a.created_at)}</span></span></button>`;
 }
 function ligarAvisos(P) {
   P.querySelectorAll('[data-av]').forEach(b => b.onclick = () => {
     const h = (b.dataset.av.split('#')[1] || '').split('/');
     if (!h[0]) return ir('inicio');
     if (h[0] === 'reunioes' && h[1]) return abrirAtendimento(h[1]);
+    if (h[0] === 'leads') return ir('leads', () => { LSUB = { talento: 'talentos', convite: 'convites' }[b.dataset.tipo] || 'leads'; });
     ir(h[0], () => { if (h[1] && h[0] === 'emissoes') EM_ED = h[1]; if (h[1] && h[0] === 'reunioes') RE_ED = h[1]; if (h[1] && h[0] === 'agenda') { AG_ED = h[1]; AG_VISTA = 'reunioes'; } if (h[0] === 'clientes' && h[1]) CLI = h[1]; });
     if (h[1]) history.replaceState(null, '', '#' + h.join('/'));
   });
@@ -3047,6 +3050,12 @@ function trechosEm() {
 const checkinsEm = () => trechosEm().filter(t => t.pendente);
 
 /* ---------- leads ---------- */
+// talentos não têm status: o "novo" é o que este aparelho ainda não abriu
+const TAL_K = 'mk_tal_visto';
+const talVisto = () => { try { return localStorage.getItem(TAL_K) || ''; } catch (_) { return ''; } };
+const talNovos = () => (D.talErro ? [] : (D.tal || [])).filter(r => String(r.created_at || '') > talVisto());
+const leadsBadge = () => leadsSemResposta().length + (pode('leads') ? convitesNovos().length : 0) + (pode('talentos') ? talNovos().length : 0);
+let TAL_DESTAQUE = null;
 const noPeriodo = (arr) => DIAS ? arr.filter(r => Date.now() - new Date(r.created_at) <= DIAS * 864e5) : arr;
 const origemDe = (o) => {
   const v = String(o || '').trim().toLowerCase();
@@ -3069,6 +3078,8 @@ const selStatus = (t, id, atual, ops) => `<select data-t="${t}" data-id="${id}" 
 
 function telaLeads(P) {
   const SUBS = [['leads', pode('leads')], ['convites', pode('leads')], ['talentos', pode('talentos')]].filter(x => x[1]).map(x => x[0]);
+  // vindo de um aviso ou do ícone: abre direto onde tem coisa nova
+  if (LSUB === 'auto') LSUB = SUBS.includes('leads') && leadsSemResposta().length ? 'leads' : SUBS.includes('convites') && convitesNovos().length ? 'convites' : SUBS.includes('talentos') && talNovos().length ? 'talentos' : SUBS[0];
   if (!SUBS.includes(LSUB)) LSUB = SUBS[0] || 'leads';
   const L = noPeriodo(D.leads), cnt = (st) => L.filter(r => r.status === st).length, fech = cnt('fechado');
   const og = {}; L.forEach(r => { const k = origemDe(r.origem); og[k] = (og[k] || 0) + 1; });
@@ -3089,13 +3100,13 @@ function telaLeads(P) {
     </div>
     <div class="seg" id="lsub" style="margin-top:20px">
       ${SUBS.includes('leads') ? `<button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>` : ''}
-      ${SUBS.includes('convites') ? `<button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}</button>` : ''}
-      ${SUBS.includes('talentos') ? `<button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}</button>` : ''}
+      ${SUBS.includes('convites') ? `<button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}${convitesNovos().length ? ` · ${convitesNovos().length} ${convitesNovos().length === 1 ? 'novo' : 'novos'}` : ''}</button>` : ''}
+      ${SUBS.includes('talentos') ? `<button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}${talNovos().length ? ` · ${talNovos().length} ${talNovos().length === 1 ? 'novo' : 'novos'}` : ''}</button>` : ''}
     </div>
     <div class="chips" id="filtro"></div>
     <div class="lista" id="lista"></div>`;
   $('periodo').onclick = (e) => { const b = e.target.closest('button'); if (b) { DIAS = +b.dataset.d; telaLeads(P); } };
-  $('lsub').onclick = (e) => { const b = e.target.closest('button'); if (b) { LSUB = b.dataset.s; FILTRO = 'todos'; telaLeads(P); } };
+  $('lsub').onclick = (e) => { const b = e.target.closest('button'); if (b) { if (LSUB === 'talentos' && b.dataset.s !== 'talentos') TAL_DESTAQUE = null; LSUB = b.dataset.s; FILTRO = 'todos'; telaLeads(P); } };
   listaLeads();
 }
 function chips(opcoes, render) {
@@ -3134,9 +3145,14 @@ function listaLeads() {
   } else {
     $('filtro').innerHTML = '';
     if (D.talErro) { el.innerHTML = '<div class="vazio">A equipe ainda não tem permissão de leitura no banco de talentos.</div>'; return; }
-    const R = noPeriodo(D.tal);
-    el.innerHTML = R.length ? R.map(r => `<article class="card">
-        <div class="cab"><div><div class="nome">${esc(r.nome)}</div>${r.area ? `<span class="tag">${esc(r.area)}</span>` : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
+    // o que chegou depois da última abertura fica em destaque até sair desta lista
+    if (TAL_DESTAQUE === null) TAL_DESTAQUE = talVisto();
+    const novoT = (r) => String(r.created_at || '') > TAL_DESTAQUE;
+    const R = noPeriodo(D.tal), RN = R.filter(novoT);
+    const ult = (D.tal || []).reduce((m, r) => String(r.created_at || '') > m ? String(r.created_at) : m, '');
+    if (ult) { try { localStorage.setItem(TAL_K, ult); } catch (_) {} }
+    el.innerHTML = R.length ? [...RN, ...R.filter(r => !novoT(r))].map(r => `<article class="card ${novoT(r) ? 'novo' : ''}">
+        <div class="cab"><div><div class="nome">${esc(r.nome)}</div>${novoT(r) ? '<span class="tag alerta">novo</span> ' : ''}${r.area ? `<span class="tag">${esc(r.area)}</span>` : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${[['Cidade', r.cidade], ['Mensagem', r.mensagem]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}${r.link ? `<div><span>Link:</span> <a href="${esc(/^https?:\/\//.test(r.link) ? r.link : 'https://' + r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>` : ''}</div>
         <div class="acoes">${r.whatsapp ? `<a class="zap" href="https://wa.me/${zapNum(r.whatsapp)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}</div>
       </article>`).join('') : '<div class="vazio">Nenhum cadastro no período.</div>';

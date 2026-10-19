@@ -153,6 +153,8 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--verde);box-
 .dupla{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 form .btn{justify-self:start;margin-top:8px}
 .aviso-form{font-size:.86rem;color:var(--tinta-suave)}
+.aviso-form[data-estado=erro]{color:#9b2c2c;font-weight:400}
+#talentoOk{outline:0}
  
 /* rodapé */
 footer{background:var(--verde);color:rgba(249,246,241,.78);padding:52px 0 32px}
@@ -500,6 +502,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Seu cadastro fica ativo no nosso banco de talentos.</p>
         <p class="mk-lgpd" style="margin-top:10px;font-size:12px;line-height:1.6;opacity:.75;color:inherit">Ao enviar, você concorda com a nossa <a href="/privacidade/" style="color:inherit;text-decoration:underline">Política de Privacidade</a>.</p>
     </form>
+    <div class="aviso" id="talentoOk" tabindex="-1" hidden>
+      <h3 id="talentoOkT">Cadastro recebido.</h3>
+      <p>Seu cadastro já está no nosso banco de talentos e foi direto para o nosso time. Quando abrir uma posição com o seu perfil, falamos com você pelo WhatsApp ou pelo e-mail que você informou.</p>
+      <p style="margin-top:14px"><a href="/" style="color:var(--verde)">Conhecer a Maktub Go</a></p>
+    </div>
   </div>
 </section>
  
@@ -568,12 +575,16 @@ form.addEventListener('submit', async function(e){
  
   if(!d.nome || !d.whatsapp || !d.email){
     aviso.textContent = 'Preencha nome, WhatsApp e e-mail para continuar.';
+    aviso.dataset.estado = 'erro';
     return;
   }
+  delete aviso.dataset.estado;
+  const botao = form.querySelector('button[type=submit]');
  
   if(window.gtag)gtag('event','envio_formulario',{formulario:'banco_talentos'});
   if(SUPABASE_URL && SUPABASE_ANON_KEY){
     aviso.textContent = 'Enviando...';
+    botao.disabled = true; botao.textContent = 'Enviando...';
     try{
       const r = await fetch(SUPABASE_URL + '/rest/v1/' + TABELA_TALENTOS, {
         method:'POST',
@@ -585,11 +596,20 @@ form.addEventListener('submit', async function(e){
         body: JSON.stringify(d)
       });
       if(!r.ok) throw new Error(r.status);
+      /* confirmação bem visível: o formulário dá lugar à mensagem de recebido */
+      const primeiro = String(d.nome).trim().split(' ')[0];
+      document.getElementById('talentoOkT').textContent = 'Cadastro recebido, ' + primeiro + '.';
       form.reset();
-      aviso.textContent = 'Cadastro recebido. Voltamos a falar quando abrir uma posição para o seu perfil.';
+      form.style.display = 'none';
+      const ok = document.getElementById('talentoOk');
+      ok.hidden = false;
+      ok.scrollIntoView({behavior:'smooth', block:'center'});
+      ok.focus({preventScroll:true});
       return;
     }catch(err){
-      aviso.textContent = 'Não foi possível enviar agora. Abrindo seu e-mail.';
+      botao.disabled = false; botao.textContent = 'Enviar cadastro';
+      aviso.textContent = 'Não foi possível enviar agora. Abrindo seu e-mail para enviar por lá.';
+      aviso.dataset.estado = 'erro';
     }
   }
  
