@@ -198,6 +198,11 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .lin{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--linha);font-size:14px}
 .lin:first-of-type{border-top:0}
 .lin span:last-child{color:var(--tinta-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.faixa-push{max-width:728px;margin:12px auto 0;background:var(--creme-2);border-left:3px solid var(--dourado);padding:12px 14px;font-size:14px;color:var(--tinta-2);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.faixa-push[hidden]{display:none}
+.faixa-push>span{flex:1 1 220px}.faixa-push b{color:var(--verde);font-weight:600}
+.faixa-push .zap,.faixa-push .sec{flex:0 0 auto;min-width:0;padding:8px 12px;font-size:11px}
+@media(max-width:760px){.faixa-push{margin:12px 16px 0}}
 .config{background:var(--creme-2);border-left:3px solid var(--dourado);padding:14px;font-size:14px;color:var(--tinta-2)}
 .config b{color:var(--verde)}
 
@@ -377,6 +382,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
       <button class="icone" id="sair" aria-label="Sair" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
     </div>
   </header>
+  <div class="faixa-push" id="faixaPush" hidden></div>
   <main class="pagina" id="pagina"></main>
   <nav class="nav" id="nav"></nav>
   <button class="fab" id="fab" aria-label="Novo" hidden>+</button>
@@ -473,7 +479,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=12';
+import * as MKT from '/admin/app/marketing.js?v=13';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
@@ -564,6 +570,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   lerHash();
   marcarNav();
   carregar();
+  if (!ADMIN) setTimeout(faixaPush, 1500);
 })();
 
 // ---------- busca geral, botão + e sair ----------
@@ -1724,15 +1731,37 @@ async function ativarPush() {
   let sub = await reg.pushManager.getSubscription();
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
   const j = sub.toJSON();
-  const { error } = await sb.rpc('push_inscrever', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_aparelho: navigator.userAgent });
-  if (error) { aviso('Não ativou: ' + error.message); return; }
+  // administradores recebem todos os avisos da empresa; o resto do time só os avisos que são para a própria pessoa
+  const { error } = await sb.rpc(ADMIN ? 'push_inscrever' : 'push_pessoal_inscrever', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_aparelho: navigator.userAgent });
+  if (error) { aviso(/push_pessoal/.test(error.message) ? tec('Rode o 40-avisos-pessoais.sql no Supabase para ativar.') : 'Não ativou: ' + error.message); return false; }
   aviso('Notificações ativadas neste aparelho.');
+  return true;
 }
 async function desativarPush() {
   const reg = await navigator.serviceWorker.getRegistration('/admin/app/');
   const sub = reg && await reg.pushManager.getSubscription();
-  if (sub) { await sb.rpc('push_remover', { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+  if (sub) { await sb.rpc(ADMIN ? 'push_remover' : 'push_pessoal_remover', { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
   aviso('Notificações desligadas neste aparelho.');
+}
+// faixa no topo para quem não é administrador: ativar as notificações deste celular
+async function faixaPush() {
+  const F = $('faixaPush'); if (!F || ADMIN) return;
+  let adiado = 0; try { adiado = +localStorage.getItem('mk_push_adiado') || 0; } catch (_) {}
+  const st = await estadoPush();
+  if (st === 'ativo' || Date.now() - adiado < 3 * 864e5) { F.hidden = true; return; }
+  const iosSemIcone = ehIOS() && !instalado();
+  const txt = iosSemIcone ? 'No iPhone, toque em Compartilhar e depois em <b>Adicionar à Tela de Início</b>. Abra o app pelo ícone e ative aqui os avisos.'
+    : st === 'negado' ? 'As notificações estão bloqueadas neste celular. Libere nas configurações do navegador para receber os avisos.'
+    : st === 'sem' ? 'Este navegador não recebe notificações. Abra o app pelo Chrome (Android) ou pelo ícone na tela de início (iPhone).'
+    : '<b>Receba os avisos neste celular.</b> Postagens e tarefas que são suas chegam aqui, mesmo com o app fechado.';
+  F.innerHTML = `<span>${txt}</span>${st === 'inativo' ? '<button class="zap" id="fpOn">Ativar</button>' : ''}<button class="sec" id="fpDepois">Agora não</button>`;
+  F.hidden = false;
+  if ($('fpOn')) $('fpOn').onclick = async () => {
+    $('fpOn').disabled = true;
+    if (await ativarPush()) { F.hidden = true; sb.rpc('avisos_pessoais_teste'); }
+    else { $('fpOn').disabled = false; faixaPush(); }
+  };
+  $('fpDepois').onclick = () => { try { localStorage.setItem('mk_push_adiado', String(Date.now())); } catch (_) {} F.hidden = true; };
 }
 async function telaAvisos(P) {
   const s = D.avSit;

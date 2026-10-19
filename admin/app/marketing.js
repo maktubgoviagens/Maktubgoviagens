@@ -449,7 +449,7 @@ function formPost(P) {
       <div class="duas-col">${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}<span></span></div>
       ${equipeG(p).length ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. Quem foi escalado vê no app e marca quando gravar.'}</div>` : ''}
       <label class="fl"><span>Quem posta</span><select name="postagem_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.postagem_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      ${p.postagem_por && p.status !== 'publicado' ? '<div class="sub" style="margin:-4px 0 8px">A pessoa recebe o aviso no app dela, em "Para você postar". A validação da publicação continua com a coordenação.</div>' : ''}
+      ${p.postagem_por && p.status !== 'publicado' ? '<div class="sub" style="margin:-4px 0 8px">A pessoa vê o post em "Para você postar" e recebe uma notificação no celular 2 horas antes do horário (sem horário definido, às 8h do dia). A validação da publicação continua com a coordenação.</div>' : ''}
       <div class="duas-col">
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
         <label class="fl"><span>Campanha</span><select name="campanha_id"><option value="">Nenhuma</option>${campanhas().filter(c => c.ativo || c.id === p.campanha_id).map(c => `<option value="${c.id}" ${p.campanha_id === c.id ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</select></label>
