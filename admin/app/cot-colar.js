@@ -74,8 +74,10 @@ export function duracaoDe(v) {
   const oO = offMin(tzO, v.data, v.saida), oD = offMin(tzD, v.data, v.chegada); if (oO == null || oD == null) return '';
   const min = (t) => { const [a, b] = t.split(':').map(Number); return a * 60 + b; };
   let d = (min(v.chegada) - oD) - (min(v.saida) - oO);
-  while (d <= 0) d += 1440;
-  if (d > 1440 * 2) return '';
+  // quando se sabe em quantos dias depois chega (+1, +2...), soma esses dias; senão, o menor intervalo positivo
+  const dias = v.mais1 === true ? 1 : parseInt(v.mais1) || 0;
+  if (dias > 0 && d + dias * 1440 > 0) d += dias * 1440; else while (d <= 0) d += 1440;
+  if (d > 1440 * 4) return '';
   return `${Math.floor(d / 60)}h${String(d % 60).padStart(2, '0')}`;
 }
 // completa nome do aeroporto e duração, sem apagar o que a pessoa digitou à mão
@@ -174,8 +176,11 @@ function trechosGenerico(t) {
     const dt = ds.filter(d => d.pos >= antes && d.pos < dep.pos).pop() || (out.length ? null : ds.find(d => d.pos < arr.pos));
     const txt = t.slice(dep.fim, arr.pos) + ' ' + t.slice(arr.fim, prox);
     const st = txt.match(/(\d)\s*(?:parada|conex|escala|stop)/i);
+    // "10:00 +2" ou "10:00⁺²": chegada N dias depois da saída
+    const md = t.slice(arr.fim, arr.fim + 8).match(/^\s*(?:\+\s*|[⁺])([1-3¹²³])/); const mais = md ? +('¹²³'.indexOf(md[1]) + 1 || md[1]) : 0;
     const px = txt.match(/(\d{1,2})\s*(?:pax|pessoas?)\b/i);
     out.push({ pos: dep.pos, fim: arr.fim, ocod: dep.cod, saida: dep.hora, dcod: arr.cod, chegada: arr.hora, data: dt ? dt.iso : (out.length ? out[out.length - 1].data : ''),
+      dataCheg: mais && dt ? new Date(Date.parse(dt.iso + 'T12:00:00Z') + mais * 864e5).toISOString().slice(0, 10) : '',
       con: st ? +st[1] : 0, pax: px ? px[1] : '' });
   }
   return out;
@@ -204,7 +209,7 @@ function lerBloco(t) {
   const ls = [trechosAzul, trechosSmiles, trechosGoogle].map(f => f(t)).find(x => x.length) || trechosGenerico(t);
   const voos = juntar(ls, t).map((v, i) => ({ rotulo: i === 0 ? 'Ida' : i === 1 ? 'Volta' : 'Trecho ' + (i + 1), data: v.data || '',
     ocod: v.ocod, onome: '', saida: v.saida, dcod: v.dcod, dnome: '', chegada: v.chegada,
-    mais1: v.data && v.dataCheg ? v.dataCheg > v.data : !!(v.saida && v.chegada && v.chegada < v.saida), tipo: !v.con ? 'Direto' : v.con === 1 ? '1 conexão' : '2 conexões', duracao: '', pax: v.pax || '' }));
+    mais1: v.data && v.dataCheg ? Math.max(0, Math.round((Date.parse(v.dataCheg) - Date.parse(v.data)) / 864e5)) : (v.saida && v.chegada && v.chegada < v.saida ? 1 : 0), tipo: !v.con ? 'Direto' : v.con === 1 ? '1 conexão' : v.con + ' conexões', duracao: '', pax: v.pax || '' }));
   // valores em reais: o do site (subtotal/total/site/de) e o da Maktub (maktub/por/nosso). Pontos e milhas não contam.
   const N = '(?:R\\$|BRL)?\\s*(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)(?![\\d.,]|\\s*(?:pontos|milhas|pts|mil\\b))';
   let site = '', mk = '', m;

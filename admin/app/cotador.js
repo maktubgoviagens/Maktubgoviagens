@@ -2,7 +2,7 @@
 // Dois modelos: "Maktub Go" (proposta de experiência, com opções, roteiro, voos, hotel, carro e investimento)
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
-import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=4';
+import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=5';
 import { acharPessoa } from '/admin/app/venda.js?v=20';
 export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
@@ -60,7 +60,8 @@ const caixaColar = (ajuda, exemplo) => `<div class="config" style="margin:6px 0 
 function textoDosVoos(d) {
   const ls = [d.companhia || ''];
   (d.voos || []).forEach(v => { const dt = /^\d{4}-\d{2}-\d{2}$/.test(v.data || '') ? v.data.split('-').reverse().join('/') : '';
-    const c = +v.conexoes || 0; ls.push([dt, v.origem, v.saida, v.destino, v.chegada, c ? `${c} ${c === 1 ? 'conexão' : 'conexões'}` : 'direto'].filter(Boolean).join(' ')); });
+    const c = +v.conexoes || 0; const dc = /^\d{4}-\d{2}-\d{2}$/.test(v.data_chegada || '') && dt ? Math.round((Date.parse(v.data_chegada) - Date.parse(v.data)) / 864e5) : 0;
+    ls.push([dt, v.origem, v.saida, v.destino, v.chegada + (dc > 0 ? ' +' + dc : ''), c ? `${c} ${c === 1 ? 'conexão' : 'conexões'}` : 'direto'].filter(Boolean).join(' ')); });
   if (d.valor_site_reais) ls.push('site ' + Number(d.valor_site_reais).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
   return ls.filter(Boolean).join('\n');
 }
@@ -97,7 +98,10 @@ function ligarPrint(P, X) {
     const fs = imgsDoClipboard(e.clipboardData); if (!fs.length) return; e.preventDefault(); lerImagens(P, X, fs); };
   document.addEventListener('paste', colarGlobal);
 }
-const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões' };
+const TIPO_GO = { 'Direto': 'Voo direto', '1 conexão': 'Com 1 conexão', '2 conexões': 'Com 2 conexões', '3 conexões': 'Com 3 conexões', '4 conexões': 'Com 4 conexões' };
+// quantos dias depois da saída o voo chega (0 = mesmo dia). Aceita o antigo true/false do "+1".
+const dmais = (v) => { const m = v && v.mais1; if (m === true) return 1; if (m === false || m == null || m === '') return v && v.saida && v.chegada && v.chegada < v.saida ? 1 : 0; return Math.max(0, parseInt(m) || 0); };
+const selDias = (p) => { const n = dmais(get(p.replace(/\.mais1$/, ''))); return `<label class="fl"><span>Chegada</span><select data-k="${p}">${['Mesmo dia', '+1 dia', '+2 dias', '+3 dias'].map((o, i) => `<option value="${i}" ${n === i ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`; };
 
 /* ================= telas ================= */
 export function rota(hh) { ED = hh[1] || null; if (!ED) S = null; }
@@ -325,7 +329,7 @@ function formGo(X) {
   const op = S.opcoes.map((o, i) => {
     const b = `opcoes.${i}`;
     const vs = o.voos.filter(v => v.origem || v.destino);
-    const resumoVoos = vs.length ? vs.map(v => `<div style="font-size:13px;padding:3px 0"><b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.origem)} ${h(v.saida)} → ${h(v.destino)} ${h(v.chegada)}${v.mais1 ? ' (+1)' : ''} · ${h(v.tipo)}</div>`).join('') : '<div class="sub" style="margin:0">Nenhum voo ainda. Cole a tela da companhia acima ou preencha abaixo.</div>';
+    const resumoVoos = vs.length ? vs.map(v => `<div style="font-size:13px;padding:3px 0"><b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.origem)} ${h(v.saida)} → ${h(v.destino)} ${h(v.chegada)}${dmais(v) ? ` (+${dmais(v)})` : ''} · ${h(v.tipo)}</div>`).join('') : '<div class="sub" style="margin:0">Nenhum voo ainda. Cole a tela da companhia acima ou preencha abaixo.</div>';
     return `<div class="grupo">${multi ? `Opção ${i + 1} ${btnTira('opcoes#' + i)}` : 'A viagem'}</div>
       ${multi ? inp(b + '.nome', 'Nome da opção', 'text', 'placeholder="Ex.: Voo direto + hotel no centro"') : ''}
       <div class="sub" style="margin-top:6px"><b>Voos</b></div>
@@ -334,8 +338,8 @@ function formGo(X) {
         ${duas(inp(`${b}.voos.${j}.rotulo`, 'Rótulo', 'text', 'placeholder="Ida, Volta, Entre países"'), inp(`${b}.voos.${j}.data`, 'Data', 'date'))}
         ${duas(inp(`${b}.voos.${j}.origem`, 'Saída de', 'text', 'placeholder="Uberlândia" data-aero="cidade" autocomplete="off"'), inp(`${b}.voos.${j}.saida`, 'Horário', 'time'))}
         ${duas(inp(`${b}.voos.${j}.destino`, 'Chegada em', 'text', 'placeholder="Lisboa" data-aero="cidade" autocomplete="off"'), inp(`${b}.voos.${j}.chegada`, 'Horário', 'time'))}
-        ${duas(sel(`${b}.voos.${j}.tipo`, 'Tipo', ['Voo direto', 'Com 1 conexão', 'Com 2 conexões', 'Com 3 conexões']), sel(`${b}.voos.${j}.periodo`, 'Período', ['', 'Voo diurno', 'Voo noturno']))}
-        ${inp(`${b}.voos.${j}.mais1`, 'Chega no dia seguinte (+1)', 'check')}</div>`).join('')}
+        ${duas(sel(`${b}.voos.${j}.tipo`, 'Tipo', ['Voo direto', 'Com 1 conexão', 'Com 2 conexões', 'Com 3 conexões', 'Com 4 conexões']), sel(`${b}.voos.${j}.periodo`, 'Período', ['', 'Voo diurno', 'Voo noturno']))}
+        ${selDias(`${b}.voos.${j}.mais1`)}</div>`).join('')}
         ${btnMais(`${b}.voos|voo`, '+ Trecho')}
         ${inp(b + '.bagagem', 'Bagagem', 'text', 'placeholder="Para cada um: 1 mala despachada, 1 mala de bordo de 10 kg e 1 mochila, ida e volta"')}`)}
       <div class="sub" style="margin-top:10px"><b>Hotelaria</b></div>
@@ -413,7 +417,7 @@ async function colarGo(P, X, modo) {
   const r = await lerColado(txt);
   if (!r.opcoes.length) { X.aviso('Não encontrei voos nem valores. Confira se tem horário e código do aeroporto (ex.: 22:10 GIG).'); return; }
   const conv = (v) => ({ ...VOO(), rotulo: v.rotulo, data: v.data, origem: cidadeDe(v.ocod) || v.ocod, saida: v.saida, destino: cidadeDe(v.dcod) || v.dcod, chegada: v.chegada,
-    mais1: !!(v.mais1 || (v.saida && v.chegada && v.chegada < v.saida)), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
+    mais1: dmais(v), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
   const aplicar = (o, p) => {
     if (p.voos.length) o.voos = p.voos.map(conv);
     if (p.de) o.sites = p.de; if (p.por) o.cartao = p.por; if (p.nome && !o.nome) o.nome = p.nome;
@@ -448,7 +452,8 @@ function voosCorp(pre) {
       ${duas(inp(`${pre}voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.onome`, 'Aeroporto', 'text', 'placeholder="Galeão"'))}
       ${duas(inp(`${pre}voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" style="text-transform:uppercase"'), inp(`${pre}voos.${j}.dnome`, 'Aeroporto', 'text', 'placeholder="Santiago"'))}
       ${duas(inp(`${pre}voos.${j}.saida`, 'Saída', 'time'), inp(`${pre}voos.${j}.chegada`, 'Chegada', 'time'))}
-      ${duas(sel(`${pre}voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`${pre}voos.${j}.duracao`, 'Duração', 'text', 'placeholder="4h40"'))}</div>`).join('')}
+      ${duas(sel(`${pre}voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões', '3 conexões', '4 conexões']), inp(`${pre}voos.${j}.duracao`, 'Duração', 'text', 'placeholder="4h40"'))}
+      ${selDias(`${pre}voos.${j}.mais1`)}</div>`).join('')}
     ${btnMais(pre + 'voos|vooc', '+ Trecho')}`;
 }
 function formCorp() {
@@ -685,7 +690,7 @@ function gerarGo(X) {
     let s = '';
     if (multi || res.length) s += `<section><div class="wrap"><div class="titulo-sec"><div class="kicker">${multi ? 'Opção ' + n : 'Sua viagem'}</div><h2>${h(nomeOp)}</h2></div>${res.length ? `<div class="resumo">${res.map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${h(v)}</div></div>`).join('')}</div>` : ''}</div></section>`;
     if (dias.length) s += `<section style="padding-top:0"><div class="wrap"><div class="titulo-sec"><div class="kicker">Sugestão de roteiro</div><h2>Os dias da viagem</h2></div><div class="timeline">${dias.map((d, j) => `<article class="dia${d.destaque ? ' destaque' : ''}"><div class="data">${ddmm(d.data)}</div><div class="txt"><div class="num">Dia ${j + 1}</div><h3>${h(d.titulo)}</h3></div></article>`).join('')}</div></div></section>`;
-    if (voos.length) s += `<section style="background:#fff"><div class="wrap"><div class="titulo-sec"><div class="kicker">Voos</div><h2>Como ${vcs} ${pax === 1 ? 'chega' : 'chegam'}</h2></div>${voos.map(v => `<div class="card"><div class="card-cab"><span class="rot">${h(v.rotulo)}</span><span class="dt">${dLonga(v.data)}</span></div><div class="card-corpo"><div class="rota"><div><div class="leg">Saída</div><div class="cid">${h(v.origem)}</div><div class="hora">${h(v.saida)}</div></div><div class="seta">→</div><div><div class="leg">Chegada</div><div class="cid">${h(v.destino)}</div><div class="hora">${h(v.chegada)}${v.mais1 ? '<small>+1</small>' : ''}</div></div></div><div class="tags">${[v.periodo, v.tipo].filter(Boolean).map(t => `<span class="tag">${h(t)}</span>`).join('')}</div></div></div>`).join('')}<p class="nota" style="text-align:center">${o.bagagem ? h(o.bagagem) + '<br>' : ''}Horários sujeitos a alteração pela companhia aérea.</p></div></section>`;
+    if (voos.length) s += `<section style="background:#fff"><div class="wrap"><div class="titulo-sec"><div class="kicker">Voos</div><h2>Como ${vcs} ${pax === 1 ? 'chega' : 'chegam'}</h2></div>${voos.map(v => `<div class="card"><div class="card-cab"><span class="rot">${h(v.rotulo)}</span><span class="dt">${dLonga(v.data)}</span></div><div class="card-corpo"><div class="rota"><div><div class="leg">Saída</div><div class="cid">${h(v.origem)}</div><div class="hora">${h(v.saida)}</div></div><div class="seta">→</div><div><div class="leg">Chegada</div><div class="cid">${h(v.destino)}</div><div class="hora">${h(v.chegada)}${dmais(v) ? `<small>+${dmais(v)}</small>` : ''}</div></div></div><div class="tags">${[v.periodo, v.tipo].filter(Boolean).map(t => `<span class="tag">${h(t)}</span>`).join('')}</div></div></div>`).join('')}<p class="nota" style="text-align:center">${o.bagagem ? h(o.bagagem) + '<br>' : ''}Horários sujeitos a alteração pela companhia aérea.</p></div></section>`;
     if (carros.length) s += `<section><div class="wrap"><div class="titulo-sec"><div class="kicker">No destino</div><h2>Aluguel de carro</h2>${o.carro.intro ? `<p class="intro">${h(o.carro.intro)} Escolham o carro e o valor total da viagem aparece logo abaixo.</p>` : ''}</div><div class="carros">${carros.map((c, j) => `<label class="carro"><input type="radio" name="carro${n}" data-preco="${num(c.valor)}" data-nome="${h(c.grupo + (c.modelos ? ': ' + c.modelos : ''))}"><div class="carro-in"><div class="carro-top"><span class="grupo">${h(c.grupo)}</span><span class="carro-val">${brl(num(c.valor))}</span></div>${c.modelos ? `<div class="modelos">${h(c.modelos)} <small>ou similar</small></div>` : ''}${c.desc ? `<div class="carro-desc">${h(c.desc)}</div>` : ''}</div></label>`).join('')}<label class="carro"><input type="radio" name="carro${n}" data-preco="0" data-nome="Sem carro" checked><div class="carro-in"><div class="carro-top"><span class="grupo">Seguir sem carro</span><span class="carro-val">R$ 0,00</span></div></div></label></div>
       <div class="check"><h4>Importante sobre a locação</h4><p>Aqui está incluso somente o aluguel do veículo.</p><p>A caução é feita diretamente no balcão da locadora, na retirada do carro, e a Maktub não tem como intermediar esse processo. Levem a CNH válida e um cartão de crédito em nome do condutor.</p><p>Combustível, lavagem, limpeza, pedágios, multas e demais taxas cobradas pela locadora são de responsabilidade do condutor e acertados direto com a locadora.</p></div></div></section>`;
     if (hoteis.length) s += `<section${carros.length ? ' style="background:#fff"' : ''}><div class="wrap"><div class="titulo-sec"><div class="kicker">Hotelaria</div><h2>Onde ${vcs} ${pax === 1 ? 'descansa' : 'descansam'}</h2></div>${hoteis.map(x => { const fotos = linhas(x.fotos), nt = noites(x.entrada, x.saida); const meta = [x.cidade, x.estrelas ? x.estrelas + ' estrelas' : '', nt ? nt + (nt === 1 ? ' noite' : ' noites') : '', x.entrada && x.saida ? ddmm(x.entrada) + ' a ' + ddmm(x.saida) : ''].filter(Boolean).join(' · ');
@@ -794,7 +799,7 @@ ${val ? `<div class="caixa"><div class="rot">Validade da tarifa</div><div>Cotaç
 ${multi ? `<div class="abas" role="tablist"><div class="rot">Escolha a sua opção</div><div class="lista">${OPS.map((o, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(o.nome)}</span><span class="v">${brl(o.por)}</span></button>`).join('')}</div></div>` : ''}
 ${OPS.map((o, i) => { const vs = o.voos, b = vs[1], n = i + 1;
   return `${multi ? `<section class="op" data-op="${n}"${i ? ' hidden' : ''}><div class="opcao"><span>OPÇÃO ${n}</span>${o.nome ? h(o.nome) : ''}</div>` : ''}<div class="tit"><div><h1>${titDe(vs)}</h1><div class="subt">${[h(S.cia), b ? 'ida e volta' : 'só ida', vs.every(v => v.tipo === 'Direto') ? 'voos diretos' : 'com conexão'].filter(Boolean).join(' · ')}</div></div><div class="r">${vs.slice(0, 2).map(v => `${h(v.rotulo).toUpperCase()}: ${h(v.ocod).toUpperCase()} → ${h(v.dcod).toUpperCase()}`).join('<br>')}</div></div>
-${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}${v.mais1 ? '<sup style="font-size:13px;color:var(--d);margin-left:3px">+1</sup>' : ''}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
+${vs.map(v => `<div class="voo"><div class="cab"><span>${h(v.rotulo).toUpperCase()}${paxTrecho(v, pax) ? ` · ${paxTrecho(v, pax)} ${paxTrecho(v, pax) === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}` : ''}</span><span>${dataCab(v.data)}</span></div><div class="corpo"><div><div class="hora">${h(v.saida)}</div><div class="aer">${h(v.ocod).toUpperCase()} · ${h(v.onome)}</div></div><div class="seta">→</div><div><div class="hora">${h(v.chegada)}${dmais(v) ? `<sup style="font-size:13px;color:var(--d);margin-left:3px">+${dmais(v)}</sup>` : ''}</div><div class="aer">${h(v.dcod).toUpperCase()} · ${h(v.dnome)}</div></div><div class="cia">${h(S.cia)}</div><div class="chips"><span class="chip">${h(v.tipo)}</span></div></div></div>`).join('')}
 ${multi ? resumo(o, n) + '</section>' : ''}`; }).join('')}
 ${String(S.obs || '').trim() ? `<div class="caixa obs"><div class="rot">Observação</div><div style="font-weight:700;color:var(--v)">${h(String(S.obs).trim()).replace(/\n/g, '<br>')}</div></div>` : ''}
 ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div style="font-weight:700">${h(S.bagagem)}</div></div>` : ''}
@@ -888,7 +893,8 @@ function editorRapida(P, X) {
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
         ${duas(inp(`voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
         ${duas(inp(`voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
-        ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões']), inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`))}</div>`).join('')}
+        ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões', '3 conexões', '4 conexões']), selDias(`voos.${j}.mais1`))}
+        ${inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`)}</div>`).join('')}
         <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
       <div class="duas-col">${inp('cliente', 'Cliente (não aparece na cotação)', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
       <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
@@ -1149,7 +1155,7 @@ function htmlRapida() {
         <div class="tr-body">
           <div class="pt"><div class="h">${h(t.v.saida || '')}</div><div class="a">${h(t.o)}${t.onome ? ' · ' + h(t.onome) : ''}</div></div>
           <div class="mid"><div class="seta">&#8594;</div><div class="tipo">${h(t.tipo)}</div></div>
-          <div class="pt fim"><div class="h">${h(t.v.chegada || '')}${t.v.mais1 ? '<sup>+1</sup>' : ''}</div><div class="a">${h(t.d)}${t.dnome ? ' · ' + h(t.dnome) : ''}</div></div>
+          <div class="pt fim"><div class="h">${h(t.v.chegada || '')}${dmais(t.v) ? `<sup>+${dmais(t.v)}</sup>` : ''}</div><div class="a">${h(t.d)}${t.dnome ? ' · ' + h(t.dnome) : ''}</div></div>
           <div class="pax">${t.pax} ${t.pax === 1 ? 'passageiro' : 'passageiros'}</div>
         </div>
       </div>`).join('');
@@ -1309,7 +1315,7 @@ async function imagemRapida() {
     g.font = jost(13); g.fillStyle = SUAVE; esp(t.dia.toUpperCase(), 146, y + 45, 3, 'center');
     g.font = corm(30, '600'); g.fillStyle = VERDE; esp(t.dataC, 146, y + 82, 1.5, 'center');
     g.font = corm(46, '600'); g.textAlign = 'center'; g.fillText(t.v.saida || '', 430, y + 63); g.fillText(t.v.chegada || '', 710, y + 63); g.textAlign = 'left';
-    if (t.v.mais1) { const wc = g.measureText(t.v.chegada || '').width; g.font = jost(15, '500'); g.fillStyle = DOUR; g.fillText('+1', 710 + wc / 2 + 6, y + 36); }
+    if (dmais(t.v)) { const wc = g.measureText(t.v.chegada || '').width; g.font = jost(15, '500'); g.fillStyle = DOUR; g.fillText('+' + dmais(t.v), 710 + wc / 2 + 6, y + 36); }
     g.font = jost(14); g.fillStyle = SUAVE; esp(t.o, 430, y + 92, 4, 'center'); esp(t.d, 710, y + 92, 4, 'center');
     g.font = jost(22); g.fillStyle = DOUR; g.textAlign = 'center'; g.fillText('→', 570, y + 58); g.textAlign = 'left';
     g.font = jost(12); g.fillStyle = SUAVE; esp(t.tipo.toUpperCase(), 570, y + 79, 2.6, 'center');
