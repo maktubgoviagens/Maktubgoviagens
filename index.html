@@ -1128,11 +1128,22 @@ addEventListener('scroll', function(){
 })();
 </script>
 <script>
-/* AVALIAÇÕES DO GOOGLE: para atualizar o site inteiro, troque só os dois valores abaixo.
-   Conferir no Perfil da Empresa antes (fonte de apoio: aba "Avaliações Google" da planilha B2C). */
-window.MK_AVALIACOES = { nota: '5,0', total: 40 };
-document.querySelectorAll('[data-mk-nota]').forEach(function(e){ e.textContent = MK_AVALIACOES.nota; });
-document.querySelectorAll('[data-mk-total]').forEach(function(e){ e.textContent = MK_AVALIACOES.total; });
+/* AVALIAÇÕES DO GOOGLE
+   A nota e o total vêm de /ativos/avaliacoes.json, atualizado automaticamente pelo n8n
+   a cada avaliação nova. Os números escritos na página ficam como reserva: se o arquivo
+   não carregar ou vier com algo estranho, a página continua mostrando o último valor. */
+(function(){
+  function aplica(d){
+    if(!d || !/^\d,\d$/.test(d.nota) || !(d.total > 0 && d.total < 100000)) return;
+    document.querySelectorAll('[data-mk-nota]').forEach(function(e){ e.textContent = d.nota; });
+    document.querySelectorAll('[data-mk-total]').forEach(function(e){ e.textContent = d.total; });
+  }
+  try{
+    fetch('/ativos/avaliacoes.json', {cache:'no-cache'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(aplica).catch(function(){});
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
