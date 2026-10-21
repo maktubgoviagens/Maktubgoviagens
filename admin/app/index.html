@@ -41,6 +41,8 @@ button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
 .topo .acoes{margin-left:auto;display:flex;gap:6px}
 .icone{background:none;border:1px solid rgba(201,169,110,.35);color:var(--creme);width:38px;height:38px;display:grid;place-items:center;cursor:pointer;text-decoration:none}
 .icone svg{width:18px;height:18px}
+#recarregar.girando svg{animation:girar .8s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
 
 /* barra inferior */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--branco);border-top:1px solid var(--linha);display:flex;padding-bottom:env(safe-area-inset-bottom)}
@@ -377,7 +379,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
       <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
       <button class="icone" id="clientesTopo" aria-label="Clientes" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/></svg></button>
       <button class="icone" id="buscaTopo" aria-label="Buscar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></button>
-      <button class="icone" id="recarregar" aria-label="Atualizar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
+      <button class="icone" id="recarregar" aria-label="Atualizar" title="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
       <button class="icone" id="maisTopo" aria-label="Mais" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="bola" id="bLeads" hidden></span></button>
       <button class="icone" id="sair" aria-label="Sair" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
     </div>
@@ -639,7 +641,16 @@ function mostrarFab() {
   $('fab').hidden = !lista || !acoesNovo().length; document.body.classList.toggle('com-fab', !$('fab').hidden);
 }
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
-$('recarregar').onclick = () => { SITE = null; OPM.recarregar(); CX.recarregar(); ACV.recarregar(); carregar(); };
+/* botão Atualizar (todas as pessoas): busca de novo o que o resto do time lançou. Só roda quando a pessoa toca;
+   se houver algo digitado e não salvo, pergunta antes para não perder o preenchimento. */
+$('recarregar').onclick = async () => {
+  const bt = $('recarregar'); if (bt.classList.contains('girando')) return;
+  if (SUJO && !confirm('Você tem um preenchimento não salvo nesta tela. Atualizar agora descarta o que não foi salvo. Atualizar mesmo assim?')) return;
+  bt.classList.add('girando');
+  try { SITE = null; OPM.recarregar(); CX.recarregar(); ACV.recarregar(); await carregar(); aviso('Atualizado com o que o time lançou.'); }
+  catch (e) { aviso('Não atualizou: ' + ((e && e.message) || 'sem conexão')); }
+  finally { bt.classList.remove('girando'); }
+};
 $('sino').onclick = () => ir('avisos');
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
