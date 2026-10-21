@@ -254,6 +254,11 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .emchk button.conf{border-color:var(--alerta);color:var(--alerta)}
 .fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:50%;border:0;background:var(--verde);color:var(--creme);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
 .folha{position:fixed;inset:0;z-index:60}
+.prazos{display:flex;gap:8px;align-items:flex-start;overflow-x:auto;scrollbar-width:none;margin-bottom:6px}.prazos::-webkit-scrollbar{display:none}
+.prazo-col{flex:0 0 46%;min-width:140px;background:var(--branco);border:1px solid var(--linha);padding:8px}
+.prazo-tit{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin-bottom:6px}
+.prazo-col.atr .prazo-tit{color:var(--alerta)}
+.prazo-it{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid var(--verde);padding:6px 8px;margin-top:4px;font:inherit;font-size:13px;color:var(--tinta);cursor:pointer;line-height:1.3}
 .folha-fundo{position:absolute;inset:0;background:rgba(20,30,24,.45)}
 .folha-caixa{position:absolute;left:0;right:0;bottom:0;background:var(--fundo,#f6f3ec);padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-radius:14px 14px 0 0;max-height:85vh;overflow:auto}
 .busca-caixa{top:0;bottom:auto;border-radius:0 0 14px 14px;padding-top:calc(14px + env(safe-area-inset-top))}
@@ -672,6 +677,8 @@ async function conferirVersao() {
 }
 conferirVersao();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) conferirVersao(); });
+// confere também a cada 2 minutos com o app aberto (só mostra o aviso; nunca recarrega sozinho)
+setInterval(() => { if (!document.hidden) conferirVersao(); }, 120e3);
 // com um formulário ou ficha aberta (fechamento, emissão, cotação...), atualiza os dados mas nunca redesenha a tela
 const editando = () => { if (SUJO) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
 document.addEventListener('visibilitychange', () => {
@@ -708,25 +715,47 @@ async function recarregarGravar() {
   D.gravar = r.error ? [] : (r.data || []); D.postar = q.error ? [] : (q.data || []); return D.gravar;
 }
 function blocoGravar() { return blocoGravacoes() + blocoPostar(); }
+/* "Para você gravar" e "Para você postar": compacto, em colunas por data (lado a lado).
+   Cada item mostra só o título; tocando abre os detalhes numa folha. */
+const MK_FMT = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };
+const MK_CONTA = { maktub: ['Maktub Go', '#1b4332'], bragas: ['Os Bragas', '#c96a28'] };
+const ddmm = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
+function colunasPrazo(L, tipo, prazoDe, rotulo) {
+  const grupos = new Map();
+  L.forEach(p => { const k = prazoDe(p) || ''; (grupos.get(k) || grupos.set(k, []).get(k)).push(p); });
+  const chaves = [...grupos.keys()].sort((x, y) => (x || '9999') < (y || '9999') ? -1 : 1), hj = hojeISO();
+  return `<div class="prazos">${chaves.map(k => { const atr = k && k < hj;
+    return `<div class="prazo-col ${atr ? 'atr' : ''}"><div class="prazo-tit">${k ? `${rotulo} ${ddmm(k)}` : 'Sem data'}${atr ? ' · atrasado' : ''}</div>
+      ${grupos.get(k).map(p => `<button type="button" class="prazo-it" data-mkdet="${tipo}:${esc(p.id)}" style="border-left-color:${(MK_CONTA[p.conta] || MK_CONTA.maktub)[1]}">${esc(p.titulo)}</button>`).join('')}</div>`; }).join('')}</div>`;
+}
 function blocoPostar() {
   const L = D.postar || []; if (!L.length) return '';
-  const dd = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
-  const fmt = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };
-  const conta = { maktub: 'Maktub Go', bragas: 'Os Bragas' };
-  return `<div class="secao">Para você postar</div>${L.map(p => { const atr = p.data_prevista && p.data_prevista < hojeISO(); return `<div class="card ${atr ? 'novo' : ''}" style="margin-bottom:8px">
-    <div class="cab"><div><div class="nome">${esc(p.titulo)}</div><span class="tag">${esc(conta[p.conta] || 'Maktub Go')}</span> <span class="tag">${esc((fmt[p.formato] || 'Post') + (p.formato === 'reels' && p.reels_teste ? ' teste' : ''))}</span>${p.data_prevista ? ` <span class="tag ${atr ? 'alerta' : 'ouro'}">postar ${dd(p.data_prevista)}${p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}</div></div>
-    ${p.instrucoes_post || p.legenda ? `<div class="info"><div>${esc(String(p.instrucoes_post || p.legenda).slice(0, 220))}</div></div>` : ''}
-    ${p.link_arquivo ? `<div class="acoes"><a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Abrir arquivos</a></div>` : ''}</div>`; }).join('')}`;
+  return `<div class="secao">Para você postar</div>` + colunasPrazo(L, 'p', p => p.data_prevista, 'Postar');
 }
 function blocoGravacoes() {
   const L = D.gravar || []; if (!L.length) return '';
-  const dd = (s) => s ? String(s).slice(8, 10) + '/' + String(s).slice(5, 7) : '';
-  const fmt = { reels: 'Reels', stories: 'Stories', carrossel: 'Carrossel', feed: 'Feed' };
-  return `<div class="secao">Para você gravar</div>${L.map(p => { const prazo = p.gravacao_data || p.data_prevista; const atr = prazo && prazo < hojeISO(); return `<div class="card ${atr ? 'novo' : ''}" style="margin-bottom:8px">
-    <div class="cab"><div><div class="nome">${esc(p.titulo)}</div><span class="tag">${esc(fmt[p.formato] || 'Post')}</span>${prazo ? ` <span class="tag ${atr ? 'alerta' : 'ouro'}">gravar até ${dd(prazo)}</span>` : ''}</div></div>
-    ${p.obs || p.legenda ? `<div class="info"><div>${esc(String(p.obs || p.legenda).slice(0, 220))}</div></div>` : ''}
-    <div class="acoes">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Ver roteiro ou arte</a>` : ''}<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button></div></div>`; }).join('')}`;
+  return `<div class="secao">Para você gravar</div>` + colunasPrazo(L, 'g', p => p.gravacao_data || p.data_prevista, 'Até');
 }
+function detalheMkt(tipo, id) {
+  const p = ((tipo === 'g' ? D.gravar : D.postar) || []).find(x => String(x.id) === String(id)); if (!p) return;
+  const conta = (MK_CONTA[p.conta] || MK_CONTA.maktub)[0], fmt = (MK_FMT[p.formato] || 'Post') + (p.formato === 'reels' && p.reels_teste ? ' teste' : '');
+  const prazo = tipo === 'g' ? (p.gravacao_data || p.data_prevista) : p.data_prevista;
+  const texto = tipo === 'g' ? (p.obs || p.legenda) : (p.instrucoes_post || p.legenda);
+  let f = document.getElementById('folhaMkt');
+  if (!f) { f = document.createElement('div'); f.id = 'folhaMkt'; f.className = 'folha'; document.getElementById('app').appendChild(f); }
+  f.innerHTML = `<div class="folha-fundo" data-fmk></div><div class="folha-caixa">
+    <div class="folha-tit">${tipo === 'g' ? 'Para você gravar' : 'Para você postar'}</div>
+    <div class="nome" style="font-size:17px;margin-bottom:6px">${esc(p.titulo)}</div>
+    <span class="tag">${esc(conta)}</span> <span class="tag">${esc(fmt)}</span>${prazo ? ` <span class="tag ouro">${tipo === 'g' ? 'gravar até' : 'postar'} ${ddmm(prazo)}${tipo === 'p' && p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}
+    ${texto ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.5;margin-top:12px">${esc(texto)}</div>` : ''}
+    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : ''}</div>
+    <button class="sec" data-fmk style="width:100%;margin-top:12px">Fechar</button></div>`;
+  f.hidden = false;
+}
+document.addEventListener('click', (e) => {
+  const d = e.target.closest('[data-mkdet]'); if (d) { const [t, id] = d.dataset.mkdet.split(':'); detalheMkt(t, id); return; }
+  if (e.target.closest('[data-fmk]') || e.target.closest('#folhaMkt [data-gravado]')) { const f = document.getElementById('folhaMkt'); if (f) f.hidden = true; }
+});
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-gravado]'); if (!b) return;
   b.disabled = true;
@@ -938,29 +967,27 @@ async function carregar(silencioso, manterTela) {
   const hoje = HOJE(), iso = (d) => isoLocal(d);
   const ontem = new Date(hoje - 864e5), em120 = new Date(+hoje + 120 * 864e5);
   const inicioAno = `${hoje.getFullYear()}-01-01`, desde = `${hoje.getFullYear() - 1}-01-01`;
-  const comum = await Promise.all([
-    sb.from('emissoes').select('*').gte('data_negociacao', desde).order('data_negociacao', { ascending: false }).limit(5000),
-    sb.from('configuracoes').select('*').eq('id', 1).maybeSingle(),
-    sb.from('fechamentos').select('*'),
-    sb.rpc('parceiros_ativos'),
-    sb.rpc('time_nomes'),
-    carregarAgendaEm(),
-    sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
-  ]);
-  D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
-  if (podeAba('cotador')) { const pc = await sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000); D.cots = pc.error ? [] : (pc.data || []); }
-  { const ar = await sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000); D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda; }
-  { const tt = await sb.rpc('ticktick_situacao'); D.tt = tt.error ? null : tt.data; }
-  { const cl = await sb.rpc('cal_links'); D.cal = cl.error ? null : (cl.data || []); }
-  if (ADMIN) { const ci = await sb.rpc('cal_webhook_info'); D.calInfo = ci.error ? null : ci.data; }
-  { const mp = await sb.rpc('metas_progresso', { p_mes: mesKey(new Date()) + '-01' }); D.metas = mp.error ? null : mp.data; }
-  if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
-  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B(); marcarVoados();
-  if (!VER_TODAS() && pode('vendas_todas')) { const vt = await sb.rpc('vendas_maktub', { p_desde: desde }); if (!vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); } } D.fech = comum[2].data || []; fecharMesesAuto(); D.parc = comum[3].data || []; D.time = comum[4].data || [];
-  const G = pode('gestao'), LE = pode('leads');
-  if (ADMIN || G || LE || pode('talentos')) {
-    const nada = Promise.resolve({ data: [], error: null, count: 0 });
-    const q = await Promise.all([
+  // tudo em paralelo (antes eram ~15 buscas uma depois da outra, o que deixava a abertura lenta)
+  const nada = Promise.resolve({ data: [], error: null, count: 0 });
+  const G = pode('gestao'), LE = pode('leads'), CRMok = podeAba('crm'), k0 = mesKey(new Date());
+  const [comum, pc, ar, tt, cl, ci, mp, vt, q, gx, px, av, pv, ag] = await Promise.all([
+    Promise.all([
+      sb.from('emissoes').select('*').gte('data_negociacao', desde).order('data_negociacao', { ascending: false }).limit(5000),
+      sb.from('configuracoes').select('*').eq('id', 1).maybeSingle(),
+      sb.from('fechamentos').select('*'),
+      sb.rpc('parceiros_ativos'),
+      sb.rpc('time_nomes'),
+      carregarAgendaEm(),
+      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
+    ]),
+    podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000) : null,
+    sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000),
+    sb.rpc('ticktick_situacao'),
+    sb.rpc('cal_links'),
+    ADMIN ? sb.rpc('cal_webhook_info') : null,
+    sb.rpc('metas_progresso', { p_mes: k0 + '-01' }),
+    !VER_TODAS() && pode('vendas_todas') ? sb.rpc('vendas_maktub', { p_desde: desde }) : null,
+    (ADMIN || G || LE || pode('talentos')) ? Promise.all([
       LE ? sb.from('leads').select('*').order('created_at', { ascending: false }).limit(1000) : nada,
       LE || G ? sb.from('solicitacoes_acesso').select('*').order('created_at', { ascending: false }).limit(500) : nada,
       pode('talentos') ? sb.from('banco_talentos').select('*').order('created_at', { ascending: false }).limit(300) : nada,
@@ -974,43 +1001,54 @@ async function carregar(silencioso, manterTela) {
       G ? sb.from('convites').select('id', { count: 'exact', head: true }).eq('status', 'enviado') : nada,
       ADMIN ? carregarEquipe() : nada,
       ADMIN ? carregarAvisos() : nada
-    ]);
-    const erro = q.slice(0, 10).find(r => r && r.error && r !== q[2]);
-    if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
-    [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => (r && r.data) || []);
-    D.talErro = q[2].error; D.convPend = q[10].count || 0;
-  }
-  if (G) {
-    const k0 = mesKey(new Date());
-    const gx = await Promise.all([
+    ]) : null,
+    G ? Promise.all([
       sb.from('convites').select('*').order('created_at', { ascending: false }).limit(300),
       sb.from('relatorios_mensais').select('cliente_id,publicado').eq('mes', mesMais(k0, -1) + '-01'),
       sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', k0 + '-01'),
       sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', k0 + '-01'),
       sb.from('gestao_tarefas').select('*').limit(5000)
-    ]);
-    [D.indic, D.rel, D.extMes, D.atasMes, D.gtar] = gx.map(r => r.data || []);
-    if (gx[4].error) D.gtar = null;
-  }
-  if (podeAba('crm')) {
-    const nada = Promise.resolve({ data: [], error: null });
-    const px = await Promise.all([
+    ]) : null,
+    CRMok ? Promise.all([
       sb.from('pessoas').select('*').order('nome').limit(10000),
       pode('emissoes') ? sb.from('pessoas_documentos').select('*').limit(10000) : nada,
       sb.from('pessoas_vinculos').select('*').limit(10000),
       pode('emissoes') ? sb.from('emissao_passageiros').select('*').limit(20000) : nada,
       ADMIN ? sb.from('pessoas_duplicatas').select('*').eq('status', 'pendente').limit(500) : nada
-    ]);
+    ]) : null,
+    CRMok ? sb.from('avaliacoes').select('*').order('created_at', { ascending: false }).limit(5000) : null,
+    CRMok ? sb.from('pos_viagem').select('*').limit(10000) : null,
+    ADMIN ? sb.from('avaliacoes_google').select('*').limit(3000) : null,
+    CRMok && podeAba('fornecedores') ? FORN.carregar(sb) : null,
+    podeAba('compromissos') ? CMP.carregar(ctxCMP()) : null,
+    podeAba('marketing') ? MKT.carregar(sb) : null,
+    recarregarGravar()
+  ]);
+  D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
+  if (pc) D.cots = pc.error ? [] : (pc.data || []);
+  D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda;
+  D.tt = tt.error ? null : tt.data;
+  D.cal = cl.error ? null : (cl.data || []);
+  if (ci) D.calInfo = ci.error ? null : ci.data;
+  D.metas = mp.error ? null : mp.data;
+  if (comum[0].error) aviso('Emissões não carregaram: ' + comum[0].error.message);
+  D.emissoes = comum[0].data || []; D.cfg = comum[1].data || null; COT.configurar(D.cfg); marcarCheckinB2B(); marcarVoados();
+  if (vt && !vt.error) { const ja = new Set(D.emissoes.map(e => e.id)); (vt.data || []).forEach(e => { if (!ja.has(e.id)) D.emissoes.push(Object.assign({ outra: true }, e)); }); }
+  D.fech = comum[2].data || []; fecharMesesAuto(); D.parc = comum[3].data || []; D.time = comum[4].data || [];
+  if (q) {
+    const erro = q.slice(0, 10).find(r => r && r.error && r !== q[2]);
+    if (erro) aviso('Alguns dados não carregaram: ' + erro.error.message);
+    [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => (r && r.data) || []);
+    D.talErro = q[2].error; D.convPend = q[10].count || 0;
+  }
+  if (gx) { [D.indic, D.rel, D.extMes, D.atasMes, D.gtar] = gx.map(r => r.data || []); if (gx[4].error) D.gtar = null; }
+  if (px) {
     D.pessoas = px[0].error ? null : (px[0].data || []);
-    { const av = await sb.from('avaliacoes').select('*').order('created_at', { ascending: false }).limit(5000); D.avaliacoes = av.error ? null : (av.data || []); }
-    { const pv = await sb.from('pos_viagem').select('*').limit(10000); D.posViagem = pv.error ? null : (pv.data || []); }
-    if (podeAba('fornecedores')) await FORN.carregar(sb);
+    D.avaliacoes = av.error ? null : (av.data || []);
+    D.posViagem = pv.error ? null : (pv.data || []);
     [D.docs, D.vinculos, D.passageiros, D.dups] = px.slice(1).map(r => (r && !r.error && r.data) || []);
   } else D.pessoas = [];
-  if (podeAba('compromissos')) await CMP.carregar(ctxCMP());
-  if (podeAba('marketing')) await MKT.carregar(sb);
-  if (ADMIN) { const ag = await sb.from('avaliacoes_google').select('*').limit(3000); D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
-  await recarregarGravar();
+  if (ag) { D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   if (!manterTela) tela();
