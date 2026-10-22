@@ -1975,9 +1975,10 @@ async function salvarInteresses(ld, novo) {
   }
   return null;
 }
-const ROT_MARCO = { 'Qualificação': 'Qualificado pelo SDR', 'Diagnóstico agendado': 'Diagnóstico agendado', 'Diagnóstico feito': 'Diagnóstico feito', 'Proposta enviada': 'Proposta enviada', 'Em cotação': 'Começou a cotar', 'Cotação enviada': 'Cotação enviada', 'Follow-up': 'Entrou em follow-up', 'Fechou': 'Fechou', 'Não fechou': 'Não fechou' };
+const ROT_MARCO = { 'Reunião de proposta': 'Reunião de proposta marcada', 'Qualificação': 'Qualificado pelo SDR', 'Diagnóstico agendado': 'Diagnóstico agendado', 'Diagnóstico feito': 'Diagnóstico feito', 'Proposta enviada': 'Proposta enviada', 'Em cotação': 'Começou a cotar', 'Cotação enviada': 'Cotação enviada', 'Follow-up': 'Entrou em follow-up', 'Fechou': 'Fechou', 'Não fechou': 'Não fechou' };
 const tsDe = (x) => typeof x === 'string' && x.length === 10 ? dia(x) : new Date(x);
 const quandoTrilha = (x) => typeof x === 'string' && x.length === 10 ? dia(x).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : dhCurta(x);
+const agProp = (r) => reunioesDe(r.id).filter(a => /proposta/i.test(a.titulo || '') && a.status !== 'Cancelada')[0] || null;
 const agDiag = (r) => reunioesDe(r.id).filter(a => /diagn/i.test(a.titulo || '') && a.status !== 'Cancelada')[0] || null;
 const clienteGestaoDe = (r) => { const pf = r && r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null; return pf && pf.cliente_id ? (D.clientes || []).find(c => c.id === pf.cliente_id) || null : null; };
 function eventosCard(r) {
@@ -1986,7 +1987,8 @@ function eventosCard(r) {
   if (r.assumido_em) ev.push([r.assumido_em, 'Assumido' + (r.assumido_por ? ' por ' + (nomeTime(r.assumido_por) || '') : ''), '']);
   if (r.primeiro_contato_em) ev.push([r.primeiro_contato_em, '1º contato pelo WhatsApp', '']);
   Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
-  reunioesDe(r.id).forEach(a => { if (a.created_at) ev.push([a.created_at, /diagn/i.test(a.titulo || '') ? 'Diagnóstico marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !/diagn/i.test(a.titulo) ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, /diagn/i.test(a.titulo || '') ? 'Diagnóstico realizado' : 'Reunião realizada', a.titulo && !/diagn/i.test(a.titulo) ? a.titulo : '']); });
+  const tipoReu = (a) => /diagn/i.test(a.titulo || '') ? 'Diagnóstico' : /proposta/i.test(a.titulo || '') ? 'Reunião de proposta' : '';
+  reunioesDe(r.id).forEach(a => { const tp = tipoReu(a); if (a.created_at) ev.push([a.created_at, tp ? tp + ' marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !tp ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, tp ? tp + ' realizado' : 'Reunião realizada', a.resumo ? String(a.resumo).slice(0, 140) + (String(a.resumo).length > 140 ? '…' : '') : (a.titulo && !tp ? a.titulo : '')]); });
   cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada ao cliente', c.titulo || '']); }));
   if (r.etapa_desde && etapaDe(r) !== 'Novo lead' && r.resultado === 'Em andamento' && !M[etapaDe(r)]) ev.push([r.etapa_desde, 'Entrou em ' + etapaDe(r), '']);
   return ev;
@@ -2035,7 +2037,7 @@ function htmlGestaoSdr(r) {
       ${campo('q_decisor', 'Quem decide a contratação', pre('decisor'), 'text', 'placeholder="Ex.: ele mesmo, junto com a esposa"')}
       <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal; sem o resumo, preencha gasto mensal, bancos e cartões, objetivo e quem decide.</div></details>`;
 }
-const PASSOS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada', 'Fechou', 'Implantação', 'Ativo e renovação'];
+const PASSOS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Fechou', 'Implantação', 'Ativo e renovação'];
 const dataCurtaH = (x) => { const d = tsDe(x); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + (String(x).length > 10 ? ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''); };
 const quandoDiag = (x) => new Date(x).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 function posVendaDe(r) {
@@ -2048,7 +2050,8 @@ function htmlTopoGestao(r) {
   const M = r.marcos || {}, pv = posVendaDe(r), perdeu = r.resultado === 'Não fechou';
   const atual = r.resultado === 'Fechou' ? pv.idx : Math.max(0, ETAPAS_G.indexOf(etapaDe(r)));
   const ag = agDiag(r), q = r.qualificacao || {};
-  const dataPasso = (et, i) => i === 0 ? entradaDe(r) : et === 'Diagnóstico agendado' && ag && i === atual ? ag.data : et === 'Implantação' && pv.cli ? pv.cli.gestao_inicio : et === 'Ativo e renovação' && pv.cli && pv.cli.gestao_vencimento ? null : (M[et] || {}).em;
+  const ap = agProp(r);
+  const dataPasso = (et, i) => i === 0 ? entradaDe(r) : et === 'Reunião de proposta' && ap && i === atual ? ap.data : et === 'Diagnóstico agendado' && ag && i === atual ? ag.data : et === 'Implantação' && pv.cli ? pv.cli.gestao_inicio : et === 'Ativo e renovação' && pv.cli && pv.cli.gestao_vencimento ? null : (M[et] || {}).em;
   const trilha = PASSOS_G.map((et, i) => {
     const pvc = i >= 6 ? ' pv' : '', st = perdeu && i === atual ? 'x' : i < atual ? 'f' : i === atual ? (r.resultado === 'Fechou' && i === 7 ? 'f' : 'a') : '';
     const dt = dataPasso(et, i), extra = et === 'Ativo e renovação' && pv.cli && pv.cli.gestao_vencimento ? 'até ' + dataBR(pv.cli.gestao_vencimento) : '';
@@ -2066,8 +2069,8 @@ function htmlTopoGestao(r) {
   else if (atual === 0) { t = 'Assumir e mandar as perguntas'; d = 'O SDR assume, manda as perguntas pelo WhatsApp e liga com o Granola gravando.'; bt = (!r.assumido_por ? B('Assumir', `data-gassumir="${r.id}"`, 1) : '') + (zap ? `<a class="${r.assumido_por ? 'p' : 's'}" target="_blank" rel="noopener" href="${esc(zap)}">Mandar as perguntas</a>` : ''); }
   else if (atual === 1) { t = 'Qualificar e passar para o closer'; d = q.gasto || q.granola ? 'Qualificação registrada. Escolha o closer e agende o diagnóstico.' : 'Ligue com o Granola gravando, cole o resumo e preencha o gasto mensal.'; bt = B('Passar para o closer ›', 'data-gir="Diagnóstico agendado"', 1) + B('Qualificação', 'data-gqual="1"'); }
   else if (atual === 2) { t = ag ? `${quandoDiag(ag.data)} com ${esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0])}` : 'Diagnóstico sem data na agenda'; d = 'Antes: o closer lê a qualificação e o resumo do Granola.'; bt = B('Diagnóstico feito ›', 'data-gir="Diagnóstico feito"', 1) + B('Remarcar', 'data-gir="Diagnóstico agendado"'); }
-  else if (atual === 3) { t = 'Enviar a proposta'; d = 'Ao enviar, registre o valor e a condição.'; bt = B('Proposta enviada ›', 'data-gir="Proposta enviada"', 1) + B('Qualificação', 'data-gqual="1"'); }
-  else { t = 'Aguardando a decisão'; d = r.proximo_passo_data ? 'Follow-up em ' + dataCurta(dia(r.proximo_passo_data)) + '.' : 'Defina a data do follow-up.'; bt = B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"'); }
+  else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1); }
+  else { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); }
   const ent = entradaDe(r);
   return `<div class="sub" style="margin-top:4px">SDR ${esc(nomeTime(r.sdr_id) || 'a definir')} · Closer ${esc(nomeTime(r.closer_id) || 'a definir')}${ent ? ' · entrou ' + (Date.now() - tsDe(ent) < 2 * 864e5 ? 'há ' + haTempo(Date.now() - tsDe(ent)) : 'em ' + dataBR(String(ent).slice(0, 10))) : ''}</div>
     <div class="gtr" aria-label="Trilha do cliente">${trilha}</div>
@@ -2095,8 +2098,8 @@ function htmlJornadaGestao() {
     if (et === 'Novo lead') { const ms = Date.now() - tsDe(entradaDe(r)); s = 'Entrou há ' + haTempo(ms) + (!r.assumido_por && ms >= 9e5 ? ' · sem ninguém' : ''); c = !r.assumido_por && ms >= 9e5 ? 'al' : ''; prox = prox || 'Assumir e mandar as perguntas'; }
     else if (et === 'Qualificação') { s = 'Qualificando há ' + desde((M[et] || {}).em || r.etapa_desde || r.assumido_em); prox = 'Ligar com o Granola e passar ao closer'; }
     else if (et === 'Diagnóstico agendado') { s = ag ? 'Diagnóstico ' + quandoDiag(ag.data) : 'Sem data na agenda'; c = ag ? 'ok' : 'al'; prox = 'Closer revisar a qualificação'; }
-    else if (et === 'Diagnóstico feito') { const x = (M[et] || {}).em || r.etapa_desde; s = 'Feito há ' + desde(x); c = x && Date.now() - tsDe(x) > 2 * 864e5 ? 'al' : ''; prox = 'Enviar a proposta'; }
-    else { s = 'Enviada há ' + desde((M[et] || {}).em || r.etapa_desde); c = r.proximo_passo_data && r.proximo_passo_data <= hj ? 'al' : ''; prox = r.proximo_passo_data ? 'Follow-up ' + dataCurta(dia(r.proximo_passo_data)) : 'Definir o follow-up'; }
+    else if (et === 'Diagnóstico feito') { const x = (M[et] || {}).em || r.etapa_desde; s = 'Feito há ' + desde(x); c = x && Date.now() - tsDe(x) > 2 * 864e5 ? 'al' : ''; prox = 'Marcar a reunião de proposta'; }
+    else { const ap = agProp(r), passou = ap && tsDe(ap.data) < Date.now(); s = ap ? 'Proposta ' + quandoDiag(ap.data) : 'Sem data da reunião'; c = !ap || passou ? 'al' : 'ok'; prox = passou ? 'Registrar se fechou e por quê' : ap ? 'Apresentar a proposta' : 'Marcar a reunião de proposta'; }
     return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
   };
   const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Gestor ' + String(g.nome).split(' ')[0] : 'Sem gestor'; };
@@ -2131,10 +2134,10 @@ const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar',
   'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
-const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
+const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
 const etapasDe = (g) => g ? ETAPAS_G : ETAPAS_V;
-const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Follow-up' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
+const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Follow-up' : r.etapa === 'Proposta enviada' ? 'Reunião de proposta' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
 const diasDesde = (ts) => ts ? Math.max(0, Math.floor((Date.now() - new Date(ts)) / 864e5)) : 0;
 const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 const reunioesDe = (id) => (D.areu || []).filter(x => x.atendimento_id === id);
@@ -2260,7 +2263,7 @@ function htmlKPos(r) {
 async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
-  if (ehGestao(r) && ['Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'].includes(etapa)) return abrirAtendimento(id, { etapa });
+  if (ehGestao(r) && ['Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'].includes(etapa)) return abrirAtendimento(id, { etapa });
   if (!etapasDe(ehGestao(r)).includes(etapa)) { aviso(ehGestao(r) ? 'Card da Gestão: assuma e siga pelas etapas da Gestão (diagnóstico, proposta).' : 'Essa etapa é do funil da Gestão.'); tela(); return; }
   const upd = { etapa };
   if (etapa === 'Em cotação' && !r.cotacao_inicio) upd.cotacao_inicio = hojeISO();
@@ -2363,9 +2366,11 @@ function telaFormReuniao(P) {
     if (et === 'Qualificação') return dt('mg_em', 'Qualificado em', m.em);
     if (et === 'Diagnóstico agendado') return `${dt('mg_em', 'Agendado em', m.em)}${campo('mg_diag', 'Data e hora do diagnóstico ' + fusoRotulo(), ag ? dl(ag.data) : '', 'datetime-local')}<div class="sub">Ao salvar, o diagnóstico entra na agenda do app e no TickTick, com o closer escolhido acima.</div>`;
     if (et === 'Diagnóstico feito') return `${dt('mg_em', 'Diagnóstico feito em', m.em || (ag && ag.data))}<label class="fl"><span>Resumo do diagnóstico</span><textarea name="mg_resumo" rows="4" placeholder="Cole aqui o resumo do Granola.">${esc((ag && ag.resumo) || '')}</textarea></label>`;
+    if (et === 'Reunião de proposta') { const ap = r.id ? agProp(r) : null; return `${dt('mg_em', 'Marcada em', m.em)}${campo('mg_prop', 'Data e hora da reunião de proposta ' + fusoRotulo(), ap ? dl(ap.data) : '', 'datetime-local')}<label class="fl"><span>Como vai ser a apresentação</span><textarea name="mg_pauta" rows="3" placeholder="Ex.: mostrar o estudo dos cartões, a economia projetada e o plano de 12 meses">${esc(m.pauta || '')}</textarea></label>${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}<div class="sub">Ao salvar, a reunião entra na agenda e no TickTick do closer.</div>`; }
     if (et === 'Proposta enviada') return `${dt('mg_em', 'Proposta enviada em', m.em)}${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}`;
-    if (et === 'Fechou') return dt('mg_em', 'Fechado em', m.em);
-    if (et === 'Não fechou') return dt('mg_em', 'Decidido em', m.em);
+    const resProp = () => { const ap = r.id ? agProp(r) : null; return `<label class="fl"><span>Resumo da reunião de proposta (cole do Granola)</span><textarea name="mg_resprop" rows="4" placeholder="Como foi a apresentação e o que o cliente disse.">${esc((ap && ap.resumo) || '')}</textarea></label>`; };
+    if (et === 'Fechou') return dt('mg_em', 'Fechado em', m.em) + resProp();
+    if (et === 'Não fechou') return dt('mg_em', 'Decidido em', m.em) + resProp() + '<div class="sub">Logo abaixo, escolha o motivo principal e por que não fechou.</div>';
     return '';
   };
   const sel = (nome, rot, ops, val) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}${val && !ops.includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select></label>`;
@@ -2652,8 +2657,9 @@ function telaFormReuniao(P) {
         if (!row.closer_id) { $('msgRe').textContent = 'Escolha o closer que fará o diagnóstico.'; return; }
       }
       if (etN === 'Qualificação' && !row.sdr_id) row.sdr_id = D.meuId;
-      if (etN === 'Proposta enviada' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
-      if (g('mg_em')) { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Proposta enviada' ? { cond: g('mg_cond') || null } : {}) }; row.marcos = M; }
+      if (etN === 'Reunião de proposta' && mudou && !g('mg_prop')) { $('msgRe').textContent = 'Informe a data e a hora da reunião de proposta.'; return; }
+      if (etN === 'Reunião de proposta' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
+      if (g('mg_em')) { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { cond: g('mg_cond') || null, pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
     }
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     if (!row.pessoa_id) {
@@ -2673,6 +2679,16 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    // Gestão: reunião de proposta entra na agenda; Fechou ou Não fechou marca a reunião como realizada, com o resumo
+    if (G && D.agenda && (g('mg_prop') || ((data.resultado === 'Fechou' || data.resultado === 'Não fechou') && g('mg_resprop')))) {
+      const ap = agProp(data), part = [data.closer_id || data.responsavel_id || D.meuId];
+      const q3 = g('mg_prop') && data.resultado === 'Em andamento'
+        ? (ap ? sb.from('agenda_reunioes').update({ data: new Date(g('mg_prop')).toISOString(), participantes: part, status: 'Agendada' }).eq('id', ap.id).select().single()
+          : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Reunião de proposta da Gestão', tipo: 'Comercial · Gestão de Milhas', data: new Date(g('mg_prop')).toISOString(), status: 'Agendada', resumo: g('mg_pauta') ? 'Pauta: ' + g('mg_pauta') : null, participantes: part }).select().single())
+        : (ap ? sb.from('agenda_reunioes').update({ status: 'Realizada', resumo: g('mg_resprop') }).eq('id', ap.id).select().single()
+          : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Reunião de proposta da Gestão', tipo: 'Comercial · Gestão de Milhas', data: g('mg_em') ? new Date(g('mg_em')).toISOString() : new Date().toISOString(), status: 'Realizada', resumo: g('mg_resprop'), participantes: part }).select().single());
+      const a3 = await q3; if (a3.error) aviso('O card foi salvo, mas a reunião de proposta não entrou na agenda: ' + a3.error.message); else if (ap) Object.assign(ap, a3.data); else D.agenda.unshift(a3.data);
+    }
     // Gestão: diagnóstico agendado entra na agenda (e no TickTick); diagnóstico feito marca a reunião como realizada
     if (G && D.agenda && (g('mg_diag') || data.etapa === 'Diagnóstico feito')) {
       const ag = agDiag(data), part = [data.closer_id || data.responsavel_id || D.meuId];

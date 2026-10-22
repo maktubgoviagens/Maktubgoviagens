@@ -152,7 +152,7 @@ function trilhas(L) {
       t.criado = ts; t.resp = m.responsavel_id || null; t.gestao = m.produto === 'Gestão de Milhas';
       t.passos.push({ etapa: m.etapa || (t.gestao ? 'Novo lead' : 'Novo lead'), ts });
     } else if (l.acao === 'alterou') {
-      if (m.etapa && m.etapa.para) t.passos.push({ etapa: m.etapa.para === 'Negociação' ? 'Follow-up' : m.etapa.para, ts });
+      if (m.etapa && m.etapa.para) t.passos.push({ etapa: m.etapa.para === 'Negociação' ? 'Follow-up' : m.etapa.para === 'Proposta enviada' ? 'Reunião de proposta' : m.etapa.para, ts });
       if (m.resultado && ['Fechou', 'Não fechou'].includes(m.resultado.para) && !t.fim) t.fim = { r: m.resultado.para, ts };
       if (m.responsavel_id) t.resp = m.responsavel_id.para;
       if (m.produto) t.gestao = m.produto.para === 'Gestão de Milhas';
@@ -177,9 +177,9 @@ async function telaTempos(C, ctx) {
   const agora = Date.now();
   const bloco = (gestao) => {
     const LT = T.filter(t => t.gestao === gestao);
-    const etapas = gestao ? ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'] : ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
+    const etapas = gestao ? ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'] : ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
     const desc = gestao
-      ? { 'Novo lead': 'Do lead até o SDR começar a qualificar', 'Qualificação': 'Da qualificação até agendar o diagnóstico', 'Diagnóstico agendado': 'Do agendamento até fazer o diagnóstico', 'Diagnóstico feito': 'Do diagnóstico até enviar a proposta', 'Proposta enviada': 'Da proposta até a decisão' }
+      ? { 'Novo lead': 'Do lead até o SDR começar a qualificar', 'Qualificação': 'Da qualificação até agendar o diagnóstico', 'Diagnóstico agendado': 'Do agendamento até fazer o diagnóstico', 'Diagnóstico feito': 'Do diagnóstico até marcar a reunião de proposta', 'Reunião de proposta': 'Da reunião de proposta até a decisão' }
       : { 'Novo lead': 'Do pedido até começar a cotar', 'Em cotação': 'Montando a cotação até enviar', 'Cotação enviada': 'Cotação enviada até o follow-up ou a decisão', 'Follow-up': 'Em follow-up até a decisão' };
     const tempos = {}, porPessoa = {};
     LT.forEach(t => {
