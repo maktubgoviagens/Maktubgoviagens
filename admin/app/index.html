@@ -1968,18 +1968,78 @@ async function salvarInteresses(ld, novo) {
   }
   return null;
 }
-function htmlLinhaTempo(r) {
-  const t0 = entradaDe(r), ev = [];
+const ROT_MARCO = { 'Qualificação': 'Qualificado pelo SDR', 'Diagnóstico agendado': 'Diagnóstico agendado', 'Diagnóstico feito': 'Diagnóstico feito', 'Proposta enviada': 'Proposta enviada', 'Em cotação': 'Começou a cotar', 'Cotação enviada': 'Cotação enviada', 'Follow-up': 'Entrou em follow-up', 'Fechou': 'Fechou', 'Não fechou': 'Não fechou' };
+const tsDe = (x) => typeof x === 'string' && x.length === 10 ? dia(x) : new Date(x);
+const quandoTrilha = (x) => typeof x === 'string' && x.length === 10 ? dia(x).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : dhCurta(x);
+const agDiag = (r) => reunioesDe(r.id).filter(a => /diagn/i.test(a.titulo || '') && a.status !== 'Cancelada')[0] || null;
+const clienteGestaoDe = (r) => { const pf = r && r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null; return pf && pf.cliente_id ? (D.clientes || []).find(c => c.id === pf.cliente_id) || null : null; };
+function eventosCard(r) {
+  const t0 = entradaDe(r), ev = [], M = r.marcos || {};
   if (t0) ev.push([t0, doSite(r) ? 'Entrou pelo site' : 'Card aberto', doSite(r) ? '' : (r.origem || '')]);
   if (r.assumido_em) ev.push([r.assumido_em, 'Assumido' + (r.assumido_por ? ' por ' + (nomeTime(r.assumido_por) || '') : ''), '']);
   if (r.primeiro_contato_em) ev.push([r.primeiro_contato_em, '1º contato pelo WhatsApp', '']);
-  reunioesDe(r.id).forEach(a => { if (a.created_at) ev.push([a.created_at, 'Reunião agendada', (a.titulo ? a.titulo + ' · ' : '') + 'para ' + dhCurta(a.data)]); if (a.status === 'Realizada') ev.push([a.data, 'Reunião realizada', a.titulo || '']); });
-  cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada', c.titulo || '']); }));
-  if (r.etapa_desde && etapaDe(r) !== 'Novo lead' && r.resultado === 'Em andamento') ev.push([r.etapa_desde, 'Entrou em ' + etapaDe(r), '']);
+  Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
+  reunioesDe(r.id).forEach(a => { if (a.created_at) ev.push([a.created_at, /diagn/i.test(a.titulo || '') ? 'Diagnóstico marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !/diagn/i.test(a.titulo) ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, /diagn/i.test(a.titulo || '') ? 'Diagnóstico realizado' : 'Reunião realizada', a.titulo && !/diagn/i.test(a.titulo) ? a.titulo : '']); });
+  cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada ao cliente', c.titulo || '']); }));
+  if (r.etapa_desde && etapaDe(r) !== 'Novo lead' && r.resultado === 'Em andamento' && !M[etapaDe(r)]) ev.push([r.etapa_desde, 'Entrou em ' + etapaDe(r), '']);
+  return ev;
+}
+function eventosPosVenda(c) {
+  const ev = [];
+  if (c.gestao_inicio) ev.push([c.gestao_inicio, 'Entrada na Gestão (contrato)', c.gestao_vencimento ? 'ciclo até ' + dataBR(c.gestao_vencimento) : '']);
+  tarefasDe(c.id).filter(t => t.feito && t.feito_em).forEach(t => ev.push([t.feito_em, 'Implantação: ' + (t.titulo || 'tarefa'), t.feito_por ? 'por ' + (nomeTime(t.feito_por) || '') : '']));
+  (D.eco || []).filter(x => x.cliente_id === c.id && x.data).forEach(x => ev.push([x.data, 'Economia gerada', [x.descricao || x.categoria || '', brl(ecoValor(x))].filter(Boolean).join(' · ')]));
+  if (c.gestao_vencimento) ev.push([c.gestao_vencimento, dia(c.gestao_vencimento) > new Date() ? 'Vencimento do ciclo e renovação (previsto)' : 'Vencimento do ciclo', '']);
+  return ev;
+}
+function desenhaTrilha(titulo, ev, t0, falta, cab) {
   if (!ev.length) return '';
-  ev.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-  const falta = r.resultado === 'Em andamento' ? (!r.assumido_por ? 'Ninguém assumiu ainda' : doSite(r) && !r.primeiro_contato_em ? 'Sem 1º contato registrado: toque no WhatsApp do card para registrar' : '') : '';
-  return `<section class="bloco" style="margin-top:10px"><h2>Linha do tempo</h2>${ev.map(([ts, t, d], i) => `<div class="lt-i"><span class="q">${dhCurta(ts)}</span><span><b>${esc(t)}</b>${d ? ` <span class="d">${esc(d)}</span>` : ''}${i && t0 ? ` <span class="d">· ${haTempo(new Date(ts) - new Date(t0))} após a entrada</span>` : ''}</span></div>`).join('')}${falta ? `<div class="sub" style="color:var(--alerta);margin-top:8px">${esc(falta)}</div>` : ''}</section>`;
+  ev = ev.slice().sort((a, b) => tsDe(a[0]) - tsDe(b[0]));
+  return `<section class="bloco" style="margin-top:10px"><h2>${esc(titulo)}</h2>${cab ? `<div class="sub" style="margin:-6px 0 6px">${cab}</div>` : ''}${ev.map(([ts, t, d], i) => `<div class="lt-i"><span class="q">${quandoTrilha(ts)}</span><span><b>${esc(t)}</b>${d ? ` <span class="d">${esc(d)}</span>` : ''}${i && t0 && String(ts).length > 10 && tsDe(ts) > tsDe(t0) ? ` <span class="d">· ${haTempo(tsDe(ts) - tsDe(t0))} após a entrada</span>` : ''}</span></div>`).join('')}${falta ? `<div class="sub" style="color:var(--alerta);margin-top:8px">${falta}</div>` : ''}</section>`;
+}
+function htmlLinhaTempo(r) {
+  const G = ehGestao(r), cli = G && r.resultado === 'Fechou' ? clienteGestaoDe(r) : null;
+  let ev = eventosCard(r);
+  if (cli) ev = ev.concat(eventosPosVenda(cli));
+  const falta = r.resultado === 'Em andamento' ? (!r.assumido_por ? 'Ninguém assumiu ainda' : doSite(r) && !r.primeiro_contato_em ? 'Sem 1º contato registrado: toque no WhatsApp do card para registrar' : '')
+    : G && r.resultado === 'Fechou' && !cli ? 'Pós-venda: cadastre o cliente na Gestão (Administração completa) e ligue a ficha do CRM para a trajetória continuar aqui.' : '';
+  const cab = G ? `SDR: ${esc(nomeTime(r.sdr_id) || 'não definido')} · Closer: ${esc(nomeTime(r.closer_id) || 'não definido')}` : '';
+  return desenhaTrilha(G ? 'Trajetória do cliente' : 'Linha do tempo', ev, entradaDe(r), esc(falta), cab);
+}
+// perguntas que o SDR manda ao lead da Gestão antes da ligação (o Granola grava a ligação)
+const PERGUNTAS_SDR = ['Quanto você gasta, em média, por mês no cartão?', 'Quais bancos e cartões você usa hoje?', 'Em quais programas de milhas você já tem conta, e mais ou menos quanto tem em cada um?', 'Quantas viagens faz por ano, e para onde costuma ir?', 'Qual é a viagem dos sonhos que você quer realizar com as milhas?', 'A decisão de contratar é só sua ou junto com mais alguém?'];
+const textoPerguntasSdr = (r) => `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é ${String(nomeTime(D.meuId) || '').split(' ')[0] || 'a equipe'}, da Maktub Go. Para eu chegar no nosso diagnóstico com tudo bem estudado, me conta rapidinho:\n\n${PERGUNTAS_SDR.map((x, i) => (i + 1) + '. ' + x).join('\n')}\n\nPode responder do seu jeito, até por áudio.`;
+function htmlGestaoSdr(r) {
+  const q = r.qualificacao || {}, so = solDoCard(r) || {};
+  const pre = (k, v) => q[k] != null && q[k] !== '' ? q[k] : (v == null ? '' : v);
+  const opT = (sel) => '<option value="">-</option>' + (D.time || []).map(t => `<option value="${t.user_id}" ${t.user_id === sel ? 'selected' : ''}>${esc(t.nome)}</option>`).join('');
+  const aberto = ['Novo lead', 'Qualificação'].includes(etapaDe(r)) || !q.gasto;
+  return `<div class="grupo">Quem conduz</div>
+      <div class="duas-col"><label class="fl"><span>SDR (qualifica e agenda)</span><select name="sdr_id">${opT(r.sdr_id || (r.id ? r.assumido_por : D.meuId))}</select></label><label class="fl"><span>Closer (diagnóstico e proposta)</span><select name="closer_id">${opT(r.closer_id)}</select></label></div>
+      <details class="obs" ${aberto ? 'open' : ''} style="margin-top:10px"><summary>Qualificação do SDR${q.gasto ? '' : ' · <b style="color:var(--alerta)">pendente</b>'}</summary>
+      <div class="sub" style="margin:8px 0 4px">1. Mande as perguntas ao lead. 2. Faça a ligação com o Granola gravando. 3. Cole o resumo do Granola e confira os campos. 4. Passe para o closer: etapa Diagnóstico agendado, com o closer e a data.</div>
+      ${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zap" target="_blank" rel="noopener" style="display:block;text-align:center;margin:6px 0 10px" href="${esc(zapLink(r.contato, r.cliente, textoPerguntasSdr(r)))}">Mandar as perguntas pelo WhatsApp</a>` : `<div class="sub">Sem WhatsApp no card: copie as perguntas: ${esc(PERGUNTAS_SDR.join(' '))}</div>`}
+      <label class="fl"><span>Resumo da ligação do SDR (cole do Granola)</span><textarea name="q_granola" rows="5" placeholder="Cole aqui o resumo que o Granola gerou da ligação.">${esc(q.granola || '')}</textarea></label>
+      ${campo('q_gasto', 'Gasto médio no cartão por mês (R$)', pre('gasto', so.gasto_mensal), 'text', 'inputmode="decimal"')}
+      ${campo('q_cartoes', 'Bancos e cartões que usa', pre('cartoes'), 'text')}
+      ${campo('q_programas', 'Programas e saldos aproximados', pre('programas', so.programas), 'text', 'placeholder="Ex.: Smiles 80 mil, Livelo 30 mil"')}
+      ${campo('q_viagens', 'Viagens por ano e destinos', pre('viagens', so.viagens_ano), 'text')}
+      ${campo('q_objetivo', 'Objetivo ou viagem dos sonhos', pre('objetivo', so.objetivo), 'text')}
+      ${campo('q_decisor', 'Quem decide a contratação', pre('decisor'), 'text', 'placeholder="Ex.: ele mesmo, junto com a esposa"')}
+      <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal; sem o resumo, preencha gasto mensal, bancos e cartões, objetivo e quem decide.</div></details>`;
+}
+async function fiTrajetoria(el, c) {
+  const pf = (D.pessoas || []).find(x => x.cliente_id === c.id);
+  const cards = pf ? D.reunioes.filter(r => r.pessoa_id === pf.id && ehGestao(r)) : [];
+  const base = () => { let ev = []; cards.forEach(r => { ev = ev.concat(eventosCard(r)); }); return ev.concat(eventosPosVenda(c)); };
+  const t0 = cards.length ? entradaDe(cards[cards.length - 1]) : null;
+  const cab = cards[0] ? `SDR: ${esc(nomeTime(cards[0].sdr_id) || 'não definido')} · Closer: ${esc(nomeTime(cards[0].closer_id) || 'não definido')}` : '';
+  const aviso2 = pf ? '' : 'Esta ficha ainda não está ligada ao cadastro do cliente no CRM: o histórico comercial (lead, SDR, diagnóstico e proposta) aparece aqui quando estiver ligada.';
+  el.innerHTML = desenhaTrilha('Trajetória do cliente', base(), t0, aviso2, cab) || '<div class="vazio">Nada registrado ainda.</div>';
+  const r = await sb.from('reunioes').select('*').eq('cliente_id', c.id).limit(200);
+  if (CLI !== c.id || FI_ABA !== 'trajetoria' || r.error) return;
+  const ev = base().concat((r.data || []).filter(x => x.data_reuniao).map(x => [x.data_reuniao, 'Reunião da Gestão', x.titulo || '']));
+  el.innerHTML = desenhaTrilha('Trajetória do cliente', ev, t0, aviso2, cab) || '<div class="vazio">Nada registrado ainda.</div>';
 }
 // frases prontas por motivo: um toque registra o porquê; a observação escrita é opcional (só "Outro" pede texto)
 const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar', 'Fora do orçamento agora'], 'Fechou com outro': ['Comprou direto no site da companhia', 'Fechou com outra agência', 'Usou milhas próprias'],
@@ -1987,7 +2047,7 @@ const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar',
   'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
-const ETAPAS_G = ['Novo lead', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
+const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
 const etapasDe = (g) => g ? ETAPAS_G : ETAPAS_V;
 const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Follow-up' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
@@ -2062,6 +2122,7 @@ async function assumirAtendimento(id) {
   const upd = { assumido_por: D.meuId, assumido_em: new Date().toISOString(), responsavel_id: D.meuId };
   if (!r.cotacao_inicio && !ehGestao(r)) upd.cotacao_inicio = hojeISO();
   if (etapaDe(r) === 'Novo lead' && !ehGestao(r)) upd.etapa = 'Em cotação';
+  if (ehGestao(r)) { if (!r.sdr_id) upd.sdr_id = D.meuId; if (etapaDe(r) === 'Novo lead') upd.etapa = 'Qualificação'; }
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não assumiu: ' + error.message + (/assumido/.test(error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
   Object.assign(r, data); aviso(`${r.cliente} é seu. Estude o card e acione o cliente.`); tela();
@@ -2092,6 +2153,8 @@ function htmlKCard(r, etapas) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" data-kz="${r.id}" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     ${ehGestao(r) && RE_VISTA !== 'gestao' ? '<span class="tag ouro" style="margin:4px 0 0">Gestão</span>' : ''}<div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
+    ${ehGestao(r) && (r.sdr_id || r.closer_id) ? `<div class="t">SDR ${esc(nomeTime(r.sdr_id) || '-')} · Closer ${esc(nomeTime(r.closer_id) || '-')}</div>` : ''}
+    ${ehGestao(r) && agDiag(r) && agDiag(r).status === 'Agendada' ? `<div class="t" style="color:var(--verde)">Diagnóstico ${dhCurta(agDiag(r).data)}</div>` : ''}
     ${D.cots && !ehGestao(r) ? (n => n ? `<div class="t" style="color:var(--verde)">Cotação no app${n > 1 ? ` (${n})` : ''}</div>` : ['Cotação enviada', 'Follow-up'].includes(et) ? '<div class="t alerta">Sem cotação ligada ao card</div>' : '')(cotsDe(r.id).length) : ''}
     ${r.assumido_por ? `<div class="t">Com ${esc(nomeTime(r.assumido_por) || '')}${r.cotacao_inicio ? ' · cotando desde ' + dataCurta(dia(r.cotacao_inicio)) : ''}</div>` : `${(ld => ld && !intDe(ld).length ? `<div class="lint" data-lintk="${ld.id}" style="margin-top:6px"><span class="l">O que quer · <b>falta marcar</b></span><div class="chips">${LEAD_INT.map(k => `<button type="button" data-int="${esc(k)}">${esc(k)}</button>`).join('')}</div></div>` : '')(leadDoCard(r))}<button class="zap" data-assumir-at="${r.id}" style="width:100%;margin:6px 0 2px;padding:8px">Assumir</button>`}
     ${r.resultado === 'Em andamento' && doSite(r) ? (ms => !r.assumido_por ? `<div class="t ${ms >= 9e5 ? 'alerta' : ''}">Entrou há ${haTempo(ms)}${ms >= 9e5 ? ' · sem ninguém' : ''}</div>` : r.primeiro_contato_em ? `<div class="t">1º contato ${haTempo(new Date(r.primeiro_contato_em) - new Date(entradaDe(r)))} após a entrada</div>` : '<div class="t alerta">Sem 1º contato registrado</div>')(Date.now() - new Date(entradaDe(r))) : ''}
@@ -2113,6 +2176,7 @@ function htmlKPos(r) {
 async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
+  if (ehGestao(r) && ['Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'].includes(etapa)) return abrirAtendimento(id, { etapa });
   if (!etapasDe(ehGestao(r)).includes(etapa)) { aviso(ehGestao(r) ? 'Card da Gestão: assuma e siga pelas etapas da Gestão (diagnóstico, proposta).' : 'Essa etapa é do funil da Gestão.'); tela(); return; }
   const upd = { etapa };
   if (etapa === 'Em cotação' && !r.cotacao_inicio) upd.cotacao_inicio = hojeISO();
@@ -2209,6 +2273,17 @@ function telaFormReuniao(P) {
   const r = { ...base, ...(RE_PRE || {}) }; RE_PRE = null;
   const G = r.produto === 'Gestão de Milhas';
   const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+  // campos de cada etapa da Gestão: quando aconteceu e o que precisa para avançar
+  const ETG = (et) => {
+    const m = (r.marcos || {})[et] || {}, ag = r.id ? agDiag(r) : null, dt = (k, rot, v) => campo(k, rot + ' ' + fusoRotulo(), dl(v), 'datetime-local');
+    if (et === 'Qualificação') return dt('mg_em', 'Qualificado em', m.em);
+    if (et === 'Diagnóstico agendado') return `${dt('mg_em', 'Agendado em', m.em)}${campo('mg_diag', 'Data e hora do diagnóstico ' + fusoRotulo(), ag ? dl(ag.data) : '', 'datetime-local')}<div class="sub">Ao salvar, o diagnóstico entra na agenda do app e no TickTick, com o closer escolhido acima.</div>`;
+    if (et === 'Diagnóstico feito') return `${dt('mg_em', 'Diagnóstico feito em', m.em || (ag && ag.data))}<label class="fl"><span>Resumo do diagnóstico</span><textarea name="mg_resumo" rows="4" placeholder="Cole aqui o resumo do Granola.">${esc((ag && ag.resumo) || '')}</textarea></label>`;
+    if (et === 'Proposta enviada') return `${dt('mg_em', 'Proposta enviada em', m.em)}${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}`;
+    if (et === 'Fechou') return dt('mg_em', 'Fechado em', m.em);
+    if (et === 'Não fechou') return dt('mg_em', 'Decidido em', m.em);
+    return '';
+  };
   const sel = (nome, rot, ops, val) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}${val && !ops.includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select></label>`;
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
@@ -2232,9 +2307,11 @@ function telaFormReuniao(P) {
       <div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>
       ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`}
       <label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+      ${G ? htmlGestaoSdr(r) : ''}
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
+      ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
       <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reFech"></div><div id="reDaCot"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       <div id="blAndamento">
@@ -2275,7 +2352,7 @@ function telaFormReuniao(P) {
   };
   if ($('reunMostra')) $('reunMostra').onclick = () => { reunAberta = true; f._reunVis(); };
   f._reunVis();
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
@@ -2472,6 +2549,22 @@ function telaFormReuniao(P) {
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
+    if (G) {
+      const q = { gasto: g('q_gasto'), cartoes: g('q_cartoes'), programas: g('q_programas'), viagens: g('q_viagens'), objetivo: g('q_objetivo'), decisor: g('q_decisor'), granola: g('q_granola') };
+      row.qualificacao = q; row.sdr_id = g('sdr_id') || null; row.closer_id = g('closer_id') || null;
+      const etN = g('etapa'), mudou = nova || etN !== etapaDe(base), iG = ETAPAS_G.indexOf(etN);
+      if (mudou && (iG >= 2 || etN === 'Fechou')) {
+        const falta = (q.granola ? [['gasto', 'gasto mensal']] : [['gasto', 'gasto mensal'], ['cartoes', 'bancos e cartões'], ['objetivo', 'objetivo'], ['decisor', 'quem decide']]).filter(([k]) => !q[k]).map(x => x[1]);
+        if (falta.length) { $('msgRe').textContent = 'Antes de passar para o closer, o SDR precisa preencher: ' + falta.join(', ') + (q.granola ? '.' : ' (ou colar o resumo do Granola).'); const d = f.querySelector('details.obs'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
+      }
+      if (etN === 'Diagnóstico agendado' && mudou) {
+        if (!g('mg_diag')) { $('msgRe').textContent = 'Informe a data e a hora do diagnóstico.'; return; }
+        if (!row.closer_id) { $('msgRe').textContent = 'Escolha o closer que fará o diagnóstico.'; return; }
+      }
+      if (etN === 'Qualificação' && !row.sdr_id) row.sdr_id = D.meuId;
+      if (etN === 'Proposta enviada' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
+      if (g('mg_em')) { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Proposta enviada' ? { cond: g('mg_cond') || null } : {}) }; row.marcos = M; }
+    }
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     if (!row.pessoa_id) {
       // antes de criar: a pessoa já tem ficha (CPF, celular, e-mail ou nome parecido)? liga com um toque
@@ -2490,6 +2583,21 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    // Gestão: diagnóstico agendado entra na agenda (e no TickTick); diagnóstico feito marca a reunião como realizada
+    if (G && D.agenda && (g('mg_diag') || data.etapa === 'Diagnóstico feito')) {
+      const ag = agDiag(data), part = [data.closer_id || data.responsavel_id || D.meuId];
+      if (data.etapa === 'Diagnóstico agendado' && g('mg_diag')) {
+        const quando = new Date(g('mg_diag')).toISOString();
+        const q2 = ag ? sb.from('agenda_reunioes').update({ data: quando, participantes: part, status: 'Agendada' }).eq('id', ag.id).select().single()
+          : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Diagnóstico da Gestão de Milhas', tipo: 'Comercial · Gestão de Milhas', data: quando, status: 'Agendada', resumo: null, participantes: part }).select().single();
+        const a2 = await q2; if (a2.error) aviso('O card foi salvo, mas o diagnóstico não entrou na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
+      } else if (data.etapa === 'Diagnóstico feito') {
+        const quando = g('mg_em') ? new Date(g('mg_em')).toISOString() : new Date().toISOString(), resumo = g('mg_resumo') || null;
+        const q2 = ag ? sb.from('agenda_reunioes').update({ status: 'Realizada', resumo: resumo || ag.resumo || null }).eq('id', ag.id).select().single()
+          : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Diagnóstico da Gestão de Milhas', tipo: 'Comercial · Gestão de Milhas', data: quando, status: 'Realizada', resumo, participantes: part }).select().single();
+        const a2 = await q2; if (a2.error) aviso('O card foi salvo, mas o diagnóstico não foi registrado na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
+      }
+    }
     if (nova && data.lead_id) { const ld = (D.leads || []).find(x => x.id === data.lead_id); if (ld && ld.status === 'novo') { const u = await sb.from('leads').update({ status: 'em conversa' }).eq('id', ld.id); if (!u.error) ld.status = 'em conversa'; } }
     // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
     if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
@@ -3567,7 +3675,7 @@ function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
-  const abas = [['resumo', 'Resumo'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
   if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
@@ -3580,7 +3688,7 @@ function telaFicha(P, id) {
   $('voltar').onclick = () => history.back();
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
-  ({ resumo: fiResumo, tarefas: fiTarefas, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
 function fiResumo(el, c) {

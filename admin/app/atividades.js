@@ -177,9 +177,9 @@ async function telaTempos(C, ctx) {
   const agora = Date.now();
   const bloco = (gestao) => {
     const LT = T.filter(t => t.gestao === gestao);
-    const etapas = gestao ? ['Novo lead', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'] : ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
+    const etapas = gestao ? ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Proposta enviada'] : ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
     const desc = gestao
-      ? { 'Novo lead': 'Do lead até agendar o diagnóstico', 'Diagnóstico agendado': 'Do agendamento até fazer o diagnóstico', 'Diagnóstico feito': 'Do diagnóstico até enviar a proposta', 'Proposta enviada': 'Da proposta até a decisão' }
+      ? { 'Novo lead': 'Do lead até o SDR começar a qualificar', 'Qualificação': 'Da qualificação até agendar o diagnóstico', 'Diagnóstico agendado': 'Do agendamento até fazer o diagnóstico', 'Diagnóstico feito': 'Do diagnóstico até enviar a proposta', 'Proposta enviada': 'Da proposta até a decisão' }
       : { 'Novo lead': 'Do pedido até começar a cotar', 'Em cotação': 'Montando a cotação até enviar', 'Cotação enviada': 'Cotação enviada até o follow-up ou a decisão', 'Follow-up': 'Em follow-up até a decisão' };
     const tempos = {}, porPessoa = {};
     LT.forEach(t => {
