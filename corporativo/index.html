@@ -662,7 +662,7 @@ form.addEventListener('submit', async function(e){
       fetch(SUPABASE_URL + '/rest/v1/' + TABELA,{
         method:'POST', keepalive:true,
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify({tipo:'corporativo', nome:d.responsavel, empresa:d.empresa, whatsapp:d.whatsapp, email:d.email, detalhes:{segmento:d.segmento||null, volume:d.volume||null, trechos:d.tipo||null, demanda:d.demanda||null}, origem:d.origem||null, pagina:location.pathname})
+        body:JSON.stringify({tipo:'corporativo', interesses:['Corporativo'], nome:d.responsavel, empresa:d.empresa, whatsapp:d.whatsapp, email:d.email, detalhes:{segmento:d.segmento||null, volume:d.volume||null, trechos:d.tipo||null, demanda:d.demanda||null}, origem:d.origem||null, pagina:location.pathname})
       }).catch(function(){});
     }catch(err){}
   }

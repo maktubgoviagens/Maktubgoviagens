@@ -483,6 +483,14 @@ input:focus,select:focus,textarea:focus{outline:0;border-bottom-color:var(--dour
 select{appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23c9a96e' stroke-width='1.2'/%3E%3C/svg%3E") right center/11px no-repeat}
 select option{color:var(--tinta);background:var(--creme)}
 .dupla{display:grid;grid-template-columns:1fr 1fr;gap:var(--e3)}
+fieldset.interesse{border:0;padding:0;margin:0;min-width:0}
+fieldset.interesse legend{font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-claro);padding:0;margin-bottom:10px}
+.opcoes{display:flex;flex-wrap:wrap;gap:8px}
+.opcoes label{position:relative;cursor:pointer;text-transform:none;letter-spacing:.02em;font-size:.875rem;color:var(--creme)}
+.opcoes input{position:absolute;opacity:0;width:1px;height:1px;min-height:0;padding:0;border:0}
+.opcoes span{display:inline-flex;align-items:center;min-height:42px;padding:0 15px;border:1px solid rgba(249,246,241,.45);border-radius:21px;transition:background .15s,border-color .15s}
+.opcoes input:checked+span{background:var(--dourado-claro);border-color:var(--dourado-claro);color:var(--verde);font-weight:500}
+.opcoes input:focus-visible+span{outline:2px solid var(--dourado-claro);outline-offset:2px}
 form .btn{justify-self:start;margin-top:var(--e1)}
 .aviso-form{font-size:.875rem;color:rgba(249,246,241,.8);max-width:44ch}
 .aviso-form[data-estado="erro"]{color:#e8b4a0}
@@ -940,6 +948,16 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <label for="viajantes">Quantas pessoas viajam</label>
         <input id="viajantes" name="viajantes" type="text" placeholder="Ex.: 2 adultos e 1 criança">
       </div>
+      <fieldset class="interesse">
+        <legend>O que você procura</legend>
+        <div class="opcoes">
+          <label><input type="checkbox" name="interesse" value="Passagens"><span>Passagens</span></label>
+          <label><input type="checkbox" name="interesse" value="Hotelaria"><span>Hotelaria</span></label>
+          <label><input type="checkbox" name="interesse" value="Pacote"><span>Viagem completa</span></label>
+          <label><input type="checkbox" name="interesse" value="Gestão de Milhas"><span>Gestão de Milhas</span></label>
+          <label><input type="checkbox" name="interesse" value="Outros"><span>Outros</span></label>
+        </div>
+      </fieldset>
       <input type="hidden" id="origem" name="origem">
       <button class="btn btn-ouro" type="submit">Quero planejar minha viagem</button>
       <p class="aviso-form" id="avisoForm" role="status" aria-live="polite">Ao enviar, abrimos o WhatsApp com os seus dados para você falar direto com a gente.</p>
@@ -1035,6 +1053,7 @@ function dizer(texto, estado){
 form.addEventListener('submit', async function(e){
   e.preventDefault();
   const d = Object.fromEntries(new FormData(form).entries());
+  const ints = new FormData(form).getAll('interesse');
  
   if(!d.nome || !d.whatsapp || !d.email){
     dizer('Preencha nome, WhatsApp e e-mail para continuar.','erro');
@@ -1053,7 +1072,7 @@ form.addEventListener('submit', async function(e){
       fetch(SUPABASE_URL + '/rest/v1/' + TABELA,{
         method:'POST', keepalive:true,
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify({tipo:'viagem', nome:d.nome, whatsapp:d.whatsapp, email:d.email, destino:d.destino||null, quando:d.quando||null, viajantes:d.viajantes||null, origem:d.origem||null, pagina:location.pathname})
+        body:JSON.stringify({tipo:'viagem', nome:d.nome, whatsapp:d.whatsapp, email:d.email, destino:d.destino||null, quando:d.quando||null, viajantes:d.viajantes||null, interesses:ints.length ? ints : null, origem:d.origem||null, pagina:location.pathname})
       }).catch(function(){});
     }catch(err){}
   }
@@ -1062,6 +1081,7 @@ form.addEventListener('submit', async function(e){
   const texto = 'Olá! Quero planejar uma viagem com a Maktub Go.'
     + '\nNome: ' + d.nome
     + '\nE-mail: ' + d.email
+    + (ints.length ? '\nProcuro: ' + ints.map(function(x){ return x === 'Pacote' ? 'Viagem completa' : x; }).join(', ') : '')
     + '\nDestino: ' + (d.destino || 'ainda não sei')
     + '\nQuando: ' + d.quando
     + '\nViajantes: ' + (d.viajantes || 'a confirmar');
