@@ -100,6 +100,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .gjres{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}.gjres button{background:var(--branco);border:1px solid var(--linha);padding:10px 12px;text-align:left;cursor:pointer;font:inherit}.gjres .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}.gjres .bs{display:flex;gap:3px;margin-top:8px}.gjres .bs i{flex:1;height:8px;background:#efe9dc}.gjres .d{font-size:12.5px;color:var(--tinta-2);margin-top:6px}
 .gjchips{display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}.gjchips::-webkit-scrollbar{display:none}.gjchips button{white-space:nowrap;border-radius:20px;padding:8px 12px;font-size:12.5px;background:var(--branco);color:var(--tinta-2);border:1px solid var(--linha);cursor:pointer}.gjchips button b{font-weight:600;margin-left:3px}
 .gj{display:flex;gap:10px;overflow-x:auto;padding:12px 2px 6px;margin:0 -16px;padding-left:16px;padding-right:16px;scroll-snap-type:x proximity;align-items:flex-start}.gj::-webkit-scrollbar{height:5px}.gj::-webkit-scrollbar-thumb{background:var(--dourado);border-radius:3px}.gjc{flex:0 0 236px;display:flex;flex-direction:column;gap:8px;scroll-snap-align:start}.gjc h3{display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;padding:0 2px;margin:0}.gjc h3 small{font-size:12px;letter-spacing:0;color:var(--tinta-3);font-weight:400}.gjc .ln{height:3px}.gjk{background:var(--branco);border:1px solid var(--linha);padding:11px 12px;display:flex;flex-direction:column;gap:5px;text-align:left;cursor:pointer;font:inherit;color:inherit;width:100%}.gjk .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15}.gjk .s{align-self:flex-start;font-size:11px;letter-spacing:.04em;padding:2px 8px;border-radius:10px;background:#f2ece1;color:#6b5320}.gjk .s.al{background:#f6e7dc;color:var(--alerta)}.gjk .s.ok{background:#e3ece5;color:var(--verde)}.gjk .p{font-size:12.5px;color:var(--tinta-2)}.gjk .q{font-size:11.5px;color:var(--tinta-3);border-top:1px solid var(--linha);padding-top:5px}
+.pia h4{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:14px 0 6px}.pia ul{margin:0;padding-left:18px}.pia li{margin:3px 0;font-size:14px}.pia p{margin:4px 0;font-size:14px}.pia .ob{border-top:1px solid var(--linha);padding:6px 0;font-size:14px}.pia .ob b{color:var(--verde);font-weight:600}.pia .acs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pia .acs>*{flex:1;min-width:140px}
 .lint{margin-top:12px}.lint .l{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:500;margin-bottom:2px}.lint .l b{color:var(--alerta);font-weight:600}.lint .chips{flex-wrap:wrap;overflow:visible}.lint .chips button{padding:7px 11px}
 .seg{display:flex;border:1px solid var(--linha);background:var(--branco);margin:14px 0 4px}
 .seg button{flex:1;background:none;border:0;padding:10px 4px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
@@ -2069,14 +2070,128 @@ function htmlTopoGestao(r) {
   else if (atual === 0) { t = 'Assumir e mandar as perguntas'; d = 'O SDR assume, manda as perguntas pelo WhatsApp e liga com o Granola gravando.'; bt = (!r.assumido_por ? B('Assumir', `data-gassumir="${r.id}"`, 1) : '') + (zap ? `<a class="${r.assumido_por ? 'p' : 's'}" target="_blank" rel="noopener" href="${esc(zap)}">Mandar as perguntas</a>` : ''); }
   else if (atual === 1) { t = 'Qualificar e passar para o closer'; d = q.gasto || q.granola ? 'Qualificação registrada. Escolha o closer e agende o diagnóstico.' : 'Ligue com o Granola gravando, cole o resumo e preencha o gasto mensal.'; bt = B('Passar para o closer ›', 'data-gir="Diagnóstico agendado"', 1) + B('Qualificação', 'data-gqual="1"'); }
   else if (atual === 2) { t = ag ? `${quandoDiag(ag.data)} com ${esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0])}` : 'Diagnóstico sem data na agenda'; d = 'Antes: o closer lê a qualificação e o resumo do Granola.'; bt = B('Diagnóstico feito ›', 'data-gir="Diagnóstico feito"', 1) + B('Remarcar', 'data-gir="Diagnóstico agendado"'); }
-  else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1); }
-  else { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); }
+  else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1) + B('Proposta com IA', 'data-gia="1"'); }
+  else { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); bt += B('Proposta com IA', 'data-gia="1" style="grid-column:1/-1"'); }
   const ent = entradaDe(r);
   return `<div class="sub" style="margin-top:4px">SDR ${esc(nomeTime(r.sdr_id) || 'a definir')} · Closer ${esc(nomeTime(r.closer_id) || 'a definir')}${ent ? ' · entrou ' + (Date.now() - tsDe(ent) < 2 * 864e5 ? 'há ' + haTempo(Date.now() - tsDe(ent)) : 'em ' + dataBR(String(ent).slice(0, 10))) : ''}</div>
     <div class="gtr" aria-label="Trilha do cliente">${trilha}</div>
     <section class="gagora"><div class="r">Agora · ${esc(rot)}</div><div class="t">${t}</div>${d ? `<div class="d">${d}</div>` : ''}${bt ? `<div class="b">${bt}</div>` : ''}</section>`;
 }
+// ---------- proposta da Gestão com IA ----------
+const slugLimpo = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+function htmlPropostaIA(r) {
+  const et = etapaDe(r), X = r.proposta_ia;
+  if (!X && !['Diagnóstico feito', 'Reunião de proposta'].includes(et) && r.resultado === 'Em andamento') return '';
+  if (!X && r.resultado !== 'Em andamento') return '';
+  return `<details class="gsec gsec-ia" ${X ? '' : 'open'}><summary><span>Proposta com IA<small>${X ? 'Gerada em ' + dhCurta(X.gerada_em) + (X.link ? ' · link pronto' : '') : 'Roteiro do closer e proposta a partir do Granola'}</small></span></summary><div class="pia" id="piaCorpo">${corpoPropostaIA(r)}</div></details>`;
+}
+function corpoPropostaIA(r) {
+  const X = r.proposta_ia, L = (a) => (Array.isArray(a) ? a : []).filter(Boolean);
+  const temGranola = !!((r.qualificacao || {}).granola || (agDiag(r) || {}).resumo);
+  const aviso2 = temGranola ? '' : '<div class="sub" style="color:var(--alerta)">Cole antes o resumo do Granola (da ligação do SDR ou do diagnóstico). Sem ele a IA não tem do que partir.</div>';
+  if (!X) return `<div class="sub" style="margin:0 0 8px">A IA lê a qualificação, os resumos do Granola, o valor e a condição, e segue o Método de venda da Gestão. Nada de número inventado: o que faltar vem marcado como [a confirmar].</div>${aviso2}<div class="acs"><button type="button" class="zap" data-pia-gerar="1">Gerar proposta com IA</button></div>`;
+  const R = X.roteiro || {}, Pp = X.proposta || {};
+  const slug = X.link_slug || slugLimpo(String(r.cliente || '').split(' ')[0] + '-gestao');
+  return `<h4>Roteiro do closer (só a equipe vê)</h4>${R.abertura ? `<p>${esc(R.abertura)}</p>` : ''}
+    ${L(R.dores).length ? `<p><b>Dores</b></p><ul>${L(R.dores).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${L(R.oportunidades).length ? `<p><b>Oportunidades</b></p><ul>${L(R.oportunidades).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${L(R.objecoes).length ? `<p><b>Objeções previstas</b></p>${L(R.objecoes).map(o => `<div class="ob"><b>${esc(o.objecao || '')}</b><br>${esc(o.resposta || '')}</div>`).join('')}` : ''}
+    ${R.fechamento ? `<p><b>Fechamento:</b> ${esc(R.fechamento)}</p>` : ''}
+    ${L(R.atencao).length ? `<p><b>Atenção</b></p><ul>${L(R.atencao).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    <h4>Proposta para o cliente</h4><p style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--verde)">${esc(Pp.titulo || '')}</p>${Pp.chamada ? `<p>${esc(Pp.chamada)}</p>` : ''}
+    ${L(Pp.diagnostico).length ? `<p><b>O que vimos</b></p><ul>${L(Pp.diagnostico).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${L(Pp.plano).length ? `<p><b>Plano</b></p><ul>${L(Pp.plano).map(x => `<li><b>${esc(x.etapa || '')}</b> ${esc(x.texto || '')}</li>`).join('')}</ul>` : ''}
+    ${L(Pp.beneficios).length ? `<p><b>O que muda</b></p><ul>${L(Pp.beneficios).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${Pp.investimento ? `<p><b>Investimento:</b> ${esc(Pp.investimento)}</p>` : ''}${Pp.fechamento ? `<p>${esc(Pp.fechamento)}</p>` : ''}
+    ${aviso2}
+    <label class="fl" style="margin-top:12px"><span>Nome do link (maktubgo.com.br/...)</span><input id="piaSlug" value="${esc(slug)}" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
+    <div class="acs"><button type="button" class="zap" data-pia-link="1">${X.link ? 'Atualizar o link' : 'Gerar link para o cliente'}</button><button type="button" class="sec" data-pia-gerar="1">Gerar de novo</button></div>
+    ${X.link ? `<div class="config" style="margin-top:8px;word-break:break-all"><b>Link:</b> <a href="${esc(X.link)}" target="_blank" rel="noopener">${esc(X.link)}</a></div><div class="acs" style="margin-top:6px"><button type="button" class="sec" data-pia-copiar="1">Copiar link</button>${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="sec" target="_blank" rel="noopener" style="text-align:center" href="${esc(zapLink(r.contato, r.cliente, 'Aqui está a sua proposta da Gestão de Milhas Maktub Go: ' + X.link))}">Mandar pelo WhatsApp</a>` : ''}</div>` : ''}`;
+}
+async function metodoGestao() {
+  if (D.gmetodo !== undefined) return D.gmetodo;
+  const q = await sb.from('gestao_metodo').select('texto').eq('id', 1).maybeSingle();
+  D.gmetodo = q.error ? null : ((q.data && q.data.texto) || '');
+  return D.gmetodo;
+}
+async function gerarPropostaIA(r) {
+  const q = r.qualificacao || {}, M = (r.marcos || {})['Reunião de proposta'] || {}, dg = agDiag(r);
+  const metodo = await metodoGestao();
+  let exemplos = [];
+  const h = await sb.from('gestao_propostas_ia').select('atendimento_id,proposta').order('criado_em', { ascending: false }).limit(40);
+  if (!h.error) { const vistos = new Set(); exemplos = (h.data || []).filter(x => { const c = D.reunioes.find(y => String(y.id) === String(x.atendimento_id)); if (!c || c.resultado !== 'Fechou' || vistos.has(x.atendimento_id) || String(x.atendimento_id) === String(r.id)) return false; vistos.add(x.atendimento_id); return true; }).slice(0, 2).map(x => x.proposta); }
+  const { data, error } = await sb.functions.invoke('proposta-gestao', { body: {
+    cliente: r.cliente, qualificacao: { gasto: q.gasto, cartoes: q.cartoes, programas: q.programas, viagens: q.viagens, objetivo: q.objetivo, decisor: q.decisor },
+    granola_sdr: q.granola || '', granola_diagnostico: (dg && dg.resumo) || '', pauta: M.pauta || '', valor: r.valor_estimado || '', condicao: M.cond || '', metodo: metodo || '', exemplos } });
+  if (error || !data || data.erro) {
+    let msg = (data && data.erro) || (error && error.message) || 'sem resposta';
+    try { if (error && error.context && error.context.json) { const j = await error.context.json(); if (j && j.erro) msg = j.erro; } } catch (e) {}
+    throw new Error(/not found|404|Failed to send/i.test(msg) ? 'A função proposta-gestao ainda não foi criada no Supabase.' : msg);
+  }
+  const X = { gerada_em: new Date().toISOString(), roteiro: data.roteiro || {}, proposta: data.proposta || {}, link: (r.proposta_ia || {}).link || null, link_slug: (r.proposta_ia || {}).link_slug || null };
+  const u = await sb.from('atendimentos').update({ proposta_ia: X }).eq('id', r.id);
+  if (u.error) throw new Error(/proposta_ia/.test(u.error.message) ? 'Falta rodar o SQL da proposta com IA no Supabase.' : u.error.message);
+  r.proposta_ia = X;
+  await sb.from('gestao_propostas_ia').insert({ atendimento_id: String(r.id), roteiro: X.roteiro, proposta: X.proposta });
+  return X;
+}
+function htmlPaginaProposta(r, Pp) {
+  const e = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])), L = (a) => (Array.isArray(a) ? a : []).filter(Boolean);
+  const zap = 'https://wa.me/5521976275225?text=' + encodeURIComponent('Olá! Vi a minha proposta da Gestão de Milhas e quero começar.');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${e(Pp.titulo || 'Sua proposta')} | Maktub Go</title><link rel="icon" href="https://www.maktubgo.com.br/ativos/simbolo-verde.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500;600&display=swap">
+<style>*{box-sizing:border-box}body{margin:0;background:#EBE0C4;color:#1B4332;font-family:Jost,sans-serif;font-weight:300;line-height:1.55}.w{max-width:640px;margin:0 auto;padding:0 18px}header{background:#1B4332;color:#EBE0C4;padding:26px 0 30px;text-align:center}header img{height:54px}header .tg{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#A88B4A;margin-top:8px}h1{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:34px;line-height:1.1;margin:22px 0 8px}h1 em{color:#A88B4A}.ch{font-size:16px;margin:0}section{background:#fff;margin:14px 0;padding:18px 18px 14px;border-top:3px solid #A88B4A}h2{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#A88B4A;font-weight:600;margin:0 0 10px}ul{margin:0;padding-left:18px}li{margin:6px 0}.pl{border-top:1px solid rgba(27,67,50,.12);padding:9px 0}.pl:first-of-type{border-top:0}.pl b{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;display:block}.inv{background:#1B4332;color:#EBE0C4;border-top:0;text-align:center}.inv h2{color:#A88B4A}.inv p{font-family:'Cormorant Garamond',serif;font-size:24px;margin:4px 0 8px}.fe{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;text-align:center;margin:20px 0}.cta{display:block;text-align:center;background:#A88B4A;color:#fff;text-decoration:none;padding:16px;font-weight:600;letter-spacing:.06em;margin:0 0 22px}footer{background:#1B4332;color:#EBE0C4;text-align:center;font-size:13px;padding:20px 0}footer a{color:#EBE0C4;margin:0 8px}</style></head><body>
+<header><div class="w"><img src="https://www.maktubgo.com.br/ativos/logo-creme-transparente.png" alt="Maktub Go"><div class="tg">Alfaiataria de Viagens</div></div></header>
+<main class="w"><h1>${e(Pp.titulo || 'Sua Gestão de Milhas')}</h1>${Pp.chamada ? `<p class="ch">${e(Pp.chamada)}</p>` : ''}
+${L(Pp.diagnostico).length ? `<section><h2>O que vimos no seu diagnóstico</h2><ul>${L(Pp.diagnostico).map(x => `<li>${e(x)}</li>`).join('')}</ul></section>` : ''}
+${L(Pp.plano).length ? `<section><h2>Seu plano</h2>${L(Pp.plano).map(x => `<div class="pl"><b>${e(x.etapa)}</b>${e(x.texto)}</div>`).join('')}</section>` : ''}
+${L(Pp.beneficios).length ? `<section><h2>O que muda para você</h2><ul>${L(Pp.beneficios).map(x => `<li>${e(x)}</li>`).join('')}</ul></section>` : ''}
+${Pp.investimento ? `<section class="inv"><h2>Investimento</h2><p>${e(Pp.investimento)}</p></section>` : ''}
+${Pp.fechamento ? `<p class="fe">${e(Pp.fechamento)}</p>` : ''}<a class="cta" href="${zap}">Quero começar</a></main>
+<footer><a href="https://wa.me/5521976275225">WhatsApp</a><a href="https://www.instagram.com/maktubgo_/">Instagram @maktubgo_</a><a href="https://www.maktubgo.com.br">maktubgo.com.br</a></footer></body></html>`;
+}
+async function linkPropostaIA(r, slugDigitado) {
+  const X = r.proposta_ia; if (!X) return;
+  let slug = slugLimpo(slugDigitado); if (slug.length < 3) throw new Error('O nome do link precisa de pelo menos 3 letras.');
+  const html = htmlPaginaProposta(r, X.proposta || {}), titulo = (X.proposta || {}).titulo || 'Proposta da Gestão', cliente = r.cliente || null;
+  let res;
+  if (X.link_slug === slug) { res = await sb.rpc('cotacao_link_atualizar', { p_slug: slug, p_html: html, p_titulo: titulo, p_cliente: cliente }); if (res.error) throw new Error(res.error.message); }
+  else {
+    for (const u of [`/${slug}/`, `/${slug}`]) { try { const k = await fetch(u, { method: 'HEAD', cache: 'no-store' }); if (k.ok) throw new Error(`"maktubgo.com.br/${slug}" já é uma página do site. Troque o nome do link.`); } catch (e) { if (/já é uma página/.test(e.message)) throw e; } }
+    res = await sb.from('cotacoes_link').insert({ html, titulo, cliente, slug }).select('token,slug').single();
+    if (res.error) throw new Error(res.error.code === '23505' ? `O nome "${slug}" já está em uso. Troque (ex.: ${slug}-2).` : res.error.message);
+    slug = res.data.slug || slug;
+  }
+  const link = `https://www.maktubgo.com.br/${slug}`;
+  const X2 = { ...X, link, link_slug: slug };
+  const u = await sb.from('atendimentos').update({ proposta_ia: X2 }).eq('id', r.id); if (!u.error) r.proposta_ia = X2;
+  await sb.from('gestao_propostas_ia').insert({ atendimento_id: String(r.id), roteiro: X.roteiro, proposta: X.proposta, link });
+  try { await navigator.clipboard.writeText(link); } catch (e) {}
+  return link;
+}
+function ligarPropostaIA(P, r) {
+  const box = P.querySelector('#piaCorpo'); if (!box) return;
+  const redesenha = () => { box.innerHTML = corpoPropostaIA(r); ligarPropostaIA(P, r); const sm = P.querySelector('.gsec-ia > summary small'); if (sm && r.proposta_ia) sm.textContent = 'Gerada em ' + dhCurta(r.proposta_ia.gerada_em) + (r.proposta_ia.link ? ' · link pronto' : ''); };
+  box.querySelectorAll('[data-pia-gerar]').forEach(b => b.onclick = async () => {
+    b.disabled = true; const rot = b.textContent; b.textContent = 'Gerando... (até 1 minuto)';
+    try { await gerarPropostaIA(r); aviso('Proposta gerada. Revise antes de mandar.'); redesenha(); }
+    catch (e) { b.disabled = false; b.textContent = rot; aviso('Não gerou: ' + e.message); }
+  });
+  box.querySelectorAll('[data-pia-link]').forEach(b => b.onclick = async () => {
+    b.disabled = true; const rot = b.textContent; b.textContent = 'Gerando o link...';
+    try { const l = await linkPropostaIA(r, (box.querySelector('#piaSlug') || {}).value); aviso('Link pronto e copiado: ' + l); redesenha(); }
+    catch (e) { b.disabled = false; b.textContent = rot; aviso(e.message); }
+  });
+  box.querySelectorAll('[data-pia-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(r.proposta_ia.link); aviso('Link copiado.'); } catch (e) { aviso(r.proposta_ia.link); } });
+}
+const METODO_INICIAL = `Quem atendemos: pessoas com gasto médio acima de R$ 20 mil por mês no cartão (somando cartões e Pix), que viajam e querem viajar melhor gastando menos.
+O que vendemos: a Gestão de Milhas Concierge da Maktub Go, um clube de concierge de viagens por 12 meses, com a gestão de milhas como benefício central. Implantação no início e acompanhamento mensal.
+O que entregamos: estudo dos cartões e dos programas, cofre de senhas por cliente, painel do cliente com saldos e economia gerada, carta mensal, reunião mensal e emissões com as milhas do cliente.
+Tom: consultivo, próximo, sem pressa artificial. Mostrar o dinheiro que hoje o cliente deixa na mesa e o que a Maktub faz por ele mês a mês.
+Estrutura da proposta: 1) o que vimos no diagnóstico, nas palavras do cliente; 2) o plano dos 12 meses; 3) o que muda na vida dele; 4) investimento; 5) próximo passo simples.
+(Edite este texto: é ele que a IA segue em toda proposta.)`;
 function ligarTopoGestao(P) {
+  P.querySelectorAll('[data-gia]').forEach(b => b.onclick = () => { const d = P.querySelector('.gsec-ia'); if (!d) return; d.open = true; setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); const g = d.querySelector('[data-pia-gerar]'); if (g && !P._piaAuto) { P._piaAuto = 1; g.click(); } });
   P.querySelectorAll('[data-gir]').forEach(b => b.onclick = () => {
     const bt = $('reRes') && [...$('reRes').children].find(x => x.dataset.v === b.dataset.gir); if (!bt) return;
     bt.click(); const al = ['Fechou', 'Não fechou'].includes(b.dataset.gir) ? $('blFechou') && !$('blFechou').hidden ? $('blFechou') : $('blPerdeu') : $('blEtapaG');
@@ -2379,7 +2494,7 @@ function telaFormReuniao(P) {
     <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
     ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
-    ${!nova && G ? htmlTopoGestao(base) : ''}
+    ${!nova && G ? htmlTopoGestao(base) + htmlPropostaIA(base) : ''}
     ${!nova ? (G ? (lt => lt ? `<details class="gsec"><summary><span>Linha do tempo<small>Cada passo com data, hora e quem fez</small></span></summary>${lt}</details>` : '')(htmlLinhaTempo(base)) : htmlLinhaTempo(base)) : ''}
     <form id="fRe" class="form" autocomplete="off" ${G ? 'novalidate' : ''} style="${G ? 'display:flex;flex-direction:column' : ''}">
       ${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}
@@ -2446,7 +2561,7 @@ function telaFormReuniao(P) {
   };
   if ($('reunMostra')) $('reunMostra').onclick = () => { reunAberta = true; f._reunVis(); };
   f._reunVis();
-  if (G && !nova) ligarTopoGestao(P);
+  if (G && !nova) { ligarTopoGestao(P); ligarPropostaIA(P, base); }
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
@@ -3665,10 +3780,28 @@ function telaGestao(P) {
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
     </details>
-    <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>`;
+    <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>
+    ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
   ligarGestao(P);
 }
 function ligarGestao(P) {
+  const gm = $('geMetodo');
+  if (gm) gm.ontoggle = async () => {
+    if (!gm.open || gm._ok) return; gm._ok = 1;
+    const t = await metodoGestao();
+    if (t === null) { $('gmTexto').placeholder = 'Falta rodar o SQL da proposta com IA no Supabase.'; return; }
+    $('gmTexto').value = t || METODO_INICIAL;
+    const h = await sb.from('gestao_propostas_ia').select('atendimento_id,criado_em,link,proposta').order('criado_em', { ascending: false }).limit(20);
+    const L = h.error ? [] : (h.data || []);
+    $('gmHist').innerHTML = L.length ? '<div class="pend">' + L.map(x => { const c = D.reunioes.find(y => String(y.id) === String(x.atendimento_id)); const res = c ? (c.resultado === 'Em andamento' ? etapaDe(c) : c.resultado) : '-'; return `<button ${c ? `data-gj-r="${c.id}"` : ''}><span>${esc(c ? c.cliente : 'Card removido')}<small style="display:block;font-size:12px;color:var(--tinta-3)">${dhCurta(x.criado_em)}${x.link ? ' · com link' : ''}</small></span><span style="font-size:13px;color:${res === 'Fechou' ? 'var(--ok)' : res === 'Não fechou' ? 'var(--alerta)' : 'var(--tinta-2)'}">${esc(res)}</span></button>`; }).join('') + '</div>' : 'Nenhuma proposta gerada ainda.';
+    $('gmHist').querySelectorAll('[data-gj-r]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.gjR));
+  };
+  if ($('gmSalvar')) $('gmSalvar').onclick = async () => {
+    const texto = $('gmTexto').value.trim();
+    const { error } = await sb.from('gestao_metodo').upsert({ id: 1, texto, atualizado_em: new Date().toISOString(), atualizado_por: D.meuId });
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    D.gmetodo = texto; aviso('Método salvo. As próximas propostas já seguem este texto.');
+  };
   P.querySelectorAll('[data-gj-r]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.gjR));
   P.querySelectorAll('[data-gj-c]').forEach(b => b.onclick = () => abrirFicha(b.dataset.gjC));
   P.querySelectorAll('[data-gj-cli]').forEach(b => b.onclick = () => ir('clientes'));
