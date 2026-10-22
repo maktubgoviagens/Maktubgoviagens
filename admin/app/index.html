@@ -498,6 +498,7 @@ import * as MKT from '/admin/app/marketing.js?v=13';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
+import * as CTR from '/admin/app/contrato.js?v=1';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=47';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
@@ -1087,6 +1088,7 @@ async function fecharMesesAuto() {
   while (true) { const [y, m] = k.split('-').map(Number), fim5 = new Date(y, m, 5); if (fim5 > h) break; if (!mesFechado(k) && !R.has(k)) await fecharMes(k); k = mesMais(k, 1); }
 }
 
+function ctxCTR() { return { D, sb, $, esc, aviso, campo, zapLink, ADMIN, programas: (id) => progsDe(id).map(p => p.programa).filter(Boolean) }; }
 function ctxCRM() {
   return { D, $, esc, sb, aviso, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
@@ -3949,6 +3951,7 @@ function fiResumo(el, c) {
     </div>
     <div class="secao">Contrato da Gestão</div>
     <section class="bloco" style="margin-top:0" id="blContrato">${htmlContrato(c)}</section>
+    ${ADMIN || pode('gestao') ? '<div class="secao">Contrato para assinatura</div><section class="bloco" style="margin-top:0" id="blAssin"><div class="vazio">Carregando...</div></section>' : ''}
     <div class="secao">Programas <button data-fa="carteira">Abrir carteira ›</button></div>
     <div class="bloco" style="margin-top:0">${progs.length ? progs.map(p => { const v = p.vencimento_data ? dia(p.vencimento_data) : null; return `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} ${esc(p.unidade || 'milhas')}</div></div><div class="v">${p.patrimonio_brl ? brlC(p.patrimonio_brl) : ''}</div>${v && Number(p.vencimento_quantidade) > 0 && difDias(v) >= 0 ? `<div class="s" style="grid-column:1/-1;${difDias(v) <= 30 ? 'color:var(--alerta)' : ''}">${num(p.vencimento_quantidade)} vencem em ${dataBR(p.vencimento_data)}</div>` : ''}</div>`; }).join('') : '<div class="vazio">Nenhum saldo lançado ainda.</div>'}</div>
     <div class="secao">Próximos compromissos</div>
@@ -3960,6 +3963,7 @@ function fiResumo(el, c) {
       <a class="sec" style="flex:1" href="${adminLink(id, 'cadastro')}">Editar cadastro</a>
     </div>`;
   ligarContrato(c);
+  if ($('blAssin')) CTR.bloco($('blAssin'), c, ctxCTR());
   el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FI_ABA = b.dataset.fa; telaFicha($('pagina'), c.id); });
   el.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
 }
