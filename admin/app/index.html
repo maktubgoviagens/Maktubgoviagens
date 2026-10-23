@@ -1959,6 +1959,18 @@ function produtoDoLead(r) {
 }
 // lead do site e pedido da Gestão viram card no funil sozinhos (gatilho no Supabase); aqui ficam os vínculos e os tempos da conversa
 const cardDoLead = (l) => l ? (D.reunioes || []).find(x => x.lead_id && String(x.lead_id) === String(l.id)) : null;
+// pedido do site aprovado: o card da Gestão vira Fechou (cria o card se ainda não existir) e entra em "Fechou · a liberar"
+async function aprovarGestao(sol) {
+  const pj = VENDA.acharPessoa(D, { nome: sol.nome, contato: sol.whatsapp || sol.email });
+  let c = cardDaSol(sol) || (pj ? D.reunioes.find(x => ehGestao(x) && x.pessoa_id === pj.id && ['Em andamento', 'Fechou'].includes(x.resultado)) : null);
+  if (c && c.resultado === 'Fechou') { aviso('Aprovado. O card já estava em Fechou.'); return abrirAtendimento(c.id); }
+  const agora = new Date().toISOString(), M = { ...((c && c.marcos) || {}), Fechou: { em: agora, por: D.meuId } };
+  const r = c ? await sb.from('atendimentos').update({ resultado: 'Fechou', etapa: 'Fechou', marcos: M }).eq('id', c.id).select().single()
+    : await sb.from('atendimentos').insert({ data: agora, tipo: 'Diagnóstico da Gestão de Milhas', produto: 'Gestão de Milhas', resultado: 'Fechou', etapa: 'Fechou', marcos: M, cliente: sol.nome || '', contato: sol.whatsapp || sol.email || '', origem: sol.indicado_por ? 'Indicação de cliente' : 'Site', solicitacao_id: String(sol.id), pessoa_id: pj ? pj.id : null, responsavel_id: D.meuId, sdr_id: D.meuId, closer_id: D.meuId }).select().single();
+  if (r.error) { aviso('Status salvo, mas o card não foi para Fechou: ' + r.error.message); telaLeads($('pagina')); return; }
+  if (c) Object.assign(c, r.data); else D.reunioes.unshift(r.data);
+  aviso('Aprovado: o card está em "Fechou · a liberar".'); abrirAtendimento(r.data.id);
+}
 const cardDaSol = (s) => s ? (D.reunioes || []).find(x => x.solicitacao_id && x.solicitacao_id === String(s.id)) : null;
 const leadDoCard = (r) => r && r.lead_id ? (D.leads || []).find(x => String(x.id) === String(r.lead_id)) : null;
 const solDoCard = (r) => r && r.solicitacao_id ? (D.sols || []).find(x => String(x.id) === r.solicitacao_id) : null;
@@ -1995,6 +2007,7 @@ function eventosCard(r) {
   if (r.assumido_em) ev.push([r.assumido_em, 'Assumido' + (r.assumido_por ? ' por ' + (nomeTime(r.assumido_por) || '') : ''), '']);
   if (r.primeiro_contato_em) ev.push([r.primeiro_contato_em, '1º contato pelo WhatsApp', '']);
   Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
+  ((M['Follow-up'] || {}).hist || []).forEach(h => ev.push([h.em, 'Follow-up: chamar em ' + (h.retorno ? dataBR(h.retorno) : '-'), [h.por ? 'por ' + (nomeTime(h.por) || '') : '', h.nota || ''].filter(Boolean).join(' · ')]));
   const tipoReu = (a) => /diagn/i.test(a.titulo || '') ? 'Diagnóstico' : /proposta/i.test(a.titulo || '') ? 'Reunião de proposta' : '';
   reunioesDe(r.id).forEach(a => { const tp = tipoReu(a); if (a.created_at) ev.push([a.created_at, tp ? tp + ' marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !tp ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, tp ? tp + ' realizado' : 'Reunião realizada', a.resumo ? String(a.resumo).slice(0, 140) + (String(a.resumo).length > 140 ? '…' : '') : (a.titulo && !tp ? a.titulo : '')]); });
   cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada ao cliente', c.titulo || '']); }));
@@ -2045,14 +2058,15 @@ function htmlGestaoSdr(r) {
       ${campo('q_decisor', 'Quem decide a contratação', pre('decisor'), 'text', 'placeholder="Ex.: ele mesmo, junto com a esposa"')}
       <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal; sem o resumo, preencha gasto mensal, bancos e cartões, objetivo e quem decide.</div></details>`;
 }
-const PASSOS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Fechou', 'Onboarding', 'Ativo e renovação'];
+const PASSOS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Follow-up', 'Fechou', 'Onboarding', 'Ativo e renovação'];
+const NF_G = 6; // posição de "Fechou" na trilha
 const dataCurtaH = (x) => { const d = tsDe(x); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + (String(x).length > 10 ? ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''); };
 const quandoDiag = (x) => new Date(x).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 function posVendaDe(r) {
   const cli = r.resultado === 'Fechou' ? clienteGestaoDe(r) : null;
-  if (!cli || !r.liberado_em) return { cli, idx: 5 };
+  if (!cli || !r.liberado_em) return { cli, idx: NF_G };
   const T = tarefasOb(cli.id), f = T.filter(t => t.feito).length;
-  return { cli, T: T.length, f, idx: T.length && f < T.length ? 6 : 7 };
+  return { cli, T: T.length, f, idx: T.length && f < T.length ? NF_G + 1 : NF_G + 2 };
 }
 /* ---------- pós-fechamento da Gestão: cadastro + contrato + pagamento liberam o onboarding ---------- */
 const tarefasOb = (cid) => tarefasDe(cid).filter(t => t.etapa === 'onboarding');
@@ -2108,8 +2122,10 @@ function htmlTopoGestao(r) {
   const ag = agDiag(r), q = r.qualificacao || {};
   const ap = agProp(r);
   const dataPasso = (et, i) => i === 0 ? entradaDe(r) : et === 'Reunião de proposta' && ap && i === atual ? ap.data : et === 'Diagnóstico agendado' && ag && i === atual ? ag.data : et === 'Onboarding' && pv.cli ? (pv.cli.implantacao_inicio || pv.cli.gestao_inicio) : et === 'Ativo e renovação' && pv.cli && pv.cli.gestao_vencimento ? null : (M[et] || {}).em;
+  const passouFup = etapaDe(r) === 'Follow-up' || !!(r.marcos || {})['Follow-up'];
   const trilha = PASSOS_G.map((et, i) => {
-    const pvc = i >= 6 ? ' pv' : '', st = perdeu && i === atual ? 'x' : i < atual ? 'f' : i === atual ? (r.resultado === 'Fechou' && i === 7 ? 'f' : 'a') : '';
+    if (et === 'Follow-up' && !passouFup) return '';
+    const pvc = i >= NF_G + 1 ? ' pv' : '', st = perdeu && i === atual ? 'x' : i < atual ? 'f' : i === atual ? (r.resultado === 'Fechou' && i === NF_G + 2 ? 'f' : 'a') : '';
     const dt = dataPasso(et, i), extra = et === 'Ativo e renovação' && pv.cli && pv.cli.gestao_vencimento ? 'até ' + dataBR(pv.cli.gestao_vencimento) : '';
     return `<div><i class="${st}${pvc}">${st === 'f' ? '✓' : st === 'x' ? '×' : i + 1}</i><span class="${st ? 'on' : ''}">${esc(perdeu && i === atual ? 'Não fechou' : et)}</span><small>${dt && st ? dataCurtaH(dt) : esc(extra)}</small></div>`;
   }).join('');
@@ -2118,16 +2134,17 @@ function htmlTopoGestao(r) {
   let rot = etapaDe(r), t = '', d = '', bt = '';
   if (perdeu) { rot = 'Não fechou'; t = esc(r.motivo_perda || 'Sem motivo registrado'); d = esc(r.motivo_detalhe || ''); }
   else if (r.resultado === 'Fechou') {
-    rot = pv.idx === 5 ? 'Fechou · a liberar' : pv.idx === 6 ? 'Onboarding D0 a D7' : 'Cliente ativo';
-    if (pv.idx === 5) { const L = liberacaoDe(r); t = `Liberar o onboarding: ${L.feitos} de 3`; d = htmlLiberacao(r, L); }
-    else if (pv.idx === 6) { const nx = tarefasOb(pv.cli.id).find(x => !x.feito); t = `Onboarding: ${pv.f} de ${pv.T} passos`; d = nx ? 'Próximo: ' + esc((nx.dia ? nx.dia + ' · ' : '') + nx.titulo) : ''; bt = B('Abrir o checklist ›', `data-gficha="${pv.cli.id}" data-gfa="tarefas"`, 1); }
+    rot = pv.idx === NF_G ? 'Fechou · a liberar' : pv.idx === NF_G + 1 ? 'Onboarding D0 a D7' : 'Cliente ativo';
+    if (pv.idx === NF_G) { const L = liberacaoDe(r); t = `Liberar o onboarding: ${L.feitos} de 3`; d = htmlLiberacao(r, L); }
+    else if (pv.idx === NF_G + 1) { const nx = tarefasOb(pv.cli.id).find(x => !x.feito); t = `Onboarding: ${pv.f} de ${pv.T} passos`; d = nx ? 'Próximo: ' + esc((nx.dia ? nx.dia + ' · ' : '') + nx.titulo) : ''; bt = B('Abrir o checklist ›', `data-gficha="${pv.cli.id}" data-gfa="tarefas"`, 1); }
     else { t = 'Cliente ativo na Gestão'; d = pv.cli.gestao_vencimento ? 'Ciclo até ' + dataBR(pv.cli.gestao_vencimento) + '.' : 'Defina a data de entrada na ficha para contar os 12 meses.'; bt = B('Abrir a base do cliente ›', `data-gficha="${pv.cli.id}"`, 1); }
   }
   else if (atual === 0) { t = 'Assumir e mandar as perguntas'; d = 'O SDR assume, manda as perguntas pelo WhatsApp e liga com o Granola gravando.'; bt = (!r.assumido_por ? B('Assumir', `data-gassumir="${r.id}"`, 1) : '') + (zap ? `<a class="${r.assumido_por ? 'p' : 's'}" target="_blank" rel="noopener" href="${esc(zap)}">Mandar as perguntas</a>` : ''); }
   else if (atual === 1) { t = 'Qualificar e passar para o closer'; d = q.gasto || q.granola ? 'Qualificação registrada. Escolha o closer e agende o diagnóstico.' : 'Ligue com o Granola gravando, cole o resumo e preencha o gasto mensal.'; bt = B('Passar para o closer ›', 'data-gir="Diagnóstico agendado"', 1) + B('Qualificação', 'data-gqual="1"'); }
   else if (atual === 2) { t = ag ? `${quandoDiag(ag.data)} com ${esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0])}` : 'Diagnóstico sem data na agenda'; d = 'Antes: o closer lê a qualificação e o resumo do Granola.'; bt = B('Diagnóstico feito ›', 'data-gir="Diagnóstico feito"', 1) + B('Remarcar', 'data-gir="Diagnóstico agendado"'); }
   else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1) + B('Proposta com IA', 'data-gia="1"'); }
-  else { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); bt += B('Proposta com IA', 'data-gia="1" style="grid-column:1/-1"'); }
+  else if (atual === 4) { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Ainda não decidiu: follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); bt += B('Proposta com IA', 'data-gia="1" style="grid-column:1/-1"'); }
+  else { const F = (r.marcos || {})['Follow-up'] || {}, dt = r.proximo_passo_data, dv = dt ? diasPara(dt) : null; t = dt ? (dv < 0 ? 'Follow-up atrasado: era ' + dataBR(dt) : dv === 0 ? 'Chamar o cliente hoje' : 'Chamar o cliente em ' + dataBR(dt) + ' (' + plural(dv, 'dia', 'dias') + ')') : 'Follow-up sem data'; d = F.nota ? 'Combinado: ' + esc(F.nota) : 'Registre o que ficou combinado para a próxima conversa.'; bt = B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Novo follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"'); }
   const ent = entradaDe(r);
   return `<div id="gTopo"><div class="sub" style="margin-top:4px">SDR ${esc(nomeTime(r.sdr_id) || 'a definir')} · Closer ${esc(nomeTime(r.closer_id) || 'a definir')}${ent ? ' · entrou ' + (Date.now() - tsDe(ent) < 2 * 864e5 ? 'há ' + haTempo(Date.now() - tsDe(ent)) : 'em ' + dataBR(String(ent).slice(0, 10))) : ''}</div>
     <div class="gtr" aria-label="Trilha do cliente">${trilha}</div>
@@ -2315,6 +2332,7 @@ function htmlJornadaGestao() {
     else if (et === 'Qualificação') { s = 'Qualificando há ' + desde((M[et] || {}).em || r.etapa_desde || r.assumido_em); prox = 'Ligar com o Granola e passar ao closer'; }
     else if (et === 'Diagnóstico agendado') { s = ag ? 'Diagnóstico ' + quandoDiag(ag.data) : 'Sem data na agenda'; c = ag ? 'ok' : 'al'; prox = 'Closer revisar a qualificação'; }
     else if (et === 'Diagnóstico feito') { const x = (M[et] || {}).em || r.etapa_desde; s = 'Feito há ' + desde(x); c = x && Date.now() - tsDe(x) > 2 * 864e5 ? 'al' : ''; prox = 'Marcar a reunião de proposta'; }
+    else if (et === 'Follow-up') { const dt = r.proximo_passo_data, dv = dt ? diasPara(dt) : null, F = (r.marcos || {})['Follow-up'] || {}; s = dt ? (dv < 0 ? 'Atrasado desde ' + dataCurta(dia(dt)) : dv === 0 ? 'Chamar hoje' : 'Chamar em ' + dataCurta(dia(dt))) : 'Sem data de retorno'; c = !dt || dv <= 0 ? 'al' : 'ok'; prox = F.nota || 'Retomar contato'; }
     else { const ap = agProp(r), passou = ap && tsDe(ap.data) < Date.now(); s = ap ? 'Proposta ' + quandoDiag(ap.data) : 'Sem data da reunião'; c = !ap || passou ? 'al' : 'ok'; prox = passou ? 'Registrar se fechou e por quê' : ap ? 'Apresentar a proposta' : 'Marcar a reunião de proposta'; }
     return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
   };
@@ -2327,8 +2345,8 @@ function htmlJornadaGestao() {
   cols.push(['Renovação', 'var(--verde)', renov.map(c => { const dv = diasPara(c.gestao_vencimento); return kC(c, dv < 0 ? 'Venceu há ' + plural(-dv, 'dia', 'dias') : 'Vence em ' + plural(dv, 'dia', 'dias'), dv <= 30 ? 'al' : '', 'Reunião de renovação'); })]);
   const barras = (L, cor) => L.map(([, , k]) => `<i style="${k.length ? 'background:' + cor : ''}"></i>`).join('');
   return `<div class="gjseg"><button class="on" type="button">Jornada</button><button type="button" data-gj-cli="1">Clientes · ${(D.clientes || []).length}</button></div>
-    <div class="gjres"><button type="button" data-gj-ir="0"><div class="l" style="color:var(--dourado)">Comercial</div><div class="bs">${barras(cols.slice(0, 5), 'var(--dourado)')}</div><div class="d">${plural(ab.length, 'em negociação', 'em negociação')}</div></button>
-      <button type="button" data-gj-cli="1"><div class="l" style="color:var(--verde)">Clientes</div><div class="bs">${barras(cols.slice(5), 'var(--verde)')}</div><div class="d">${(D.clientes || []).length} na carteira · ver todos ›</div></button></div>
+    <div class="gjres"><button type="button" data-gj-ir="0"><div class="l" style="color:var(--dourado)">Comercial</div><div class="bs">${barras(cols.slice(0, ETAPAS_G.length), 'var(--dourado)')}</div><div class="d">${plural(ab.length, 'em negociação', 'em negociação')}</div></button>
+      <button type="button" data-gj-cli="1"><div class="l" style="color:var(--verde)">Clientes</div><div class="bs">${barras(cols.slice(ETAPAS_G.length), 'var(--verde)')}</div><div class="d">${(D.clientes || []).length} na carteira · ver todos ›</div></button></div>
     <div class="gjchips">${cols.map(([n, , k], i) => `<button type="button" data-gj-ir="${i}">${esc(n)}<b>${k.length}</b></button>`).join('')}</div>
     <div class="gj" id="gjKanban">${cols.map(([n, cor, k], i) => `<section class="gjc" data-gj-col="${i}"><h3 style="color:${cor}">${esc(n)}<small>${k.length}</small></h3><div class="ln" style="background:${cor}"></div>${k.join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</section>`).join('')}</div>`;
 }
@@ -2351,7 +2369,8 @@ const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar',
   'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
-const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'];
+const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Follow-up'];
+const FUP_PRAZOS = [['3 dias', 3], ['7 dias', 7], ['15 dias', 15], ['1 mês', 30], ['3 meses', 90], ['6 meses', 180]];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
 const etapasDe = (g) => g ? ETAPAS_G : ETAPAS_V;
 const etapaDe = (r) => (r.etapa === 'Negociação' ? 'Follow-up' : r.etapa === 'Proposta enviada' ? 'Reunião de proposta' : r.etapa) || (FINAIS.includes(r.resultado) ? r.resultado : etapasDe(r.produto === 'Gestão de Milhas')[0]);
@@ -2584,6 +2603,7 @@ function telaFormReuniao(P) {
     if (et === 'Diagnóstico agendado') return `${dt('mg_em', 'Agendado em', m.em)}${campo('mg_diag', 'Data e hora do diagnóstico ' + fusoRotulo(), ag ? dl(ag.data) : '', 'datetime-local')}<div class="sub">Ao salvar, o diagnóstico entra na agenda do app e no TickTick, com o closer escolhido acima.</div>`;
     if (et === 'Diagnóstico feito') return `${dt('mg_em', 'Diagnóstico feito em', m.em || (ag && ag.data))}<label class="fl"><span>Resumo do diagnóstico</span><textarea name="mg_resumo" rows="4" placeholder="Cole aqui o resumo do Granola.">${esc((ag && ag.resumo) || '')}</textarea></label>`;
     if (et === 'Reunião de proposta') { const ap = r.id ? agProp(r) : null; return `${dt('mg_em', 'Marcada em', m.em)}${campo('mg_prop', 'Data e hora da reunião de proposta ' + fusoRotulo(), ap ? dl(ap.data) : '', 'datetime-local')}<label class="fl"><span>Como vai ser a apresentação</span><textarea name="mg_pauta" rows="3" placeholder="Ex.: mostrar o estudo dos cartões, a economia projetada e o plano de 12 meses">${esc(m.pauta || '')}</textarea></label>${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}<div class="sub">Ao salvar, a reunião entra na agenda e no TickTick do closer.</div>`; }
+    if (et === 'Follow-up') { const dfu = r.proximo_passo_data && r.proximo_passo_data > hojeISO() && etapaDe(r) === 'Follow-up' ? r.proximo_passo_data : ''; return `<div class="fl"><span style="display:block;font-size:12px;color:var(--tinta-2);margin-bottom:6px">Chamar o cliente de novo em</span><div class="chips" id="fupChips">${FUP_PRAZOS.map(([l, n]) => `<button type="button" data-fup="${n}">${l}</button>`).join('')}</div></div>${campo('mg_fup', 'Data do próximo contato', dfu, 'date')}<label class="fl"><span>O que ficou combinado</span><textarea name="mg_fupnota" rows="3" placeholder="Ex.: vai conversar com a esposa e me responde; pediu para chamar depois das férias">${esc(dfu ? ((r.marcos || {})['Follow-up'] || {}).nota || '' : '')}</textarea></label><div class="sub">No dia, chega aviso para o closer no celular e para os sócios no app e no Telegram. Ao salvar, o card vai para a coluna Follow-up.</div>`; }
     if (et === 'Proposta enviada') return `${dt('mg_em', 'Proposta enviada em', m.em)}${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}`;
     const resProp = () => { const ap = r.id ? agProp(r) : null; return `<label class="fl"><span>Resumo da reunião de proposta (cole do Granola)</span><textarea name="mg_resprop" rows="4" placeholder="Como foi a apresentação e o que o cliente disse.">${esc((ap && ap.resumo) || '')}</textarea></label>`; };
     if (et === 'Fechou') return dt('mg_em', 'Fechado em', m.em) + resProp();
@@ -2664,6 +2684,7 @@ function telaFormReuniao(P) {
   if ($('reunMostra')) $('reunMostra').onclick = () => { reunAberta = true; f._reunVis(); };
   f._reunVis();
   if (G && !nova) { ligarTopoGestao(P); ligarPropostaIA(P, base); }
+  f.addEventListener('click', (e) => { const b = e.target.closest('[data-fup]'); if (!b || !f.elements.mg_fup) return; const d = new Date(); if (+b.dataset.fup % 30 === 0) d.setMonth(d.getMonth() + b.dataset.fup / 30); else d.setDate(d.getDate() + +b.dataset.fup); f.elements.mg_fup.value = isoLocal(d); [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b)); });
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
@@ -2876,7 +2897,13 @@ function telaFormReuniao(P) {
       if (etN === 'Qualificação' && !row.sdr_id) row.sdr_id = D.meuId;
       if (etN === 'Reunião de proposta' && mudou && !g('mg_prop')) { $('msgRe').textContent = 'Informe a data e a hora da reunião de proposta.'; return; }
       if (etN === 'Reunião de proposta' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
-      if (g('mg_em')) { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { cond: g('mg_cond') || null, pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
+      if (etN === 'Follow-up') {
+        if (!g('mg_fup')) { $('msgRe').textContent = 'Escolha quando chamar o cliente de novo (3, 7, 15 dias, 1, 3 ou 6 meses, ou uma data).'; const c = $('fupChips'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        row.proximo_passo_data = g('mg_fup'); row.proximo_passo = 'Follow-up' + (g('mg_fupnota') ? ': ' + g('mg_fupnota') : '');
+        const M = { ...(base.marcos || {}) }, ant = M['Follow-up'] || {}, hist = (ant.hist || []).concat([{ em: new Date().toISOString(), por: D.meuId, retorno: g('mg_fup'), nota: g('mg_fupnota') || null }]);
+        M['Follow-up'] = { ...ant, em: ant.em || new Date().toISOString(), por: ant.por || D.meuId, nota: g('mg_fupnota') || null, retorno: g('mg_fup'), hist }; row.marcos = M;
+      }
+      if (g('mg_em') && etN !== 'Follow-up') { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { cond: g('mg_cond') || null, pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
     }
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     if (!row.pessoa_id) {
@@ -2890,6 +2917,10 @@ function telaFormReuniao(P) {
       const pn = await sb.from('pessoas').insert({ nome: g('cliente').replace(/\s+/g, ' '), celular: !ehMail && ct ? ct : null, email: ehMail ? ct : (g('cn_email') || null), nascimento: g('cn_nasc') || null, papeis: [], interesse: [G ? 'gestao' : 'viagens'], origem: g('origem') || null }).select().single();
       if (pn.error) aviso('O atendimento será salvo, mas a ficha do cliente não foi criada: ' + pn.error.message);
       else { (D.pessoas = D.pessoas || []).push(pn.data); row.pessoa_id = pn.data.id; f.elements.pessoa_id.value = pn.data.id; }
+    }
+    if (nova && G && row.pessoa_id) {
+      const ja = D.reunioes.find(x => ehGestao(x) && x.pessoa_id === row.pessoa_id && ['Em andamento', 'Fechou'].includes(x.resultado));
+      if (ja && confirm(`${ja.cliente} já tem um card da Gestão (${ja.resultado === 'Fechou' ? 'fechado' : etapaDe(ja)}).\n\nOK: abrir o card que já existe. Cancelar: criar outro mesmo assim.`)) { $('salvarRe').disabled = false; $('msgRe').textContent = ''; SUJO = false; abrirAtendimento(ja.id); return; }
     }
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
@@ -3734,6 +3765,7 @@ function listaLeads() {
     const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);
     if (error) { aviso('Não salvou: ' + error.message); return; }
     const r = (s.dataset.t === 'leads' ? D.leads : D.sols).find(x => x.id === s.dataset.id); if (r) r.status = s.value;
+    if (s.dataset.t !== 'leads' && s.value === 'aprovada' && r) { await aprovarGestao(r); return; }
     aviso('Status atualizado.'); telaLeads($('pagina'));
   });
   const assumir = async (id, silencioso) => {
