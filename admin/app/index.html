@@ -494,7 +494,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=13';
+import * as MKT from '/admin/app/marketing.js?v=14';
 import * as CART from '/admin/app/carteira.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
@@ -759,13 +759,15 @@ function detalheMkt(tipo, id) {
     <div class="nome" style="font-size:17px;margin-bottom:6px">${esc(p.titulo)}</div>
     <span class="tag">${esc(conta)}</span> <span class="tag">${esc(fmt)}</span>${prazo ? ` <span class="tag ouro">${tipo === 'g' ? 'gravar até' : 'postar'} ${ddmm(prazo)}${tipo === 'p' && p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}
     ${texto ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.5;margin-top:12px">${esc(texto)}</div>` : ''}
-    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : ''}</div>
+    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : `<button class="zap" data-postei="${esc(p.id)}">Já postei</button>`}</div>
     <button class="sec" data-fmk style="width:100%;margin-top:12px">Fechar</button></div>`;
   f.hidden = false;
 }
 document.addEventListener('click', (e) => {
   const d = e.target.closest('[data-mkdet]'); if (d) { const [t, id] = d.dataset.mkdet.split(':'); detalheMkt(t, id); return; }
-  if (e.target.closest('[data-fmk]') || e.target.closest('#folhaMkt [data-gravado]')) { const f = document.getElementById('folhaMkt'); if (f) f.hidden = true; }
+  if (e.target.closest('[data-fmk]') || e.target.closest('#folhaMkt [data-gravado]') || e.target.closest('#folhaMkt [data-postei]')) { const f = document.getElementById('folhaMkt'); if (f) f.hidden = true; }
+  const po = e.target.closest('[data-postei]');
+  if (po && podeAba('marketing')) { ir('marketing', () => MKT.postar(po.dataset.postei)); aviso('Cole o link do post no Instagram e salve.'); }
 });
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-gravado]'); if (!b) return;

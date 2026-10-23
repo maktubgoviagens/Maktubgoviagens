@@ -80,6 +80,7 @@ const endereco = () => '#marketing/' + VIEW + (ED ? (ED === 'nova' ? '/nova' : '
 // abre um post (ou um novo) criando uma entrada no histórico; fechar volta no histórico
 function abrirPost(id, pre) { ED = id; PRE = pre || null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); }
 function fecharPost() { const h = location.hash; ED = null; PRE = null; if (/\/(post|nova)/.test(h)) history.back(); else rerender(); scrollTo(0, 0); }
+export function postar(id) { ED = String(id); PRE = { status: 'publicado' }; ED_EST = null; CONF = null; }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
 const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0] + (p.formato === 'reels' && p.reels_teste ? ' teste' : '');
@@ -339,14 +340,16 @@ export function mover(id, g) {
   if (g === 'andamento') return mudar(id, { status: p.status === 'publicado' && p.aprovado_em ? 'agendado' : 'producao', publicado_em: null }, 'Foi para Em andamento.');
   if (g === 'publicado') return mudar(id, { status: 'publicado', publicado_em: p.publicado_em || hoje() }, 'Marcado como publicado. Abra o post para colar o link do Instagram.');
 }
+// quem posta (Maju, Jéssica ou quem estiver escalado) marca que o post já está no Instagram, em qualquer etapa depois da produção
+const jaPostei = (p) => `<button data-publicar="${p.id}">Já postei</button>`;
 // botão de próxima etapa de cada post
 function acao(p) {
   if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">${ehVideo(p) ? 'Fazer roteiro' : 'Criar arte'}</button>`;
   if (p.status === 'producao' && ehVideo(p)) return `<button data-gravar="${p.id}">Pronto para gravar</button>`;
   if (p.status === 'gravacao') return `<button data-gravado="${p.id}">Já gravado</button>`;
-  if (p.status === 'producao' || p.status === 'edicao') return exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`;
-  if (p.status === 'aprovacao') return X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>';
-  if (p.status === 'agendado') return `<button data-publicar="${p.id}">Marcar publicado</button>`;
+  if (p.status === 'producao' || p.status === 'edicao') return (exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`) + jaPostei(p);
+  if (p.status === 'aprovacao') return (X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>') + jaPostei(p);
+  if (p.status === 'agendado') return jaPostei(p);
   return '';
 }
 
@@ -428,7 +431,7 @@ function formPost(P) {
   const base = nova ? { titulo: '', formato: 'reels', status: 'ideia', conta: FCONTA || 'maktub', collab: [], responsavel_id: X.COORD ? null : X.meuId } : LISTA.find(x => x.id === ED);
   if (!base) { ED = null; return tela(P, X); }
   const p = { ...base, ...(PRE || {}) };
-  const pode = (s) => X.COORD || !exigir() || ['ideia', ...EM_PRODUCAO, 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
+  const pode = (s) => s === 'publicado' || X.COORD || !exigir() || ['ideia', ...EM_PRODUCAO, 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
   const marketing = TIME.filter(t => t.user_id);
   P.innerHTML = `<button class="voltar" id="mkVoltarF">‹ Marketing</button><h1 class="titulo" style="margin-top:6px">${nova ? (p.status === 'ideia' ? 'Nova <em>ideia</em>' : 'Novo <em>post</em>') : 'Editar <em>post</em>'}</h1>
     ${!nova && base.ajuste && EM_PRODUCAO.includes(base.status) ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
@@ -449,7 +452,7 @@ function formPost(P) {
       <div class="duas-col">${campo('gravacao_data', 'Gravar até', p.gravacao_data, 'date')}<span></span></div>
       ${equipeG(p).length ? `<div class="sub" style="margin:-4px 0 8px">${p.gravado_em ? 'Gravado em ' + dm(String(p.gravado_em).slice(0, 10)) + '.' : 'Gravação pendente. Quem foi escalado vê no app e marca quando gravar.'}</div>` : ''}
       <label class="fl"><span>Quem posta</span><select name="postagem_por"><option value="">Ninguém escalado</option>${marketing.map(t => `<option value="${t.user_id}" ${p.postagem_por === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
-      ${p.postagem_por && p.status !== 'publicado' ? '<div class="sub" style="margin:-4px 0 8px">A pessoa vê o post em "Para você postar" e recebe uma notificação no celular 2 horas antes do horário (sem horário definido, às 8h do dia). A validação da publicação continua com a coordenação.</div>' : ''}
+      ${p.postagem_por && p.status !== 'publicado' ? '<div class="sub" style="margin:-4px 0 8px">A pessoa vê o post em "Para você postar" e recebe uma notificação no celular 2 horas antes do horário (sem horário definido, às 8h do dia). Depois de postar, ela mesma toca em Já postei e cola o link do Instagram.</div>' : ''}
       <div class="duas-col">
         <label class="fl"><span>Pilar</span><select name="pilar_id"><option value="">Nenhum</option>${pilares().map(pl => `<option value="${pl.id}" ${p.pilar_id === pl.id ? 'selected' : ''}>${esc(pl.titulo)}</option>`).join('')}</select></label>
         <label class="fl"><span>Campanha</span><select name="campanha_id"><option value="">Nenhuma</option>${campanhas().filter(c => c.ativo || c.id === p.campanha_id).map(c => `<option value="${c.id}" ${p.campanha_id === c.id ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</select></label>
@@ -606,7 +609,7 @@ function ligar(P) {
     if (!equipeG(pp).length) { abrirPost(pp.id, { status: 'gravacao' }); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
     mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${nomesG(pp)}.`); });
   q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
-  q('[data-publicar]').forEach(b => b.onclick = () => { abrirPost(b.dataset.publicar, { status: 'publicado' }); X.aviso('Cole o link do post e salve.'); });
+  q('[data-publicar]').forEach(b => b.onclick = () => { abrirPost(b.dataset.publicar, { status: 'publicado' }); X.aviso('Cole o link do post no Instagram e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
   q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; { const pp = LISTA.find(x => x.id === b.dataset.ajok) || {}; mudar(b.dataset.ajok, { status: voltaAjuste(pp), ajuste: t }, ehVideo(pp) ? 'Devolvido para a edição com o ajuste.' : 'Devolvido para a criação com o ajuste.'); } });
