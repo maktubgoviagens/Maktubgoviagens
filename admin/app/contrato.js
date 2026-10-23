@@ -49,52 +49,111 @@ export function extenso(valor) {
 }
 
 // ---------- PDF ----------
-let PDFMAKE = null;
+// Identidade Maktub: verde, dourado e creme; títulos em Cormorant Garamond e texto em Montserrat.
+const COR = { verde: '#1B4332', dourado: '#A88B4A', creme: '#EBE0C4', creme2: '#F6F1E4', texto: '#2E2E2E', cinza: '#8A8A8A' };
+let PDFMAKE = null, FONTES = null;
 function script(src) { return new Promise((ok, erro) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => erro(new Error('Não carregou ' + src)); document.head.appendChild(s); }); }
+const paraDataUrl = (b) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(b); });
 async function pdfMake() {
   if (PDFMAKE) return PDFMAKE;
   if (!window.pdfMake) await script('/admin/app/lib/pdfmake.min.js?v=0.2.23');
   if (!window.pdfMake.vfs || !Object.keys(window.pdfMake.vfs).length) await script('/admin/app/lib/vfs_fonts.js?v=0.2.23');
   PDFMAKE = window.pdfMake; return PDFMAKE;
 }
-async function logoDataUrl() {
+// carrega as fontes da marca; se falhar, o contrato sai em Roboto (fonte padrão), sem travar
+async function fontesMarca(pm) {
+  if (FONTES !== null) return FONTES;
   try {
-    const b = await (await fetch('/ativos/logo-verde-transparente.png')).blob();
-    return await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(b); });
-  } catch (_) { return null; }
+    const arqs = ['montserrat-400', 'montserrat-600', 'montserrat-400i', 'cormorant-600', 'cormorant-600i'];
+    const b64 = await Promise.all(arqs.map(async (n) => { const r = await fetch(`/admin/app/lib/fontes/${n}.ttf?v=1`); if (!r.ok) throw new Error(n); return String(await paraDataUrl(await r.blob())).split(',')[1]; }));
+    arqs.forEach((n, i) => { pm.vfs[n + '.ttf'] = b64[i]; });
+    pm.fonts = Object.assign({}, pm.fonts || {}, {
+      Montserrat: { normal: 'montserrat-400.ttf', bold: 'montserrat-600.ttf', italics: 'montserrat-400i.ttf', bolditalics: 'montserrat-600.ttf' },
+      Cormorant: { normal: 'cormorant-600.ttf', bold: 'cormorant-600.ttf', italics: 'cormorant-600i.ttf', bolditalics: 'cormorant-600i.ttf' }
+    });
+    FONTES = { texto: 'Montserrat', titulo: 'Cormorant' };
+  } catch (_) { FONTES = { texto: 'Roboto', titulo: 'Roboto' }; }
+  return FONTES;
 }
+async function imagem(url) { try { const r = await fetch(url); if (!r.ok) return null; return await paraDataUrl(await r.blob()); } catch (_) { return null; } }
 const CHAVE = /\{\{\s*([a-z_]+)\s*\}\}/g;
 export function camposDoModelo(blocos) {
   const s = new Set();
   const ver = (t) => { for (const m of String(t || '').matchAll(CHAVE)) s.add(m[1]); };
-  (blocos || []).forEach(b => { (b.r || []).forEach(r => ver(r[0])); (b.linhas || []).forEach(l => l.forEach(ver)); });
+  (blocos || []).forEach(b => { (b.r || []).forEach(r => ver(r[0])); (b.linhas || []).forEach(l => l.forEach(ver)); [b.titulo, b.subtitulo, b.local].forEach(ver); (b.partes || []).forEach(l => l.forEach(ver)); });
   return [...s];
 }
 const trocar = (t, dados) => String(t || '').replace(CHAVE, (_, k) => (dados[k] !== undefined && dados[k] !== null && String(dados[k]).trim() !== '') ? String(dados[k]) : `[${k}]`);
+// número da cláusula (1.1., 10.2.) em destaque, sem mexer no texto
+function comNumero(runs, dados) {
+  const out = [];
+  runs.forEach(([t, neg], i) => {
+    let txt = trocar(t, dados);
+    if (i === 0) { const m = txt.match(/^(\d+\.\d+\.)\s*/); if (m) { out.push({ text: m[1] + ' ', bold: true, color: COR.verde }); txt = txt.slice(m[0].length); } }
+    out.push({ text: txt, bold: !!neg });
+  });
+  return out;
+}
+const rubrica = () => ({ text: [{ text: 'Rubrica do MEMBRO  ', color: COR.cinza }, { text: '_______________________', color: COR.cinza }], fontSize: 7.5, alignment: 'right', margin: [0, 6, 0, 0] });
 export async function gerarPdf(modelo, dados) {
-  const pm = await pdfMake(), logo = await logoDataUrl();
+  const pm = await pdfMake(), F = await fontesMarca(pm);
+  const [logo, simbolo] = await Promise.all([imagem('/ativos/logo-verde-transparente.png'), imagem('/ativos/simbolo-verde.png')]);
   const content = [];
-  if (logo) content.push({ image: logo, width: 120, alignment: 'center', margin: [0, 0, 0, 16] });
   (modelo.blocos || []).forEach((b, i, todos) => {
+    if (b.k === 'capa') {
+      if (logo) content.push({ image: logo, width: 118, alignment: 'center', margin: [0, 0, 0, 14] });
+      content.push({ canvas: [{ type: 'line', x1: 207, y1: 0, x2: 288, y2: 0, lineWidth: 0.8, lineColor: COR.dourado }], margin: [0, 0, 0, 12] });
+      content.push({ text: trocar(b.titulo, dados), font: F.titulo, fontSize: 25, color: COR.verde, alignment: 'center' });
+      content.push({ text: trocar(b.subtitulo, dados).toUpperCase(), fontSize: 6.8, characterSpacing: 1.6, color: COR.dourado, alignment: 'center', margin: [0, 6, 0, 22] });
+      return;
+    }
+    if (b.k === 'quadro') {
+      const body = [[{ text: String(b.titulo || 'Quadro-resumo').toUpperCase(), colSpan: 2, fontSize: 7.2, bold: true, characterSpacing: 1.8, color: COR.creme, fillColor: COR.verde, margin: [8, 6, 8, 6] }, {}]];
+      b.linhas.forEach(([rot, val]) => body.push([
+        { text: String(rot).toUpperCase(), fontSize: 6.6, bold: true, characterSpacing: 0.8, color: COR.verde, margin: [8, 5, 4, 5] },
+        { text: trocar(val, dados), fontSize: 8.4, color: COR.texto, margin: [4, 4.5, 8, 4.5] }]));
+      content.push({ table: { widths: [112, '*'], body, dontBreakRows: true }, layout: { fillColor: (r) => r === 0 ? COR.verde : r % 2 ? COR.creme2 : '#FFFFFF', hLineWidth: (r, n) => r === 0 || r === 1 || r === n.table.body.length ? 0 : 0.4, vLineWidth: () => 0, hLineColor: () => '#E2D8BE', paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0 }, margin: [0, 0, 0, 16] });
+      return;
+    }
     if (b.k === 'tabela') {
       const nc = (b.linhas[0] || []).length;
-      content.push({ table: { widths: nc === 2 ? ['38%', '62%'] : Array(nc).fill('*'), headerRows: 1, body: b.linhas.map((l, i) => l.map(c => ({ text: trocar(c, dados), bold: i === 0, fontSize: 9.5, color: i === 0 ? '#1B4332' : '#222' }))) },
-        layout: { hLineColor: () => '#cfc6ad', vLineColor: () => '#cfc6ad', fillColor: (i) => i === 0 ? '#EBE0C4' : null }, margin: [0, 4, 0, 12] });
-      // tabela curta fica na mesma página do título que vem antes dela
+      content.push({ table: { widths: nc === 2 ? ['38%', '62%'] : Array(nc).fill('*'), headerRows: 1, body: b.linhas.map((l, r) => l.map(c => ({ text: trocar(c, dados), bold: r === 0, fontSize: 8.4, color: r === 0 ? COR.verde : COR.texto, margin: [2, 2, 2, 2] }))) },
+        layout: { hLineColor: () => '#E2D8BE', vLineColor: () => '#E2D8BE', fillColor: (r) => r === 0 ? COR.creme : null }, margin: [0, 4, 0, 12] });
       if (b.linhas.length <= 4 && content.length > 1 && todos[i - 1] && todos[i - 1].k !== 'tabela') { const t = content.pop(), h = content.pop(); content.push({ stack: [h, t], unbreakable: true }); }
       return;
     }
-    const texto = (b.r || []).map(([t, neg]) => ({ text: trocar(t, dados), bold: !!neg }));
-    if (b.k === 'h1') content.push({ text: texto, style: 'titulo' });
-    else if (b.k === 'h2') content.push({ text: texto, style: 'clausula' });
-    else content.push({ text: texto, style: 'p' });
+    if (b.k === 'destaque') {
+      content.push({ unbreakable: true, margin: [0, 4, 0, 10], stack: [
+        { table: { widths: ['*'], body: [[{ text: (b.r || []).map(([t, neg]) => ({ text: trocar(t, dados), bold: !!neg })), fontSize: 8.4, color: COR.verde, margin: [10, 8, 10, 8] }]] }, layout: { fillColor: () => COR.creme2, hLineWidth: () => 0, vLineWidth: (c) => c === 0 ? 2.2 : 0, vLineColor: () => COR.dourado } },
+        ...(b.rubrica ? [rubrica()] : [])] });
+      return;
+    }
+    if (b.k === 'assinaturas') {
+      const col = ([nome, papel]) => ({ width: '*', stack: [{ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 215, y2: 0, lineWidth: 0.6, lineColor: COR.verde }] }, { text: trocar(nome, dados), fontSize: 8, bold: true, color: COR.verde, margin: [0, 5, 0, 0] }, { text: trocar(papel, dados), fontSize: 7.4, color: COR.cinza }] });
+      content.push({ unbreakable: true, margin: [0, 18, 0, 0], stack: [
+        { text: trocar(b.local, dados), fontSize: 8.4, margin: [0, 0, 0, 34] },
+        { columns: (b.partes || []).map(col), columnGap: 30 },
+        { text: 'Documento assinado eletronicamente. A página de autenticação da plataforma de assinatura integra este contrato.', fontSize: 6.8, color: COR.cinza, margin: [0, 16, 0, 0] }] });
+      return;
+    }
+    if (b.k === 'h1') { content.push({ text: (b.r || []).map(([t]) => trocar(t, dados)).join(''), font: F.titulo, fontSize: 22, color: COR.verde, alignment: 'center', margin: [0, 0, 0, 14] }); return; }
+    if (b.k === 'h2') { content.push({ text: (b.r || []).map(([t]) => trocar(t, dados)).join(''), font: F.titulo, fontSize: 13.5, color: COR.verde, margin: [0, 10, 0, 3], headlineLevel: 1 }); return; }
+    if (b.k === 'item') { content.push({ text: comNumero(b.r || [], dados), style: 'p', margin: [12, 0, 0, 4] }); return; }
+    content.push({ text: comNumero(b.r || [], dados), style: 'p' });
   });
+  // título de cláusula nunca fica sozinho no fim da página: vai junto com o primeiro parágrafo
+  for (let i = content.length - 2; i >= 0; i--) if (content[i].headlineLevel === 1) { const h = content[i], n = content[i + 1]; delete h.headlineLevel; content.splice(i, 2, { stack: [h, n], unbreakable: true }); }
   const doc = {
-    pageSize: 'A4', pageMargins: [56, 56, 56, 56], content,
+    pageSize: 'A4', pageMargins: [52, 62, 52, 54], content,
     info: { title: `Contrato Gestão de Milhas - ${dados.nome_completo || ''}`, author: 'Maktub Go', subject: modelo.versao || '' },
-    defaultStyle: { font: 'Roboto', fontSize: 10, lineHeight: 1.25, color: '#222' },
-    styles: { titulo: { fontSize: 15, bold: true, color: '#1B4332', alignment: 'center', margin: [0, 0, 0, 14] }, clausula: { fontSize: 11, bold: true, color: '#1B4332', margin: [0, 12, 0, 4] }, p: { alignment: 'justify', margin: [0, 0, 0, 6] } },
-    footer: (atual, total) => ({ columns: [{ text: 'Maktub Go · Contrato Gestão de Milhas', fontSize: 7.5, color: '#888' }, { text: `Página ${atual} de ${total}`, alignment: 'right', fontSize: 7.5, color: '#888' }], margin: [56, 20, 56, 0] })
+    defaultStyle: { font: F.texto, fontSize: 8.5, lineHeight: 1.32, color: COR.texto },
+    styles: { p: { margin: [0, 0, 0, 4.5] } },
+    // título de cláusula nunca fica sozinho no fim da página
+    pageBreakBefore: (no, seguintesNaPagina) => no.headlineLevel === 1 && seguintesNaPagina.length === 0,
+    header: (atual) => atual === 1 ? null : { margin: [52, 26, 52, 0], stack: [
+      { columns: [simbolo ? { image: simbolo, width: 12 } : { text: '' }, { text: 'CONTRATO DE GESTÃO DE MILHAS', fontSize: 6.2, characterSpacing: 1.4, color: COR.dourado, alignment: 'right', margin: [0, 3, 0, 0] }] },
+      { canvas: [{ type: 'line', x1: 0, y1: 6, x2: 491, y2: 6, lineWidth: 0.5, lineColor: COR.creme }] }] },
+    footer: (atual, total) => ({ margin: [52, 18, 52, 0], columns: [{ text: 'Maktub Go · Alfaiataria de Viagens', fontSize: 6.6, color: COR.cinza }, { text: `${atual} / ${total}`, alignment: 'right', fontSize: 6.6, color: COR.cinza }] })
   };
   return await new Promise((ok, erro) => { try { pm.createPdf(doc).getBlob(ok); } catch (e) { erro(e); } });
 }
