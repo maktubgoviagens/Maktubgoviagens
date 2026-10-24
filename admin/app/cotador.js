@@ -869,14 +869,16 @@ function resumoParc() {
     ${dobra('rpTab', 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
     <div class="sub" style="margin:6px 0 0">Link da InfinitePay: o total da linha escolhida, sem repassar a taxa, com o número de parcelas dela.</div></div>`;
 }
-// colar de novo com voos já na cotação: soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2) ou troca tudo
-let RAP_MODO = 'somar', RAP_PAXN = '';
+// colar de novo com voos já na cotação: sempre soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2); para tirar, o X de cada trecho
+let RAP_PAXN = '';
+// cada tela colada vira um grupo (_g) com o valor do site dela, para descontar quando o último trecho daquela tela sair
+const novoGrupo = (voos, de) => { const g = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); voos.forEach(v => { v._g = g; }); if (!S.site_g) S.site_g = {}; if (num(de)) S.site_g[g] = num(de); };
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
   if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
   const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1);
-  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}</div>`; }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
+  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><div style="flex:1;min-width:0"><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}</div><button type="button" data-xv="${S.voos.indexOf(v)}" aria-label="Tirar este trecho" style="flex:none;width:32px;height:32px;border:1px solid var(--linha);background:var(--papel, #fff);color:var(--tinta-2, inherit);font-size:18px;line-height:1;cursor:pointer;padding:0">×</button></div>`; }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
@@ -884,10 +886,9 @@ function editorRapida(P, X) {
     <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
-      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Ao colar outra tela:</div>
-        <div class="seg" id="rpModo" style="margin:4px 0"><button type="button" data-m="somar" class="${RAP_MODO === 'somar' ? 'on' : ''}">Somar os trechos</button><button type="button" data-m="trocar" class="${RAP_MODO === 'trocar' ? 'on' : ''}">Trocar tudo</button></div>
-        ${RAP_MODO === 'somar' ? `<label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div>` : ''}</div>` : ''}
-      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length && RAP_MODO === 'somar' ? 'Preencher e somar' : 'Preencher'}</button>
+      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Colar outra tela acrescenta os trechos novos. Para tirar um trecho, toque no X dele.</div>
+        <label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div></div>` : ''}
+      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length ? 'Preencher e somar' : 'Preencher'}</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
@@ -935,7 +936,7 @@ function editorRapida(P, X) {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    const somar = rapVoos().length > 0 && RAP_MODO === 'somar' && o.voos.length;
+    const somar = rapVoos().length > 0 && o.voos.length;
     if (somar) {
       const chave = (v) => [v.data, v.ocod, v.dcod, v.saida].join('|'), ja = new Set(S.voos.map(chave));
       const novos = o.voos.filter(v => !ja.has(chave(v)));
@@ -945,20 +946,37 @@ function editorRapida(P, X) {
       // trechos que já estavam ficam com a quantidade de antes; os novos com a informada (ou a lida da tela)
       S.voos.forEach(v => { if (!(parseInt(v.pax) > 0)) v.pax = String(totAntes); });
       novos.forEach(v => { completarVoo(v); v.pax = String(pn || parseInt(v.pax) || totAntes); });
+      novoGrupo(novos, o.de);
       S.voos = S.voos.concat(novos); rotular(S.voos);
       S.pessoas = String(Math.max(totAntes, ...S.voos.map(v => parseInt(v.pax) || 0)));
       if (o.de) S.de = String(Math.round(((num(S.de) || 0) + num(o.de)) * 100) / 100);
       RAP_PAXN = '';
-    } else if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
+    } else if (o.voos.length) { S.voos = o.voos; S.site_g = {}; novoGrupo(S.voos, o.de); S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
       const mx = Math.max(0, ...S.voos.map(v => parseInt(v.pax) || 0)); if (mx > (parseInt(S.pessoas) || 1)) S.pessoas = String(mx); }
     if (!somar && o.de) S.de = o.de; if (!somar && o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
     if (!o.voos.length) ABERTOS.add('rpVoosD');
     S.eco = undefined; editorRapida(P, X); X.aviso(!o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".' : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
-  if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  // tirar um trecho: confirma, desconta o valor do site da tela dele (quando sai o último trecho daquela tela) e apaga o valor da Maktub para digitar o novo total
+  const tirarTrecho = (i) => { const v = S.voos[i]; if (!v) return;
+    const g = v._g, irmaos = g ? S.voos.filter(x => x !== v && x._g === g).length : 0, val = g && S.site_g ? S.site_g[g] : 0;
+    const desc = [v.rotulo, ddmm(v.data), v.ocod && v.dcod ? v.ocod + ' → ' + v.dcod : ''].filter(Boolean).join(' · ');
+    const lin = [`Tirar o trecho ${desc}?`];
+    if (val && !irmaos) lin.push(`O valor do site desta tela (${brl(val)}) sai do total.`);
+    else if (val && irmaos) lin.push('O valor do site continua: ele é de uma tela com mais trechos e só sai quando o último deles for tirado.');
+    if (num(S.por)) lin.push('O valor da Maktub será apagado para você digitar o novo total.');
+    if (!confirm(lin.join('\n\n'))) return;
+    S.voos.splice(i, 1);
+    if (val && !irmaos) { S.de = String(Math.max(0, Math.round(((num(S.de) || 0) - val) * 100) / 100)); delete S.site_g[g]; }
+    if (!rapVoos().length) { S.de = ''; S.site_g = {}; }
+    if (num(S.de) <= 0) S.de = '';
+    S.por = ''; S.eco = undefined; rotular(S.voos); editorRapida(P, X);
+    const cp = $('fRap') && $('fRap').querySelector('[data-k="por"]'); if (cp) cp.focus();
+    X.aviso('Trecho removido. Digite o novo valor da Maktub.'); };
+  if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) tirarTrecho(+b.dataset.xv); };
+  if ($('rpLimpa')) $('rpLimpa').onclick = () => { if (!confirm('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.')) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
   if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
-  if ($('rpModo')) $('rpModo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; RAP_MODO = b.dataset.m; editorRapida(P, X); };
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)
   const bagTexto = () => { S.bagagem = textoBag(S.bag_mao, S.bag_desp); editorRapida(P, X); };
@@ -966,7 +984,7 @@ function editorRapida(P, X) {
   P.querySelectorAll('[data-bagd]').forEach(bt => bt.onclick = () => { S.bag_mao = bagMao(); S.bag_desp = Math.max(0, Math.min(9, bagDesp() + +bt.dataset.bagd)); bagTexto(); });
   $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
     S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
-  P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => { S.voos.splice(+b.dataset.tira.split('#')[1], 1); rotular(S.voos); editorRapida(P, X); });
+  P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => tirarTrecho(+b.dataset.tira.split('#')[1]));
   if ($('rpPrint')) $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
