@@ -290,14 +290,17 @@ function editor(P, X) {
   const f = $('fCot');
   f.addEventListener('toggle', (e) => { const d = e.target.dataset && e.target.dataset.d; if (d) { if (e.target.open) ABERTOS.add(d); else ABERTOS.delete(d); } }, true);
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; set(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+    const rk = k.match(/^(.*voos\.\d+)\.rotulo$/); if (rk) { const v = get(rk[1]); if (v) v._rotM = !!String(e.target.value).trim(); }
     const m = k.match(/^opcoes\.(\d+)\.(sites|cartao|parcelas|pix)$/); if (m && $('rv' + m[1])) $('rv' + m[1]).innerHTML = resumoValores(S.opcoes[+m[1]]);
     const vk = S.modelo === 'corp' && k.match(/^(.*voos\.\d+)\.(ocod|dcod|saida|chegada|data|tipo)$/);
     if (vk) { const v = get(vk[1]); completarVoo(v); ['onome', 'dnome', 'duracao'].forEach(c => { const el = f.querySelector(`[data-k="${vk[1]}.${c}"]`); if (el && el !== e.target && el.value !== (v[c] || '')) el.value = v[c] || ''; }); } });
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && e.target.dataset.k) set(e.target.dataset.k, e.target.value); if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
   f.addEventListener('click', (e) => {
     const cb = e.target.closest('[data-colar]'); if (cb) { (S.modelo === 'go' ? colarGo : colar)(P, X, cb.dataset.colar); return; }
-    const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]');
+    const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]'), xv = e.target.closest('[data-xvoo]');
     if (m) { mais(m.dataset.mais); editor(P, X); }
+    const vt = xv ? xv.dataset.xvoo : t && /(^|\.)voos#\d+$/.test(t.dataset.tira) ? t.dataset.tira : '';
+    if (vt) { tirarVooEd(P, X, vt); return; }
     if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
   });
   ligarPrint(P, X);
@@ -308,6 +311,18 @@ function editor(P, X) {
   $('acervoC').onclick = () => acervo(X);
   $('linkC').onclick = () => comCardNaCotacao(P, X, () => gerarLink(X));
   if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; delete S.historico; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
+}
+
+// X de um trecho na Maktub Go (opcoes.N.voos#j) ou na corporativa (voos#j, extras.N.voos#j)
+function tirarVooEd(P, X, alvo) {
+  const [lista, i] = alvo.split('#'), base = lista.replace(/\.?voos$/, ''), T = base ? get(base) : S, go = S.modelo === 'go';
+  const siteK = go ? 'sites' : 'de', porK = go ? 'cartao' : 'por', F = go ? FMT_GO : FMT_C;
+  if (!T || !tirarVoo(T, +i, siteK, porK, F)) return;
+  if (go) { const ds = T.voos.filter(F.ok).map(v => v.data).filter(Boolean).sort(); T.embarque = ds[0] || ''; T.retorno = ds.length > 1 ? ds[ds.length - 1] : ''; }
+  if (T.voos.some(F.ok)) rotular(T.voos, F.o, F.d);
+  editor(P, X);
+  const cp = X.$('fCot') && X.$('fCot').querySelector(`[data-k="${base ? base + '.' : ''}${porK}"]`); if (cp) cp.focus();
+  X.aviso('Trecho removido. Digite o novo valor da Maktub.');
 }
 
 function mais(a) {
@@ -329,7 +344,7 @@ function formGo(X) {
   const op = S.opcoes.map((o, i) => {
     const b = `opcoes.${i}`;
     const vs = o.voos.filter(v => v.origem || v.destino);
-    const resumoVoos = vs.length ? vs.map(v => `<div style="font-size:13px;padding:3px 0"><b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.origem)} ${h(v.saida)} → ${h(v.destino)} ${h(v.chegada)}${dmais(v) ? ` (+${dmais(v)})` : ''} · ${h(v.tipo)}</div>`).join('') : '<div class="sub" style="margin:0">Nenhum voo ainda. Cole a tela da companhia acima ou preencha abaixo.</div>';
+    const resumoVoos = vs.length ? `<div style="font-size:13px">${vs.map(v => linhaX(`<b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.origem)} ${h(v.saida)} → ${h(v.destino)} ${h(v.chegada)}${dmais(v) ? ` (+${dmais(v)})` : ''} · ${h(v.tipo)}`, `data-xvoo="${b}.voos#${o.voos.indexOf(v)}"`)).join('')}</div>` : '<div class="sub" style="margin:0">Nenhum voo ainda. Cole a tela da companhia acima ou preencha abaixo.</div>';
     return `<div class="grupo">${multi ? `Opção ${i + 1} ${btnTira('opcoes#' + i)}` : 'A viagem'}</div>
       ${multi ? inp(b + '.nome', 'Nome da opção', 'text', 'placeholder="Ex.: Voo direto + hotel no centro"') : ''}
       <div class="sub" style="margin-top:6px"><b>Voos</b></div>
@@ -373,7 +388,8 @@ function formGo(X) {
         ${inp(b + '.cta', 'Texto do botão')}`)}`;
   }).join('');
   return `${caixaColar('Copie a tela da companhia (dos horários até o subtotal) e cole. Voos, datas e valores entram sozinhos. Ou escreva curto, uma linha por voo:', '02/12 GIG 22:10 LIS 12:05 direto<br>15/12 LIS 10:20 GIG 17:40 direto<br>site 9.800 maktub 8.900<br>Várias opções: comece cada uma com "Opção 1", "Opção 2".')}
-    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">Preencher</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">${S.opcoes[0].voos.some(FMT_GO.ok) ? 'Preencher e somar' : 'Preencher'}</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    ${S.opcoes[0].voos.some(FMT_GO.ok) ? '<div class="sub" style="margin:2px 0 0">Colar outra tela acrescenta os trechos novos e soma o valor do site. Para tirar um trecho, toque no X dele.</div>' : ''}
     <div class="grupo">Cliente</div>
     ${duas(inp('para', 'Para quem', 'text', 'placeholder="Verônica e Helena"'), inp('pessoas', 'Pessoas', 'num'))}
     ${inp('destino', 'Destino', 'text', 'placeholder="Em branco: usa a cidade do voo de ida"')}
@@ -418,10 +434,12 @@ async function colarGo(P, X, modo) {
   if (!r.opcoes.length) { X.aviso('Não encontrei voos nem valores. Confira se tem horário e código do aeroporto (ex.: 22:10 GIG).'); return; }
   const conv = (v) => ({ ...VOO(), rotulo: v.rotulo, data: v.data, origem: cidadeDe(v.ocod) || v.ocod, saida: v.saida, destino: cidadeDe(v.dcod) || v.dcod, chegada: v.chegada,
     mais1: dmais(v), tipo: TIPO_GO[v.tipo] || 'Voo direto' });
+  let somou = false, dup = 0;
   const aplicar = (o, p) => {
-    if (p.voos.length) o.voos = p.voos.map(conv);
-    if (p.de) o.sites = p.de; if (p.por) o.cartao = p.por; if (p.nome && !o.nome) o.nome = p.nome;
-    const ds = o.voos.map(v => v.data).filter(Boolean).sort();
+    const rs = somarVoos(o, p.voos.map(conv), p.de, p.por, 'sites', 'cartao', FMT_GO);
+    if (rs.somou) somou = true; if (rs.somou && !rs.n) dup++;
+    if (p.nome && !o.nome) o.nome = p.nome;
+    const ds = o.voos.filter(FMT_GO.ok).map(v => v.data).filter(Boolean).sort();
     if (ds.length) { o.embarque = ds[0]; o.retorno = ds.length > 1 ? ds[ds.length - 1] : o.retorno; }
   };
   const temVoo = S.opcoes[0].voos.some(v => v.origem);
@@ -432,7 +450,8 @@ async function colarGo(P, X, modo) {
   if (!S.destino) { const v = S.opcoes[0].voos.find(v => v.destino); if (v) S.destino = v.destino; }
   editor(P, X);
   const falta = S.opcoes.some(o => !num(o.cartao));
-  X.aviso(falta ? 'Voos preenchidos. Digite o valor Maktub de cada opção e, se tiver, escolha o hotel.' : 'Preenchido. Confira, escolha o hotel e gere o link.');
+  if (dup && dup === r.opcoes.filter(p => p.voos.length).length) { X.aviso('Esses trechos já estão na cotação.'); return; }
+  X.aviso(somou ? 'Trechos acrescentados e valor do site somado. Confira o valor Maktub.' : falta ? 'Voos preenchidos. Digite o valor Maktub de cada opção e, se tiver, escolha o hotel.' : 'Preenchido. Confira, escolha o hotel e gere o link.');
 }
 
 function precos(o) {
@@ -446,6 +465,11 @@ function resumoValores(o) {
   return `<div class="config" style="margin:6px 0">${p.parc}x de ${brl(p.vparc)} no cartão${p.pix ? ` · ${brl(p.pix)} no Pix` : ''}${p.sites ? (p.economia ? ` · economia de ${brl(p.economia)} sobre os sites` : ' · atenção: valor da Maktub não está abaixo dos sites') : ' · sem ancoragem: a economia não vai aparecer'}</div>`;
 }
 
+function listaCorp(pre) {
+  const l = get(pre + 'voos') || [], vs = ordenarVoos(l.filter(FMT_C.ok));
+  if (!vs.length) return '';
+  return `<div class="config" style="margin:6px 0;font-size:13px">${vs.map(v => linhaX(`<b>${h(v.rotulo || 'Voo')}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}`, `data-xvoo="${pre}voos#${l.indexOf(v)}"`)).join('')}</div>`;
+}
 function voosCorp(pre) {
   return `${get(pre + 'voos').map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira(pre + 'voos#' + j)}
       ${duas(inp(`${pre}voos.${j}.rotulo`, 'Rótulo'), inp(`${pre}voos.${j}.data`, 'Data', 'date'))}
@@ -461,7 +485,8 @@ function formCorp() {
   const multi = S.extras.length > 0;
   return `<div class="config" style="margin:6px 0 4px"><b>Colar e preencher</b><br>Copie a tela da companhia (do horário até o subtotal) e cole aqui. Ou escreva curto, uma linha por voo:<br><span style="font-family:monospace;font-size:12px">02/12 GIG 12:20 SCL 17:00 direto<br>09/12 SCL 14:10 GIG 21:25 1 parada<br>site 1.670,93 maktub 1.655</span><br>Para várias opções, comece cada uma com "Opção 1", "Opção 2".</div>
     <label class="fl"><textarea id="colaTxt" rows="5" placeholder="Cole aqui"></textarea></label>
-    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">Preencher</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    <div class="botoes4"><button type="button" class="zap" data-colar="tudo">${(S.voos || []).some(FMT_C.ok) ? 'Preencher e somar' : 'Preencher'}</button><button type="button" class="sec" data-colar="nova">Colar como nova opção</button></div>
+    ${(S.voos || []).some(FMT_C.ok) ? '<div class="sub" style="margin:2px 0 0">Colar outra tela acrescenta os trechos novos e soma o valor do site. Para tirar um trecho, toque no X dele.</div>' : ''}
     <div class="grupo">Cotação</div>
     ${duas(inp('codigo', 'Código', 'text', `placeholder="MC-${hoje().slice(8, 10)}${hoje().slice(5, 7)}-001"`), inp('validade', 'Válida somente em', 'date'))}
     ${duas(inp('passageiro', 'Passageiro', 'text', 'placeholder="Victor"'), inp('pessoas', 'Pessoas', 'num'))}
@@ -470,10 +495,12 @@ function formCorp() {
     ${sel('marca', 'Marca no topo', ['Maktub Corporativo', 'Maktub Go'])}
     <div class="grupo">${multi ? 'Opção 1' : 'Voos'}</div>
     ${multi ? inp('nome1', 'Nome da Opção 1', 'text', 'placeholder="Ida direta, volta com 1 parada"') : ''}
+    ${listaCorp('')}
     ${voosCorp('')}
     ${duas(inp('de', 'De (valor no site)', 'num', 'placeholder="1.670,93"'), inp('por', 'Por (valor Maktub)', 'num', 'placeholder="1.655,00"'))}
     ${S.extras.map((o, i) => `<div class="grupo">Opção ${i + 2} ${btnTira('extras#' + i)}</div>
     ${inp(`extras.${i}.nome`, `Nome da Opção ${i + 2}`, 'text', 'placeholder="Ida e volta em voo direto"')}
+    ${listaCorp(`extras.${i}.`)}
     ${voosCorp(`extras.${i}.`)}
     ${duas(inp(`extras.${i}.de`, 'De (valor no site)', 'num', 'placeholder="2.154,06"'), inp(`extras.${i}.por`, 'Por (valor Maktub)', 'num', 'placeholder="2.100,00"'))}`).join('')}
     ${S.extras.length < 2 ? btnMais('extras|corpop', `+ Opção ${S.extras.length + 2} (copia os voos da anterior)`) : '<div class="sub">Máximo de 3 opções por cotação.</div>'}
@@ -525,12 +552,17 @@ async function colar(P, X, modo) {
   const r = await lerColado(txt);
   if (!r.opcoes.length || !r.opcoes.some(o => o.voos.length)) { X.aviso('Não encontrei voos no texto. Confira se tem horário e código do aeroporto (ex.: 12:20 GIG).'); return; }
   if (!S.extras) S.extras = [];
-  const ops = modo === 'nova' && (S.voos || []).some(v => v.ocod) ? r.opcoes.map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por })) : null;
+  const ops = modo === 'nova' && (S.voos || []).some(v => v.ocod) ? r.opcoes.map(o => { const n = { nome: o.nome, voos: o.voos, de: o.de, por: o.por }; marcarGrupo(n, n.voos, o.de); ordenarVoos(n.voos); return n; }) : null;
+  let somou = false, dup = 0;
   if (ops) { S.extras = S.extras.concat(ops).slice(0, 2); }
   else {
+    // colar de novo acrescenta os trechos novos em cada opção (não troca tudo)
     const [p1, ...resto] = r.opcoes;
-    S.voos = p1.voos.length ? p1.voos : S.voos; S.de = p1.de || S.de; S.por = p1.por || S.por; S.nome1 = p1.nome || S.nome1 || '';
-    S.extras = resto.slice(0, 2).map(o => ({ nome: o.nome, voos: o.voos, de: o.de, por: o.por }));
+    const rs = somarVoos(S, p1.voos, p1.de, p1.por, 'de', 'por', FMT_C); if (rs.somou) { somou = true; if (!rs.n && p1.voos.length) dup++; }
+    S.nome1 = S.nome1 || p1.nome || '';
+    resto.slice(0, 2).forEach((o, i) => { if (!S.extras[i]) S.extras[i] = { nome: '', voos: [], de: '', por: '' };
+      const rx = somarVoos(S.extras[i], o.voos, o.de, o.por, 'de', 'por', FMT_C); if (rx.somou) { somou = true; if (!rx.n && o.voos.length) dup++; }
+      if (o.nome && !S.extras[i].nome) S.extras[i].nome = o.nome; });
   }
   if (r.cliente && !S.passageiro) S.passageiro = r.cliente;
   if (r.cia && !S.cia) S.cia = r.cia;
@@ -539,7 +571,8 @@ async function colar(P, X, modo) {
   if (v0 && !S.destino) S.destino = cidadeDe(v0.dcod) || '';
   editor(P, X);
   const faltaPor = [S.por].concat(S.extras.map(o => o.por)).some(x => !x);
-  X.aviso(faltaPor ? 'Preenchido. Confira e digite o valor da Maktub (Por) de cada opção.' : 'Preenchido. Confira e gere o link.');
+  if (dup && dup === r.opcoes.filter(o => o.voos.length).length) { X.aviso('Esses trechos já estão na cotação.'); return; }
+  X.aviso(somou ? 'Trechos acrescentados e valor do site somado. Confira o valor da Maktub (Por).' : faltaPor ? 'Preenchido. Confira e digite o valor da Maktub (Por) de cada opção.' : 'Preenchido. Confira e gere o link.');
 }
 /* nomes que nunca podem virar link de cotação: páginas e pastas do site e nomes que o site pode usar */
 const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'c', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'trabalhe-conosco', 'viagens', 'index', 'sitemap', 'robots', '404',
@@ -831,14 +864,53 @@ const VOO_RAP = () => ({ rotulo: '', data: '', ocod: '', onome: '', saida: '', d
 // passageiros de um trecho só aparecem quando são diferentes do total da cotação
 const paxTrecho = (v, total) => { const n = parseInt(v && v.pax) || 0; return n > 0 && n !== total ? n : 0; };
 // rótulos automáticos: Ida, Volta (ou Volta 1, Volta 2 quando a volta é em datas diferentes), Trecho N. O que foi digitado à mão fica.
-function rotular(vs) {
+function rotular(vs, ok = 'ocod', dk = 'dcod') {
   ordenarVoos(vs);
-  const ori = vs[0] && vs[0].ocod, n = vs.length;
+  const ori = vs[0] && vs[0][ok], n = vs.length;
   // uma ida e uma ou mais voltas para a origem (ex.: volta em datas diferentes): Ida, Volta 1, Volta 2
-  const voltas = vs.slice(1), soVoltas = n > 1 && ori && voltas.every(v => v.dcod === ori);
+  const voltas = vs.slice(1), soVoltas = n > 1 && ori && voltas.every(v => v[dk] === ori);
   vs.forEach((v, i) => { if (v._rotM) return;
     v.rotulo = n === 1 ? 'Ida' : soVoltas ? (i === 0 ? 'Ida' : voltas.length > 1 ? 'Volta ' + i : 'Volta') : 'Trecho ' + (i + 1); });
 }
+/* ===== trechos em todas as cotações: colar sempre soma, X tira um trecho ===== */
+// formato dos voos: rápida e corporativa (ocod/dcod) ou Maktub Go (origem/destino)
+const FMT_C = { ok: v => !!(v && v.ocod), chave: v => [v.data, v.ocod, v.dcod, v.saida].join('|'), desc: v => [v.rotulo, ddmm(v.data), v.ocod && v.dcod ? v.ocod + ' → ' + v.dcod : ''].filter(Boolean).join(' · '), o: 'ocod', d: 'dcod' };
+const FMT_GO = { ok: v => !!(v && (v.origem || v.destino)), chave: v => [v.data, v.origem, v.destino, v.saida].join('|'), desc: v => [v.rotulo, ddmm(v.data), v.origem && v.destino ? v.origem + ' → ' + v.destino : ''].filter(Boolean).join(' · '), o: 'origem', d: 'destino' };
+// cada tela colada vira um grupo (_g) com o valor do site dela, para descontar quando o último trecho daquela tela sair
+function marcarGrupo(T, voos, de) { const g = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); voos.forEach(v => { v._g = g; }); if (!T.site_g) T.site_g = {}; if (num(de)) T.site_g[g] = num(de); }
+// cola na opção T: sem voos, entram os da tela; com voos, acrescenta só os trechos novos e soma o valor do site (o valor da Maktub continua um total único)
+function somarVoos(T, novosBrutos, de, por, siteK, porK, F) {
+  if (!novosBrutos.length) { if (de) T[siteK] = de; if (por) T[porK] = por; return { n: 0, somou: false }; }
+  const atuais = (T.voos || []).filter(F.ok);
+  if (!atuais.length) { T.voos = novosBrutos; T.site_g = {}; marcarGrupo(T, T.voos, de); if (de) T[siteK] = de; if (por) T[porK] = por; ordenarVoos(T.voos); return { n: novosBrutos.length, somou: false }; }
+  const ja = new Set(atuais.map(F.chave)), novos = novosBrutos.filter(v => !ja.has(F.chave(v)));
+  if (!novos.length) return { n: 0, somou: true };
+  marcarGrupo(T, novos, de);
+  T.voos = atuais.concat(novos); rotular(T.voos, F.o, F.d);
+  if (num(de)) T[siteK] = String(Math.round(((num(T[siteK]) || 0) + num(de)) * 100) / 100);
+  if (por && !num(T[porK])) T[porK] = por;
+  return { n: novos.length, somou: true };
+}
+// tira o trecho i da opção T com confirmação: desconta o site da tela dele (quando sai o último trecho daquela tela) e apaga o valor da Maktub
+function tirarVoo(T, i, siteK, porK, F) {
+  const v = T.voos[i]; if (!v) return false;
+  if (!F.ok(v)) { T.voos.splice(i, 1); return true; }
+  const g = v._g, irmaos = g ? T.voos.filter(x => x !== v && x._g === g && F.ok(x)).length : 0, val = g && T.site_g ? T.site_g[g] : 0;
+  const lin = [`Tirar o trecho ${F.desc(v)}?`];
+  if (val && !irmaos) lin.push(`O valor do site desta tela (${brl(val)}) sai do total.`);
+  else if (val && irmaos) lin.push('O valor do site continua: ele é de uma tela com mais trechos e só sai quando o último deles for tirado.');
+  else if (num(T[siteK]) && T.voos.filter(F.ok).length > 1) lin.push('O valor do site não muda sozinho. Confira depois.');
+  if (num(T[porK])) lin.push('O valor da Maktub será apagado para você digitar o novo total.');
+  if (!confirm(lin.join('\n\n'))) return false;
+  T.voos.splice(i, 1);
+  if (val && !irmaos) { T[siteK] = String(Math.max(0, Math.round(((num(T[siteK]) || 0) - val) * 100) / 100)); delete T.site_g[g]; }
+  if (!T.voos.some(F.ok)) { T[siteK] = ''; T.site_g = {}; }
+  if (num(T[siteK]) <= 0) T[siteK] = '';
+  T[porK] = '';
+  return true;
+}
+const btnX = (attr) => `<button type="button" ${attr} aria-label="Tirar este trecho" style="flex:none;width:32px;height:32px;border:1px solid var(--linha);background:var(--papel, #fff);color:var(--tinta-2, inherit);font-size:18px;line-height:1;cursor:pointer;padding:0">×</button>`;
+const linhaX = (conteudo, attr) => `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><div style="flex:1;min-width:0">${conteudo}</div>${btnX(attr)}</div>`;
 function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
 function rapParaCorp() {
@@ -869,14 +941,14 @@ function resumoParc() {
     ${dobra('rpTab', 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
     <div class="sub" style="margin:6px 0 0">Link da InfinitePay: o total da linha escolhida, sem repassar a taxa, com o número de parcelas dela.</div></div>`;
 }
-// colar de novo com voos já na cotação: soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2) ou troca tudo
-let RAP_MODO = 'somar', RAP_PAXN = '';
+// colar de novo com voos já na cotação: sempre soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2); para tirar, o X de cada trecho
+let RAP_PAXN = '';
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
   if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
   const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1);
-  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return `<div><b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}</div>`; }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
+  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return linhaX(`<b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}`, `data-xv="${S.voos.indexOf(v)}"`); }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
@@ -884,10 +956,9 @@ function editorRapida(P, X) {
     <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
-      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Ao colar outra tela:</div>
-        <div class="seg" id="rpModo" style="margin:4px 0"><button type="button" data-m="somar" class="${RAP_MODO === 'somar' ? 'on' : ''}">Somar os trechos</button><button type="button" data-m="trocar" class="${RAP_MODO === 'trocar' ? 'on' : ''}">Trocar tudo</button></div>
-        ${RAP_MODO === 'somar' ? `<label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div>` : ''}</div>` : ''}
-      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length && RAP_MODO === 'somar' ? 'Preencher e somar' : 'Preencher'}</button>
+      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Colar outra tela acrescenta os trechos novos. Para tirar um trecho, toque no X dele.</div>
+        <label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div></div>` : ''}
+      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length ? 'Preencher e somar' : 'Preencher'}</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
@@ -935,7 +1006,7 @@ function editorRapida(P, X) {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
-    const somar = rapVoos().length > 0 && RAP_MODO === 'somar' && o.voos.length;
+    const somar = rapVoos().length > 0 && o.voos.length;
     if (somar) {
       const chave = (v) => [v.data, v.ocod, v.dcod, v.saida].join('|'), ja = new Set(S.voos.map(chave));
       const novos = o.voos.filter(v => !ja.has(chave(v)));
@@ -945,20 +1016,26 @@ function editorRapida(P, X) {
       // trechos que já estavam ficam com a quantidade de antes; os novos com a informada (ou a lida da tela)
       S.voos.forEach(v => { if (!(parseInt(v.pax) > 0)) v.pax = String(totAntes); });
       novos.forEach(v => { completarVoo(v); v.pax = String(pn || parseInt(v.pax) || totAntes); });
+      marcarGrupo(S, novos, o.de);
       S.voos = S.voos.concat(novos); rotular(S.voos);
       S.pessoas = String(Math.max(totAntes, ...S.voos.map(v => parseInt(v.pax) || 0)));
       if (o.de) S.de = String(Math.round(((num(S.de) || 0) + num(o.de)) * 100) / 100);
       RAP_PAXN = '';
-    } else if (o.voos.length) { S.voos = o.voos; S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
+    } else if (o.voos.length) { S.voos = o.voos; S.site_g = {}; marcarGrupo(S, S.voos, o.de); S.voos.forEach(v => completarVoo(v)); rotular(S.voos);
       const mx = Math.max(0, ...S.voos.map(v => parseInt(v.pax) || 0)); if (mx > (parseInt(S.pessoas) || 1)) S.pessoas = String(mx); }
     if (!somar && o.de) S.de = o.de; if (!somar && o.por) S.por = o.por; if (r.cia) S.cia = r.cia; if (r.cliente && !S.cliente) S.cliente = r.cliente;
     if (!o.voos.length) ABERTOS.add('rpVoosD');
     S.eco = undefined; editorRapida(P, X); X.aviso(!o.voos.length ? 'Não achei os voos no texto. Digite à mão em "Digitar voo à mão".' : num(S.por) ? 'Preenchido. Confira e envie.' : 'Preenchido. Digite o valor com a Maktub.');
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
-  if ($('rpLimpa')) $('rpLimpa').onclick = () => { S.voos = []; editorRapida(P, X); };
+  // tirar um trecho: confirma, desconta o valor do site da tela dele (quando sai o último trecho daquela tela) e apaga o valor da Maktub para digitar o novo total
+  const tirarTrecho = (i) => { if (!tirarVoo(S, i, 'de', 'por', FMT_C)) return;
+    S.eco = undefined; rotular(S.voos); editorRapida(P, X);
+    const cp = $('fRap') && $('fRap').querySelector('[data-k="por"]'); if (cp) cp.focus();
+    X.aviso('Trecho removido. Digite o novo valor da Maktub.'); };
+  if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) tirarTrecho(+b.dataset.xv); };
+  if ($('rpLimpa')) $('rpLimpa').onclick = () => { if (!confirm('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.')) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
   if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
-  if ($('rpModo')) $('rpModo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; RAP_MODO = b.dataset.m; editorRapida(P, X); };
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)
   const bagTexto = () => { S.bagagem = textoBag(S.bag_mao, S.bag_desp); editorRapida(P, X); };
@@ -966,7 +1043,7 @@ function editorRapida(P, X) {
   P.querySelectorAll('[data-bagd]').forEach(bt => bt.onclick = () => { S.bag_mao = bagMao(); S.bag_desp = Math.max(0, Math.min(9, bagDesp() + +bt.dataset.bagd)); bagTexto(); });
   $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
     S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
-  P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => { S.voos.splice(+b.dataset.tira.split('#')[1], 1); rotular(S.voos); editorRapida(P, X); });
+  P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => tirarTrecho(+b.dataset.tira.split('#')[1]));
   if ($('rpPrint')) $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
