@@ -504,7 +504,7 @@ import * as CTR from '/admin/app/contrato.js?v=2';
 import * as FORN from '/admin/app/fornecedores.js?v=9';
 import * as COT from '/admin/app/cotador.js?v=47';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
-import * as VENDA from '/admin/app/venda.js?v=21';
+import * as VENDA from '/admin/app/venda.js?v=22';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=15';
 import * as CX from '/admin/app/caixa.js?v=1';
@@ -2400,12 +2400,16 @@ function blocoPagamentos(L) {
   const F = L.filter(r => r.resultado === 'Fechou');
   const val = (r) => { const v = (r.itens || []).reduce((a, x) => a + (+x.venda || 0), 0); return v || +r.valor_fechado || 0; };
   const taxa = (r) => r.fech && r.fech.forma === 'cartao' ? +(r.fech.taxa_pct != null ? r.fech.taxa_pct : COT.taxaCartao(+r.fech.parcelas || 1)) || 0 : 0;
-  const pix = F.filter(r => r.fech && r.fech.forma === 'pix'), car = F.filter(r => r.fech && r.fech.forma === 'cartao' && +r.fech.parcelas), sem = F.length - pix.length - car.length;
+  const pix = F.filter(r => r.fech && r.fech.forma === 'pix'), car0 = F.filter(r => r.fech && r.fech.forma === 'cartao' && +r.fech.parcelas);
+  // Pix + Cartão: a parte do cartão conta no Cartão (e no custo da maquininha), a parte do Pix soma no valor do Pix
+  const mis = F.filter(r => r.fech && r.fech.forma === 'pix_cartao' && +r.fech.parcelas && +r.fech.cartao_liq), car = car0.concat(mis), sem = F.length - pix.length - car.length;
+  const ehMis = (r) => r.fech.forma === 'pix_cartao';
   if (!pix.length && !car.length) return `<section class="bloco"><h2>Pagamentos</h2><div class="vazio">Sem vendas fechadas com a forma de pagamento registrada no período.${sem ? ` ${sem} ${sem === 1 ? 'venda fechada' : 'vendas fechadas'} sem a forma marcada.` : ''}</div></section>`;
   // taxa: com o total do cartão registrado, é o total menos o que entrou; nas vendas antigas, estimada pelo percentual
-  const tx = (r) => +r.fech.bruto ? Math.max(+r.fech.bruto - val(r), 0) : val(r) * taxa(r) / 100;
-  const vPix = pix.reduce((a, r) => a + val(r), 0), vCar = car.reduce((a, r) => a + (+r.fech.bruto || val(r)), 0), custo = car.reduce((a, r) => a + tx(r), 0);
-  const porN = {}; car.forEach(r => { const n = +r.fech.parcelas; const g = porN[n] = porN[n] || { q: 0, v: 0, c: 0 }; g.q++; g.v += +r.fech.bruto || val(r); g.c += tx(r); });
+  const tx = (r) => ehMis(r) ? Math.max((+r.fech.bruto || 0) - (+r.fech.cartao_liq || 0), 0) : +r.fech.bruto ? Math.max(+r.fech.bruto - val(r), 0) : val(r) * taxa(r) / 100;
+  const vCartao = (r) => ehMis(r) ? (+r.fech.bruto || +r.fech.cartao_liq || 0) : (+r.fech.bruto || val(r));
+  const vPix = pix.reduce((a, r) => a + val(r), 0) + mis.reduce((a, r) => a + (+r.fech.pix_valor || 0), 0), vCar = car.reduce((a, r) => a + vCartao(r), 0), custo = car.reduce((a, r) => a + tx(r), 0);
+  const porN = {}; car.forEach(r => { const n = +r.fech.parcelas; const g = porN[n] = porN[n] || { q: 0, v: 0, c: 0 }; g.q++; g.v += vCartao(r); g.c += tx(r); });
   const tot = pix.length + car.length;
   return `<section class="bloco"><h2>Pagamentos</h2>
     <div class="numeros" style="margin-top:0">
@@ -2414,6 +2418,7 @@ function blocoPagamentos(L) {
       <div class="num destaque"><div class="l">Custo da maquininha</div><div class="v">${brlC(custo)}</div><div class="d">${vCar ? pct(custo / vCar * 100) + ' do vendido no cartão' : 'no período'}</div></div>
     </div>
     ${Object.keys(porN).length ? `<div class="sub" style="margin:10px 0 2px">Cartão por parcelas</div>${Object.entries(porN).sort((a, b) => a[0] - b[0]).map(([n, g]) => `<div class="lin"><span>${n}x · ${plural(g.q, 'venda', 'vendas')}</span><span>${brl2(g.v)} · taxa ${brl2(g.c)}</span></div>`).join('')}` : ''}
+    ${mis.length ? `<div class="sub">${mis.length} ${mis.length === 1 ? 'venda em Pix + Cartão, contada' : 'vendas em Pix + Cartão, contadas'} no Cartão; a parte do Pix soma no valor do Pix.</div>` : ''}
     ${sem ? `<div class="sub">${sem} ${sem === 1 ? 'venda fechada' : 'vendas fechadas'} no período sem a forma de pagamento marcada no fechamento.</div>` : ''}
   </section>`;
 }
@@ -3321,7 +3326,7 @@ let CF_CONF = null;
 function telaConferir(P) {
   const qd = (r) => (r.fech || {}).enviado_em || r.data || '';
   const val = (r) => +r.valor_fechado || (r.itens || []).reduce((t, x) => t + (+x.venda || 0), 0);
-  const forma = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
+  const forma = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix_cartao' ? `Pix + Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
   const L = compParaConferir().sort((a, b) => String(qd(a)).localeCompare(String(qd(b))));
   const R = D.reunioes.filter(r => r.fech && r.fech.comprovante && r.fech.conferido && r.fech.conferido_em && Date.now() - new Date(r.fech.conferido_em) < 30 * 864e5).sort((a, b) => String(b.fech.conferido_em).localeCompare(String(a.fech.conferido_em)));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Início</button><h1 class="titulo" style="margin-top:6px">Comprovantes para <em>conferir</em></h1>
@@ -3332,7 +3337,7 @@ function telaConferir(P) {
     ${R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Conferidos nos últimos 30 dias (${R.length})</summary>${R.map(r => `<div class="lin" style="align-items:center"><span>${VENDA.numCard(r) ? VENDA.numCard(r) + ' · ' : ''}${esc(r.cliente)}<small style="display:block;color:var(--tinta-3)">conferido em ${new Date(r.fech.conferido_em).toLocaleDateString('pt-BR')}${r.fech.conferido_por && nomeTime(r.fech.conferido_por) ? ' por ' + esc(nomeTime(r.fech.conferido_por)) : ''}</small></span><span style="white-space:nowrap">${brl2(val(r))} <button class="sec" data-cfdesf="${r.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : ''}
     <div class="lista">${L.length ? L.map(r => { const F = r.fech || {}; return `<div class="card">
       <div class="cab"><div><button class="nome" data-cfab="${r.id}" style="background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)} ›</button>${forma(F) ? `<span class="tag ouro">${esc(forma(F))}</span>` : ''}</div><span class="quando">${qd(r) ? dataCurta(new Date(qd(r))) : ''}</span></div>
-      <div class="info"><div><span>Valor:</span> ${brl2(val(r))}${F.forma === 'cartao' && +F.bruto ? ' · cliente pagou ' + brl2(F.bruto) + ' no cartão' : ''}</div>
+      <div class="info"><div><span>Valor:</span> ${brl2(val(r))}${F.forma === 'cartao' && +F.bruto ? ' · cliente pagou ' + brl2(F.bruto) + ' no cartão' : ''}${F.forma === 'pix_cartao' ? ' · ' + brl2(F.pix_valor) + ' no Pix + ' + brl2(F.cartao_liq) + ' do cartão (cliente pagou ' + brl2(F.bruto) + ')' : ''}</div>
         ${r.trecho ? `<div>${esc(r.trecho)}</div>` : ''}
         ${nomeTime(r.responsavel_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(r.responsavel_id))}</div>` : ''}</div>
       <div class="botoes4" style="margin-top:10px"><button class="sec" data-cfver="${esc(F.comprovante)}">Ver comprovante</button><button class="zap" data-cfok="${r.id}">Conferido</button></div>

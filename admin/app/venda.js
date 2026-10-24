@@ -81,6 +81,11 @@ export function pendenciasFechamento(r) {
   if (!F.forma) f.push('forma de pagamento');
   // sem as parcelas não dá para medir o custo da maquininha
   if (F.forma === 'cartao' && !+F.parcelas) f.push('em quantas vezes no cartão');
+  if (F.forma === 'pix_cartao') {
+    if (!+F.pix_valor) f.push('valor recebido no Pix');
+    if (!+F.cartao_liq) f.push('valor recebido no cartão');
+    if (!+F.parcelas) f.push('em quantas vezes no cartão');
+  }
   if (!F.comprovante) f.push('comprovante de pagamento');
   IT.filter(x => !enviado(x)).forEach(x => { const p = pendenciasItem(x); if (p.length) f.push(`${x.produto}: ${p.join(', ')}`); });
   return f;
@@ -356,13 +361,25 @@ export function editorFechamento(X, el, F, ctx) {
   // no cartão o cliente paga o total da maquininha, mas a venda (o que vai para a planilha) é sempre o que entra na conta
   const liq = () => F.forma === 'cartao' && +F.bruto ? Math.round(+F.bruto * (100 - (+F.taxa_pct || 0))) / 100 : null;
   const aplica = (v) => { if (v && ctx.aplicarTotal && Math.abs(v - ctx.total().v) > 0.009) ctx.aplicarTotal(v); };
+  const num = (v) => { v = String(v ?? '').trim(); return v ? Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v) || null : null; };
+  // Pix + Cartão: digita o que caiu no Pix, o que caiu do cartão e as parcelas; a taxa vem da tabela cadastrada
+  // e o app calcula quanto o cliente pagou no cartão e quanto ficou na maquininha
+  const combo = () => {
+    const n = +F.parcelas || 0, tx = n && ctx.taxa ? +ctx.taxa(n) || 0 : 0, l = +F.cartao_liq || 0, p = +F.pix_valor || 0;
+    const b = l && tx < 100 ? Math.round(l / (1 - tx / 100) * 100) / 100 : 0;
+    return { n, tx, l, p, b, perda: b ? Math.round((b - l) * 100) / 100 : 0 };
+  };
   const desenha = () => {
     const t = ctx.total();
-    const cartao = F.forma === 'cartao', lq = liq();
+    const cartao = F.forma === 'cartao', misto = F.forma === 'pix_cartao', lq = liq(), C = combo();
     el.innerHTML = `<div class="bloco" style="margin:8px 0;padding:10px 12px">
       <div class="sub" style="margin:0">Forma de pagamento${F.forma ? '' : ': escolha primeiro, o valor da venda se ajusta sozinho'}</div>
-      <div class="seg" style="margin:6px 0 8px"><button type="button" data-fp="pix" class="${F.forma === 'pix' ? 'on' : ''}">Pix</button><button type="button" data-fp="cartao" class="${cartao ? 'on' : ''}">Cartão</button></div>
-      ${cartao ? `<div class="duas-col"><label class="fl"><span>Em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="4"></label><label class="fl"><span>Total no cartão (cliente paga)</span><input id="fBruto" inputmode="decimal" value="${X.esc(F.bruto || '')}" placeholder="0,00"></label></div>
+      <div class="seg" style="margin:6px 0 8px"><button type="button" data-fp="pix" class="${F.forma === 'pix' ? 'on' : ''}">Pix</button><button type="button" data-fp="cartao" class="${cartao ? 'on' : ''}">Cartão</button><button type="button" data-fp="pix_cartao" class="${misto ? 'on' : ''}">Pix + Cartão</button></div>
+      ${misto ? `<div class="duas-col"><label class="fl"><span>Recebido no Pix</span><input id="fMPix" inputmode="decimal" value="${X.esc(F.pix_valor || '')}" placeholder="0,00"></label><label class="fl"><span>Recebido do cartão (caiu na conta)</span><input id="fMCar" inputmode="decimal" value="${X.esc(F.cartao_liq || '')}" placeholder="0,00"></label></div>
+      <div class="duas-col"><label class="fl"><span>Cartão em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="4"></label><div></div></div>
+      <div class="sub" style="margin:0 0 6px">${C.n && C.l ? `Cliente pagou ${X.brl2(C.b)} no cartão em ${C.n}x de ${X.brl2(C.b / C.n)}. Taxa da maquininha ${String(C.tx).replace('.', ',')}%: ${X.brl2(C.perda)} ficou no cartão.` : 'Com o valor recebido do cartão e as parcelas, o app calcula a taxa pela tabela cadastrada.'}</div>
+      <label class="fl"><span>Dados do Pix para o cliente</span><input id="fPix" value="${X.esc(F.pix || pixGuardado())}" placeholder="Chave Pix e nome do recebedor"></label>
+      <label class="fl"><span>Link de pagamento do cartão</span><input id="fLink" inputmode="url" value="${X.esc(F.link || '')}" placeholder="Cole o link gerado"></label>` : cartao ? `<div class="duas-col"><label class="fl"><span>Em quantas vezes</span><input id="fParc" inputmode="numeric" value="${X.esc(F.parcelas || '')}" placeholder="4"></label><label class="fl"><span>Total no cartão (cliente paga)</span><input id="fBruto" inputmode="decimal" value="${X.esc(F.bruto || '')}" placeholder="0,00"></label></div>
       <div class="sub" id="fCartaoInfo" style="margin:0 0 6px">${F.parcelas && +F.bruto ? `${F.parcelas}x de ${X.brl2(F.bruto / F.parcelas)}. Taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${X.brl2(F.bruto - lq)}.` : 'Com as parcelas e o total, o app calcula o que entra na conta.'}</div>
       <label class="fl"><span>Link de pagamento do cartão</span><input id="fLink" inputmode="url" value="${X.esc(F.link || '')}" placeholder="Cole o link gerado"></label>` : F.forma === 'pix' ? `<label class="fl"><span>Dados do Pix para o cliente</span><input id="fPix" value="${X.esc(F.pix || pixGuardado())}" placeholder="Chave Pix e nome do recebedor"></label>` : ''}
       <div class="lin" style="margin-top:6px"><span>Entra na conta (vai para a planilha)</span><b>${X.brl2(t.v)}</b></div>
@@ -377,8 +394,15 @@ export function editorFechamento(X, el, F, ctx) {
       F.taxa_pct = F.forma === 'cartao' && n && ctx.taxa ? ctx.taxa(n) : (F.forma === 'pix' ? 0 : F.taxa_pct);
       if (F.forma === 'cartao') { const alvo = ctx.alvo ? ctx.alvo('cartao', n) : null; if (!F.bruto_manual) F.bruto = alvo || null; aplica(liq()); }
       else if (F.forma === 'pix') { F.bruto = null; F.bruto_manual = false; aplica(ctx.alvo ? ctx.alvo('pix', 0) : null); }
+      else if (F.forma === 'pix_cartao') {
+        // entra na conta = Pix + o que caiu do cartão; o total que o cliente pagou no cartão fica guardado para o custo da maquininha
+        const c = combo(); F.taxa_pct = c.tx; F.bruto = c.b || null; F.bruto_manual = false;
+        if (c.p + c.l > 0) aplica(Math.round((c.p + c.l) * 100) / 100);
+      }
       desenha();
     };
+    const mp = el.querySelector('#fMPix'); if (mp) { mp.oninput = () => { F.pix_valor = num(mp.value); }; mp.onchange = () => ajusta(); }
+    const mc = el.querySelector('#fMCar'); if (mc) { mc.oninput = () => { F.cartao_liq = num(mc.value); }; mc.onchange = () => ajusta(); }
     el.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => { F.forma = b.dataset.fp; ajusta(); });
     const fp = el.querySelector('#fParc'); if (fp) { fp.oninput = () => { const v = parseInt(fp.value, 10); F.parcelas = v ? Math.min(Math.max(v, 1), 12) : null; }; fp.onchange = () => { if (F.parcelas && +fp.value !== F.parcelas) { fp.value = F.parcelas; X.aviso('Parcelamento de 1 a 12 vezes.'); } ajusta(); }; }
     const fb = el.querySelector('#fBruto'); if (fb) { fb.oninput = () => { const v = String(fb.value).trim(); F.bruto = v ? Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v) || null : null; F.bruto_manual = !!F.bruto; }; fb.onchange = () => ajusta(); }
@@ -387,6 +411,17 @@ export function editorFechamento(X, el, F, ctx) {
     const pix = el.querySelector('#fPix'); if (pix) { if (!F.pix && pix.value) F.pix = pix.value; pix.onchange = () => { try { localStorage.setItem('mk_pix', pix.value.trim()); } catch (_) {} }; }
     const env = el.querySelector('#fEnviar'); if (env) env.onclick = () => {
       const nome = String(ctx.cliente() || '').split(' ')[0];
+      if (misto) {
+        const c = combo();
+        if (!c.p) { X.aviso('Informe o valor no Pix.'); return; }
+        if (!c.l || !c.n) { X.aviso('Informe o valor do cartão e em quantas vezes.'); return; }
+        if (!F.pix) { X.aviso('Informe os dados do Pix.'); return; }
+        if (!F.link) { X.aviso('Cole o link de pagamento antes de enviar.'); return; }
+        const txt = `Oi, ${nome}! Tudo pronto para garantir a sua viagem. O investimento ficou dividido assim: ${X.brl2(c.p)} no Pix e ${X.brl2(c.b)} no cartão, em ${c.n}x de ${X.brl2(c.b / c.n)}.\nPix:\n${F.pix}\nCartão:\n${F.link}\nAssim que os pagamentos caírem, me manda o comprovante do Pix por aqui que a gente emite e te manda tudo.`;
+        const link = X.zapLink(ctx.contato(), ctx.cliente(), txt);
+        if (!link) { X.aviso('O atendimento não tem WhatsApp do cliente.'); return; }
+        F.enviado_em = new Date().toISOString(); window.open(link, '_blank'); desenha(); return;
+      }
       if (cartao && !F.link) { X.aviso('Cole o link de pagamento antes de enviar.'); return; }
       if (cartao && !F.parcelas) { X.aviso('Informe em quantas vezes.'); return; }
       if (!cartao && !F.pix) { X.aviso('Informe os dados do Pix.'); return; }
@@ -438,9 +473,10 @@ export async function enviarParaPlanilha(X, r, IT, F) {
       'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
       'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
       'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
-'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : ''].filter(Boolean).join(' · '),
-      'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : '',
-      'Quantas vezes': F.forma === 'cartao' && F.parcelas ? +F.parcelas : '',
+'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
+        F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · '),
+      'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : F.forma === 'pix_cartao' ? 'Pix + Cartão' : '',
+      'Quantas vezes': (F.forma === 'cartao' || F.forma === 'pix_cartao') && F.parcelas ? +F.parcelas : '',
       'Serviço': servicoPlanilha(x), 'Vendedor': vendedor, 'ID sistema': id
     } };
   });
