@@ -464,6 +464,40 @@
       .hero-venda .prova-cta-final{width:100%}
       .venda-perda{border-left:none;border-top:4px solid #a8322d}
     }
+    /* COMPARATIVO VISUAL PANELA x VIAGEM */
+    .hero-venda .venda-h1{text-align:center;max-width:900px;margin:0 auto}
+    .hero-venda .venda-h1 .italic-gold{display:inline}
+    .vs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:26px;align-items:center;max-width:1100px;width:100%;margin:48px auto 0}
+    .vs-card{display:flex;flex-direction:column;text-align:left;padding:18px 18px 26px;position:relative}
+    .vs-ruim{background:rgba(255,255,255,.05);border:1px solid rgba(249,246,241,.16)}
+    .vs-bom{background:var(--cream);outline:3px solid var(--gold-warm);outline-offset:6px;box-shadow:0 26px 70px rgba(0,0,0,.4);transform:scale(1.04)}
+    .vs-tag{font-size:12.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(249,246,241,.78);margin:4px 2px 14px}
+    .vs-tag-bom{color:var(--green)}
+    .vs-foto{position:relative;aspect-ratio:3/2;overflow:hidden;background:#eee}
+    .vs-foto img{width:100%;height:100%;object-fit:cover;display:block}
+    .vs-ruim .vs-foto img{filter:saturate(.75)}
+    .vs-check{position:absolute;right:14px;bottom:14px;width:62px;height:62px;border-radius:50%;background:#2e7d4f;color:#fff;font-size:34px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.35);border:3px solid #fff}
+    .vs-titulo{margin-top:18px;font-family:'Cormorant Garamond',serif;font-size:clamp(24px,2.6vw,30px);line-height:1.15;color:rgba(249,246,241,.85)}
+    .vs-bom .vs-titulo{color:var(--green);font-weight:500}
+    .vs-bom .vs-titulo strong{font-weight:700;color:var(--green)}
+    .vs-valor{font-family:'Cormorant Garamond',serif;font-weight:700;line-height:1;margin-top:10px}
+    .vs-valor-ruim{font-size:clamp(34px,4vw,44px);color:rgba(249,246,241,.5)}
+    .vs-valor-ruim s{text-decoration-color:#c0392b;text-decoration-thickness:3px}
+    .vs-valor-bom{font-size:clamp(48px,5.6vw,66px);color:var(--green)}
+    .vs-pontos{margin-top:8px;font-size:14.5px;font-weight:600;letter-spacing:.06em;color:rgba(249,246,241,.7)}
+    .vs-bom .vs-pontos{color:var(--gold)}
+    .vs-ou{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:34px;color:var(--gold-warm)}
+    .venda-fecho{max-width:620px;width:100%;margin:64px auto 0;text-align:center}
+    .venda-fecho .venda-perda{border-left:none;border-top:4px solid #a8322d;text-align:center}
+    .venda-fecho .venda-ctas{max-width:none;margin:0 auto}
+    .venda-fecho .venda-cuidar{max-width:none}
+    @media(max-width:900px){
+      .vs-grid{grid-template-columns:1fr;gap:14px;margin-top:32px}
+      .vs-ou{justify-self:center;font-size:28px}
+      .vs-bom{transform:none;margin-top:6px}
+      .vs-check{width:50px;height:50px;font-size:28px}
+      .venda-fecho{margin-top:48px}
+    }
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -657,29 +691,41 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
  
 <section class="hero hero-prova hero-venda">
   <span class="prova-selo reveal d1">Exemplo real &middot; 24/10/2026</span>
-  <div class="venda-grid">
-    <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
-    <div class="venda-foto reveal d3">
-      <div class="venda-foto-box">
-        <img class="venda-img" src="https://images.unsplash.com/photo-1584990347193-6bebebfeaeee?w=1400&amp;q=85&amp;auto=format" alt="Jogo de panelas e frigideiras antiaderentes" width="1400" height="933" loading="eager" />
+  <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
+  <div class="vs-grid reveal d3">
+    <div class="vs-card vs-ruim">
+      <span class="vs-tag">O que você leva no catálogo</span>
+      <div class="vs-foto">
+        <img src="https://images.unsplash.com/photo-1584990347193-6bebebfeaeee?w=1200&amp;q=85&amp;auto=format" alt="Jogo de panelas antiaderentes" width="1200" height="800" />
         <span class="venda-risco" aria-hidden="true"></span>
-        <span class="venda-preco"><s>R$ 337,79</s><small>20.472 pontos Livelo</small></span>
       </div>
-      <p class="venda-legenda">Jogo de panelas no catálogo de pontos</p>
+      <p class="vs-titulo">Um jogo de panelas</p>
+      <p class="vs-valor vs-valor-ruim"><s>R$ 337,79</s></p>
+      <p class="vs-pontos">20.472 pontos Livelo</p>
     </div>
-    <div class="venda-texto reveal d4">
-      <p class="venda-lead">Com os mesmos 20 mil pontos desse jogo de panelas, a gente emitiu <strong>ida e volta Rio x Curitiba para 2 pessoas</strong>, que custaria <strong>R$ 1.472,68</strong> em passagens.</p>
-      <div class="venda-perda">
-        <span class="venda-perda-label">Você está perdendo</span>
-        <span class="venda-perda-valor">R$ 1.134,89</span>
-        <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
+    <div class="vs-ou" aria-hidden="true">ou</div>
+    <div class="vs-card vs-bom">
+      <span class="vs-tag vs-tag-bom">O que esses mesmos pontos compram</span>
+      <div class="vs-foto">
+        <img src="https://images.unsplash.com/photo-1530469641172-8ac15d0a7d6a?w=1200&amp;q=85&amp;auto=format" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" />
+        <span class="vs-check" aria-hidden="true">&#10003;</span>
       </div>
-      <div class="venda-ctas prova-ctas">
-        <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Contratar a Maktub Go</a>
-        <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20de%20especialistas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-outline-gold venda-btn2">Quero um diagnóstico dos meus pontos</a>
-      </div>
-      <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
+      <p class="vs-titulo">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
+      <p class="vs-valor vs-valor-bom">R$ 1.472,68</p>
+      <p class="vs-pontos">Os mesmos 20.472 pontos Livelo</p>
     </div>
+  </div>
+  <div class="venda-fecho reveal d4">
+    <div class="venda-perda">
+      <span class="venda-perda-label">Você está perdendo</span>
+      <span class="venda-perda-valor">R$ 1.134,89</span>
+      <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
+    </div>
+    <div class="venda-ctas prova-ctas">
+      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Contratar a Maktub Go</a>
+      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20de%20especialistas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-outline-gold venda-btn2">Quero um diagnóstico dos meus pontos</a>
+    </div>
+    <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
   </div>
   <div class="prova-como reveal d5">
     <span class="prova-como-label">Como a gestão chega lá</span>
