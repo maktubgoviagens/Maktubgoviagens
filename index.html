@@ -23,8 +23,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Maktub Go | Alfaiataria de Viagens sob medida</title>
-<meta name="description" content="Alfaiataria de viagens premium. Rota sob medida, voos, hotelaria e gestão de milhas concierge, com um time inteiro acompanhando cada etapa.">
+<title>Maktub Go | Gestão de Milhas e Alfaiataria de Viagens</title>
+<meta name="description" content="Gestão de milhas com alfaiataria de viagens inclusa. Um gestor cuida dos seus pontos o ano inteiro e, quando chega a hora, a Maktub desenha a viagem do voo ao retorno.">
 <meta name="theme-color" content="#1a3826">
 <link rel="canonical" href="https://www.maktubgo.com.br/">
 <link rel="icon" href="/ativos/simbolo-verde.png">
@@ -33,8 +33,8 @@
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Maktub Go">
 <meta property="og:url" content="https://www.maktubgo.com.br/">
-<meta property="og:title" content="Maktub Go | Alfaiataria de Viagens">
-<meta property="og:description" content="Seu destino começa aqui. Planejamento premium, sob medida, com exclusividade.">
+<meta property="og:title" content="Maktub Go | Gestão de Milhas e Alfaiataria de Viagens">
+<meta property="og:description" content="Seus pontos viram viagens inteiras. Gestão de milhas o ano todo e a viagem desenhada sob medida, do voo ao retorno.">
 <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -616,6 +616,43 @@ footer a:hover{color:var(--creme)}
 .acesso-cliente{margin-top:var(--e3);font-size:.9375rem;color:rgba(249,246,241,.8)}
 .acesso-cliente a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.5);padding-bottom:2px}
 .acesso-cliente a:hover{border-bottom-color:var(--dourado-claro)}
+
+/* ===================== PONTOS: panela x viagem ===================== */
+#pontos .vs{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,3vw,40px);margin-top:var(--e4);align-items:stretch}
+#pontos .vs-item{display:flex;flex-direction:column;padding:clamp(12px,2vw,22px);background:#fff;border:1px solid rgba(26,56,38,.12)}
+#pontos .vs-ganha{background:var(--verde);border-color:var(--verde);outline:2px solid var(--dourado-claro);outline-offset:5px}
+#pontos .vs-rot{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:rgba(28,28,28,.6);margin-bottom:14px;line-height:1.4;min-height:2.8em}
+#pontos .vs-ganha .vs-rot{color:var(--dourado-claro)}
+#pontos .vs-foto{position:relative;aspect-ratio:3/2;overflow:hidden;background:#eee}
+#pontos .vs-foto img{width:100%;height:100%;object-fit:cover}
+#pontos .vs-perde .vs-foto img{filter:saturate(.75)}
+#pontos .vs-x::before,#pontos .vs-x::after{content:'';position:absolute;left:6%;right:6%;top:50%;height:7px;background:#a8322d;border-radius:4px;opacity:.85}
+#pontos .vs-x::before{transform:rotate(33deg)}#pontos .vs-x::after{transform:rotate(-33deg)}
+#pontos .vs-ok{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;background:#2e7d4f;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+#pontos .vs-nome{margin-top:16px;font-family:var(--serif);font-size:var(--t-lg);line-height:1.2;color:var(--verde)}
+#pontos .vs-ganha .vs-nome{color:var(--creme)}
+#pontos .vs-valor{font-family:var(--serif);font-weight:500;line-height:1;margin-top:10px;font-size:clamp(1.7rem,3.6vw,2.6rem);color:rgba(28,28,28,.45)}
+#pontos .vs-valor s{text-decoration-color:#a8322d;text-decoration-thickness:3px}
+#pontos .vs-ganha .vs-valor{color:var(--dourado-claro);font-size:clamp(2rem,4.6vw,3.3rem)}
+#pontos .vs-pts{margin-top:8px;font-size:.85rem;font-weight:500;color:rgba(28,28,28,.62)}
+#pontos .vs-ganha .vs-pts{color:rgba(249,246,241,.8)}
+#pontos .vs-fecho{text-align:center;margin-top:var(--e5)}
+#pontos .vs-perda{max-width:none;font-family:var(--serif);font-size:var(--t-xl);line-height:1.15;color:var(--verde)}
+#pontos .vs-perda strong{font-weight:500;color:#a8322d;white-space:nowrap}
+#pontos .acoes{justify-content:center;margin-top:var(--e4)}
+#pontos .vs-nota{margin:var(--e3) auto 0;font-size:.8rem;color:rgba(28,28,28,.6)}
+@media (max-width:640px){
+  #pontos .vs{gap:10px}
+  #pontos .vs-item{padding:10px}
+  #pontos .vs-rot{font-size:.6rem;letter-spacing:.08em}
+  #pontos .vs-foto{aspect-ratio:1/1}
+  #pontos .vs-ok{width:32px;height:32px;font-size:18px;right:6px;bottom:6px}
+  #pontos .vs-nome{font-size:1.1rem}
+  #pontos .vs-valor{font-size:1.45rem}
+  #pontos .vs-ganha .vs-valor{font-size:1.6rem}
+  #pontos .vs-pts{font-size:.72rem}
+  #pontos .acoes .btn{width:100%}
+}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -727,12 +764,12 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="hero-fundo" aria-hidden="true"></div>
   <div class="wrap">
     <div class="hero-texto">
-      <span class="olho">Alfaiataria de viagens</span>
-      <h1 id="t-hero">Seu destino<em>começa aqui.</em></h1>
-      <p>Não existe pacote pronto na Maktub. Existe escuta, rota desenhada sob medida e um time inteiro cuidando de cada etapa, do primeiro voo ao seu retorno.</p>
+      <span class="olho">Gestão de milhas com alfaiataria de viagens</span>
+      <h1 id="t-hero">Seus pontos viram<em>viagens inteiras.</em></h1>
+      <p>A gente cuida das suas milhas o ano inteiro e, quando chega a hora, desenha a viagem sob medida, do primeiro voo ao seu retorno. Nada de pacote pronto. Nada de bilhete solto.</p>
       <div class="acoes">
-        <a class="btn btn-cheio" href="#contato">Planejar minha viagem</a>
-        <a class="btn" href="/gestao-de-milhas/">Conhecer a gestão de milhas</a>
+        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn" href="#contato">Planejar minha viagem</a>
       </div>
       <a class="hero-google" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">
         <span class="hg-estrelas" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
@@ -765,34 +802,61 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
  
-<!-- ===================== ALFAIATARIA ===================== -->
-<section class="secao" id="alfaiataria" aria-labelledby="t-quem">
-  <div class="wrap duas">
-    <div>
-      <span class="olho">Quem somos</span>
-      <h2 id="t-quem">Não vendemos destinos.<em>Criamos memórias.</em></h2>
-      <p class="intro">A Maktub Go é uma alfaiataria de viagens premium. Cada experiência é construída sob medida, porque cada família viaja de um jeito. Escutamos antes de cotar, desenhamos a rota antes de vender e acompanhamos a viagem depois que ela começa.</p>
-      <p style="margin-top:var(--e2)">Somos um time pequeno e presente. Você fala com gente que conhece o seu processo, não com um atendimento que recomeça a cada mensagem.</p>
-      <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
-      <p class="mais"><a class="link-texto" href="/quem-somos/">Conheça a Maktub e o time</a></p>
+<!-- ===================== PONTOS (exemplo real panela x viagem) =====================
+     Atualizar valores e data a cada 3 meses, junto com a página /gestao-de-milhas/. -->
+<section class="secao secao-creme" id="pontos" aria-labelledby="t-pontos">
+  <div class="wrap">
+    <span class="olho">Exemplo real · pesquisa de 24/10/2026</span>
+    <h2 id="t-pontos">Pare de trocar seus pontos<em>por isso.</em></h2>
+    <div class="vs">
+      <div class="vs-item vs-perde">
+        <span class="vs-rot">O que você leva no catálogo</span>
+        <div class="vs-foto"><img src="https://images.unsplash.com/photo-1584990347193-6bebebfeaeee?w=1000&amp;q=85&amp;auto=format" alt="Jogo de panelas antiaderentes" width="1000" height="667" loading="lazy"><span class="vs-x" aria-hidden="true"></span></div>
+        <p class="vs-nome">Um jogo de panelas</p>
+        <p class="vs-valor"><s>R$ 337,79</s></p>
+        <p class="vs-pts">20.472 pontos Livelo</p>
+      </div>
+      <div class="vs-item vs-ganha">
+        <span class="vs-rot">O que esses mesmos pontos compram</span>
+        <div class="vs-foto"><img src="https://images.unsplash.com/photo-1530469641172-8ac15d0a7d6a?w=1000&amp;q=85&amp;auto=format" alt="Vista da janela do avião sobre as nuvens" width="1000" height="721" loading="lazy"><span class="vs-ok" aria-hidden="true">&#10003;</span></div>
+        <p class="vs-nome">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
+        <p class="vs-valor">R$ 1.472,68</p>
+        <p class="vs-pts">Os mesmos 20.472 pontos Livelo</p>
+      </div>
     </div>
-    <!-- Quando a foto existir, troque para style="background-image:url('/ativos/quem-somos.jpg')" -->
-    <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.jpg')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
+    <div class="vs-fecho">
+      <p class="vs-perda">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate como esse no catálogo.</p>
+      <div class="acoes">
+        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn" href="/gestao-de-milhas/">Ver o exemplo completo</a>
+      </div>
+      <p class="vs-nota">Transferência de pontos Livelo para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
+    </div>
   </div>
 </section>
  
-<!-- ===================== COMO FUNCIONA (resumo) ===================== -->
-<section class="secao secao-verde" id="como-funciona" aria-labelledby="t-resumo">
-  <div class="wrap">
-    <span class="olho">Como funciona</span>
-    <h2 id="t-resumo">Do primeiro oi<em>até a sua volta.</em></h2>
-    <div class="jornada quatro">
-      <div class="passo"><span class="passo-n">01</span><h3>A conversa</h3><p>Você conta como gosta de viajar. A gente escuta antes de cotar qualquer coisa.</p></div>
-      <div class="passo"><span class="passo-n">02</span><h3>O desenho da rota</h3><p>Uma proposta sob medida, com investimento de planejamento devolvido em cashback quando a viagem é fechada com a Maktub.</p></div>
-      <div class="passo passo-seguro"><span class="passo-n">03</span><h3>Contrato e pagamento</h3><p>Contrato assinado e pagamento sempre direto para a Maktub Go Agência de Viagens Ltda, com nota fiscal.</p></div>
-      <div class="passo"><span class="passo-n">04</span><h3>Com você até a volta</h3><p>Reservas, emissões e check-in por nossa conta, e o time acompanhando cada etapa da viagem.</p></div>
+<!-- ===================== MILHAS ===================== -->
+<section class="secao secao-verde" id="milhas" aria-labelledby="t-milhas">
+  <div class="wrap milhas">
+    <div>
+      <span class="olho">Gestão de milhas Maktub Go</span>
+      <h2 id="t-milhas">Seus pontos pagam o voo.<em>A gente cuida do resto.</em></h2>
+      <p class="intro">Um gestor acompanha seus cartões, seus programas e cada promoção de transferência, o ano inteiro. Você não precisa ficar de olho em grupo de alerta nem perder ponto vencido. A gente recomenda e só executa com o seu ok.</p>
+      <p style="margin-top:var(--e2)">E o que nenhuma gestão de milhas entrega: como cliente, você tem a alfaiataria de viagens inclusa. Rota, hotelaria, transporte, ingressos, roteiro e suporte 24 horas durante a viagem.</p>
+      <p style="margin-top:var(--e2)">Cada cliente tem painel privado, relatório mensal e uma reunião por mês com o gestor.</p>
+      <div class="acoes">
+        <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn btn-claro" href="/gestao-de-milhas/">Conhecer a gestão</a>
+      </div>
+      <p class="acesso-cliente">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
     </div>
-    <p class="mais"><a class="link-texto" href="/como-trabalhamos/">Ver como trabalhamos em detalhe</a></p>
+    <div class="painel" aria-hidden="true">
+      <div class="painel-topo"><span>maktubgo.com.br/painel</span><span class="painel-selo">Exemplo ilustrativo</span></div>
+      <div class="painel-linha"><span>Patrimônio consolidado</span><span>970.000</span></div>
+      <div class="painel-linha"><span>Economia gerada no ano</span><span>R$ 47.320</span></div>
+      <div class="painel-linha"><span>Próxima reunião</span><span>21/10</span></div>
+      <div class="painel-linha"><span>Viagens em estratégia</span><span>04</span></div>
+    </div>
   </div>
 </section>
  
@@ -800,7 +864,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
 <section class="secao" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho">Viagens que já entregamos</span>
+    <span class="olho">O que vem depois da emissão</span>
     <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
  
     <div class="casos">
@@ -838,6 +902,37 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
  
+<!-- ===================== COMO FUNCIONA (resumo) ===================== -->
+<section class="secao secao-verde" id="como-funciona" aria-labelledby="t-resumo">
+  <div class="wrap">
+    <span class="olho">Como funciona</span>
+    <h2 id="t-resumo">Do primeiro oi<em>até a sua volta.</em></h2>
+    <div class="jornada quatro">
+      <div class="passo"><span class="passo-n">01</span><h3>A conversa</h3><p>Você conta como gosta de viajar. A gente escuta antes de cotar qualquer coisa.</p></div>
+      <div class="passo"><span class="passo-n">02</span><h3>O desenho da rota</h3><p>Uma proposta sob medida, com investimento de planejamento devolvido em cashback quando a viagem é fechada com a Maktub.</p></div>
+      <div class="passo passo-seguro"><span class="passo-n">03</span><h3>Contrato e pagamento</h3><p>Contrato assinado e pagamento sempre direto para a Maktub Go Agência de Viagens Ltda, com nota fiscal.</p></div>
+      <div class="passo"><span class="passo-n">04</span><h3>Com você até a volta</h3><p>Reservas, emissões e check-in por nossa conta, e o time acompanhando cada etapa da viagem.</p></div>
+    </div>
+    <p class="mais"><a class="link-texto" href="/como-trabalhamos/">Ver como trabalhamos em detalhe</a></p>
+  </div>
+</section>
+ 
+<!-- ===================== ALFAIATARIA ===================== -->
+<section class="secao" id="alfaiataria" aria-labelledby="t-quem">
+  <div class="wrap duas">
+    <div>
+      <span class="olho">Quem somos</span>
+      <h2 id="t-quem">Não vendemos destinos.<em>Criamos memórias.</em></h2>
+      <p class="intro">A Maktub Go é uma alfaiataria de viagens premium. Cada experiência é construída sob medida, porque cada família viaja de um jeito. Escutamos antes de cotar, desenhamos a rota antes de vender e acompanhamos a viagem depois que ela começa.</p>
+      <p style="margin-top:var(--e2)">Somos um time pequeno e presente. Você fala com gente que conhece o seu processo, não com um atendimento que recomeça a cada mensagem.</p>
+      <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
+      <p class="mais"><a class="link-texto" href="/quem-somos/">Conheça a Maktub e o time</a></p>
+    </div>
+    <!-- Quando a foto existir, troque para style="background-image:url('/ativos/quem-somos.jpg')" -->
+    <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.jpg')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
+  </div>
+</section>
+ 
 <!-- ===================== DEPOIMENTOS ===================== -->
 <section class="secao" id="depoimentos" aria-labelledby="t-depo">
   <div class="wrap">
@@ -862,29 +957,6 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </figure>
     </div>
     <p class="nota-google"><a href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">Ver todas as avaliações no Google</a></p>
-  </div>
-</section>
- 
-<!-- ===================== MILHAS ===================== -->
-<section class="secao secao-verde" id="milhas" aria-labelledby="t-milhas">
-  <div class="wrap milhas">
-    <div>
-      <span class="olho">Gestão de milhas concierge</span>
-      <h2 id="t-milhas">Suas milhas merecem<em>um gestor.</em></h2>
-      <p class="intro">Como um assessor financeiro acompanha investimentos, acompanhamos suas milhas o ano inteiro. Antecipamos oportunidades, otimizamos cartões e transformamos consumo cotidiano em viagens.</p>
-      <p style="margin-top:var(--e2)">Cada cliente tem painel privado, relatório mensal e uma reunião por mês com o gestor.</p>
-      <div class="acoes">
-        <a class="btn btn-ouro" href="/gestao-de-milhas/">Conhecer a gestão</a>
-      </div>
-      <p class="acesso-cliente">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
-    </div>
-    <div class="painel" aria-hidden="true">
-      <div class="painel-topo"><span>maktubgo.com.br/painel</span><span class="painel-selo">Exemplo ilustrativo</span></div>
-      <div class="painel-linha"><span>Patrimônio consolidado</span><span>970.000</span></div>
-      <div class="painel-linha"><span>Economia gerada no ano</span><span>R$ 47.320</span></div>
-      <div class="painel-linha"><span>Próxima reunião</span><span>21/10</span></div>
-      <div class="painel-linha"><span>Viagens em estratégia</span><span>04</span></div>
-    </div>
   </div>
 </section>
  
