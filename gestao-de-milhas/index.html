@@ -633,9 +633,6 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <p class="prova-mesa-titulo">Você deixou <span>R$ 1.134,89</span> <em class="nw">na mesa.</em></p>
     <p class="prova-mesa-sub">Em um único resgate. Com a gestão, seus pontos valem 4x mais.</p>
   </div>
-  <div class="prova-cta-cedo reveal d5">
-    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20Livelo%20e%20n%C3%A3o%20quero%20mais%20perder%20meus%20pontos." target="_blank" rel="noopener" class="btn-gold btn-grande">Não quero mais perder meus pontos</a>
-  </div>
   <div class="prova-como reveal d5">
     <span class="prova-como-label">Como a gestão chega lá</span>
     <ol class="prova-passos">
@@ -1012,7 +1009,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 <div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você deixou <strong>R$ 1.134,89</strong> na mesa em um único resgate.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20Livelo%20e%20n%C3%A3o%20quero%20mais%20perder%20meus%20pontos." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1">Não quero mais perder meus pontos</a></div></div>
 <script>
 (function(){var bar=document.getElementById('ctaFixa');
-var first=document.querySelector('.prova-cta-cedo'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
+var first=document.querySelector('.prova-mesa'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
 function vis(el){if(!el)return false;var r=el.getBoundingClientRect();return r.bottom>0&&r.top<window.innerHeight;}
 function set(el,on){if(!el)return;el.classList.toggle('on',on);el.setAttribute('aria-hidden',on?'false':'true');var a=el.tagName==='A'?el:el.querySelector('a');if(a)a.tabIndex=on?0:-1;}
 function upd(){var show=false;if(first){show=first.getBoundingClientRect().bottom<0&&!vis(last)&&!vis(stop)&&!vis(foot);}
