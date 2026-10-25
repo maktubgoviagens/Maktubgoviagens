@@ -419,6 +419,47 @@
     @media(min-width:1200px){.cta-fixa-txt{font-size:23px;white-space:nowrap}}
     @media(max-width:1199px) and (min-width:769px){.cta-fixa-txt{font-size:20px}}
     @media(max-width:768px){.cta-fixa-txt{display:none}}
+    /* MODELO DE VENDA */
+    .hero-venda{text-align:left}
+    .hero-venda .prova-selo{align-self:center}
+    .venda-grid{display:grid;grid-template-columns:1fr 1.1fr;grid-template-areas:"foto h1" "foto texto";column-gap:64px;row-gap:22px;max-width:1080px;width:100%;margin:0 auto;align-items:start}
+    .venda-h1{grid-area:h1;font-size:clamp(44px,6.4vw,76px)!important;color:var(--cream);line-height:1.02;text-align:left}
+    .venda-h1 .italic-gold{display:block;color:var(--gold-warm);font-weight:500}
+    .venda-foto{grid-area:foto;align-self:center}
+    .venda-foto-box{position:relative;background:var(--cream);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+    .panela-svg{width:74%;color:var(--green)}
+    .venda-risco{position:absolute;inset:0;pointer-events:none}
+    .venda-risco::before,.venda-risco::after{content:'';position:absolute;left:8%;right:8%;top:50%;height:10px;background:#a8322d;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+    .venda-risco::before{transform:rotate(38deg)}
+    .venda-risco::after{transform:rotate(-38deg)}
+    .venda-preco{position:absolute;right:-14px;bottom:22px;background:var(--gold-warm);color:var(--green);font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;line-height:1;padding:14px 20px 12px;transform:rotate(-4deg);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+    .venda-preco s{text-decoration-thickness:3px}
+    .venda-preco small{display:block;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin-top:6px;text-decoration:none}
+    .venda-legenda{margin-top:16px;font-size:14px;letter-spacing:.06em;color:rgba(249,246,241,.75);text-align:center}
+    .venda-texto{grid-area:texto}
+    .venda-lead{font-size:19px;line-height:1.6;color:rgba(249,246,241,.92)}
+    .venda-lead strong{color:var(--cream)}
+    .venda-perda{margin:28px 0 30px;padding:22px 26px;border-left:4px solid #a8322d;background:rgba(0,0,0,.18)}
+    .venda-perda-label{display:block;font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:rgba(249,246,241,.8)}
+    .venda-perda-valor{display:block;font-family:'Cormorant Garamond',serif;font-size:clamp(56px,7vw,84px);font-weight:700;line-height:1;color:var(--gold-warm);margin:6px 0 4px}
+    .venda-perda-sub{display:block;font-size:16px;color:rgba(249,246,241,.85)}
+    .venda-ctas{display:flex;flex-direction:column;gap:14px;align-items:stretch;max-width:520px}
+    .venda-ctas .btn-grande{width:100%}
+    .venda-btn2{width:100%;font-weight:600!important;color:var(--cream)!important;border-color:rgba(201,169,110,.7)!important;min-height:62px;text-align:center}
+    .venda-cuidar{margin-top:22px;font-size:16px;line-height:1.6;color:rgba(249,246,241,.85);max-width:520px}
+    .venda-cuidar strong{display:block;color:var(--gold-warm);font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-top:4px}
+    .hero-venda .prova-como,.hero-venda .prova-urgencia,.hero-venda .prova-nota,.hero-venda .hero-client{text-align:center}
+    .hero-venda .prova-cta-final,.hero-venda .prova-metodo{align-self:center}
+    @media(max-width:900px){
+      .venda-grid{grid-template-columns:1fr;grid-template-areas:"h1" "foto" "texto";row-gap:26px}
+      .venda-h1{text-align:center}
+      .venda-foto{max-width:420px;width:100%;justify-self:center}
+      .venda-preco{right:-6px;font-size:28px}
+      .venda-ctas,.venda-cuidar{max-width:none}
+      .venda-texto{text-align:center}
+      .hero-venda .prova-cta-final{width:100%}
+      .venda-perda{border-left:none;border-top:4px solid #a8322d}
+    }
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -610,28 +651,39 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </nav>
  
-<section class="hero hero-prova">
+<section class="hero hero-prova hero-venda">
   <span class="prova-selo reveal d1">Exemplo real &middot; 24/10/2026</span>
-  <h1 class="reveal d2">Você trocaria uma viagem para dois <span class="italic-gold">por um jogo de panelas?</span></h1>
-  <p class="prova-sub reveal d3">Quem resgata pontos no catálogo faz exatamente isso.</p>
-  <div class="prova-grid reveal d4">
-    <div class="prova-card sem">
-      <span class="prova-tag">O que você leva no catálogo</span>
-      <p class="prova-item">Jogo de panelas 8 peças</p>
-      <p class="prova-valor"><s>R$ 337,79</s></p>
-      <p class="prova-detalhe">20.472 pontos Livelo</p>
+  <div class="venda-grid">
+    <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
+    <div class="venda-foto reveal d3">
+      <div class="venda-foto-box">
+        <svg class="panela-svg" viewBox="20 60 260 160" role="img" aria-label="Jogo de panelas">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 110 h170 v70 a28 28 0 0 1 -28 28 h-114 a28 28 0 0 1 -28 -28 z"/>
+        <path d="M60 128 h-26 a10 10 0 0 0 0 20 h26"/>
+        <path d="M230 128 h26 a10 10 0 0 1 0 20 h-26"/>
+        <path d="M50 110 q95 -46 190 0"/>
+        <path d="M133 82 q12 -14 24 0"/>
+      </g>
+    </svg>
+        <span class="venda-risco" aria-hidden="true"></span>
+        <span class="venda-preco"><s>R$ 337,79</s><small>20.472 pontos Livelo</small></span>
+      </div>
+      <p class="venda-legenda">Jogo de panelas no catálogo de pontos</p>
     </div>
-    <div class="prova-vs" aria-hidden="true">ou</div>
-    <div class="prova-card com">
-      <span class="prova-fita">O que esses mesmos pontos valiam</span>
-      <p class="prova-item">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong>, de 15 a 30 de março de 2027</p>
-      <p class="prova-valor">R$ 1.472,68</p>
-      <p class="prova-detalhe">Os mesmos 20.472 pontos Livelo</p>
+    <div class="venda-texto reveal d4">
+      <p class="venda-lead">Com os mesmos 20 mil pontos desse jogo de panelas, a gente emitiu <strong>ida e volta Rio x Curitiba para 2 pessoas</strong>, que custaria <strong>R$ 1.472,68</strong> em passagens.</p>
+      <div class="venda-perda">
+        <span class="venda-perda-label">Você está perdendo</span>
+        <span class="venda-perda-valor">R$ 1.134,89</span>
+        <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
+      </div>
+      <div class="venda-ctas prova-ctas">
+        <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Contratar a Maktub Go</a>
+        <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20de%20especialistas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-outline-gold venda-btn2">Quero um diagnóstico dos meus pontos</a>
+      </div>
+      <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
     </div>
-  </div>
-  <div class="prova-mesa reveal d5">
-    <p class="prova-mesa-titulo">Você deixou <span>R$ 1.134,89</span> <em class="nw">na mesa.</em></p>
-    <p class="prova-mesa-sub">Em um único resgate. Com a gestão, seus pontos valem 4x mais.</p>
   </div>
   <div class="prova-como reveal d5">
     <span class="prova-como-label">Como a gestão chega lá</span>
@@ -643,10 +695,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
   <p class="prova-urgencia reveal d6">E todo ponto que vence parado é dinheiro que não volta.<strong>Antes do próximo resgate, fale com a gente.</strong></p>
   <div class="hero-actions prova-cta-final reveal d6">
-    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20Livelo%20e%20n%C3%A3o%20quero%20mais%20perder%20meus%20pontos." target="_blank" rel="noopener" class="btn-gold btn-grande">Não quero mais perder meus pontos</a>
+    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Contratar a Maktub Go</a>
   </div>
   <a href="#como-funciona" class="prova-metodo reveal d6">Entenda o método</a>
-  <p class="prova-nota reveal d6">Pesquisa real feita pela nossa equipe em 24/10/2026. Transferência de pontos Livelo para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
+  <p class="prova-nota reveal d6">Pesquisa real feita pela nossa equipe em 24/10/2026: jogo de panelas por 20.472 pontos no catálogo Livelo, contra ida e volta Rio x Curitiba para 2 pessoas (15 a 30/03/2027), emitida com os mesmos pontos transferidos para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
   <p class="hero-client reveal d6">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
 </section>
 <div class="prova-ponte-wrap"><p class="prova-ponte">Suas milhas merecem <span class="italic-gold">um gestor.</span></p></div>
@@ -1006,10 +1058,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </footer>
  
-<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você deixou <strong>R$ 1.134,89</strong> na mesa em um único resgate.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20Livelo%20e%20n%C3%A3o%20quero%20mais%20perder%20meus%20pontos." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1">Não quero mais perder meus pontos</a></div></div>
+<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1">Contratar a Maktub Go</a></div></div>
 <script>
 (function(){var bar=document.getElementById('ctaFixa');
-var first=document.querySelector('.prova-mesa'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
+var first=document.querySelector('.prova-ctas'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
 function vis(el){if(!el)return false;var r=el.getBoundingClientRect();return r.bottom>0&&r.top<window.innerHeight;}
 function set(el,on){if(!el)return;el.classList.toggle('on',on);el.setAttribute('aria-hidden',on?'false':'true');var a=el.tagName==='A'?el:el.querySelector('a');if(a)a.tabIndex=on?0:-1;}
 function upd(){var show=false;if(first){show=first.getBoundingClientRect().bottom<0&&!vis(last)&&!vis(stop)&&!vis(foot);}
