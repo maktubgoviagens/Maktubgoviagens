@@ -198,8 +198,10 @@ export function opcoesCotacao(d) {
   // valor da opção = o que entra na conta: Pix quando existe; só cartão, o valor do cartão sem a taxa da maquininha
   if (d.modelo === 'go') return (d.opcoes || []).map((o, i) => { const p = precos(o), t = taxasCartao()[p.parc - 1]; return { nome: o.nome || (d.opcoes.length > 1 ? 'Opção ' + (i + 1) : ''), valor: p.pix || (p.cartao && t != null ? Math.round(p.cartao * (100 - t)) / 100 : p.cartao), o }; });
   if (d.modelo === 'corp') return [{ nome: d.nome1 || ((d.extras || []).length ? 'Opção 1' : ''), valor: num(d.por), voos: d.voos || [] }].concat((d.extras || []).map((o, i) => ({ nome: o.nome || 'Opção ' + (i + 2), valor: num(o.por), voos: o.voos || [] })));
-  return [{ nome: '', valor: (precoRapida(d) || {}).pix || num(d.por), voos: (d.voos || []).filter(v => v.ocod) }];
+  return opsRapida(d).map((o, i, a) => ({ nome: a.length > 1 ? 'Opção ' + (i + 1) : '', valor: (precoRapida(o) || {}).pix || num(o.por), voos: (o.voos || []).filter(v => v.ocod) }));
 }
+// rápida com mais de uma opção: a Opção 1 é a própria cotação; as outras (extras) trocam só os voos e os valores
+function opsRapida(d) { return [d].concat((d.extras || []).filter(x => (x.voos || []).some(v => v.ocod)).map(x => ({ ...d, voos: x.voos, de: x.de, por: x.por, site_g: x.site_g, extras: [] }))); }
 export const valorCotacao = (d) => { const o = opcoesCotacao(d)[0]; return o ? o.valor : 0; };
 // serviços já preenchidos para o fechamento: voo (rota, datas, passageiros, companhia) e hotéis (nome e datas)
 export function itensDaCotacao(d, k = 0) {
@@ -912,6 +914,14 @@ function tirarVoo(T, i, siteK, porK, F) {
 const btnX = (attr) => `<button type="button" ${attr} aria-label="Tirar este trecho" style="flex:none;width:32px;height:32px;border:1px solid var(--linha);background:var(--papel, #fff);color:var(--tinta-2, inherit);font-size:18px;line-height:1;cursor:pointer;padding:0">×</button>`;
 const linhaX = (conteudo, attr) => `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><div style="flex:1;min-width:0">${conteudo}</div>${btnX(attr)}</div>`;
 function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
+// roda fn com a opção i da rápida no lugar dos voos e valores (a Opção 1 é o próprio S)
+const rapExtras = () => (S.extras || []).filter(x => (x.voos || []).some(v => v.ocod));
+function naOpcao(i, fn) {
+  if (!i) return fn();
+  const x = rapExtras()[i - 1], a = { voos: S.voos, de: S.de, por: S.por };
+  S.voos = x.voos; S.de = x.de; S.por = x.por;
+  try { return fn(); } finally { S.voos = a.voos; S.de = a.de; S.por = a.por; }
+}
 // a rápida vira uma cotação corporativa de uma opção para gerar o link
 function rapParaCorp() {
   const v0 = rapVoos()[0];
@@ -930,24 +940,28 @@ function textoBag(mao, desp) {
 }
 // o que o vendedor vê ao escolher as parcelas: quanto o cliente paga e quanto a Maktub recebe
 // para o vendedor (não vai para o cliente): Pix, cartão sem juros e a tabela de 1x a 12x, já garantindo o mínimo da Maktub
-function resumoParc() {
-  if (S.so_pix) return `<div class="config" style="margin:0"><b>Só Pix:</b> ${num(S.por) ? `a cotação mostra ${brl(num(S.por))} no Pix` : 'a cotação mostra exatamente o valor digitado no Pix'}, sem cartão de crédito e sem desconto.</div>`;
-  const pr = precoRapida(S), R = regraPix();
+function resumoParc(T = S) {
+  if (S.so_pix) return `<div class="config" style="margin:0"><b>Só Pix:</b> ${num(T.por) ? `a cotação mostra ${brl(num(T.por))} no Pix` : 'a cotação mostra exatamente o valor digitado no Pix'}, sem cartão de crédito e sem desconto.</div>`;
+  const pr = precoRapida(T === S ? S : { ...T, so_pix: S.so_pix }), R = regraPix(), tab = 'rpTab' + (T === S ? '' : (S.extras || []).indexOf(T));
   if (!pr) return `<div class="sub" style="margin:0">Digite o mínimo que a Maktub quer receber. O app monta o Pix com ${pct1(R.desc)}% de desconto e o cartão em até ${R.n}x sem juros.</div>`;
   const c = pr.cartao, lin = [];
   for (let n = 1; n <= 12; n++) { const t = n <= pr.n ? c.total : cartao(pr.piso, n).total, par = Math.round(t * 100 / n) / 100;
     lin.push(`<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--linha);${n <= pr.n ? 'font-weight:600' : ''}"><span>${n}x de ${brl(par)}</span><span>${brl(t)}${n <= pr.n ? ' · sem juros' : ''}</span></div>`); }
   return `<div class="config" style="margin:0"><b>Pix:</b> ${brl(pr.pix)} (spread de ${brl(pr.pix - pr.piso)})<br><b>Na cotação:</b> ${brl(c.total)} em até ${pr.n}x de ${brl(c.parcela)} sem juros
-    ${dobra('rpTab', 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
+    ${dobra(tab, 'Cliente pediu mais parcelas? Tabela de 1x a 12x', `<div style="font-size:13px;margin-top:4px">${lin.join('')}</div><div class="sub" style="margin:6px 0 0">Esses valores já garantem os ${brl(pr.piso)} para a Maktub. A cotação enviada continua mostrando só até ${pr.n}x.</div>`)}
     <div class="sub" style="margin:6px 0 0">Link da InfinitePay: o total da linha escolhida, sem repassar a taxa, com o número de parcelas dela.</div></div>`;
 }
 // colar de novo com voos já na cotação: sempre soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2); para tirar, o X de cada trecho
-let RAP_PAXN = '';
+let RAP_PAXN = '', RAP_DEST = 'somar';
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
   if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
-  const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1);
+  if (!S.extras) S.extras = [];
+  const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1), multi = S.extras.length > 0, nOp = S.extras.length + 2;
+  if (!vs.length || S.extras.length >= 2) RAP_DEST = 'somar';
+  const nova = RAP_DEST === 'nova';
+  const listaDe = (x, i) => { const l = ordenarVoos((x.voos || []).filter(v => v.ocod)); return l.length ? l.map(v => linhaX(`<b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}`, `data-xe="${i}:${x.voos.indexOf(v)}"`)).join('') : 'Sem voos nesta opção.'; };
   const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return linhaX(`<b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}`, `data-xv="${S.voos.indexOf(v)}"`); }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
@@ -956,10 +970,12 @@ function editorRapida(P, X) {
     <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
-      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Colar outra tela acrescenta os trechos novos. Para tirar um trecho, toque no X dele.</div>
-        <label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div></div>` : ''}
-      <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length ? 'Preencher e somar' : 'Preencher'}</button>
-      <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
+      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 6px">A próxima tela colada entra como:</div>
+        <div class="seg" id="rpDest" style="margin:0 0 6px"><button type="button" data-d="somar" class="${nova ? '' : 'on'}">${multi ? 'Trechos da Opção 1' : 'Mais trechos'}</button><button type="button" data-d="nova" class="${nova ? 'on' : ''}"${S.extras.length >= 2 ? ' disabled' : ''}>${S.extras.length >= 2 ? 'Máx. 3 opções' : 'Opção ' + nOp}</button></div>
+        ${nova ? `<div class="sub" style="margin:0">Vira a Opção ${nOp}, com voos e valor próprios. O cliente escolhe pelo link.</div>` : `<div class="sub" style="margin:0 0 4px">Soma na mesma viagem (ex.: volta em outra data). O valor da Maktub continua um total único. Para tirar um trecho, toque no X dele.</div>
+        <label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label>`}</div>` : ''}
+      <button type="button" class="zap" id="rpColar" style="width:100%">${!vs.length ? 'Preencher' : nova ? 'Preencher como Opção ' + nOp : 'Preencher e somar'}</button>
+      ${multi ? '<div class="grupo" style="margin-top:12px">Opção 1</div>' : ''}<div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
       ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
         ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
         ${duas(inp(`voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
@@ -974,19 +990,24 @@ function editorRapida(P, X) {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px"><span>Malas despachadas de até 23 kg</span><span style="display:flex;align-items:center;gap:8px"><button type="button" class="sec" data-bagd="-1" style="width:40px;padding:6px 0">−</button><b style="min-width:18px;text-align:center">${bagDesp()}</b><button type="button" class="sec" data-bagd="1" style="width:40px;padding:6px 0">+</button></span></div></div>
       ${inp('bagagem', 'Bagagem incluída (sai assim na cotação; dá para ajustar)')}
       <div class="seg" id="rpForma" style="margin:8px 0 4px"><button type="button" data-f="ambos" class="${S.so_pix ? '' : 'on'}">Pix e cartão</button><button type="button" data-f="pix" class="${S.so_pix ? 'on' : ''}">Só Pix</button></div>
-      ${inp('por', S.so_pix ? 'Valor no Pix (é o que o cliente vê)' : 'Quanto a Maktub quer receber (mínimo)', 'num', 'placeholder="1.000,00"')}
+      ${inp('por', (multi ? 'Opção 1: ' : '') + (S.so_pix ? 'Valor no Pix (é o que o cliente vê)' : 'Quanto a Maktub quer receber (mínimo)'), 'num', 'placeholder="1.000,00"')}
       <div id="rpParc" style="margin:-4px 0 8px">${resumoParc()}</div>
+      ${S.extras.map((x, i) => `<div class="grupo" style="margin-top:14px">Opção ${i + 2} <button type="button" data-xop="${i}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;float:right">tirar opção</button></div>
+        <div class="config" style="margin:6px 0">${listaDe(x, i)}</div>
+        ${duas(inp(`extras.${i}.de`, 'Valor no site', 'num', 'placeholder="2.100,00"'), inp(`extras.${i}.por`, S.so_pix ? 'Valor no Pix' : 'Mínimo da Maktub', 'num', 'placeholder="1.700,00"'))}
+        <div id="rpParc${i}" style="margin:-4px 0 8px">${resumoParc(x)}</div>`).join('')}
       ${inp('obs', 'Observação (opcional, aparece em destaque)', 'area', 'rows="2" placeholder="Ex.: Volta em datas diferentes: Ana e João em 10/12, Pedro em 15/12."')}
     </form>
-    <button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
-    <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>
+    ${multi ? `<div class="config" style="margin-top:12px">Com mais de uma opção, a cotação vai por link: o cliente toca em cada opção para comparar e escolhe a dele.</div>
+    <button class="sec" id="rpSalvar" style="width:100%;margin-top:6px">Salvar</button>` : `<button class="zap grande" id="rpEnviar" style="width:100%;margin-top:12px">Enviar imagem no WhatsApp</button>
+    <div class="botoes4" style="margin-top:6px"><button class="sec" id="rpBaixar">Baixar imagem</button><button class="sec" id="rpSalvar">Salvar</button></div>`}
     <label class="fl" style="margin-top:10px"><span>Nome do link (maktubgo.com.br/...)</span><input id="slugC" value="${h(S.slug || sugerirSlug())}" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="victor-santiago"></label>
     <button class="sec grande" id="linkC" style="width:100%;margin-top:6px">${S.link_slug ? 'Atualizar o link do cliente' : 'Gerar link para o cliente'}</button><div id="linkBox"></div>
     <div id="rpPrevia" style="margin-top:12px"></div>`;
   $('voltar').onclick = () => { S = null; ir(X, null); };
   const f = $('fRap');
   const ligarEco = () => { const ck = $('rpEcoCk'); if (ck) ck.onchange = () => { S.eco = ck.checked; previa(); }; };
-  let tm = null; const previa = () => { clearTimeout(tm); tm = setTimeout(() => { if (!num(S.por) || !$('rpPrevia')) return; imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; }); }, 400); };
+  let tm = null; const previa = () => { clearTimeout(tm); tm = setTimeout(() => { if (!num(S.por) || !$('rpPrevia') || (S.extras || []).length) return; imagemRapida().then(b => { if ($('rpPrevia')) $('rpPrevia').innerHTML = `<div class="sub">Prévia</div><img src="${URL.createObjectURL(b)}" style="max-width:100%;border:1px solid var(--linha)">`; }); }, 400); };
   let slugManual = !!S.slug; $('slugC').addEventListener('input', () => { slugManual = true; });
   f.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return;
     const vk = k.match(/^voos\.(\d+)\.(\w+)$/);
@@ -995,6 +1016,7 @@ function editorRapida(P, X) {
     if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
     if (k === 'por' && $('rpParc')) $('rpParc').innerHTML = resumoParc();
+    { const m = k.match(/^extras\.(\d+)\.por$/); if (m && $('rpParc' + m[1])) $('rpParc' + m[1]).innerHTML = resumoParc(S.extras[+m[1]]); }
     previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
@@ -1006,6 +1028,18 @@ function editorRapida(P, X) {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
     const r = await lerColado(txt), o = r.opcoes[0];
     if (!o) { X.aviso('Não encontrei voos nem valores no texto.'); return; }
+    if (RAP_DEST === 'nova' && rapVoos().length) {
+      if (!o.voos.length) { X.aviso('Não achei os voos no texto para a nova opção.'); return; }
+      if (S.extras.length >= 2) { X.aviso('Máximo de 3 opções por cotação.'); return; }
+      if (o.voos.length > 4) { X.aviso('Cada opção da cotação rápida comporta até 4 trechos.'); return; }
+      const x = { voos: o.voos, de: o.de || '', por: o.por || '' };
+      x.voos.forEach(v => completarVoo(v)); marcarGrupo(x, x.voos, o.de); rotular(x.voos);
+      S.extras.push(x); if (r.cia && !S.cia) S.cia = r.cia; RAP_DEST = 'somar';
+      const i = S.extras.length - 1; editorRapida(P, X);
+      X.aviso(`Opção ${i + 2} criada. ${num(x.por) ? 'Confira e gere o link.' : 'Digite o valor da Maktub dela.'}`);
+      const cp = $('fRap').querySelector(`[data-k="extras.${i}.por"]`); if (cp && !num(x.por)) cp.focus();
+      return;
+    }
     const somar = rapVoos().length > 0 && o.voos.length;
     if (somar) {
       const chave = (v) => [v.data, v.ocod, v.dcod, v.saida].join('|'), ja = new Set(S.voos.map(chave));
@@ -1036,6 +1070,11 @@ function editorRapida(P, X) {
   if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) tirarTrecho(+b.dataset.xv); };
   if ($('rpLimpa')) $('rpLimpa').onclick = () => { if (!confirm('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.')) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
   if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
+  if ($('rpDest')) $('rpDest').onclick = (e) => { const b = e.target.closest('button'); if (!b || b.disabled) return; RAP_DEST = b.dataset.d; editorRapida(P, X); };
+  // opções 2 e 3: tirar um trecho (com confirmação) ou a opção inteira
+  P.querySelectorAll('[data-xe]').forEach(b => b.onclick = () => { const [i, j] = b.dataset.xe.split(':').map(Number), x = S.extras[i]; if (!tirarVoo(x, j, 'de', 'por', FMT_C)) return;
+    if (!x.voos.some(v => v.ocod)) S.extras.splice(i, 1); else rotular(x.voos); editorRapida(P, X); X.aviso('Trecho removido.'); });
+  P.querySelectorAll('[data-xop]').forEach(b => b.onclick = () => { const i = +b.dataset.xop; if (!confirm(`Tirar a Opção ${i + 2} inteira desta cotação?`)) return; S.extras.splice(i, 1); editorRapida(P, X); });
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)
   const bagTexto = () => { S.bagagem = textoBag(S.bag_mao, S.bag_desp); editorRapida(P, X); };
@@ -1047,15 +1086,16 @@ function editorRapida(P, X) {
   if ($('rpPrint')) $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
   P.querySelectorAll('details[data-d]').forEach(d => d.ontoggle = () => { d.open ? ABERTOS.add(d.dataset.d) : ABERTOS.delete(d.dataset.d); });
-  const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor total com a Maktub.'); return false; } return true; };
+  const pronto = () => { if (!num(S.por)) { X.aviso('Digite o valor total com a Maktub.'); return false; }
+    const sem = S.extras.findIndex(x => !num(x.por)); if (sem >= 0) { X.aviso(`Digite o valor da Maktub da Opção ${sem + 2}.`); return false; } return true; };
   ligarFaixa(P, X);
-  $('rpEnviar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, enviarImagem); };
+  if ($('rpEnviar')) $('rpEnviar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, enviarImagem); };
   const enviarImagem = async () => {
     enviada(X, 'Imagem no WhatsApp'); salvar(X, true); const blob = await imagemRapida(); const arq = new File([blob], 'cotacao-maktub.jpg', { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [arq] })) { try { await navigator.share({ files: [arq] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     baixar(blob); X.aviso('Imagem baixada. Anexe no WhatsApp.');
   };
-  $('rpBaixar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, async () => { enviada(X, 'Imagem baixada'); salvar(X, true); baixar(await imagemRapida()); }); };
+  if ($('rpBaixar')) $('rpBaixar').onclick = () => { if (pronto()) comCardNaCotacao(P, X, async () => { enviada(X, 'Imagem baixada'); salvar(X, true); baixar(await imagemRapida()); }); };
   $('rpSalvar').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
   $('linkC').onclick = () => { if (pronto()) comCardNaCotacao(P, X, () => gerarLink(X)); };
   previa();
@@ -1152,7 +1192,7 @@ export function valorDaOpcao(d, k, forma, n) {
     return forma === 'cartao' && p.cartao && n >= 1 && n <= p.parc ? p.cartao : null;
   }
   if (d.modelo === 'corp') { const op = opcoesCotacao(d)[k || 0] || opcoesCotacao(d)[0]; return forma === 'pix' && op ? op.valor || null : null; }
-  return valorPelaCotacao(d, forma, n);
+  return valorPelaCotacao(d.modelo === 'rapida' ? (opsRapida(d)[k || 0] || d) : d, forma, n);
 }
 export function valorPelaCotacao(d, forma, n) {
   const pr = precoRapida(d); if (!pr) return null;
@@ -1219,14 +1259,16 @@ function rapInfo() {
   const corp = S.marca === 'Maktub Corporativo';
   // mensagem do botão "Quero fechar esta viagem": a Maktub já sabe qual cotação é
   const per = trechos.length ? (trechos.length > 1 && trechos[trechos.length - 1].dataL ? ` (${ddmm(trechos[0].v.data)} a ${ddmm(trechos[trechos.length - 1].v.data)})` : trechos[0].dataL ? ` (${ddmm(trechos[0].v.data)})` : '') : '';
-  const zapTxt = `Olá, Maktub! Quero fechar a viagem ${titulo}${per}${S.cliente ? ', em nome de ' + String(S.cliente).trim() : ''}.${S.slug ? ' Cotação: maktubgo.com.br/' + S.slug : ''}`;
-  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, valor, zapTxt, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
+  const viagem = `${titulo}${per}${S.cliente ? ', em nome de ' + String(S.cliente).trim() : ''}.${S.slug ? ' Cotação: maktubgo.com.br/' + S.slug : ''}`;
+  const zapTxt = `Olá, Maktub! Quero fechar a viagem ${viagem}`, zapOp = (k) => `Olá, Maktub! Quero seguir com a Opção ${k}: viagem ${viagem}`;
+  return { vs, n, pax, titulo, tipo, total: totalLbl, paxT, pagto, cc, descTxt, valor, zapTxt, zapOp, trechos, corp, sub: [S.cia, tipo, paxT].filter(Boolean), rota: n ? `${trechos[0].o} ${n > 1 ? '⇄' : '→'} ${trechos[0].d}` : '' };
 }
 // página do link (mesmo visual da imagem, em versão para celular)
 function htmlRapida() {
   const I = rapInfo(), R = RAPM || {}, agora = new Date();
+  const Is = [I].concat(rapExtras().map((x, k) => naOpcao(k + 1, rapInfo))), multi = Is.length > 1;
   const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), hoje = agora.toLocaleDateString('pt-BR');
-  const tr = I.trechos.map(t => `
+  const tr = (I) => I.trechos.map(t => `
       <div class="tr">
         <div class="tr-top"><span class="tr-rot">${h(t.rot)}</span><span class="tr-data">${h(t.dia)}${t.dataL ? ' · ' + t.dataL : ''}</span></div>
         <div class="tr-body">
@@ -1298,6 +1340,15 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
 .valor .d{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.18);font-size:11px;color:rgba(235,224,196,.65);letter-spacing:.3px}
 .nota{padding:20px 26px 24px;font-size:10px;line-height:1.95;color:var(--suave);text-align:center}
 .rodape{background:var(--verde);padding:28px 24px 24px;text-align:center}
+[hidden]{display:none!important}
+.abas{margin:0 0 26px;text-align:center}.abas .k{font-size:8px;letter-spacing:2.8px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.abas .lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.aba{font:inherit;cursor:pointer;background:var(--branco);border:1px solid var(--linha);padding:12px 10px;color:var(--verde);text-align:center}
+.aba .n{display:block;font-size:8.5px;letter-spacing:2.6px;text-transform:uppercase;color:var(--dourado);font-weight:500}
+.aba .t{display:block;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--suave);margin-top:4px}
+.aba .v{display:block;font-family:'Cormorant Garamond',serif;font-size:25px;font-weight:600;margin-top:4px;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1}
+.aba[aria-selected="true"]{background:var(--verde);border-color:var(--verde)}.aba[aria-selected="true"] .v{color:var(--creme)}.aba[aria-selected="true"] .t{color:rgba(235,224,196,.7)}
+.optit{text-align:center;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dourado);font-weight:500;margin-bottom:10px}
 .rodape .selo img{height:66px;width:auto;opacity:.92}
 .rodape .lt img{height:34px;width:auto;margin-top:14px;opacity:.95}
 .rodape .ct{margin-top:16px;padding-top:14px;border-top:1px solid rgba(235,224,196,.16);font-size:10.5px;color:rgba(235,224,196,.8);line-height:1.95;letter-spacing:.4px}
@@ -1313,26 +1364,29 @@ body{font-family:'Jost',sans-serif;background:#E9E6DD;color:var(--texto);line-he
   </div>
   <div class="faixa">
     <div><div class="k">Passageiros</div><div class="v">${I.pax} ${I.pax === 1 ? 'pessoa' : 'pessoas'}</div></div>
-    <div><div class="k">Trecho</div><div class="v">${h(I.rota)}</div></div>
+    <div><div class="k">Trecho</div><div class="v">${multi ? Is.map((J, i) => `<span class="op" data-op="${i + 1}"${i ? ' hidden' : ''}>${h(J.rota)}</span>`).join('') : h(I.rota)}</div></div>
     <div><div class="k">Consulta</div><div class="v">${hoje}</div></div>
   </div>
   <div class="corpo">
-    <div class="rota-tt">${h(I.titulo)}</div>
-    <div class="rota-sub">${I.sub.map(h).join(' &nbsp;·&nbsp; ')}</div>
+${multi ? `    <div class="abas" role="tablist"><div class="k">Toque em cada opção para comparar</div><div class="lista">${Is.map((J, i) => `<button type="button" class="aba" role="tab" aria-selected="${i === 0}" data-op="${i + 1}"><span class="n">Opção ${i + 1}</span><span class="t">${h(J.tipo)}${J.trechos[0] && J.trechos[0].dataL ? ' · ' + ddmm(J.trechos[0].v.data) : ''}</span><span class="v">${brl(J.valor)}</span></button>`).join('')}</div></div>` : ''}
+${Is.map((J, i) => `    <div class="op" data-op="${i + 1}"${i ? ' hidden' : ''}>${multi ? `<div class="optit">Opção ${i + 1}</div>` : ''}
+    <div class="rota-tt">${h(J.titulo)}</div>
+    <div class="rota-sub">${J.sub.map(h).join(' &nbsp;·&nbsp; ')}</div>
     <div class="fio"></div>
-${tr}
+${tr(J)}
+    </div>`).join('')}
     ${obs ? `<div class="obs"><div class="k">Observação</div><div class="v">${h(obs)}</div></div>` : ''}
     ${(B => `<div class="bag"><div class="k">Bagagem por passageiro</div><div class="bagrow">${B.L.map(([k, t, sb, q]) => `<div class="bagit"><div class="bagic">${svgBag(k, 40)}${q ? `<span class="bagq">${q}</span>` : ''}</div><div class="bagt">${t}</div><div class="bags">${sb}</div></div>`).join('')}</div>${B.extra ? `<div class="v" style="margin-top:10px">${h(B.extra)}</div>` : ''}<div class="bagtx">Taxas de embarque inclusas</div></div>`)(itensBag())}
   </div>
-  <div class="valor">
-    <div class="k">Valor total</div>
-    <div class="n">${brl(I.valor)}</div>
-    <div class="p">${h(I.total)}</div>
-    ${I.descTxt ? `<div class="desc">${h(I.descTxt)}</div>` : ''}
-    <div class="d">${I.cc ? I.pagto.map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
-    <a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(I.zapTxt)}" target="_blank" rel="noopener">Quero fechar esta viagem</a>
+${Is.map((J, i) => `  <div class="valor op" data-op="${i + 1}"${i ? ' hidden' : ''}>
+    <div class="k">Valor total${multi ? ' · Opção ' + (i + 1) : ''}</div>
+    <div class="n">${brl(J.valor)}</div>
+    <div class="p">${h(J.total)}</div>
+    ${J.descTxt ? `<div class="desc">${h(J.descTxt)}</div>` : ''}
+    <div class="d">${J.cc ? J.pagto.map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') : J.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
+    <a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(multi ? J.zapOp(i + 1) : J.zapTxt)}" target="_blank" rel="noopener">${multi ? 'Quero a Opção ' + (i + 1) : 'Quero fechar esta viagem'}</a>
     <div class="cta-sub">Abre o WhatsApp da Maktub com a sua mensagem pronta</div>
-  </div>
+  </div>`).join('')}
   <div class="nota">
     Valores consultados em ${hoje} às ${hora}.<br>
     Tarifa sujeita à confirmação no momento da emissão. Horários locais.<br>
@@ -1344,6 +1398,7 @@ ${tr}
     <div class="ct">${ctLinks()}</div>
   </div>
 </div>
+${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.getBoundingClientRect().top+window.scrollY-10,behavior:'smooth'})}})</script>` : ''}
 </body></html>`;
 }
 // fontes do desenho: Jost do app e a Cormorant com algarismos alinhados (iguais aos do modelo)
