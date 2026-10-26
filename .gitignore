@@ -110,3 +110,6 @@ temp/
 
 # Design references (local only, not published)
 referencias-design/
+
+# Playwright CLI session output (snapshots, screenshots, logs)
+.playwright-cli/
