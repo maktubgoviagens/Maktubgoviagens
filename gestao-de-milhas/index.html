@@ -507,6 +507,20 @@
       .venda-risco::before,.venda-risco::after{height:6px!important}
       .venda-fecho{margin-top:40px}
     }
+    /* celular: frase do serviço e diagnóstico antes do comparativo, cartões mais compactos */
+    .venda-topo-celular{display:none}
+    @media(max-width:768px){
+      .hero-venda .prova-selo{margin-bottom:22px}
+      .venda-topo-celular{display:block;width:100%;margin-top:18px;text-align:center}
+      .venda-topo-celular p{font-size:18px;line-height:1.55;color:rgba(249,246,241,.92);max-width:30ch;margin:0 auto 22px}
+      .hero-venda .vs-grid{margin-top:32px}
+      .hero-venda .vs-foto{aspect-ratio:16/9}
+      .hero-venda .vs-card{padding:10px 10px 14px}
+      .hero-venda .vs-tag{margin-bottom:8px}
+      .hero-venda .vs-titulo{margin-top:10px}
+      .hero-venda .vs-valor{margin-top:6px}
+      .hero-venda .vs-pontos{margin-top:4px}
+    }
     /* foco visível no teclado */
     :focus-visible{outline:2px solid var(--gold);outline-offset:3px}
     .hero-venda :focus-visible,.acesso-preview :focus-visible,.seguranca :focus-visible,.convite :focus-visible,footer :focus-visible,.cta-fixa :focus-visible{outline-color:var(--gold-warm)}
@@ -722,6 +736,10 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
 <section class="hero hero-prova hero-venda">
   <span class="prova-selo reveal d1">Exemplo real &middot; 24/10/2026</span>
   <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
+  <div class="venda-topo-celular">
+    <p>Um gestor cuida dos seus pontos o ano inteiro para que eles virem viagens.</p>
+    <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20meu%20diagn%C3%B3stico%20de%20Gest%C3%A3o%20de%20Milhas%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Quero meu diagnóstico</a>
+  </div>
   <div class="vs-grid reveal d3">
     <div class="vs-card vs-ruim">
       <span class="vs-tag">O que você leva no catálogo</span>
