@@ -205,6 +205,12 @@
     [hidden]{display:none!important}
     .hero .label .sep{opacity:.5;margin:0 8px}
     .alfaiataria{background:var(--white)}
+    .vai-antes{background:var(--cream-deep)}
+    .vai-antes-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:64px;align-items:center}
+    .vai-antes-foto{aspect-ratio:4/5;background:url('/ativos/destino-santarem.jpg') center/cover no-repeat}
+    .vai-antes h2{font-size:clamp(34px,4.4vw,54px);margin-bottom:22px}
+    .vai-antes p{font-size:17px;line-height:1.8;color:var(--text)}
+    @media(max-width:768px){.vai-antes-grid{grid-template-columns:1fr;gap:36px}.vai-antes-foto{aspect-ratio:1/1;background-position:center 20%}}
     .alf-head{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:end;margin-bottom:56px}
     .alf-head h2{font-size:clamp(38px,5.5vw,58px)}
     .alf-head p{font-size:17px;color:var(--text-mid);font-weight:300}
@@ -758,7 +764,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <p class="lead reveal d3">A maioria das pessoas só lembra das milhas quando precisa viajar. Nós cuidamos delas o ano inteiro, com método, como quem cuida de um investimento.</p>
     <div class="diferenca-grid">
       <div class="diferenca-col before reveal d4">
-        <h3>Gestão Comum</h3>
+        <h3>Sem gestão</h3>
         <ul>
           <li>Pensa só na próxima viagem</li>
           <li>Procura passagem quando precisa</li>
@@ -808,7 +814,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <div class="passo-num">03</div>
         <div class="passo-content">
           <h3>Gestão contínua</h3>
-          <p>Acompanhamos promoções, transferências bonificadas, lançamentos de cartões, vencimentos e janelas ideais de emissão. Quando há oportunidade relevante, agimos.</p>
+          <p>Acompanhamos promoções, transferências bonificadas, lançamentos de cartões, vencimentos e janelas ideais de emissão. Quando há oportunidade relevante, avisamos você e executamos com o seu ok.</p>
         </div>
       </div>
       <div class="passo reveal d6">
@@ -842,6 +848,18 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     </div>
     <p class="alf-note reveal d4">Milhas bem geridas são o começo. <em>A viagem bem feita é o destino.</em></p>
     <p class="reveal d4" style="text-align:center;margin-top:28px;font-size:15px">Quer trocar a econômica pela poltrona que deita? <a href="/classe-executiva-com-milhas/" style="color:var(--gold);border-bottom:1px solid var(--gold);padding-bottom:2px">Veja como a Gestão leva você para a executiva</a></p>
+  </div>
+</section>
+ 
+<section class="vai-antes" id="vai-antes">
+  <div class="container--wide vai-antes-grid">
+    <div class="vai-antes-foto reveal d1" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
+    <div>
+      <span class="label reveal d1">A gente vai antes</span>
+      <div class="divider reveal d1"></div>
+      <h2 class="reveal d2">Não indicamos<br><span class="italic-gold">por catálogo.</span></h2>
+      <p class="reveal d3">Sempre que possível, alguém daqui vive o destino antes de ele entrar na nossa prateleira. O passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você leva junto com os seus pontos.</p>
+    </div>
   </div>
 </section>
  
