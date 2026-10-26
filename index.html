@@ -241,11 +241,10 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
   min-height:clamp(600px,94svh,920px);
   padding-block:150px var(--e6);overflow:hidden;
 }
-/* a foto entra por cima do gradiente da marca.
-   se o arquivo ainda não existir, o gradiente sustenta a tela sozinho. */
+/* fundo do topo feito só com o gradiente da marca. */
 .hero-fundo{
   position:absolute;inset:0;
-  background-image:url('/ativos/hero.jpg'),
+  background-image:
     radial-gradient(120% 90% at 78% 18%, rgba(201,169,110,.28) 0%, transparent 58%),
     linear-gradient(160deg, var(--creme-fundo) 0%, #e8dfcd 52%, #ded2b9 100%);
   background-size:cover;background-position:center;background-repeat:no-repeat;
@@ -546,6 +545,9 @@ footer a:hover{color:var(--creme)}
   display:grid;place-items:center;box-shadow:0 5px 20px rgba(0,0,0,.22);
 }
 .zap svg{width:27px;height:27px;fill:#fff}
+/* no celular, o WhatsApp sai da frente enquanto o comparativo está na tela */
+.zap{transition:opacity .25s,visibility .25s}
+@media(max-width:768px){body.comparativo-na-tela .zap{opacity:0;visibility:hidden;pointer-events:none}}
  
 /* ============================================================
    18. TELAS MENORES
@@ -768,7 +770,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <h1 id="t-hero">Seus pontos viram<em>viagens inteiras.</em></h1>
       <p>A gente cuida das suas milhas o ano inteiro e, quando chega a hora, desenha a viagem sob medida, do primeiro voo ao seu retorno. Nada de pacote pronto. Nada de bilhete solto.</p>
       <div class="acoes">
-        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
         <a class="btn" href="#contato">Planejar minha viagem</a>
       </div>
       <a class="hero-google" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">
@@ -827,7 +829,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <div class="vs-fecho">
       <p class="vs-perda">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate como esse no catálogo.</p>
       <div class="acoes">
-        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
         <a class="btn" href="/gestao-de-milhas/">Ver o exemplo completo</a>
       </div>
       <p class="vs-nota">Transferência de pontos Livelo para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
@@ -845,14 +847,14 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <p style="margin-top:var(--e2)">E o que nenhuma gestão de milhas entrega: como cliente, você tem a alfaiataria de viagens inclusa. Rota, hotelaria, transporte, ingressos, roteiro e suporte 24 horas durante a viagem.</p>
       <p style="margin-top:var(--e2)">Cada cliente tem painel privado, relatório mensal e uma reunião por mês com o gestor.</p>
       <div class="acoes">
-        <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero um diagnóstico dos meus pontos</a>
+        <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
         <a class="btn btn-claro" href="/gestao-de-milhas/">Conhecer a gestão</a>
       </div>
       <p class="acesso-cliente">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
     </div>
     <div class="painel" aria-hidden="true">
       <div class="painel-topo"><span>maktubgo.com.br/painel</span><span class="painel-selo">Exemplo ilustrativo</span></div>
-      <div class="painel-linha"><span>Patrimônio consolidado</span><span>970.000</span></div>
+      <div class="painel-linha"><span>Saldo consolidado</span><span>970.000</span></div>
       <div class="painel-linha"><span>Economia gerada no ano</span><span>R$ 47.320</span></div>
       <div class="painel-linha"><span>Reunião mensal</span><span>Agendada</span></div>
       <div class="painel-linha"><span>Viagens em estratégia</span><span>04</span></div>
@@ -1092,6 +1094,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 <a class="zap" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" aria-label="Falar com a Maktub Go no WhatsApp">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6 1.9.8 2.7.9 3.6.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Z"/></svg>
 </a>
+<script>
+(function(){var c=document.querySelector('#pontos .vs');
+if(c&&'IntersectionObserver' in window)new IntersectionObserver(function(e){document.body.classList.toggle('comparativo-na-tela',e[0].isIntersecting)}).observe(c);})();
+</script>
  
  
 <script>
