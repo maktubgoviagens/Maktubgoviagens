@@ -576,7 +576,7 @@ async function colar(P, X, modo) {
 }
 /* nomes que nunca podem virar link de cotação: páginas e pastas do site e nomes que o site pode usar */
 const RESERVADOS = ['acesso', 'admin', 'assets', 'ativos', 'avaliacao', 'c', 'cadastro', 'classe-executiva-com-milhas', 'como-trabalhamos', 'corporativo', 'gestao-de-milhas', 'painel', 'privacidade', 'quem-somos', 'termos', 'trabalheconosco', 'trabalhe-conosco', 'viagens', 'index', 'sitemap', 'robots', '404',
-  'fale-conosco', 'contato', 'blog', 'cotacao', 'cotacoes', 'login', 'app', 'site', 'maktub', 'maktubgo', 'servicos', 'sobre', 'politica-de-privacidade', 'termos-de-uso', 'lua-de-mel', 'europa', 'milhas'];
+  'fale-conosco', 'contato', 'blog', 'cotacao', 'cotacoes', 'login', 'app', 'site', 'maktub', 'maktubgo', 'servicos', 'sobre', 'politica-de-privacidade', 'termos-de-uso', 'lua-de-mel', 'europa', 'milhas', 'executiva-buenos-aires'];
 // confere no próprio site se o endereço já é uma página publicada (pega também páginas novas que entrarem no GitHub)
 async function existeNoSite(slug) {
   for (const u of [`/${slug}/`, `/${slug}`]) {
