@@ -1442,7 +1442,7 @@
     const ano = String(new Date().getFullYear());
     const doAno = extrato.filter(x => String(x.data).startsWith(ano));
     const soma = (arr) => arr.reduce((s, x) => s + Number(x.quantidade || 0), 0);
-    const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
+    const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || x.tipo === 'emissao' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
     const entradas = doAno.reduce((s, x) => s + cresce(x), 0);
     const bonus = soma(doAno.filter(x => x.tipo === 'bonus')) + doAno.filter(x => x.tipo === 'transf_entrada').reduce((s, x) => s + Number(x.milhas_bonus || 0), 0);
     const usadas = Math.abs(soma(doAno.filter(x => x.tipo === 'emissao')));
@@ -1458,7 +1458,7 @@
     $('extratoWrap').innerHTML = extrato.length ? `<table class="tbl"><thead><tr><th>Data</th><th>Programa</th><th>Tipo</th><th>Descrição</th><th class="r">Milhas</th></tr></thead><tbody>
       ${extrato.slice(0, 60).map(x => { const q = Number(x.quantidade || 0); return `<tr>
         <td class="mute">${brDate(x.data)}</td><td>${escapeHtml(x.programa || '')}</td>
-        <td><span class="pill">${TIPOS[x.tipo] || escapeHtml(x.tipo || '')}</span></td>
+        <td><span class="pill">${x.tipo === 'emissao' && q > 0 ? 'Estorno' : TIPOS[x.tipo] || escapeHtml(x.tipo || '')}</span></td>
         <td>${escapeHtml(x.descricao || '')}</td>
         <td class="r ${q >= 0 ? 'pos' : 'neg'}">${q >= 0 ? '+' : '−'} ${fmtNum(Math.abs(q))}</td></tr>`; }).join('')}
       </tbody></table>` : '<div class="empty-cards">Nenhuma movimentação registrada ainda.</div>';

@@ -182,7 +182,7 @@
     if (!saldoMes(mes).length && mes === curKey) { saldoAtual = programas.reduce((s, p) => s + Number(p.saldo || 0), 0); fonteSaldo = 'saldo atual'; }
     const saldoAnt = totMes(prevKey);
     const variacao = saldoMes(prevKey).length ? saldoAtual - saldoAnt : null;
-    const entradas = extrato.reduce((s, x) => s + (x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade)), 0);
+    const entradas = extrato.reduce((s, x) => s + (x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || x.tipo === 'emissao' || Number(x.quantidade) <= 0 ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade)), 0);
     const usadas = Math.abs(extrato.filter(x => x.tipo === 'emissao').reduce((s, x) => s + Number(x.quantidade), 0));
  
     // --- valor em reais pelo milheiro de referência atual de cada programa

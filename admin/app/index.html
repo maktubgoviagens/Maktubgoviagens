@@ -142,6 +142,23 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .conf .dif{margin-top:6px;font-weight:600;color:var(--verde);font-size:14px}
 .conf .dif.neg{color:var(--alerta)}
 .resumoConf{margin-top:12px;font-size:14px;color:var(--tinta-2)}
+.printConf{border:1px dashed rgba(138,101,32,.45);background:rgba(138,101,32,.05);padding:12px;margin:14px 0 4px}
+.printConf .cab,.plido .cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.printConf .cab b,.plido .cab b{font-weight:600;color:var(--verde);font-size:15px}
+.printConf .cab small,.plido .cab small{color:var(--tinta-3);font-size:12px;text-align:right}
+.plido{border-top:1px solid var(--linha);margin-top:12px;padding-top:12px}
+.plin{padding:9px 0;border-top:1px dotted var(--linha)}
+.plin.off .pchk span,.plin.off .pchk b{opacity:.45}
+.pchk{display:flex;align-items:flex-start;gap:8px;font-size:14px;line-height:1.35}
+.pchk input{width:auto;margin:2px 0 0;flex:0 0 auto}
+.pchk span{flex:1}
+.pchk b{white-space:nowrap;color:var(--verde);font-weight:600}
+.pchk b.neg,.pst .neg{color:var(--alerta)}
+.pst .ok{color:var(--verde);font-weight:600}
+.plin select,.plin input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--linha);background:var(--creme);font-size:16px;margin-top:6px;border-radius:0}
+.pav{margin-top:6px;font-size:12.5px;color:var(--alerta)}
+.pnota{display:block;margin-top:6px;font-size:12px;color:var(--tinta-3)}
+.pst{margin-top:10px;font-size:14px;color:var(--tinta-2)}
 .dre .lin.sub{font-weight:600;color:var(--verde)}
 .mapa{height:340px;margin-top:12px;border:1px solid var(--linha);background:#dde5e8;z-index:0}
 .mapa .leaflet-control-attribution{font-size:9px;background:rgba(255,255,255,.6)}
@@ -497,7 +514,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as MKT from '/admin/app/marketing.js?v=14';
-import * as CART from '/admin/app/carteira.js?v=1';
+import * as CART from '/admin/app/carteira.js?v=2';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
 import * as CTR from '/admin/app/contrato.js?v=2';
@@ -4132,7 +4149,7 @@ async function fiCarteira(el, c) {
     <div class="secao">Por programa</div>
     <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
     <div class="secao">Últimos lançamentos</div>
-    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}<button class="mini" data-del="${x.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}<button class="mini" data-del="${x.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
       <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
   el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -4262,7 +4279,122 @@ function formCarteira(c) {
 }
 
 /* conferência mensal: digita o saldo de hoje e o app lança a diferença */
-function formConferencia(c) {
+/* ---------- Conferência por print do extrato: o app lê saldo, vencimentos e movimentações ---------- */
+const TIPO_PRINT = { acumulo: 'Acúmulo', clube: 'Clube de pontos', bonus: 'Bônus', compra: 'Compra de pontos', transf_entrada: 'Transferência recebida', transf_saida: 'Transferência enviada', emissao: 'Uso (emissão)', estorno: 'Estorno de resgate', expiracao: 'Expiração', ajuste: 'Ajuste' };
+const TETO_BONUS = 300000; // teto comum de bônus nas promoções de transferência
+const bonusDe = (q, pct) => pct > 0 && q > 0 ? Math.min(TETO_BONUS, Math.round(q - q / (1 + pct / 100))) : 0;
+const reduzirPrint = (file) => new Promise((ok) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 2400 / Math.max(img.width, img.height)); const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); ok(cv.toDataURL('image/jpeg', 0.88)); URL.revokeObjectURL(img.src); }; img.onerror = () => ok(null); img.src = URL.createObjectURL(file); });
+const dataISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+const pctBonus = (m) => Number(String(m.bonus || '').replace(',', '.')) || 0;
+async function lerPrintsConf(c, files) {
+  files = [...files].filter(f => /^image\//.test(f.type)).slice(0, 4);
+  if (!files.length) { aviso('Escolha uma imagem do extrato.'); return null; }
+  const imagens = (await Promise.all(files.map(reduzirPrint))).filter(Boolean);
+  const { data, error } = await sb.functions.invoke('ler-print', { body: { imagens, modo: 'saldo' } });
+  let msg = data && data.erro;
+  if (!msg && error && error.context && typeof error.context.json === 'function') { try { msg = (await error.context.json()).erro; } catch (_) { /* sem corpo */ } }
+  if (!data || !data.ok) { aviso(msg || 'Não consegui ler o print. Tente de novo ou digite o saldo.'); return null; }
+  if (!String(data.programa || '').trim()) { aviso('Não identifiquei o programa nesse print.'); return null; }
+  return prepararLeitura(c, data);
+}
+function prepararLeitura(c, d) {
+  const key = CART.normProg(d.programa), prog = c._W.programas.find(p => p.key === key);
+  const ex = (c._ex || []).filter(x => CART.normProg(x.programa) === key);
+  const corte = c.conferencia_em ? String(c.conferencia_em).slice(0, 10) : '';
+  const L = { key, nome: prog ? prog.programa : String(d.programa).trim(), atual: prog ? prog.saldo : null, primeira: !ex.length, corte,
+    saldoVisivel: !!d.saldo_visivel, saldo: Math.round(Number(d.saldo || 0)), vencVisivel: !!d.vencimentos_visiveis,
+    lotes: (d.vencimentos || []).filter(l => dataISO(l.data) && Number(l.quantidade) > 0).map(l => ({ data: l.data, quantidade: Math.round(Number(l.quantidade)) })),
+    obs: String(d.observacao || '').trim(), avisoResumo: '', antigas: 0, linhas: [] };
+  const movs = (d.movimentos || []).filter(m => Number(m.quantidade) && dataISO(m.data)).map(m => ({ ...m, quantidade: Math.round(Number(m.quantidade)) }));
+  // o resumo do período do site (ex.: Smiles) confere se alguma linha ficou fora do print
+  if (d.resumo_visivel) {
+    const ent = movs.filter(m => m.quantidade > 0).reduce((a, m) => a + m.quantidade, 0), sai = movs.filter(m => m.quantidade < 0).reduce((a, m) => a - m.quantidade, 0);
+    if (ent !== Number(d.resumo_entradas) || sai !== Number(d.resumo_saidas)) L.avisoResumo = `O resumo do site soma ${num(d.resumo_entradas)} de entradas e ${num(d.resumo_saidas)} de saídas, mas as linhas lidas somam ${num(ent)} e ${num(sai)}. Pode ter ficado alguma linha fora do print.`;
+  }
+  // compras no cartão (ex.: Esfera) viram uma linha por cartão e por mês
+  const grupos = {}, linhas = [];
+  movs.forEach(m => { if (m.tipo === 'acumulo' && m.cartao) { const g = m.data.slice(0, 7) + '|' + m.cartao; (grupos[g] = grupos[g] || []).push(m); } else linhas.push(m); });
+  Object.values(grupos).forEach(gs => linhas.push({ data: gs.map(m => m.data).sort().pop(), descricao: gs.length > 1 ? `Compras no cartão ${gs[0].cartao} (${gs.length} lançamentos)` : gs[0].descricao,
+    quantidade: gs.reduce((a, m) => a + m.quantidade, 0), tipo: 'acumulo', cartao: gs[0].cartao, validade: gs.map(m => m.validade).filter(dataISO).sort()[0] || '' }));
+  linhas.sort((a, b) => b.data.localeCompare(a.data));
+  const novas = L.primeira ? [] : linhas.filter(m => !corte || m.data > corte), vistas = {};
+  L.antigas = linhas.length - novas.length;
+  L.linhas = novas.map(m => {
+    // já lançada: mesma data e mesma quantidade no extrato (ex.: uso lançado sozinho pela venda)
+    const ja = ex.some(x => String(x.data).slice(0, 10) === m.data && Math.round(Number(x.quantidade)) === m.quantidade);
+    const chave = m.data + '|' + m.quantidade + '|' + m.descricao, repetida = !!vistas[chave]; vistas[chave] = true;
+    const ult = ['compra', 'clube'].includes(m.tipo) ? ex.filter(x => x.tipo === m.tipo && Number(x.custo_brl) > 0).sort((a, b) => String(b.data).localeCompare(String(a.data)))[0] : null;
+    return { ...m, ja, repetida, incluir: !ja && !repetida, bonus: '', custo: ult ? String(ult.custo_brl) : '' };
+  });
+  return L;
+}
+const somaPrint = (L) => L.linhas.filter(m => m.incluir).reduce((a, m) => a + m.quantidade, 0);
+const difPrint = (L) => L.primeira || !L.saldoVisivel ? 0 : L.saldo - ((L.atual || 0) + somaPrint(L));
+const saldoPrint = (L) => L.primeira || L.saldoVisivel ? L.saldo : (L.atual || 0) + somaPrint(L);
+function htmlLeitura(L) {
+  const dif = difPrint(L), opts = (v) => Object.entries(TIPO_PRINT).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('');
+  const linhas = L.linhas.map((m, i) => {
+    const b = bonusDe(m.quantidade, pctBonus(m));
+    return `<div class="plin${m.incluir ? '' : ' off'}" data-i="${i}">
+      <label class="pchk"><input type="checkbox" data-p="incluir"${m.incluir ? ' checked' : ''}><span>${dataBR(m.data)} · ${esc(m.descricao)}</span><b class="${m.quantidade < 0 ? 'neg' : ''}">${m.quantidade > 0 ? '+' : '−'} ${num(Math.abs(m.quantidade))}</b></label>
+      ${m.ja ? '<div class="pav">Já está lançada na carteira (provavelmente pela venda). Marque só se for outra.</div>' : ''}
+      ${m.repetida ? '<div class="pav">Repetida no mesmo dia. Marque se as duas forem reais.</div>' : ''}
+      <select data-p="tipo" aria-label="Tipo">${opts(m.tipo)}</select>
+      ${m.tipo === 'transf_entrada' ? `<input type="number" inputmode="decimal" step="any" data-p="bonus" value="${esc(m.bonus)}" placeholder="Bônus da promoção em % (opcional)" aria-label="Bônus da promoção em %">${b ? `<small class="pnota">${num(m.quantidade - b)} transferidos + ${num(b)} de bônus</small>` : ''}` : ''}
+      ${m.tipo === 'compra' || m.tipo === 'clube' ? `<label class="pnota">Valor pago (R$)${m.custo ? ', como no último lançamento' : ''}<input type="number" inputmode="decimal" step="any" data-p="custo" value="${esc(m.custo)}" placeholder="Ex.: 44,90"></label>` : ''}
+    </div>`;
+  }).join('');
+  const venc = !L.vencVisivel ? 'Este print não mostra vencimentos: os atuais ficam como estão.' : L.lotes.length
+    ? 'A vencer: ' + L.lotes.slice().sort((a, b) => a.data.localeCompare(b.data)).slice(0, 4).map(l => `${num(l.quantidade)} em ${dataBR(l.data)}`).join(' · ') + (L.lotes.length > 4 ? ` · e mais ${L.lotes.length - 4}` : '')
+    : 'Sem pontos a vencer.';
+  const status = L.primeira ? (L.saldoVisivel ? `Primeira conferência deste programa: o saldo de ${num(L.saldo)} entra como saldo herdado.` : '<span class="neg">Não achei o saldo no print.</span> Envie a tela onde aparece o saldo total.')
+    : !L.saldoVisivel ? `Não achei o saldo no print: o saldo novo fica ${num(saldoPrint(L))}, pela soma das movimentações.`
+    : !dif ? `<span class="ok">Fecha com o saldo do print: ${num(L.saldo)}.</span>`
+    : `<span class="neg">Diferença de ${dif > 0 ? '+' : '−'}${num(Math.abs(dif))} para o saldo do print.</span> Confira as linhas acima. Se salvar assim, a diferença entra como ajuste.`;
+  return `<div class="plido" data-k="${esc(L.key)}">
+    <div class="cab"><b>${esc(L.nome)}</b><small>${L.saldoVisivel ? 'no print: ' + num(L.saldo) : 'sem saldo no print'}${L.atual === null ? '' : ' · no painel: ' + num(L.atual)}</small></div>
+    ${L.linhas.length ? `<div class="pnota" style="margin:0 0 2px">Movimentações novas desde ${L.corte ? dataBR(L.corte) : 'a última conferência'}</div>${linhas}` : L.primeira ? '' : '<div class="pnota" style="margin:0">Nenhuma movimentação nova no print.</div>'}
+    ${L.antigas && !L.primeira ? `<small class="pnota">${plural(L.antigas, 'movimentação anterior à última conferência ficou de fora', 'movimentações anteriores à última conferência ficaram de fora')}.</small>` : ''}
+    ${L.avisoResumo ? `<div class="pav">${esc(L.avisoResumo)}</div>` : ''}
+    ${L.obs ? `<div class="pav">${esc(L.obs)}</div>` : ''}
+    <div class="pst">${status}</div>
+    <small class="pnota">${venc}</small>
+    <button type="button" class="sec" data-p="remover" style="margin-top:8px;padding:7px 10px;font-size:11px">Remover esta leitura</button>
+  </div>`;
+}
+function linhasDoPrint(L, data) {
+  if (L.primeira) return L.saldoVisivel ? { linhas: L.saldo > 0 ? [{ data, programa: L.nome, tipo: 'saldo_inicial', quantidade: L.saldo, descricao: 'Saldo lido no print' }] : [] } : { erro: `${L.nome}: não achei o saldo no print.` };
+  const out = [];
+  for (const m of L.linhas.filter(x => x.incluir)) {
+    // estorno de resgate fica como emissão positiva: devolve as milhas sem contar como ganho
+    const tipo = m.tipo === 'estorno' ? 'emissao' : m.tipo, q = m.quantidade;
+    const row = { data: m.data, programa: L.nome, tipo, quantidade: q, descricao: m.tipo === 'estorno' ? 'Estorno: ' + m.descricao : m.descricao };
+    if (dataISO(m.validade) && q > 0) row.validade = m.validade;
+    if (tipo === 'emissao' && q < 0) row.categoria_uso = 'passagem';
+    if (tipo === 'transf_entrada' && pctBonus(m) > 0) row.milhas_bonus = bonusDe(q, pctBonus(m));
+    if (tipo === 'compra' || tipo === 'clube') {
+      const v = Number(String(m.custo).replace(',', '.'));
+      if (!(v > 0)) return { erro: `${L.nome}: informe o valor pago em "${m.descricao}".` };
+      row.custo_brl = v;
+    }
+    out.push(row);
+  }
+  const dif = difPrint(L);
+  if (dif) out.push({ data, programa: L.nome, tipo: 'ajuste', quantidade: dif, descricao: 'Diferença para fechar com o saldo do print' });
+  return { linhas: out };
+}
+async function gravarVencLidos(c, Ls, data) {
+  const pr = await sb.from('programas_milhas').select('id,programa,saldo').eq('cliente_id', c.id);
+  if (pr.error) return pr.error.message;
+  for (const L of Ls) {
+    const row = (pr.data || []).find(p => CART.normProg(p.programa) === L.key); if (!row) continue;
+    const v = CART.vencLidos(L.lotes, row.saldo);
+    const { error } = await sb.from('programas_milhas').update({ vencimentos_lidos: L.lotes, vencimentos_lidos_em: data, vencimento_data: v.data, vencimento_quantidade: v.qtd }).eq('id', row.id);
+    if (error) return error.message;
+  }
+  return '';
+}
+function formConferencia(c, vals) {
   const box = $('ctForm'); if (!box) return;
   const W = c._W, refs = c._refs || {}, primeira = !c._ex.length;
   const progs = W.programas.filter(p => p.saldo !== 0);
@@ -4276,6 +4408,12 @@ function formConferencia(c) {
   box.innerHTML = `<form class="bloco form" id="fConf">
     <h2>Conferência de ${mesNomeCurto(mesKey(new Date()))}</h2>
     <div class="sub" style="margin-top:0">Digite o saldo que aparece hoje em cada programa. O app calcula a diferença e faz os lançamentos sozinho.${primeira ? ' Como é a primeira vez, tudo entra como saldo herdado.' : ''}</div>
+    <div class="printConf">
+      <div class="cab"><b>Ler pelo print do extrato</b><small>um programa por vez, até 4 prints</small></div>
+      <div class="duas-col" style="margin-top:8px"><label class="sec" style="text-align:center;cursor:pointer">Enviar prints<input type="file" id="confPrintArq" accept="image/*" multiple hidden></label><button class="sec" type="button" id="confPrintColar">Colar print</button></div>
+      <div class="pnota" id="confPrintSt">O app lê o saldo, os vencimentos e as movimentações. Você só confere.</div>
+      <div id="confPrints"></div>
+    </div>
     ${campo('data', 'Data da conferência', hojeISO(), 'date', 'required')}
     <div id="confLinhas">${progs.map((p, i) => linha(p.programa, p.saldo, i)).join('')}${extras.map((n, j) => linha(n, null, progs.length + j)).join('')}</div>
     <div class="duas-col" style="align-items:end;margin-top:8px"><label class="fl"><span>Outro programa</span><input id="confNovoProg" list="dlProgC" autocomplete="off" placeholder="Ex.: Smiles"></label><button class="sec" type="button" id="confAdd" style="height:44px">+ Adicionar</button></div>
@@ -4285,8 +4423,54 @@ function formConferencia(c) {
   </form>`;
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const f = $('fConf');
+  const leituras = c._prints || (c._prints = {});
+  // o saldo do painel pode ter mudado desde a leitura (outro lançamento): compara sempre com o atual
+  Object.values(leituras).forEach(L => { const p = W.programas.find(x => x.key === L.key); L.atual = p ? p.saldo : null; });
   const lista = () => progs.map(p => ({ nome: p.programa, atual: p.saldo, key: p.key })).concat(extras.map(n => ({ nome: n, atual: null, key: CART.normProg(n) })));
-  $('cancConf').onclick = () => { FI_FORM = null; c._confExtra = []; box.innerHTML = ''; };
+  $('cancConf').onclick = () => { FI_FORM = null; c._confExtra = []; c._prints = {}; box.innerHTML = ''; };
+  const valsDigitados = () => { const v = {}; lista().forEach((x, i) => { const inp = f.querySelector(`.conf[data-i="${i}"] [name=novo]`); if (inp && !inp.readOnly) v[x.key] = inp.value; }); return v; };
+  if (vals) lista().forEach((x, i) => { if (vals[x.key] !== undefined) f.querySelector(`.conf[data-i="${i}"] [name=novo]`).value = vals[x.key]; });
+  const desenharPrints = () => { $('confPrints').innerHTML = Object.values(leituras).map(htmlLeitura).join(''); };
+  const aplicarPrints = () => lista().forEach((x, i) => {
+    const div = f.querySelector(`.conf[data-i="${i}"]`), inp = div.querySelector('[name=novo]'), sm = div.querySelector('.cab small'), L = leituras[x.key];
+    if (!sm.dataset.orig) sm.dataset.orig = sm.textContent;
+    if (L) { div.dataset.print = '1'; inp.value = String(saldoPrint(L)); inp.readOnly = true; sm.textContent = sm.dataset.orig + ' · pelo print'; }
+    else if (div.dataset.print) { delete div.dataset.print; inp.value = ''; inp.readOnly = false; sm.textContent = sm.dataset.orig; }
+  });
+  const novaLeitura = async (files) => {
+    const st = $('confPrintSt'), txt = st.textContent; st.textContent = 'Lendo o print... pode levar alguns segundos.';
+    const L = await lerPrintsConf(c, files);
+    if ($('confPrintSt')) $('confPrintSt').textContent = txt;
+    if (!L || !$('fConf')) return;
+    const v = valsDigitados();
+    leituras[L.key] = L;
+    if (!lista().some(x => x.key === L.key)) extras.push(L.nome);
+    formConferencia(c, v);
+  };
+  $('confPrintArq').onchange = (e) => { const fs = [...e.target.files]; e.target.value = ''; novaLeitura(fs); };
+  $('confPrintColar').onclick = async () => {
+    if (!navigator.clipboard || !navigator.clipboard.read) { aviso('Use "Enviar prints", ou cole com Ctrl + V aqui na tela.'); return; }
+    try {
+      const fs = [];
+      for (const it of await navigator.clipboard.read()) { const t = it.types.find(x => x.startsWith('image/')); if (t) fs.push(new File([await it.getType(t)], 'print.png', { type: t })); }
+      if (!fs.length) { aviso('Não há print copiado. Tire o print e tente de novo.'); return; }
+      novaLeitura(fs);
+    } catch (_) { aviso('Não consegui colar. Use "Enviar prints".'); }
+  };
+  f.addEventListener('paste', (e) => {
+    const fs = [...((e.clipboardData && e.clipboardData.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
+    if (fs.length) { e.preventDefault(); novaLeitura(fs); }
+  });
+  const mexePrint = (e) => {
+    const card = e.target.closest('.plido'), L = card && leituras[card.dataset.k]; if (!L) return;
+    const p = e.target.dataset.p;
+    if (p === 'remover') { delete leituras[L.key]; aplicarPrints(); desenharPrints(); upd(); return; }
+    const lin = e.target.closest('.plin'), m = lin && L.linhas[Number(lin.dataset.i)]; if (!m) return;
+    if (p === 'incluir') m.incluir = e.target.checked; else if (p === 'tipo') m.tipo = e.target.value; else if (p === 'bonus') m.bonus = e.target.value; else if (p === 'custo') m.custo = e.target.value; else return;
+    card.outerHTML = htmlLeitura(L); aplicarPrints(); upd();
+  };
+  $('confPrints').addEventListener('change', mexePrint);
+  $('confPrints').addEventListener('click', (e) => { if (e.target.dataset.p === 'remover') mexePrint(e); });
   $('confAdd').onclick = () => {
     const n = $('confNovoProg').value.trim(); if (!n) return;
     if (lista().some(x => x.key === CART.normProg(n))) { aviso('Esse programa já está na lista.'); return; }
@@ -4297,6 +4481,7 @@ function formConferencia(c) {
   };
   const detalhe = (div, dif, atual) => {
     const d = div.querySelector('.det'), tipoAtual = d.dataset.t;
+    if (div.dataset.print) { d.hidden = true; d.innerHTML = ''; d.dataset.t = ''; return; }
     if (!dif) { d.hidden = true; d.innerHTML = ''; d.dataset.t = ''; return; }
     const sobe = dif > 0, chave = sobe ? 'sobe' : 'desce';
     if (tipoAtual === chave) return;
@@ -4328,12 +4513,14 @@ function formConferencia(c) {
     });
     $('confResumo').innerHTML = mexidos ? `<b>${plural(mexidos, 'programa conferido', 'programas conferidos')}</b>${sobe ? ` · ${num(sobe)} novos pontos${valor ? ', cerca de ' + brl2(valor) + ' em patrimônio' : ''}` : ''}` : '';
   };
+  aplicarPrints(); desenharPrints();
   f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
   f.onsubmit = async (e) => {
     e.preventDefault();
     const data = tv(f, 'data'), R = ler(), linhas = [];
     if (!R.some(r => r.novo !== null)) { aviso('Digite o saldo de pelo menos um programa.'); return; }
     for (const r of R) {
+      if (leituras[r.key]) { const lp = linhasDoPrint(leituras[r.key], data); if (lp.erro) { aviso(lp.erro); return; } linhas.push(...lp.linhas); continue; }
       if (!r.dif) continue;
       const d = r.div.querySelector('.det'), t = d.querySelector('[name=tipo]').value;
       if (r.dif > 0) {
@@ -4354,8 +4541,16 @@ function formConferencia(c) {
     const agora = new Date().toISOString();
     const cf = await sb.from('clientes').update({ conferencia_em: agora }).eq('id', c.id);
     if (!cf.error) c.conferencia_em = agora;
-    c._confExtra = [];
-    await depoisDaCarteira(c, linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.');
+    // vencimentos lidos do print: grava depois do recálculo, que cria o programa novo na carteira
+    const comVenc = Object.values(leituras).filter(L => L.vencVisivel);
+    let semVenc = '';
+    if (comVenc.length) {
+      try { await CART.syncCarteira(c.id, c._refs); } catch (_) { /* o recálculo roda de novo logo abaixo */ }
+      const er = await gravarVencLidos(c, comVenc, data);
+      if (er) semVenc = ' ' + tec('Os vencimentos do print não foram gravados: rode no Supabase o SQL das colunas vencimentos_lidos (' + er + ').');
+    }
+    c._confExtra = []; c._prints = {};
+    await depoisDaCarteira(c, (linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.') + semVenc);
   };
 }
 
