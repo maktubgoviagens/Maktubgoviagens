@@ -7,6 +7,12 @@
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "6ac8ba6089dcbc303744a507a4587113c5d845ca2f658b3ce2b0b5eab108fb0d"
     },
+    "image-to-code": {
+      "source": "Leonxlnx/imagegen-skills",
+      "sourceType": "github",
+      "skillPath": "skills/image-to-code/SKILL.md",
+      "computedHash": "58517b03b2a01f4c9ba65861559d03df931400871bbc200978c975b24bb92c73"
+    },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
