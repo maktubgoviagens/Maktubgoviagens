@@ -107,3 +107,6 @@ temp/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+# Design references (local only, not published)
+referencias-design/
