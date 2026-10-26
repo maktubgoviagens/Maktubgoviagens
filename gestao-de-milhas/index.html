@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  <meta name="description" content="Gestão de Milhas Concierge Maktub Go: acompanhamento estratégico do seu patrimônio de milhas o ano inteiro, como um assessor acompanha seus investimentos." />
+  <meta name="description" content="Gestão de Milhas Concierge Maktub Go: acompanhamento estratégico das suas milhas o ano inteiro, com a mesma disciplina de um assessor de investimentos." />
   <meta name="keywords" content="gestão de milhas, concierge de viagens, milhas premium, assessoria de milhas, planejamento de viagens" />
   <meta property="og:title" content="Gestão de Milhas Concierge | Maktub Go" />
   <meta property="og:description" content="Suas milhas merecem um gestor. Acompanhamento o ano inteiro, painel privado e atendimento por convite." />
@@ -30,7 +30,7 @@
     body{background:var(--white);color:var(--text);font-family:'Jost',sans-serif;font-size:17px;font-weight:400;line-height:1.8;overflow-x:hidden}
     a{color:inherit;text-decoration:none}
     @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
-    .reveal{opacity:0}
+    .anima .reveal{opacity:0}
     .reveal.visible{animation:fadeUp .9s cubic-bezier(.16,1,.3,1) forwards}
     .d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}.d4{animation-delay:.35s}.d5{animation-delay:.45s}.d6{animation-delay:.55s}
     .container{max-width:900px;margin:0 auto;padding:0 36px}
@@ -507,6 +507,20 @@
       .venda-risco::before,.venda-risco::after{height:6px!important}
       .venda-fecho{margin-top:40px}
     }
+    /* foco visível no teclado */
+    :focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+    .hero-venda :focus-visible,.acesso-preview :focus-visible,.seguranca :focus-visible,.convite :focus-visible,footer :focus-visible,.cta-fixa :focus-visible{outline-color:var(--gold-warm)}
+    .convite .conv-form :focus-visible{outline-color:var(--gold)}
+    .cf input:focus-visible,.cf select:focus-visible,.cf textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+    /* no celular, o WhatsApp sai da frente enquanto o comparativo está na tela */
+    .wa-float{transition:transform .25s,box-shadow .25s,opacity .25s,visibility .25s}
+    @media(max-width:768px){body.comparativo-na-tela .wa-float{opacity:0;visibility:hidden;pointer-events:none}}
+    /* quem pede menos movimento vê tudo parado */
+    @media (prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      .reveal{opacity:1!important}
+      *,*::before,*::after{animation:none!important;transition:none!important}
+    }
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -628,7 +642,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
      "name": "Como acompanho os resultados?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Pelo seu painel privado, atualizado pelo seu gestor, com patrimônio, economias, viagens e documentos. Todo mês você tem uma reunião com o gestor e um relatório mensal com tudo o que foi conquistado."
+      "text": "Pelo seu painel privado, atualizado pelo seu gestor, com saldos, pontos a vencer, economias, viagens e documentos. Todo mês você tem uma reunião com o gestor e um relatório mensal com tudo o que foi conquistado."
      }
     },
     {
@@ -675,6 +689,13 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 /* espaço para o botão flutuante do WhatsApp não cobrir os últimos links */
 @media(max-width:600px){.mk-rodape .rodape-base{padding-bottom:84px}}
 </style>
+<script>
+/* as animações de entrada só ligam com script ativo e sem pedido de movimento reduzido.
+   se o script de animação não rodar em 3s, o conteúdo aparece mesmo assim. */
+(function(){var d=document.documentElement;
+if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classList.remove('anima')},3000);})();
+</script>
 </head>
 <body>
  
@@ -731,8 +752,8 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
     </div>
     <div class="venda-ctas prova-ctas">
-      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Contratar a Maktub Go</a>
-      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20um%20diagn%C3%B3stico%20dos%20meus%20pontos%20com%20o%20time%20de%20especialistas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-outline-gold venda-btn2">Quero um diagnóstico dos meus pontos</a>
+      <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20meu%20diagn%C3%B3stico%20de%20Gest%C3%A3o%20de%20Milhas%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande">Quero meu diagnóstico</a>
+      <a href="#convite" class="btn-outline-gold venda-btn2">Quero meu diagnóstico pelo formulário</a>
     </div>
     <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
   </div>
@@ -754,7 +775,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="container">
     <span class="label reveal d1">A diferença</span>
     <div class="divider reveal d1" style="margin-left:auto;margin-right:auto"></div>
-    <h2 class="reveal d2">Milhas não são cupom.<br><span class="italic-gold">São patrimônio.</span></h2>
+    <h2 class="reveal d2">Milhas não são cupom.<br><span class="italic-gold">Pedem estratégia.</span></h2>
     <p class="lead reveal d3">A maioria das pessoas só lembra das milhas quando precisa viajar. Nós cuidamos delas o ano inteiro, com método, como quem cuida de um investimento.</p>
     <div class="diferenca-grid">
       <div class="diferenca-col before reveal d4">
@@ -801,7 +822,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <div class="passo-num">02</div>
         <div class="passo-content">
           <h3>Painel privado</h3>
-          <p>Você recebe acesso a uma área exclusiva, protegida em duas etapas, com seu patrimônio de milhas, cartões, viagens, documentos e cada real economizado, sempre atualizada pelo seu gestor.</p>
+          <p>Você recebe acesso a uma área exclusiva, protegida em duas etapas, com seus saldos de milhas, cartões, viagens, documentos e cada real economizado, sempre atualizada pelo seu gestor.</p>
         </div>
       </div>
       <div class="passo reveal d5">
@@ -849,9 +870,9 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="container--wide">
     <span class="label reveal d1">No seu painel privado</span>
     <h2 class="reveal d2">Tudo o que importa,<br><span class="italic-gold">em um só lugar.</span></h2>
-    <p class="lead reveal d3">Um painel exclusivo, atualizado pelo seu gestor. Visualize seu patrimônio de milhas como visualiza seus investimentos.</p>
+    <p class="lead reveal d3">Um painel exclusivo, atualizado pelo seu gestor. Pense no relatório que um assessor de investimentos entrega ao cliente: aqui, o assunto são as suas milhas.</p>
     <div class="preview-grid">
-      <div class="preview-card reveal d1"><div class="preview-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div><h3>Patrimônio consolidado</h3><p>Saldo total em milhas, distribuição por programa e evolução mês a mês.</p></div>
+      <div class="preview-card reveal d1"><div class="preview-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div><h3>Saldo consolidado</h3><p>Saldo total em milhas, distribuição por programa e evolução mês a mês.</p></div>
       <div class="preview-card reveal d2"><div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><h3>Alerta de vencimento</h3><p>Pontos perto de vencer aparecem em destaque, com antecedência, para nada se perder.</p></div>
       <div class="preview-card reveal d3"><div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><h3>Economia gerada</h3><p>Cada real economizado, item a item: passagens, super acúmulos, cashback e cartões.</p></div>
       <div class="preview-card reveal d4"><div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div><h3>Viagens completas</h3><p>Cada viagem com voos, localizadores, hotel e documentos, organizados em um só lugar.</p></div>
@@ -877,9 +898,9 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <div class="mock-body">
         <div class="mock-row">
           <div class="mock-card">
-            <div class="mock-card-label">◆ Patrimônio Consolidado</div>
+            <div class="mock-card-label">◆ Saldo Consolidado</div>
             <div class="mock-card-num">970.000<span class="small"> milhas</span></div>
-            <div class="mock-card-trend">Equivalente: <strong>R$ 38.200</strong> · Crescimento mês: +8,2%</div>
+            <div class="mock-card-trend">A vencer em 90 dias: <strong>18.400</strong> · Próximas emissões: 2</div>
           </div>
           <div class="mock-card">
             <div class="mock-card-label">◆ Economia Gerada · Ano</div>
@@ -1012,7 +1033,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <details><summary>Já tenho milhas acumuladas. A gestão faz sentido para mim?</summary>
         <p>Sim. No diagnóstico mapeamos seus saldos, programas e vencimentos, e definimos a melhor forma de usar o que você já tem, além de acelerar o que ainda vai acumular.</p></details>
       <details><summary>Como acompanho os resultados?</summary>
-        <p>Pelo seu painel privado, atualizado pelo seu gestor, com patrimônio, economias, viagens e documentos. Todo mês você tem uma reunião com o gestor e um relatório mensal com tudo o que foi conquistado.</p></details>
+        <p>Pelo seu painel privado, atualizado pelo seu gestor, com saldos, pontos a vencer, economias, viagens e documentos. Todo mês você tem uma reunião com o gestor e um relatório mensal com tudo o que foi conquistado.</p></details>
       <details><summary>Por que o atendimento é por convite?</summary>
         <p>Porque cada cliente tem um gestor dedicado e acompanhamento próximo. Para manter esse padrão, atendemos um número restrito de clientes e avaliamos cada solicitação com cuidado.</p></details>
       <details><summary>Vocês atendem clientes de outras cidades ou fora do Brasil?</summary>
@@ -1025,7 +1046,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="container--wide">
     <div class="conv-wrap">
       <div>
-        <span class="label reveal d1">Solicitar convite</span>
+        <span class="label reveal d1">Seu diagnóstico</span>
         <h2 class="reveal d2">Sua próxima viagem<br><span class="italic-gold">já começou.</span></h2>
         <p class="lead reveal d3">Conte um pouco sobre você. Cada solicitação é avaliada pessoalmente pelo nosso time.</p>
         <ol class="conv-steps reveal d4">
@@ -1036,7 +1057,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         </ol>
       </div>
       <form class="conv-form reveal d3" id="convForm" novalidate>
-        <h3>Solicitação de convite</h3>
+        <h3>Quero meu diagnóstico</h3>
         <p class="sub">Leva menos de 2 minutos. Seus dados são tratados com total confidencialidade.</p>
         <div class="cf-grid">
           <div class="cf full"><label for="fNome">Nome completo</label><input id="fNome" name="nome" maxlength="120" autocomplete="name" required /></div>
@@ -1054,7 +1075,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <div class="cf full" id="cfInd" hidden><label for="fInd">Quem indicou? (opcional)</label><input id="fInd" name="indicado_por" maxlength="120" /></div>
           <div class="hp" aria-hidden="true"><label for="fSite">Site</label><input id="fSite" name="site" tabindex="-1" autocomplete="off" /></div>
         </div>
-        <button type="submit" class="btn-gold cf-submit" id="convBtn">Solicitar meu convite</button>
+        <button type="submit" class="btn-gold cf-submit" id="convBtn">Quero meu diagnóstico</button>
         <div class="cf-note"><span>✦</span><span>Sem compromisso. Você só avança se a proposta fizer sentido para você.</span></div>
         <div class="cf-msg" id="convMsg" hidden role="status"></div>
         <p class="mk-lgpd" style="margin-top:10px;font-size:12px;line-height:1.6;opacity:.75;color:inherit">Ao enviar, você concorda com a nossa <a href="/privacidade/" style="color:inherit;text-decoration:underline">Política de Privacidade</a>.</p>
@@ -1105,7 +1126,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </footer>
  
-<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20contratar%20a%20Gest%C3%A3o%20de%20Milhas%20da%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1">Contratar a Maktub Go</a></div></div>
+<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20meu%20diagn%C3%B3stico%20de%20Gest%C3%A3o%20de%20Milhas%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1">Quero meu diagnóstico</a></div></div>
 <script>
 (function(){var bar=document.getElementById('ctaFixa');
 var first=document.querySelector('.prova-ctas'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
@@ -1125,8 +1146,13 @@ window.addEventListener('scroll',upd,{passive:true});window.addEventListener('re
   const burger=document.getElementById('burger'),navLinks=document.getElementById('navLinks');
   burger.addEventListener('click',()=>navLinks.classList.toggle('open'));
   navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navLinks.classList.remove('open')));
-  const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:.10});
-  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+  if(document.documentElement.classList.contains('anima')){
+    const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:.10});
+    document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+    window.revealPronto=true;
+  }
+  const comparativo=document.querySelector('.vs-grid');
+  if(comparativo&&'IntersectionObserver' in window)new IntersectionObserver(([e])=>document.body.classList.toggle('comparativo-na-tela',e.isIntersecting)).observe(comparativo);
 </script>
  
 <script type="module">
@@ -1151,14 +1177,14 @@ window.addEventListener('scroll',upd,{passive:true});window.addEventListener('re
     if (row.email && !/^\S+@\S+\.\S+$/.test(row.email)) { msg.textContent = 'Confira o e-mail informado.'; return; }
     if(window.gtag)gtag('event','envio_formulario',{formulario:'convite_milhas',como_conheceu:row.como_conheceu||'nao_informado'});
     btn.disabled = true; btn.textContent = 'Enviando...';
-    const texto = `Olá! Sou ${row.nome} e acabei de solicitar meu convite para a Gestão de Milhas Concierge.` + (row.objetivo ? ` Viagem dos sonhos: ${row.objetivo}` : '');
+    const texto = `Olá! Sou ${row.nome} e acabei de pedir meu diagnóstico de Gestão de Milhas Concierge.` + (row.objetivo ? ` Viagem dos sonhos: ${row.objetivo}` : '');
     const wa = 'https://wa.me/5521976275225?text=' + encodeURIComponent(texto);
     let error = null;
     try {
       ({ error } = await sb.from('solicitacoes_acesso').insert(row));
       if (error && /como_conheceu/.test(String(error.message || ''))) { const { como_conheceu, ...semComo } = row; ({ error } = await sb.from('solicitacoes_acesso').insert(semComo)); }
     } catch (err) { error = err; }
-    btn.disabled = false; btn.textContent = 'Solicitar meu convite';
+    btn.disabled = false; btn.textContent = 'Quero meu diagnóstico';
     if (error) {
       console.error(error);
       msg.innerHTML = `Não conseguimos registrar agora. Envie sua solicitação pelo WhatsApp e nosso time dá sequência.<br><a href="${wa}" target="_blank" rel="noopener">Enviar pelo WhatsApp →</a>`;

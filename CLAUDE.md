@@ -25,7 +25,7 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 
 - Cores: verde #1B4332 (fundo em uso #193826), dourado #A88B4A, creme #EBE0C4.
 - Não usar tons de verde fora da paleta.
-- Títulos em Cormorant Garamond com itálico em dourado. Textos em Montserrat.
+- Títulos em Cormorant Garamond com itálico em dourado. Textos em Jost.
 - Logo: usar sempre os arquivos oficiais da pasta `ativos/`. Nunca recriar a logo em código.
 - O topo (cabeçalho e menu) de todas as páginas deve ser igual ao da página Gestão de Milhas.
 
