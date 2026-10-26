@@ -59,7 +59,8 @@ export function calcCarteira(extrato) {
     }
   }
   const ano = hoje.slice(0, 4), mes = hoje.slice(0, 7);
-  const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
+  // emissão com quantidade positiva é estorno de resgate: devolve milhas, não é crescimento
+  const cresce = (x) => x.tipo === 'saldo_inicial' || x.tipo === 'transf_saida' || x.tipo === 'emissao' ? 0 : x.tipo === 'transf_entrada' ? Number(x.milhas_bonus || 0) : Number(x.quantidade || 0);
   const evolucao_mes = Math.round(rows.filter(x => String(x.data).startsWith(mes)).reduce((a, x) => a + cresce(x), 0));
   const evolucao_ano = Math.round(rows.filter(x => String(x.data).startsWith(ano)).reduce((a, x) => a + cresce(x), 0));
   const programas = Object.values(P).map(s => {
@@ -74,6 +75,15 @@ export function calcCarteira(extrato) {
   return { programas, porLinha, fechamentos, evolucao_mes, evolucao_ano, total, custo_total: programas.reduce((a, p) => a + (p.custo_total || 0), 0) };
 }
  
+// Vencimentos lidos do print do programa (Conferência por print): quando existem, valem mais que o cálculo pelo extrato.
+export function vencLidos(lotes, saldo) {
+  const hoje = hojeISO();
+  const ls = (Array.isArray(lotes) ? lotes : []).filter(l => String(l.data).slice(0, 10) >= hoje && Number(l.quantidade) > 0)
+    .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  const d = ls[0] ? String(ls[0].data).slice(0, 10) : null;
+  return { data: d, qtd: d ? Math.min(Math.round(saldo), ls.filter(l => String(l.data).slice(0, 10) === d).reduce((a, l) => a + Number(l.quantidade), 0)) : null };
+}
+
 export async function valoresRef() {
   const { data } = await sb.from('valores_milheiro').select('*');
   const map = {}; (data || []).forEach(v => { map[normProg(v.programa)] = Number(v.valor_brl); });
@@ -99,8 +109,9 @@ export async function syncCarteira(cid, refs) {
     const row = { saldo: p.saldo, qtd_herdado: p.herdado, qtd_organico: p.organico, qtd_pago: p.pago, custo_total_brl: p.custo_total,
       custo_medio_milheiro: round2(p.custo_medio), custo_medio_compras: round2(p.custo_compras), valor_referencia_milheiro: vref,
       patrimonio_brl: vref !== null ? round2(p.saldo * vref / 1000) : null, calculado_em: agora };
-    if (p.tem_validade) { row.vencimento_data = p.venc_data; row.vencimento_quantidade = p.venc_qtd; }
     const e = exist[p.key];
+    if (e && e.vencimentos_lidos_em) { const v = vencLidos(e.vencimentos_lidos, p.saldo); row.vencimento_data = v.data; row.vencimento_quantidade = v.qtd; }
+    else if (p.tem_validade) { row.vencimento_data = p.venc_data; row.vencimento_quantidade = p.venc_qtd; }
     ops.push(e ? sb.from('programas_milhas').update(row).eq('id', e.id) : sb.from('programas_milhas').insert({ ...row, cliente_id: cid, programa: p.programa, unidade: 'milhas', ordem: 99 }));
   }
   Object.entries(exist).forEach(([key, e]) => { if (!W.programas.some(p => p.key === key) && Number(e.saldo || 0) !== 0) ops.push(sb.from('programas_milhas').update({ saldo: 0, qtd_herdado: 0, qtd_organico: 0, qtd_pago: 0, custo_total_brl: 0, custo_medio_milheiro: null, patrimonio_brl: 0, calculado_em: agora }).eq('id', e.id)); });
