@@ -280,6 +280,7 @@ nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 .prova-item:last-child{border-right:0}
 .prova-num{display:block;font-family:var(--serif);font-size:clamp(2.3rem,3.6vw,2.9rem);line-height:1;color:var(--dourado-claro)}
 .prova-rot{display:block;margin-top:var(--e2);font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(249,246,241,.8)}
+.prova-obs{display:block;margin-top:6px;font-size:.75rem;color:rgba(249,246,241,.66)}
  
 /* ============================================================
    8. BLOCOS DE IMAGEM COM QUEDA ELEGANTE
@@ -619,41 +620,35 @@ footer a:hover{color:var(--creme)}
 .acesso-cliente a{color:var(--dourado-claro);text-decoration:none;border-bottom:1px solid rgba(201,169,110,.5);padding-bottom:2px}
 .acesso-cliente a:hover{border-bottom-color:var(--dourado-claro)}
 
-/* ===================== PONTOS: panela x viagem ===================== */
-#pontos .vs{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,3vw,40px);margin-top:var(--e4);align-items:stretch}
-#pontos .vs-item{display:flex;flex-direction:column;padding:clamp(12px,2vw,22px);background:#fff;border:1px solid rgba(26,56,38,.12)}
-#pontos .vs-ganha{background:var(--verde);border-color:var(--verde);outline:2px solid var(--dourado-claro);outline-offset:5px}
-#pontos .vs-rot{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:rgba(28,28,28,.6);margin-bottom:14px;line-height:1.4;min-height:2.8em}
-#pontos .vs-ganha .vs-rot{color:var(--dourado-claro)}
-#pontos .vs-foto{position:relative;aspect-ratio:3/2;overflow:hidden;background:#eee}
-#pontos .vs-foto img{width:100%;height:100%;object-fit:cover}
-#pontos .vs-perde .vs-foto img{filter:saturate(.75)}
-#pontos .vs-x::before,#pontos .vs-x::after{content:'';position:absolute;left:6%;right:6%;top:50%;height:7px;background:#a8322d;border-radius:4px;opacity:.85}
-#pontos .vs-x::before{transform:rotate(33deg)}#pontos .vs-x::after{transform:rotate(-33deg)}
-#pontos .vs-ok{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;background:#2e7d4f;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
-#pontos .vs-nome{margin-top:16px;font-family:var(--serif);font-size:var(--t-lg);line-height:1.2;color:var(--verde)}
-#pontos .vs-ganha .vs-nome{color:var(--creme)}
-#pontos .vs-valor{font-family:var(--serif);font-weight:500;line-height:1;margin-top:10px;font-size:clamp(1.7rem,3.6vw,2.6rem);color:rgba(28,28,28,.45)}
-#pontos .vs-valor s{text-decoration-color:#a8322d;text-decoration-thickness:3px}
-#pontos .vs-ganha .vs-valor{color:var(--dourado-claro);font-size:clamp(2rem,4.6vw,3.3rem)}
-#pontos .vs-pts{margin-top:8px;font-size:.85rem;font-weight:500;color:rgba(28,28,28,.62)}
-#pontos .vs-ganha .vs-pts{color:rgba(249,246,241,.8)}
-#pontos .vs-fecho{text-align:center;margin-top:var(--e5)}
-#pontos .vs-perda{max-width:none;font-family:var(--serif);font-size:var(--t-xl);line-height:1.15;color:var(--verde)}
-#pontos .vs-perda strong{font-weight:500;color:#a8322d;white-space:nowrap}
-#pontos .acoes{justify-content:center;margin-top:var(--e4)}
-#pontos .vs-nota{margin:var(--e3) auto 0;font-size:.8rem;color:rgba(28,28,28,.6)}
+/* ===================== TOPO: comparativo panela x viagem ===================== */
+.hero-vs .vs{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+.hero-vs .vs-item{display:flex;flex-direction:column;padding:clamp(12px,2vw,22px);background:#fff;border:1px solid rgba(26,56,38,.12)}
+.hero-vs .vs-ganha{background:var(--verde);border-color:var(--verde);outline:2px solid var(--dourado-claro);outline-offset:5px}
+.hero-vs .vs-rot{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:rgba(28,28,28,.6);margin-bottom:14px;line-height:1.4;min-height:2.8em}
+.hero-vs .vs-ganha .vs-rot{color:var(--dourado-claro)}
+.hero-vs .vs-foto{position:relative;aspect-ratio:3/2;overflow:hidden;background:#eee}
+.hero-vs .vs-foto img{width:100%;height:100%;object-fit:cover}
+.hero-vs .vs-perde .vs-foto img{filter:saturate(.75)}
+.hero-vs .vs-x::before,.hero-vs .vs-x::after{content:'';position:absolute;left:6%;right:6%;top:50%;height:7px;background:#a8322d;border-radius:4px;opacity:.85}
+.hero-vs .vs-x::before{transform:rotate(33deg)}.hero-vs .vs-x::after{transform:rotate(-33deg)}
+.hero-vs .vs-ok{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;background:#2e7d4f;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.hero-vs .vs-nome{margin-top:14px;font-family:var(--serif);font-size:clamp(1.1rem,1.6vw,1.3rem);line-height:1.2;color:var(--verde)}
+.hero-vs .vs-ganha .vs-nome{color:var(--creme)}
+.hero-vs .vs-valor{font-family:var(--serif);font-weight:500;line-height:1;margin-top:10px;font-size:clamp(1.6rem,2.4vw,2.1rem);color:rgba(28,28,28,.45)}
+.hero-vs .vs-valor s{text-decoration-color:#a8322d;text-decoration-thickness:3px}
+.hero-vs .vs-ganha .vs-valor{color:var(--dourado-claro);font-size:clamp(1.6rem,2.3vw,2.15rem);white-space:nowrap}
+.hero-vs .vs-pts{margin-top:8px;font-size:.85rem;font-weight:500;color:rgba(28,28,28,.62)}
+.hero-vs .vs-ganha .vs-pts{color:rgba(249,246,241,.8)}
 @media (max-width:640px){
-  #pontos .vs{gap:10px}
-  #pontos .vs-item{padding:10px}
-  #pontos .vs-rot{font-size:.6rem;letter-spacing:.08em}
-  #pontos .vs-foto{aspect-ratio:1/1}
-  #pontos .vs-ok{width:32px;height:32px;font-size:18px;right:6px;bottom:6px}
-  #pontos .vs-nome{font-size:1.1rem}
-  #pontos .vs-valor{font-size:1.45rem}
-  #pontos .vs-ganha .vs-valor{font-size:1.6rem}
-  #pontos .vs-pts{font-size:.72rem}
-  #pontos .acoes .btn{width:100%}
+  .hero-vs .vs{gap:10px}
+  .hero-vs .vs-item{padding:10px}
+  .hero-vs .vs-rot{font-size:.6rem;letter-spacing:.08em}
+  .hero-vs .vs-foto{aspect-ratio:1/1}
+  .hero-vs .vs-ok{width:32px;height:32px;font-size:18px;right:6px;bottom:6px}
+  .hero-vs .vs-nome{font-size:1.1rem}
+  .hero-vs .vs-valor{font-size:1.45rem}
+  .hero-vs .vs-ganha .vs-valor{font-size:1.6rem}
+  .hero-vs .vs-pts{font-size:.72rem}
 }
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
@@ -727,12 +722,18 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .hero-google strong{font-weight:500;color:var(--verde)}
 .hero-google .hg-estrelas{color:var(--dourado);letter-spacing:.12em;font-size:.9375rem}
 .hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.78fr);gap:clamp(32px,5vw,72px);align-items:center}
-.mk-hero-foto{margin:0}
-.mk-hero-foto div{aspect-ratio:4/5;background-size:cover;background-position:center 70%;border-radius:2px;box-shadow:0 30px 60px rgba(26,56,38,.16)}
-.mk-hero-foto figcaption{margin-top:12px;font-family:var(--sans);font-size:.75rem;letter-spacing:.18em;text-transform:uppercase}
-.mk-hero-foto figcaption a{color:var(--dourado-texto);text-decoration:none}
-.mk-hero-foto figcaption a:hover{text-decoration:underline;text-underline-offset:4px}
-@media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.mk-hero-foto div{aspect-ratio:4/3}}
+.hero .acoes{align-items:center;gap:14px 30px}
+.hero-vs{margin:0}
+.hero-vs p{font-family:var(--sans);font-size:inherit;line-height:1.5;max-width:none;color:inherit}
+.hero-vs-selo{display:inline-block;padding:7px 14px;border:1px solid var(--dourado-claro);font-size:.6875rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado-texto)}
+.hero-vs .vs{margin-top:var(--e3);gap:clamp(12px,1.6vw,22px)}
+.hero-vs .vs-item{box-shadow:0 24px 48px rgba(26,56,38,.10)}
+.hero-vs figcaption{margin-top:var(--e3)}
+.hero-vs .vs-perda{font-family:var(--serif);font-size:clamp(1.25rem,2vw,1.5rem);line-height:1.25;color:var(--verde)}
+.hero-vs .vs-perda strong{font-weight:500;color:#a8322d;white-space:nowrap}
+.hero-vs .vs-nota{margin-top:10px;font-size:.75rem;line-height:1.55;color:var(--tinta-suave)}
+.hero-vs .link-texto{margin-top:12px}
+@media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero-vs{margin-top:var(--e2)}}
 </style>
 </head>
 <body>
@@ -768,10 +769,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <div class="hero-texto">
       <span class="olho">Gestão de milhas com alfaiataria de viagens</span>
       <h1 id="t-hero">Seus pontos viram<em>viagens inteiras.</em></h1>
-      <p>A gente cuida das suas milhas o ano inteiro e, quando chega a hora, desenha a viagem sob medida, do primeiro voo ao seu retorno. Nada de pacote pronto. Nada de bilhete solto.</p>
+      <p>Um gestor cuida dos seus pontos o ano inteiro para que eles virem viagens.</p>
       <div class="acoes">
         <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
-        <a class="btn" href="#contato">Planejar minha viagem</a>
+        <a class="link-texto" href="#contato">Planejar minha viagem</a>
       </div>
       <a class="hero-google" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">
         <span class="hg-estrelas" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
@@ -779,9 +780,30 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </a>
       <p class="hero-nota">Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
     </div>
-    <figure class="mk-hero-foto">
-      <div role="img" aria-label="Lu e Laura com mountain bikes nos Alpes Franceses, em Saint-Gervais" style="background-image:url('/ativos/caso-lu-saint-gervais.jpg')"></div>
-      <figcaption><a href="/viagens/">Saint-Gervais, Alpes Franceses · Viagem Maktub</a></figcaption>
+    <!-- Exemplo real panela x viagem. Atualizar valores e data a cada 3 meses, junto com a página /gestao-de-milhas/. -->
+    <figure class="hero-vs">
+      <span class="hero-vs-selo">Exemplo real · 24/10/2026</span>
+      <div class="vs">
+        <div class="vs-item vs-perde">
+          <span class="vs-rot">O que você leva no catálogo</span>
+          <div class="vs-foto"><img src="/ativos/panelas.jpg" alt="Jogo de panelas antiaderentes" width="1000" height="667"><span class="vs-x" aria-hidden="true"></span></div>
+          <p class="vs-nome">Um jogo de panelas</p>
+          <p class="vs-valor"><s>R$ 337,79</s></p>
+          <p class="vs-pts">20.472 pontos Livelo</p>
+        </div>
+        <div class="vs-item vs-ganha">
+          <span class="vs-rot">O que esses mesmos pontos compram</span>
+          <div class="vs-foto"><img src="/ativos/janela-aviao.jpg" alt="Vista da janela do avião sobre as nuvens" width="1000" height="721"><span class="vs-ok" aria-hidden="true">&#10003;</span></div>
+          <p class="vs-nome">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
+          <p class="vs-valor">R$ 1.472,68</p>
+          <p class="vs-pts">Os mesmos 20.472 pontos Livelo</p>
+        </div>
+      </div>
+      <figcaption>
+        <p class="vs-perda">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate como esse no catálogo.</p>
+        <p class="vs-nota">Pesquisa real feita pela nossa equipe em 24/10/2026. Transferência de pontos Livelo para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
+        <a class="link-texto" href="/gestao-de-milhas/">Ver o exemplo completo</a>
+      </figcaption>
     </figure>
   </div>
   <div class="descer" aria-hidden="true"></div>
@@ -797,42 +819,10 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <span class="prova-rot">Voos emitidos</span>
       </div>
       <div class="prova-item">
-        <span class="prova-num">100%</span>
-        <span class="prova-rot">Viagens sob medida</span>
+        <span class="prova-num">4x</span>
+        <span class="prova-rot">Mais valor nos mesmos pontos</span>
+        <span class="prova-obs">No exemplo real de 24/10/2026</span>
       </div>
-    </div>
-  </div>
-</section>
- 
-<!-- ===================== PONTOS (exemplo real panela x viagem) =====================
-     Atualizar valores e data a cada 3 meses, junto com a página /gestao-de-milhas/. -->
-<section class="secao secao-creme" id="pontos" aria-labelledby="t-pontos">
-  <div class="wrap">
-    <span class="olho">Exemplo real · pesquisa de 24/10/2026</span>
-    <h2 id="t-pontos">Pare de trocar seus pontos<em>por isso.</em></h2>
-    <div class="vs">
-      <div class="vs-item vs-perde">
-        <span class="vs-rot">O que você leva no catálogo</span>
-        <div class="vs-foto"><img src="/ativos/panelas.jpg" alt="Jogo de panelas antiaderentes" width="1000" height="667" loading="lazy"><span class="vs-x" aria-hidden="true"></span></div>
-        <p class="vs-nome">Um jogo de panelas</p>
-        <p class="vs-valor"><s>R$ 337,79</s></p>
-        <p class="vs-pts">20.472 pontos Livelo</p>
-      </div>
-      <div class="vs-item vs-ganha">
-        <span class="vs-rot">O que esses mesmos pontos compram</span>
-        <div class="vs-foto"><img src="/ativos/janela-aviao.jpg" alt="Vista da janela do avião sobre as nuvens" width="1000" height="721" loading="lazy"><span class="vs-ok" aria-hidden="true">&#10003;</span></div>
-        <p class="vs-nome">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
-        <p class="vs-valor">R$ 1.472,68</p>
-        <p class="vs-pts">Os mesmos 20.472 pontos Livelo</p>
-      </div>
-    </div>
-    <div class="vs-fecho">
-      <p class="vs-perda">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate como esse no catálogo.</p>
-      <div class="acoes">
-        <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
-        <a class="btn" href="/gestao-de-milhas/">Ver o exemplo completo</a>
-      </div>
-      <p class="vs-nota">Transferência de pontos Livelo para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
     </div>
   </div>
 </section>
@@ -1095,7 +1085,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6 1.9.8 2.7.9 3.6.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Z"/></svg>
 </a>
 <script>
-(function(){var c=document.querySelector('#pontos .vs');
+(function(){var c=document.querySelector('.hero-vs .vs');
 if(c&&'IntersectionObserver' in window)new IntersectionObserver(function(e){document.body.classList.toggle('comparativo-na-tela',e[0].isIntersecting)}).observe(c);})();
 </script>
  
