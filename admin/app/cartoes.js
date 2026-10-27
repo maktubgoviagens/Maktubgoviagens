@@ -204,55 +204,15 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
     const ops = (sel) => [['', 'Escolha o cartão na base']].concat((BASE || []).filter(b => b.ativo !== false).map(b => [b.id, nomeBase(b)])).concat([['outro', 'Outro, fora da base']])
       .map(([k, l]) => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
     const ja = new Set(C.map(x => x.catalogo_id).filter(Boolean));
-    rev.innerHTML = `<div class="sub" style="margin-top:10px">Confira o cartão que o app achou na base para cada linha. Os que ficarem em "Outro, fora da base" entram com o nome como você escreveu, sem as contas de anuidade e pontos.</div>
+    rev.innerHTML = `<div class="sub" style="margin-top:10px">Confira o cartão que o app achou na base. O que não estiver na base entra como "fora da base", com o nome como você escreveu; depois, com a anuidade conferida no site do banco, é só tocar em "cadastrar na base" no cartão.</div>
       ${L.map((x, i) => { const A0 = acharNaBase(x.nome), A = A0.map(a => a._parcial ? Object.getPrototypeOf(a) : a), b = A0.length === 1 && !A0[0]._parcial ? A[0] : null;
         const rot = b ? 'Achei na base: confira' + (ja.has(b.id) ? ' (o cliente já tem esse cartão)' : '')
-          : A.length ? `${A0[0]._parcial ? 'Parecido na base' : 'Mais de um na base'} (${A.map(nomeBase).join(', ')}): escolha qual é ou cadastre` : 'Não achei na base: cadastre, escolha ou deixe como outro';
+          : A.length ? `${A0[0]._parcial ? 'Parecido na base' : 'Mais de um na base'} (${A.map(nomeBase).join(', ')}): escolha se for um deles; se não, fica fora da base` : 'Não achei na base: entra como fora da base para cadastrar depois';
         return `<div class="bloco" style="padding:10px 12px;margin-top:8px;${b ? '' : 'border-left:3px solid var(--alerta)'}" data-li="${i}">
         <div style="font-size:13px;color:var(--tinta-2)">${esc(x.linha)}</div>
-        <label class="fl" style="margin-top:6px"><span data-rot${b ? '' : ' style="color:var(--alerta)"'}>${esc(rot)}</span><select name="li_base">${ops(b ? b.id : A.length ? '' : 'outro')}</select></label>
-        ${b ? '' : `<button class="mini" type="button" data-nb style="margin-top:6px">+ Cadastrar na base</button><div data-nbf hidden></div>`}
+        <label class="fl" style="margin-top:6px"><span data-rot${b ? '' : ' style="color:var(--alerta)"'}>${esc(rot)}</span><select name="li_base">${ops(b ? b.id : 'outro')}</select></label>
         <div class="duas-col"><label class="fl"><span>Limite (R$)</span><input name="li_lim" type="number" inputmode="decimal" step="any" value="${x.limite ?? ''}" placeholder="pendente"></label><label class="fl"><span>Observação</span><input name="li_obs" value="${esc(x.obs)}" placeholder="opcional"></label></div></div>`; }).join('')}
       <button class="zap grande" type="button" id="cxSalvarLista" style="width:100%;margin-top:10px">Salvar ${L.length} ${L.length === 1 ? 'cartão' : 'cartões'}</button><div class="sub" id="cxMsgLista"></div>`;
-    // cartão que não está na base: cadastra ali mesmo e já liga à linha (e às outras linhas iguais)
-    const today = new Date().toISOString().slice(0, 10);
-    rev.querySelectorAll('[data-li]').forEach(d => {
-      const bt = d.querySelector('[data-nb]'); if (!bt) return;
-      const f = d.querySelector('[data-nbf]'), x = L[+d.dataset.li];
-      bt.onclick = () => {
-        if (!f.hidden) { f.hidden = true; return; }
-        f.innerHTML = `<div class="bloco" style="padding:10px;margin-top:6px">
-          <div class="duas-col">${X.campo('nb_banco', 'Banco *', '', 'text', 'placeholder="Ex.: Sicoob"')}${X.campo('nb_nome', 'Cartão *', x.nome, 'text')}</div>
-          <div class="duas-col">${X.campo('nb_anu', 'Anuidade cheia (R$/ano)', '', 'number', 'placeholder="0 se não tiver"')}${X.campo('nb_isen', 'Gasto por mês que isenta (R$)', '', 'number', 'placeholder="em branco se não houver"')}</div>
-          <div class="duas-col">${X.campo('nb_pts', 'Pontuação', '', 'number', 'placeholder="Ex.: 2,2"')}<label class="fl"><span>Por</span><select name="nb_moeda">${MOEDAS.map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}</select></label></div>
-          <div class="duas-col">${X.campo('nb_prog', 'Programa de pontos', '', 'text', 'placeholder="Ex.: Esfera, Livelo"')}${X.campo('nb_fonte', 'Fonte (site do banco)', '', 'url', 'placeholder="https://..."')}</div>
-          <div class="sub">Entra na Base de cartões (aba Empresa) e passa a valer para todos os clientes. Os detalhes (sala VIP, redução) você completa lá depois.</div>
-          <button class="zap" type="button" data-nbok style="width:100%;margin-top:8px">Cadastrar e usar nesta linha</button></div>`;
-        f.hidden = false;
-        f.querySelector('[data-nbok]').onclick = async (e) => {
-          const q = (k) => f.querySelector(`[name=${k}]`).value.trim(), nq = (k) => q(k) === '' ? null : Number(q(k).replace(',', '.'));
-          const row = { banco: q('nb_banco'), nome: q('nb_nome'), anuidade_anual: nq('nb_anu'), isencao_gasto_mes: nq('nb_isen'), pontos_por: nq('nb_pts'), pontos_moeda: q('nb_moeda'),
-            programa: q('nb_prog') || null, fonte: q('nb_fonte') || null, ativo: true, conferido_em: today, atualizado_em: new Date().toISOString() };
-          if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
-          if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
-          e.target.disabled = true;
-          const r = await sb.from('cartoes_catalogo').insert(row).select().single();
-          if (r.error) { e.target.disabled = false; aviso('Não salvou na base: ' + X.limparTec(r.error.message)); return; }
-          const novo = r.data; BASE.push(novo); BASE.sort((a, c2) => nomeBase(a).localeCompare(nomeBase(c2)));
-          const opt = () => { const o = document.createElement('option'); o.value = novo.id; o.textContent = nomeBase(novo); return o; };
-          rev.querySelectorAll('[data-li]').forEach(d2 => {
-            const s2 = d2.querySelector('[name=li_base]'); s2.insertBefore(opt(), s2.querySelector('option[value=outro]'));
-            const x2 = L[+d2.dataset.li], livre = s2.value === '' || s2.value === 'outro';
-            const ac = acharNaBase(x2.nome), casa = d2 === d || (livre && ac.length === 1 && !ac[0]._parcial && ac[0].id === novo.id);
-            if (!casa) return;
-            s2.value = novo.id; d2.style.borderLeft = '';
-            const rt = d2.querySelector('[data-rot]'); rt.textContent = 'Cadastrado na base agora'; rt.style.color = '';
-            const b2 = d2.querySelector('[data-nb]'); if (b2) b2.remove(); const f2 = d2.querySelector('[data-nbf]'); if (f2) f2.remove();
-          });
-          aviso('Cartão cadastrado na base.');
-        };
-      };
-    });
     rev.querySelector('#cxSalvarLista').onclick = async () => {
       const bt = rev.querySelector('#cxSalvarLista'), msg = rev.querySelector('#cxMsgLista');
       const linhas = [...rev.querySelectorAll('[data-li]')].map(d => ({ x: L[+d.dataset.li], base: d.querySelector('[name=li_base]').value, lim: d.querySelector('[name=li_lim]').value, obs: d.querySelector('[name=li_obs]').value.trim() }));
@@ -300,14 +260,14 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
         <small style="display:block;color:var(--tinta-3);font-size:12px">${esc(det)}</small>
         ${x.disponivel !== null && x.disponivel !== undefined ? `<small style="display:block;color:var(--tinta-3);font-size:12px">disponível ${brl(x.disponivel)}, informado pelo cliente em ${data(x.disponivel_em)}</small>` : ''}
         ${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span>
-      <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br><button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>`;
+      <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br>${!cat ? `<button class="mini" data-cb="${x.id}">cadastrar na base</button>` : ''}<button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>${!cat ? `<div data-cbf="${x.id}" hidden></div>` : ''}`;
   };
   box.innerHTML = (C.length ? `<div class="numeros" style="margin:0 0 6px">
         <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${C.length === 1 ? '1 cartão' : num(C.length) + ' cartões'}</div></div>
         <div class="num"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}</div></div>
         <div class="num"><div class="l">Valor dos pontos no ano</div><div class="v">${brl(tot.valor)}</div><div class="d">${num(Math.round(tot.pontos))} pts pelo gasto informado</div></div>
         <div class="num"><div class="l">Sala VIP</div><div class="v">${tot.vipIlim.length ? 'Ilimitada' : num(tot.vip) + ' acessos'}</div><div class="d">${tot.vipIlim.length ? esc(tot.vipIlim.join(', ')) : 'por ano, somando os cartões; nenhum ilimitado'}</div></div>
-      </div>${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
+      </div>${K.some(o => !o.cat) ? `<div class="sub" style="color:var(--alerta);margin:4px 0">${K.filter(o => !o.cat).length === 1 ? '1 cartão fora da base' : K.filter(o => !o.cat).length + ' cartões fora da base'}: confira a anuidade no site do banco e toque em "cadastrar na base" para entrar nas contas.</div>` : ''}${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
     + `<details style="margin-top:8px" id="cxForm"${C.length ? '' : ' open'}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary><div id="cxCampos"></div></details>`
     + `<details style="margin-top:8px" id="cxLista"><summary class="sub" style="cursor:pointer">+ Colar lista de cartões</summary>
         <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome e o limite (ou "pendente"). Ex.: Inter Prime 50.000. O app procura cada um na base e puxa a anuidade.</div>
@@ -349,6 +309,46 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   };
   desenharForm(null);
   ligarLista(box, c, X, onPrimeiro, C, cot, refs);
+  // cartão fora da base: cadastra na Base de cartões depois de conferir a anuidade e liga este cartão
+  // (e os mesmos cartões fora da base de outros clientes, escritos igual)
+  box.querySelectorAll('[data-cb]').forEach(bt => bt.onclick = () => {
+    const x = C.find(y => y.id === bt.dataset.cb), f = box.querySelector(`[data-cbf="${x.id}"]`);
+    if (!f.hidden) { f.hidden = true; return; }
+    const escrito = [x.banco, x.categoria].filter(Boolean).join(' ');
+    f.innerHTML = `<div class="bloco" style="padding:10px 12px;margin:6px 0 10px">
+      <div class="sub">Como veio na lista: <b>${esc(escrito)}</b> · <a href="https://www.google.com/search?q=${encodeURIComponent(escrito + ' cartão anuidade isenção pontuação')}" target="_blank" rel="noopener">buscar anuidade no Google</a></div>
+      <div class="duas-col">${campo('nb_banco', 'Banco *', '', 'text', 'placeholder="Ex.: Sicoob"')}${campo('nb_nome', 'Cartão *', '', 'text', 'placeholder="Ex.: Sicoobcard Gold Visa"')}</div>
+      <div class="duas-col">${campo('nb_anu', 'Anuidade cheia (R$/ano)', '', 'number', 'placeholder="0 se não tiver"')}${campo('nb_isen', 'Gasto por mês que isenta (R$)', '', 'number', 'placeholder="em branco se não houver"')}</div>
+      <div class="duas-col">${campo('nb_pts', 'Pontuação', '', 'number', 'placeholder="Ex.: 2,2"')}<label class="fl"><span>Por</span><select name="nb_moeda">${MOEDAS.map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}</select></label></div>
+      <div class="duas-col">${campo('nb_prog', 'Programa de pontos', '', 'text', 'placeholder="Ex.: Esfera, Livelo"')}${campo('nb_fonte', 'Fonte (site do banco)', '', 'url', 'placeholder="https://..."')}</div>
+      <div class="sub">Entra na Base de cartões e passa a valer para todos os clientes. Sala VIP e redução parcial você completa em Empresa > Base de cartões.</div>
+      <button class="zap" type="button" data-cbok style="width:100%;margin-top:8px">Cadastrar na base</button></div>`;
+    f.hidden = false;
+    f.querySelector('[data-cbok]').onclick = async (e) => {
+      const q = (k) => f.querySelector(`[name=${k}]`).value.trim(), nq = (k) => q(k) === '' ? null : Number(q(k).replace(',', '.'));
+      const row = { banco: q('nb_banco'), nome: q('nb_nome'), anuidade_anual: nq('nb_anu'), isencao_gasto_mes: nq('nb_isen'), pontos_por: nq('nb_pts'), pontos_moeda: q('nb_moeda'),
+        programa: q('nb_prog') || null, fonte: q('nb_fonte') || null, ativo: true, conferido_em: new Date().toISOString().slice(0, 10), atualizado_em: new Date().toISOString() };
+      if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
+      if (row.anuidade_anual === null) { aviso('Informe a anuidade cheia (0 se o cartão não tiver).'); return; }
+      if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
+      e.target.disabled = true;
+      const r1 = await sb.from('cartoes_catalogo').insert(row).select().single();
+      if (r1.error) { e.target.disabled = false; aviso('Não salvou na base: ' + X.limparTec(r1.error.message)); return; }
+      const cat = r1.data; BASE.push(cat); BASE.sort((a, b) => nomeBase(a).localeCompare(nomeBase(b)));
+      let qy = sb.from('cartoes').select('*').is('catalogo_id', null).eq('banco', x.banco);
+      qy = x.categoria ? qy.eq('categoria', x.categoria) : qy.is('categoria', null);
+      const r2 = await qy, iguais = (r2.data && r2.data.length) ? r2.data : [x];
+      let outros = 0;
+      for (const y of iguais) {
+        const up = { catalogo_id: cat.id, banco: cat.banco, categoria: cat.nome };
+        Object.assign(up, textosPainel({ ...y, ...up }, cat, calc({ ...y, ...up }, cat, cot, refs, CART.normProg)));
+        const r3 = await sb.from('cartoes').update(up).eq('id', y.id);
+        if (!r3.error && y.cliente_id !== c.id) outros++;
+      }
+      aviso('Cartão cadastrado na base' + (outros ? ` e ligado também em ${outros} ${outros === 1 ? 'cartão de outro cliente' : 'cartões de outros clientes'}.` : '.'));
+      secaoCliente(box, c, X, onPrimeiro);
+    };
+  });
   box.querySelectorAll('[data-ce]').forEach(b => b.onclick = () => { const x = C.find(y => y.id === b.dataset.ce); const d = box.querySelector('#cxForm'); d.open = true; d.querySelector('summary').textContent = 'Editar cartão'; desenharForm(x); d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   box.querySelectorAll('[data-cd]').forEach(b => b.onclick = async () => {
     if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
