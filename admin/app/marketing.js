@@ -46,7 +46,7 @@ const DOCS = [
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 /* link colado de qualquer jeito (sem https, com texto antes, com espaço no fim): vira um endereço que abre.
    Sem isso, "drive.google.com/..." virava um endereço dentro do próprio site e o "Abrir pasta" dava erro. */
-export const urlOk = (s) => { s = String(s || '').trim(); if (!s) return ''; const m = s.match(/https?:\/\/\S+/i); if (m) return m[0]; return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s) ? 'https://' + s : s; };
+export const urlOk = (s) => { s = String(s || '').trim(); if (!s) return ''; const m = s.match(/https?:\/\/\S+/i); if (m) return m[0]; return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s) ? 'https://' + s : ''; }; // o que não vira http(s) não vira link (nada de javascript:)
 const pareceLink = (s) => /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(s);
 /* campos de link do post: nome, rótulo na mensagem e aba onde ficam */
 const LINKS = [['link_referencia', 'O link do post de referência', 'briefing'], ['link_bruto', 'O link do material bruto', 'briefing'], ['link_arquivo', 'O link da pasta de arquivos', 'arquivos'], ['link_post', 'O link do post no Instagram', 'arquivos']];
@@ -306,7 +306,7 @@ function linha(p) {
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${corP(p)}"></i><span class="t">${esc(p.titulo)}<small>${esc(det)}</small></span>${tag}</button>`;
 }
 function links(p) {
-  const L = [[p.link_arquivo, 'Abrir pasta'], [p.link_post, 'Ver no Instagram']].filter(x => x[0]);
+  const L = [[p.link_arquivo, 'Abrir pasta'], [p.link_post, 'Ver no Instagram']].filter(x => urlOk(x[0]));
   return L.length ? `<div class="mk-links">${L.map(([u, t]) => `<a href="${X.esc(urlOk(u))}" target="_blank" rel="noopener">${t} ›</a>`).join('')}</div>` : '';
 }
 function cardAprovar(p) {
@@ -647,8 +647,9 @@ function formPost(P) {
     if (reg.status === 'gravacao' && !equipe.length) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.', 'erro'); return; }
     for (const [k, nome, aba] of LINKS) {
       if (!reg[k]) continue;
-      reg[k] = urlOk(reg[k]); el[k].value = reg[k];
-      if (!pareceLink(reg[k])) { abaF(aba); erroCampo(el[k], 'Esse link não abre. No Drive ou no Instagram, toque em Copiar link e cole aqui.'); msg(`${nome} precisa de correção.`, 'erro'); return; }
+      const u = urlOk(reg[k]);
+      if (!pareceLink(u)) { abaF(aba); erroCampo(el[k], 'Esse link não abre. No Drive ou no Instagram, toque em Copiar link e cole aqui.'); msg(`${nome} precisa de correção.`, 'erro'); return; }
+      reg[k] = u; el[k].value = u;
     }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
     msg('Salvando...', 'aguarda');

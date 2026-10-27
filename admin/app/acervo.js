@@ -82,6 +82,14 @@ function local(txt) {
   return { cidade: NOME_PT[k] || v[0], pais: v[1], lat: v[2], lon: v[3], iata: k };
 }
 
+// abre um HTML (roteiro ou cotação enviada) numa janela nova, isolado num quadro com sandbox:
+// um script dentro do arquivo não alcança a sessão do app. O botão de imprimir do próprio arquivo continua funcionando.
+const abrirIsolado = (w, html, titulo) => {
+  w.document.open();
+  w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Maktub Go</title><style>html,body{margin:0;height:100%;overflow:hidden}iframe{border:0;width:100%;height:100%;display:block}</style></head><body><iframe sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"></iframe></body></html>');
+  w.document.close(); w.document.title = titulo || 'Maktub Go';
+  w.document.querySelector('iframe').srcdoc = /<base\s/i.test(html) ? html : html.replace(/<head([^>]*)>/i, '<head$1><base target="_blank">');
+};
 export async function telaAcervo(P, X) {
   const { $, esc, ir } = X;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Acervo de <em>viagens</em></h1>
@@ -255,7 +263,7 @@ async function roteiros(el, X) {
     if (error) { if (w) w.close(); aviso('Não abriu: ' + error.message); return; }
     if (/\.pdf$/i.test(x.arquivo_path)) { const u = URL.createObjectURL(new Blob([data], { type: 'application/pdf' })); if (w) w.location.href = u; else location.href = u; return; }
     const html = await data.text();
-    if (w) { w.document.open(); w.document.write(html); w.document.close(); } else aviso('Libere as janelas novas para abrir o roteiro.');
+    if (w) abrirIsolado(w, html, x.titulo || 'Roteiro'); else aviso('Libere as janelas novas para abrir o roteiro.');
   });
   el.querySelectorAll('[data-baixar]').forEach(b => b.onclick = async () => {
     const x = achar(b.dataset.baixar);

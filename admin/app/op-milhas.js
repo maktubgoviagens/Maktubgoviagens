@@ -141,3 +141,5 @@ function form(P, X) {
 }
 
 export function recarregar() { LISTA = null; }
+// ao entrar pelo menu, abre a lista (e não o formulário que ficou aberto da última vez)
+export function inicio() { OM_ED = null; OM_CONF = null; }

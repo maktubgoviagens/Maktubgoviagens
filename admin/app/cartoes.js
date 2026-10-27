@@ -18,6 +18,8 @@ export const salaVip = (b) => !b ? '' : b.salas_vip_ilimitado ? `sala VIP ilimit
 const n = (x) => x === null || x === undefined || x === '' ? null : Number(x);
 
 // Contas de um cartão do cliente. cat: cartão da base (ou null); refs: valor do milheiro por programa.
+// ao entrar pelo menu, abre a lista (e não o cartão que ficou aberto da última vez)
+export function inicio() { ED = null; }
 export function calc(cart, cat, cotacao, refs, normProg) {
   const gasto = n(cart.gasto_medio_mes) || 0, cheia = cat ? n(cat.anuidade_anual) : null, minimo = cat ? n(cat.isencao_gasto_mes) : null;
   const isentaGasto = minimo !== null && minimo > 0 && gasto >= minimo;

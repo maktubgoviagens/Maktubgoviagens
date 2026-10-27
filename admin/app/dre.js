@@ -1,4 +1,5 @@
 // Maktub Go: DRE da empresa (só administradores).
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 // DRE geral do mês ou do ano, e cada linha abre o detalhe do que compõe o valor.
 // Regime de competência: venda, custo, imposto e comissão contam no mês da venda.
 // Quando cada valor sai do caixa fica em Compromissos a pagar.
@@ -16,7 +17,8 @@ const mk = (s) => String(s || '').slice(0, 7);
 export async function tela(P, ctx) {
   const { D, sb, $, esc, aviso, brl2, pct, campo, ir, mesNome, nomeTime, CAT_DESP } = ctx;
   const mes = ctx.mes(), ano = mes.slice(0, 4), mesModo = MODO === 'mes';
-  const hojeK = mk(new Date().toISOString());
+  // data do celular (fuso de quem usa), não UTC: depois das 21h o UTC já é o dia seguinte
+  const hojeK = mk(hojeISO());
   const fimAno = ano === hojeK.slice(0, 4) ? hojeK : ano + '-12';
   const ini = mesModo ? mes : ano + '-01', fim = mesModo ? mes : fimAno;
   const cab = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">DRE da <em>empresa</em></h1>
@@ -109,7 +111,7 @@ export async function tela(P, ctx) {
   const avulsas = !mesModo ? '' : `<div class="secao">Despesas avulsas do mês <button id="abrirDesp">+ Lançar</button></div>
     <form class="bloco form" id="fDesp" hidden style="margin-top:0">
       <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: tráfego pago, bônus, cartório"')}${campo('valor', 'Valor (R$)', '', 'number', 'required step="0.01"')}</div>
-      <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('vencimento', 'Vence em', new Date().toISOString().slice(0, 10), 'date', 'required')}</div>
+      <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('vencimento', 'Vence em', hojeISO(), 'date', 'required')}</div>
       <label class="fl" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="paga" style="width:auto"> <span>Já está paga</span></label>
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Lançar em ${mesNome(mes).toLowerCase()}</button>
     </form>

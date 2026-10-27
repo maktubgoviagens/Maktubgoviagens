@@ -301,7 +301,13 @@ function editor(P, X) {
     if (m) { mais(m.dataset.mais); editor(P, X); }
     const vt = xv ? xv.dataset.xvoo : t && /(^|\.)voos#\d+$/.test(t.dataset.tira) ? t.dataset.tira : '';
     if (vt) { tirarVooEd(P, X, vt); return; }
-    if (t) { const [lista, i] = t.dataset.tira.split('#'); if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X); }
+    if (t) {
+      const [lista, i] = t.dataset.tira.split('#');
+      // remover sem querer apagava um dia, um hotel ou a opção inteira: agora pergunta antes
+      const oQue = lista === '_print' ? 'o print' : /opcoes$/.test(lista) ? 'esta opção inteira da cotação' : 'este item';
+      if (!confirm(`Remover ${oQue}?`)) return;
+      if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X);
+    }
   });
   ligarPrint(P, X);
   $('verC').onclick = () => { const w = window.open('', '_blank'); const html = gerar(X); if (w) { w.document.open(); w.document.write(html); w.document.close(); } else X.aviso('Libere as janelas novas para ver a cotação.'); };
@@ -535,7 +541,15 @@ async function printUpload(el, P, X) { const f = el.files[0]; if (!f) return; S.
 /* ================= salvar e acervo ================= */
 function tituloDe() { if (S.modelo === 'rapida') return 'Rápida' + (S.cliente ? ' · ' + S.cliente : '') + (S.por ? ' · ' + brl(num(S.por)) : ''); return S.modelo === 'corp' ? `${S.codigo || 'Corporativo'} · ${S.passageiro || ''}`.trim() : [S.titulo, S.sub].filter(Boolean).join(' ').replace(/[,.]\s*$/, '') || S.opcoes[0].nome || 'Cotação'; }
 function clienteDe() { return S.modelo === 'rapida' ? S.cliente : S.modelo === 'corp' ? S.passageiro : S.para; }
+// dois botões ao mesmo tempo (Baixar e Enviar no WhatsApp): a segunda gravação espera a primeira,
+// para a cotação nova não ser criada duas vezes no card
+let SALVANDO = null;
 async function salvar(X, quieto) {
+  while (SALVANDO) await SALVANDO.catch(() => {});
+  SALVANDO = gravar(X, quieto);
+  try { return await SALVANDO; } finally { SALVANDO = null; }
+}
+async function gravar(X, quieto) {
   const dados = JSON.parse(JSON.stringify(S)); delete dados._id;
   const row = { modelo: S.modelo, titulo: tituloDe(), cliente: clienteDe() || null, destino: S.destino || null, dados, atualizado_em: new Date().toISOString() };
   const r = S._id ? await X.sb.from('propostas').update(row).eq('id', S._id).select().single() : await X.sb.from('propostas').insert(row).select().single();
@@ -1096,12 +1110,20 @@ async function fotoDoEnvio(X, alvo, reg) {
     await X.sb.from('propostas').update({ dados }).eq('id', alvo._id);
   } catch (e) { /* sem foto, fica só o registro */ }
 }
+// abre um HTML (roteiro ou cotação enviada) numa janela nova, isolado num quadro com sandbox:
+// um script dentro do arquivo não alcança a sessão do app. O botão de imprimir do próprio arquivo continua funcionando.
+const abrirIsolado = (w, html, titulo) => {
+  w.document.open();
+  w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Maktub Go</title><style>html,body{margin:0;height:100%;overflow:hidden}iframe{border:0;width:100%;height:100%;display:block}</style></head><body><iframe sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"></iframe></body></html>');
+  w.document.close(); w.document.title = titulo || 'Maktub Go';
+  w.document.querySelector('iframe').srcdoc = /<base\s/i.test(html) ? html : html.replace(/<head([^>]*)>/i, '<head$1><base target="_blank">');
+};
 async function verEnvio(X, path) {
   const w = window.open('', '_blank');
   if (/\.html$/.test(path)) {
     const { data, error } = await X.sb.storage.from('vendas').download(path);
     if (error || !data) { if (w) w.close(); X.aviso('Não abriu o envio.'); return; }
-    const html = await data.text(); if (w) { w.document.open(); w.document.write(html); w.document.close(); } return;
+    const html = await data.text(); if (w) abrirIsolado(w, html, 'Cotação enviada'); return;
   }
   const { data, error } = await X.sb.storage.from('vendas').createSignedUrl(path, 600);
   if (error) { if (w) w.close(); X.aviso('Não abriu o envio.'); return; }

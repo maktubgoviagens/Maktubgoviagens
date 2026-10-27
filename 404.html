@@ -12,6 +12,20 @@
 /* Link de cotação com nome (maktubgo.com.br/nome-escolhido): busca a cotação; se não existir, mostra esta página normal. */
 (function () {
   var m = location.pathname.match(/^\/([a-z0-9-]{3,40})\/?$/i); if (!m) return;
+  // a cotação roda isolada (quadro com sandbox, sem a origem do site): um script dentro dela não alcança
+  // a sessão de quem está logado no site, no painel ou no app. Links abrem em nova aba (WhatsApp, Instagram).
+  var abrirCotacao = function (html) {
+    var t = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || 'Sua cotação | Maktub Go';
+    var dec = document.createElement('textarea'); dec.innerHTML = t; t = dec.value;
+    var doc = /<base\s/i.test(html) ? html : html.replace(/<head([^>]*)>/i, '<head$1><base target="_blank">');
+    document.open();
+    document.write('<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><link rel="icon" href="/ativos/simbolo-verde.png"><title>Maktub Go</title><style>html,body{margin:0;height:100%;overflow:hidden;background:#F3F1EA}iframe{border:0;width:100%;height:100%;display:block}</style></head><body></body></html>');
+    document.close();
+    document.title = t;
+    var f = document.createElement('iframe');
+    f.title = 'Cotação'; f.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads');
+    f.srcdoc = doc; document.body.appendChild(f);
+  };
   var raiz = document.documentElement; raiz.style.visibility = 'hidden';
   var mostrar = function () { raiz.style.visibility = ''; };
   fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/ver_cotacao', {
@@ -19,7 +33,7 @@
     body: JSON.stringify({ p_token: m[1].toLowerCase() })
   }).then(function (r) { return r.ok ? r.json() : null; }).then(function (html) {
     if (!html || typeof html !== 'string') return mostrar();
-    document.open(); document.write(html); document.close();
+    abrirCotacao(html);
   }).catch(mostrar);
   setTimeout(mostrar, 6000);
 })();
