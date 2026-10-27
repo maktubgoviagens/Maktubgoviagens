@@ -2,7 +2,7 @@
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
-let BASE = null, ED = null, BUSCA = '';
+let BASE = null, ED = null, BUSCA = '', SO_ILIM = false;
 
 export async function carregarBase(sb, forcar) {
   if (BASE && !forcar) return BASE;
@@ -13,6 +13,8 @@ export async function carregarBase(sb, forcar) {
 }
 const nomeBase = (b) => `${b.banco} ${b.nome}`.trim();
 const dec = (x) => Number(x).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+export const salaVip = (b) => !b ? '' : b.salas_vip_ilimitado ? `sala VIP ilimitada${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}`
+  : n(b.salas_vip_ano) ? `${b.salas_vip_ano} ${Number(b.salas_vip_ano) === 1 ? 'acesso' : 'acessos'}/ano a sala VIP${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}` : '';
 const n = (x) => x === null || x === undefined || x === '' ? null : Number(x);
 
 // Contas de um cartão do cliente. cat: cartão da base (ou null); refs: valor do milheiro por programa.
@@ -57,7 +59,7 @@ export async function telaBase(P, X) {
   if (ED) return formBase(P, X);
   const cot = D.cfg && n(D.cfg.cotacao_dolar);
   const velho = (d) => !d || (Date.now() - new Date(d + 'T12:00:00')) / 864e5 > 180;
-  const L = BASE.filter(b => !BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase()));
+  const L = BASE.filter(b => (!SO_ILIM || b.salas_vip_ilimitado) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button>
     <h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1>
     <div class="sub">Anuidade, isenção e pontuação de cada cartão do mercado. Os cartões dos clientes usam estes dados nas contas.</div>
@@ -66,15 +68,17 @@ export async function telaBase(P, X) {
       <div class="sub">Usada para converter os gastos dos cartões que pontuam por dólar.</div>
     </section>
     <div class="duas-col" style="margin-top:14px;align-items:end"><label class="fl"><span>Buscar</span><input id="bBusca" value="${esc(BUSCA)}" placeholder="Banco, cartão ou programa"></label><button class="zap" id="bNovo" style="height:44px">+ Novo cartão</button></div>
+    <label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${SO_ILIM ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>
     <section class="bloco" style="margin-top:10px">${L.length ? L.map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
         <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${!b.ativo ? ' <small>(fora de linha)</small>' : ''}
-          <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : ''].filter(Boolean).map(esc).join(' · ')}</small></span>
+          <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
         <span${velho(b.conferido_em) ? ' style="color:var(--alerta)"' : ''}>${b.conferido_em ? 'conferido ' + b.conferido_em.split('-').reverse().join('/') : 'não conferido'}</span></button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
     <div class="sub" style="margin-top:8px">${num(BASE.length)} cartões na base. Em laranja, os conferidos há mais de 6 meses: vale revisar no site do banco.</div>`;
   $('voltar').onclick = voltar;
   $('bBusca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
   $('bNovo').onclick = () => { ED = 'novo'; telaBase(P, X); };
+  $('bIlim').onchange = (e) => { SO_ILIM = e.target.checked; telaBase(P, X); };
   P.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { ED = el.dataset.b; telaBase(P, X); });
   $('cotOk').onclick = async () => {
     const v = n(String(P.querySelector('[name=cot]').value).replace(',', '.'));
@@ -100,7 +104,9 @@ function formBase(P, X) {
       ${campo('isencao', 'Regra de isenção, como o banco descreve', b.isencao, 'text', 'placeholder="Ex.: isenta com R$ 10 mil/mês ou R$ 100 mil investidos"')}
       <div class="duas-col">${campo('pontos_por', 'Pontuação', b.pontos_por, 'number', 'placeholder="Ex.: 2,2"')}${sel('pontos_moeda', 'Por', MOEDAS, b.pontos_moeda)}</div>
       ${campo('programa', 'Programa de pontos', b.programa, 'text', 'placeholder="Ex.: Esfera, Livelo, Átomos, Azul"')}
-      ${campo('beneficios', 'Benefícios de viagem', b.beneficios, 'text', 'placeholder="Ex.: 8 acessos/ano LoungeKey, seguro viagem"')}
+      <div class="duas-col">${campo('salas_vip_programa', 'Sala VIP: programa', b.salas_vip_programa, 'text', 'placeholder="LoungeKey, Priority Pass, DragonPass..."')}${campo('salas_vip_ano', 'Acessos por ano (titular)', b.salas_vip_ano, 'number', 'placeholder="em branco se não tiver"')}</div>
+      <label class="fc"><input type="checkbox" name="salas_vip_ilimitado" ${b.salas_vip_ilimitado ? 'checked' : ''}><span>Sala VIP ilimitada</span></label>
+      ${campo('beneficios', 'Outros benefícios e condições', b.beneficios, 'text', 'placeholder="Ex.: acesso exige gasto mínimo, seguro viagem"')}
       <div class="duas-col">${campo('fonte', 'Fonte (site do banco)', b.fonte, 'url', 'placeholder="https://..."')}${campo('conferido_em', 'Conferido em', b.conferido_em, 'date')}</div>
       <label class="fc"><input type="checkbox" name="ativo" ${b.ativo !== false ? 'checked' : ''}><span>Cartão ainda é oferecido pelo banco</span></label>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" type="submit" style="flex:2">Salvar</button>${ED !== 'novo' ? '<button class="sec" type="button" id="bDel" style="flex:1">Excluir</button>' : ''}</div>
@@ -112,9 +118,10 @@ function formBase(P, X) {
     e.preventDefault();
     const row = { banco: v('banco'), nome: v('nome'), bandeira: v('bandeira') || null, categoria: v('categoria') || null, anuidade_anual: nv('anuidade_anual'), isencao_gasto_mes: nv('isencao_gasto_mes'),
       isencao: v('isencao') || null, pontos_por: nv('pontos_por'), pontos_moeda: v('pontos_moeda'), programa: v('programa') || null, beneficios: v('beneficios') || null,
-      fonte: v('fonte') || null, conferido_em: v('conferido_em') || null, ativo: f.elements.ativo.checked, atualizado_em: new Date().toISOString() };
+      fonte: v('fonte') || null, conferido_em: v('conferido_em') || null, ativo: f.elements.ativo.checked, atualizado_em: new Date().toISOString(),
+      salas_vip_programa: v('salas_vip_programa') || null, salas_vip_ano: nv('salas_vip_ano') === null ? null : Math.round(nv('salas_vip_ano')), salas_vip_ilimitado: f.elements.salas_vip_ilimitado.checked };
     if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
-    if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
+    if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por', 'salas_vip_ano'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
     const r = ED === 'novo' ? await sb.from('cartoes_catalogo').insert(row).select().single() : await sb.from('cartoes_catalogo').update(row).eq('id', ED).select().single();
     if (r.error) { aviso('Não salvou: ' + r.error.message); return; }
     if (ED === 'novo') BASE.push(r.data); else Object.assign(BASE.find(x => x.id === ED), r.data);
@@ -141,12 +148,13 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   const C = r.data || [], cot = D.cfg && n(D.cfg.cotacao_dolar), porId = Object.fromEntries(BASE.map(b => [b.id, b]));
   const K = C.map(x => ({ x, cat: porId[x.catalogo_id] || null, k: calc(x, porId[x.catalogo_id] || null, cot, refs, CART.normProg) }));
   const soma = (f) => K.reduce((s, o) => s + (f(o) || 0), 0);
-  const tot = { limite: soma(o => n(o.x.limite)), custo: soma(o => o.k.custo), valor: soma(o => o.k.valor), pontos: soma(o => o.k.pontos), semAnu: K.filter(o => o.k.custo === null).length };
+  const tot = { limite: soma(o => n(o.x.limite)), custo: soma(o => o.k.custo), valor: soma(o => o.k.valor), pontos: soma(o => o.k.pontos), semAnu: K.filter(o => o.k.custo === null).length,
+    vip: soma(o => o.cat && !o.cat.salas_vip_ilimitado ? n(o.cat.salas_vip_ano) : 0), vipIlim: K.filter(o => o.cat && o.cat.salas_vip_ilimitado).map(o => nomeBase(o.cat)) };
   const data = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') : '';
   const linha = ({ x, cat, k }) => {
     const det = [
       k.custo === null ? 'anuidade: ligue à base ou informe' : k.custo === 0 ? (k.paga !== null ? 'anuidade negociada: isenta' : k.isentaGasto ? 'isenta pelo gasto' : 'sem anuidade') : `anuidade ${brl(k.custo)}/ano${k.paga !== null ? ' (negociada)' : k.minimo ? ` · isenta com ${brl(k.minimo)}/mês (gasta ${brl(k.gasto)})` : ''}`,
-      k.pontos !== null ? `${num(Math.round(k.pontos))} pts/ano` : '', k.valor !== null ? `vale ${brl(k.valor)}/ano` : k.semValor,
+      k.pontos !== null ? `${num(Math.round(k.pontos))} pts/ano` : '', k.valor !== null ? `vale ${brl(k.valor)}/ano` : k.semValor, salaVip(cat),
     ].filter(Boolean).join(' · ');
     const res = k.resultado === null ? '' : `<b style="font-weight:600;color:${k.resultado >= 0 ? 'var(--verde)' : 'var(--alerta)'}">${k.resultado >= 0 ? '+' : '−'} ${brl(Math.abs(k.resultado))}/ano</b>`;
     return `<div class="lin" style="align-items:flex-start"><span><b style="font-weight:600">${esc(cat ? nomeBase(cat) : [x.banco, x.categoria].filter(Boolean).join(' '))}</b>${x.final_cartao ? ' · final ' + esc(x.final_cartao) : ''}${!cat ? ' <small style="color:var(--alerta)">(fora da base)</small>' : ''}
@@ -156,9 +164,10 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br><button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>`;
   };
   box.innerHTML = (C.length ? `<div class="numeros" style="margin:0 0 6px">
-        <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${num(C.length)} cartões</div></div>
+        <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${C.length === 1 ? '1 cartão' : num(C.length) + ' cartões'}</div></div>
         <div class="num"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}</div></div>
         <div class="num"><div class="l">Valor dos pontos no ano</div><div class="v">${brl(tot.valor)}</div><div class="d">${num(Math.round(tot.pontos))} pts pelo gasto informado</div></div>
+        <div class="num"><div class="l">Sala VIP</div><div class="v">${tot.vipIlim.length ? 'Ilimitada' : num(tot.vip) + ' acessos'}</div><div class="d">${tot.vipIlim.length ? esc(tot.vipIlim.join(', ')) : 'por ano, somando os cartões; nenhum ilimitado'}</div></div>
       </div>${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
     + `<details style="margin-top:8px" id="cxForm"${C.length ? '' : ' open'}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary><div id="cxCampos"></div></details>`;
   const ED_C = { id: null };
