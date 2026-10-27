@@ -21,7 +21,7 @@
 :root{
   --verde:#1a3826;--verde-2:#234832;--dourado:#8a6520;--dourado-claro:#c9a96e;
   --creme:#f9f6f1;--creme-2:#f2ece1;--branco:#fff;
-  --tinta:#2b2b26;--tinta-2:#5c5c55;--tinta-3:#86867c;
+  --tinta:#2b2b26;--tinta-2:#5c5c55;--tinta-3:#6b6b62;
   --linha:rgba(26,56,38,.12);
   --alerta:#a0561f;--ok:#2f6b4a;
   --barra-h:64px;
@@ -32,6 +32,8 @@ html{-webkit-text-size-adjust:100%}
 body{background:var(--creme);color:var(--tinta);font-family:'Jost',-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.5}
 a{color:inherit}
 button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
+button:not([class]){-webkit-appearance:none;appearance:none;background:none;border:0;padding:0;color:inherit;cursor:pointer}
+@media (max-width:760px){input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}}
 
 /* topo */
 .topo{position:sticky;top:0;z-index:30;background:var(--verde);color:var(--creme);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px}
@@ -56,7 +58,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .titulo em{color:var(--dourado)}
 .sub{font-size:12.5px;color:var(--tinta-3);margin-top:4px}
 .secao{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:center}
-.secao a,.secao button{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--tinta-2);background:none;border:0;cursor:pointer;font-weight:400}
+.secao a,.secao button{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--tinta-2);background:none;border:0;cursor:pointer;font-weight:400;padding:12px 0 12px 14px;margin:-12px 0}
 
 /* números */
 .numeros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -105,7 +107,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .pia h4{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:14px 0 6px}.pia ul{margin:0;padding-left:18px}.pia li{margin:3px 0;font-size:14px}.pia p{margin:4px 0;font-size:14px}.pia .ob{border-top:1px solid var(--linha);padding:6px 0;font-size:14px}.pia .ob b{color:var(--verde);font-weight:600}.pia .acs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pia .acs>*{flex:1;min-width:140px}
 .lint{margin-top:12px}.lint .l{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:500;margin-bottom:2px}.lint .l b{color:var(--alerta);font-weight:600}.lint .chips{flex-wrap:wrap;overflow:visible}.lint .chips button{padding:7px 11px}
 .seg{display:flex;border:1px solid var(--linha);background:var(--branco);margin:14px 0 4px}
-.seg button{flex:1;background:none;border:0;padding:10px 4px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
+.seg button{flex:1;background:none;border:0;padding:var(--seg-pad,10px 4px);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
 .seg button.on{background:var(--verde);color:var(--creme)}
 .busca{width:100%;padding:12px 14px;border:1px solid var(--linha);background:var(--branco);font-size:16px;margin-top:14px}
 
@@ -181,7 +183,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .perm input{flex:none;margin-top:3px;width:18px;height:18px;accent-color:var(--verde)}
 .perm b{display:block;font-weight:600;font-size:14px;color:var(--verde)}
 .perm small{display:block;font-size:12px;color:var(--tinta-3)}
-.perm.off{opacity:.55;cursor:default;padding-left:38px;margin-top:6px}
+.perm.off{opacity:1;cursor:default;padding-left:38px;margin-top:6px}
 .pgrupo{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta-3);font-weight:600;margin:10px 0 0}
 .pgrupo:first-child{margin-top:2px}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
@@ -339,7 +341,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .kc[data-kid]{-webkit-touch-callout:none}
 .kc{background:var(--branco);border:1px solid var(--linha);padding:10px;margin-bottom:8px}
 .kc.atr{border-left:3px solid var(--alerta)}
-.kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:0;text-align:left;cursor:pointer;width:100%}
+.kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:4px 0;margin:-4px 0;text-align:left;cursor:pointer;width:100%}
 .kzap{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#25d366;color:#fff}
 .kzap svg{width:17px;height:17px;fill:currentColor}
 .kc .i{font-size:12.5px;color:var(--tinta-2);margin-top:3px}
@@ -515,10 +517,10 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
-import * as MKT from '/admin/app/marketing.js?v=18';
+import * as MKT from '/admin/app/marketing.js?v=19';
 import * as CART from '/admin/app/carteira.js?v=2';
 import * as CARTOES from '/admin/app/cartoes.js?v=4';
-import * as ACV from '/admin/app/acervo.js?v=6';
+import * as ACV from '/admin/app/acervo.js?v=7';
 import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=2';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
@@ -816,6 +818,8 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('popstate', () => {
   // voltar do celular (ou do app) com formulário não salvo: se a pessoa cancelar, fica na mesma tela com tudo preenchido
   if (pendente() && !sairOk()) { history.pushState(null, '', URL_PREENCHIDO || location.href); return; }
+  // folha aberta (sino, botão +, busca, detalhe do marketing) fecha junto ao trocar de tela pelo voltar
+  document.querySelectorAll('.folha').forEach(f => { f.hidden = true; });
   ANTERIOR = null; lerHash(); marcarNav(); tela();
 });
 $('pagina').addEventListener('click', async (e) => {
@@ -1623,7 +1627,7 @@ function telaFormEmissao(P) {
     ${B2B.blocoCancelar(e, { D, ADMIN, brl2, fechado: travado })}
     ${(() => { const at = D.reunioes.find(r => (r.itens || []).some(x => x.planilha_id === e.id)); if (!at) return ''; const x = at.itens.find(y => y.planilha_id === e.id);
       const l = (a, b) => b ? `<div class="lin"><span>${a}</span><span style="white-space:normal;text-align:right">${b}</span></div>` : '';
-      return `<section class="bloco" style="margin-top:12px"><h2>Detalhes da venda <button type="button" data-r="${at.id}" style="font-size:12px;color:var(--verde);text-decoration:underline">${VENDA.numCard(at) || 'abrir card'} ›</button></h2>
+      return `<section class="bloco" style="margin-top:12px"><h2>Detalhes da venda <button type="button" data-r="${at.id}" style="font-size:12px;color:var(--verde);text-decoration:underline;padding:8px 0;margin:-8px 0">${VENDA.numCard(at) || 'abrir card'} ›</button></h2>
         ${l('Trecho', x.tipo_trecho === 'multi' ? 'Multitrecho' + (x.trechos ? ': ' + esc(String(x.trechos).replace(/\n/g, ' · ')) : '') : x.tipo_trecho === 'ida' ? 'Só ida' : x.tipo_trecho === 'iv' ? 'Ida e volta' : '')}
         ${l('Pago em', x.pago_em === 'pagante' ? 'Pagante' : x.pago_em === 'milhas' ? 'Milhas' : '')}
         ${l('Companhia', x.cia_voo && x.cia_emissora && x.cia_voo !== x.cia_emissora ? `Emitido na ${esc(x.cia_emissora)}, voa de <b>${esc(x.cia_voo)}</b> (check-in pela ${esc(x.cia_voo)})` : esc(x.cia_emissora || ''))}
@@ -2786,7 +2790,7 @@ function telaFormReuniao(P) {
         <div class="sub">No dia do retorno, você recebe um aviso.</div>
       </div>
       ${G ? '</div>' : ''}
-      ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:13px;padding:0;margin-top:10px">+ registrar uma reunião</button>' : ''}
+      ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
       ${G ? '<details class="gsec" style="order:-2"><summary><span>Reuniões<small>Diagnóstico e outras reuniões, na agenda e no TickTick</small></span></summary>' : ''}
       <div id="blReun"><div class="grupo">Reuniões</div>
       ${D.agenda === null ? '<div class="sub">As reuniões são ativadas pelo 11-agenda-reunioes.sql.</div>' : `
@@ -3630,7 +3634,7 @@ function telaEmpresa(P) {
       <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
-    <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}" style="padding:6px 10px">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}" style="padding:6px 10px">Lucro</button></span></h2>
+    <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto;--seg-pad:12px 12px"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}">Lucro</button></span></h2>
       ${top.length ? top.map(([k, x], i) => { const pid = k.startsWith('nome:') ? null : k; return `<button class="lin" ${pid ? `data-pid="${pid}"` : ''} style="font-size:14px"><span>${i + 1}. ${esc(pid ? (pessoaNome(pid) || 'Cliente') : k.slice(5) || 'Sem nome')}</span><span>${brlC(x[EMP_TOP])} · ${x.n}${pid ? '<span class="seta">›</span>' : ''}</span></button>`; }).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
     </section>
     <section class="bloco"><h2>Por fonte de receita</h2>

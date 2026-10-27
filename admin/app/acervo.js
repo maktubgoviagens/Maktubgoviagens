@@ -162,7 +162,7 @@ function carregarLeaflet() {
   });
 }
 async function desenharMapa(topT, topC) {
-  try { await carregarLeaflet(); } catch (_) { const m = document.getElementById('acvMapa'); if (m) m.innerHTML = '<div class="vazio">O mapa não carregou. Verifique a internet.</div>'; return; }
+  try { await carregarLeaflet(); } catch (_) { const m = document.getElementById('acvMapa'); if (m) m.innerHTML = '<div class="vazio" style="color:var(--tinta-2);padding:16px">O mapa não carregou. Verifique a internet.</div>'; return; }
   const box = document.getElementById('acvMapa'); if (!box) return;
   if (MAPA) { MAPA.remove(); MAPA = null; }
   const L = window.L;

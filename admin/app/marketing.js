@@ -179,7 +179,7 @@ function estilos() {
 .mk-pilar b{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;line-height:1.1}.mk-pilar small{font-size:12px;opacity:.85}
 .mk-doc{background:var(--branco);border:1px solid var(--linha);padding:14px;margin-top:8px}
 .mk-doc h3{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado);font-weight:600;display:flex;justify-content:space-between;align-items:center}
-.mk-doc h3 button{background:none;border:0;color:var(--tinta-2);font-size:12px;letter-spacing:.04em;text-transform:none;cursor:pointer}
+.mk-doc h3 button{background:none;border:0;color:var(--tinta-2);font-size:12px;letter-spacing:.04em;text-transform:none;cursor:pointer;padding:8px 0 8px 12px;margin:-8px 0}
 .mk-doc p{font-size:14px;white-space:pre-wrap;margin-top:8px}.mk-doc p.v{color:var(--tinta-3)}
 /* Estúdio: visão da equipe de marketing */
 .mk-hero{background:var(--verde);color:var(--creme);margin:-18px -16px 0;padding:22px 16px 18px}
@@ -212,11 +212,11 @@ function estilos() {
 .mk-kt{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mk-kt .pill{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:10px;color:#fff}
 .mk-kt .st{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)}
 .mk-kb b{display:block;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;color:var(--verde);line-height:1.15;margin-top:6px}
-.mk-kb small{display:block;font-size:12px;color:var(--tinta-3);margin-top:3px}
+.mk-kb small{display:block;font-size:12px;color:var(--tinta-2);margin-top:3px}
 .mk-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;color:var(--tinta-2);margin-top:6px}
 .mk-kac{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);padding:7px 10px;font-size:12px}
-.mk-kac a{color:var(--dourado)}.mk-kl{display:flex;gap:12px}.mk-conta{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin-top:7px}.mk-kac span{color:var(--tinta-3)}
-.mk-kac button{background:none;border:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--verde);font-weight:600;cursor:pointer;padding:2px 0}
+.mk-kac a{color:var(--dourado)}.mk-kl{display:flex;gap:12px}.mk-conta{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin-top:7px}.mk-kac span{color:var(--tinta-2)}
+.mk-kac button{background:none;border:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--verde);font-weight:600;cursor:pointer;padding:10px 0 10px 12px;margin:-8px 0}
 .mk-salvar{position:sticky;z-index:5;margin:16px -16px 0;padding:8px 16px;background:var(--branco);border-top:1px solid var(--linha);box-shadow:0 -6px 14px rgba(0,0,0,.05)}
 .mk-salvar .zap.grande{padding:12px}
 .mk-erro{font-size:13px;color:var(--alerta);margin:6px 0 10px;font-weight:500;line-height:1.4}.mk-campo-erro{border-color:var(--alerta)!important;box-shadow:0 0 0 1px var(--alerta)}
@@ -328,7 +328,7 @@ function cardAprovar(p) {
   const { esc } = X, pl = est(p.pilar_id);
   return `<div class="mk-aprov">
     <div style="display:flex;justify-content:space-between;gap:8px"><span class="tag" style="margin:0;border-color:${corP(p)};color:${corP(p)}">${fmtN(p)}</span><span class="sub" style="margin:0">${p.data_prevista ? dm(p.data_prevista) + (p.hora ? ' às ' + esc(hhmm(p.hora)) : '') : 'sem data'}</span></div>
-    <button data-p="${p.id}" style="background:none;border:0;text-align:left;padding:0;cursor:pointer;margin-top:8px;display:block"><div class="nome">${esc(p.titulo)}</div></button>
+    <button data-p="${p.id}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;margin-top:4px;display:block"><div class="nome">${esc(p.titulo)}</div></button>
     <div class="sub">${[pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', p.responsavel_id ? 'por ' + primeiro(nomeT(p.responsavel_id)) : ''].filter(Boolean).map(esc).join(' · ')}</div>
     ${p.legenda ? `<div class="leg">${esc(p.legenda)}</div>` : ''}
     ${links(p) || '<div class="sub">Sem link da arte.</div>'}
@@ -381,7 +381,7 @@ function kcard(p) {
   const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? (acao(p) || `<button data-mover="${p.id}" data-g="publicado">Publicado</button>`) : '';
   const quem = [p.responsavel_id ? (ehVideo(p) ? 'roteiro: ' : 'arte: ') + primeiro(nomeT(p.responsavel_id)) : '', nomesG(p) ? 'grava: ' + nomesG(p) : '', p.edicao_por ? 'edita: ' + primeiro(nomeT(p.edicao_por)) : '', p.postagem_por ? 'posta: ' + primeiro(nomeT(p.postagem_por)) : ''].filter(Boolean).join(' · ');
   return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:5px solid ${contaCor(p)};background:${contaFundo(p)}"><button data-p="${p.id}" class="mk-kb">
-      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
+      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:#8a4618;font-weight:600">atrasado</span>' : ''}</span>
       <span class="mk-conta" style="color:${contaCor(p)}">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
       <b>${esc(p.titulo)}</b>
       <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(hhmm(p.hora)) : '') : 'sem data'}${quem ? '' : ' · ninguém escalado'}</small>
