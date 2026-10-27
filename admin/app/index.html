@@ -4297,8 +4297,11 @@ async function lerPrintsConf(c, files) {
   if (!String(data.programa || '').trim()) { aviso('Não identifiquei o programa nesse print.'); return null; }
   return prepararLeitura(c, data);
 }
+// nomes diferentes do mesmo programa (a carteira pode usar "TudoAzul" e o print, "Azul")
+const MESMO_PROGRAMA = [['azul', 'tudoazul', 'azulfidelidade', 'azulfidelidadeclube'], ['latampass', 'latam', 'multiplus'], ['smiles', 'golsmiles'], ['livelo'], ['esfera', 'esferasantander']];
 function prepararLeitura(c, d) {
-  const key = CART.normProg(d.programa), prog = c._W.programas.find(p => p.key === key);
+  const lido = CART.normProg(d.programa), grupo = MESMO_PROGRAMA.find(g => g.includes(lido)) || [lido];
+  const prog = c._W.programas.find(p => p.key === lido) || c._W.programas.find(p => grupo.includes(p.key)), key = prog ? prog.key : lido;
   const ex = (c._ex || []).filter(x => CART.normProg(x.programa) === key);
   const corte = c.conferencia_em ? String(c.conferencia_em).slice(0, 10) : '';
   const L = { key, nome: prog ? prog.programa : String(d.programa).trim(), atual: prog ? prog.saldo : null, primeira: !ex.length, corte,
