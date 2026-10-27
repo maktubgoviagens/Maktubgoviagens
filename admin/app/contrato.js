@@ -292,7 +292,8 @@ export async function bloco(el, c, X) {
     b.disabled = true; b.textContent = 'Consultando...';
     const { data, error } = await sb.functions.invoke('contrato-autentique', { body: { acao: 'status', contrato_id: b.dataset.kStatus } });
     if (error || !data || data.erro) { b.disabled = false; b.textContent = 'Atualizar status'; X.aviso('Não consultou: ' + ((data && data.erro) || (error && error.message) || 'erro')); return; }
-    X.aviso(data.status === 'assinado' ? 'Contrato assinado. O PDF já está na ficha e no painel do cliente.' : data.status === 'recusado' ? 'O cliente recusou a assinatura.' : 'Ainda aguardando a assinatura.');
+    X.aviso(data.status === 'assinado' ? 'Contrato assinado. O PDF já está na ficha e no painel do cliente.' : data.status === 'recusado' ? 'O cliente recusou a assinatura.'
+      : data.aviso ? data.aviso : (data.faltam && data.faltam.length ? 'Ainda falta assinar: ' + data.faltam.join(', ') + '.' : 'Ainda aguardando a assinatura.'));
     bloco(el, c, X);
   });
   el.querySelectorAll('[data-k-cancelar]').forEach(b => b.onclick = async () => {
