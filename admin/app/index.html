@@ -515,7 +515,7 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
-import * as MKT from '/admin/app/marketing.js?v=17';
+import * as MKT from '/admin/app/marketing.js?v=18';
 import * as CART from '/admin/app/carteira.js?v=2';
 import * as CARTOES from '/admin/app/cartoes.js?v=2';
 import * as ACV from '/admin/app/acervo.js?v=6';
@@ -715,7 +715,39 @@ $('recarregar').onclick = () => {
   if (SUJO && !confirm('Você tem um preenchimento não salvo nesta tela. Recarregar agora descarta o que não foi salvo. Recarregar mesmo assim?')) return;
   RECARREGANDO = true; location.reload();
 };
-$('sino').onclick = () => ir('avisos');
+/* sino: administradores veem os avisos da empresa; o resto da equipe vê as tarefas que são dela agora */
+function minhasTarefas() {
+  const eu = D.meuId, hj = hojeISO(), L = [];
+  const add = (area, titulo, desc, acao, atrasado) => L.push({ area, titulo, desc, acao, atrasado: !!atrasado });
+  const n2 = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+  if (podeAba('marketing')) MKT.minhasTarefas(eu, pode('mkt_aprovar')).forEach(t => add('Marketing', t.titulo, t.desc, () => ir('marketing', () => MKT.editar(t.id)), t.atrasado));
+  else {
+    (D.gravar || []).forEach(p => add('Marketing', p.titulo, 'Gravar até ' + ddmm(p.gravacao_data || p.data_prevista), () => detalheMkt('g', p.id), (p.gravacao_data || p.data_prevista) < hj));
+    (D.postar || []).forEach(p => add('Marketing', p.titulo, 'Postar ' + ddmm(p.data_prevista), () => detalheMkt('p', p.id), p.data_prevista < hj));
+  }
+  if (podeAba('leads') && pode('leads')) { const n = leadsSemDono().length; if (n) add('Comercial', n2(n, 'lead do site sem ninguém', 'leads do site sem ninguém'), 'Assuma e responda pelo WhatsApp', () => ir('leads'), true); }
+  if (!soMarketing()) {
+    if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (r.proximo_passo_data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + (r.proximo_passo ? ': ' + r.proximo_passo : ''), () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
+    const av = avaliacoesParaPedir(true).length; if (av) add('Comercial', n2(av, 'avaliação de atendimento para pedir', 'avaliações de atendimento para pedir'), 'Reuniões realizadas nos últimos 14 dias', () => ir('agenda'));
+    if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 48 horas', () => ir('agenda'), true); }
+    if (pode('gestao')) { const n = tarefasParaHoje().length; if (n) add('Gestão de Milhas', n2(n, 'tarefa da Gestão para hoje', 'tarefas da Gestão para hoje'), 'Implantação e acompanhamento dos clientes', () => ir('gestao')); }
+  }
+  return L;
+}
+function atualizarSino() {
+  const n = ADMIN ? avisosNovos().length : minhasTarefas().length;
+  $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n;
+}
+function abrirSino() {
+  const L = minhasTarefas(), areas = [...new Set(L.map(t => t.area))];
+  document.querySelector('#folhaMais .folha-tit').textContent = 'Para você';
+  $('folhaItens').innerHTML = L.length ? areas.map(a => `<div class="res-grupo">${esc(a)}</div>` + L.map((t, i) => [t, i]).filter(([t]) => t.area === a).sort((x, y) => y[0].atrasado - x[0].atrasado)
+      .map(([t, i]) => `<button class="folha-item" data-tarefa="${i}"><span>${esc(t.titulo)}<small${t.atrasado ? ' style="color:var(--alerta)"' : ''}>${esc(t.desc)}</small></span><span class="seta">›</span></button>`).join('')).join('')
+    : '<div class="vazio">Nada pendente com você agora.</div>';
+  $('folhaItens').querySelectorAll('[data-tarefa]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.tarefa].acao(); scrollTo(0, 0); });
+  $('folhaBusca').hidden = true; $('folhaMais').hidden = false;
+}
+$('sino').onclick = () => ADMIN ? ir('avisos') : abrirSino();
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b && sairOk()) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
 $('clientesTopo').onclick = () => { if (sairOk()) { CRM.abrir(null); ir('crm'); } };
@@ -902,7 +934,7 @@ const VER_TODAS = () => ADMIN || pode('financeiro');
 const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
 const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && pode(k));
 const MKT_ABAS = () => ['marketing', ...(pode('leads') || pode('talentos') ? ['leads'] : [])];
-function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), DELEGA: ADMIN || pode('mkt_aprovar') || pode('mkt_delegar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), DELEGA: ADMIN || pode('mkt_aprovar') || pode('mkt_delegar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, sino: () => { try { atualizarSino(); } catch (_) {} }, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -954,7 +986,7 @@ function montarNav() {
   const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
   $('nav').hidden = !itens.length; $('buscaTopo').hidden = soMarketing();
-  $('sino').hidden = !ADMIN;
+  $('sino').hidden = false; $('sino').setAttribute('aria-label', ADMIN ? 'Avisos' : 'Suas tarefas');
   $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
@@ -1240,12 +1272,12 @@ function htmlEvento(e) {
 /* ================= telas ================= */
 function tela() {
   SUJO = false; PREENCHIDO = false;
+  try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
   if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); }
   if ($('bGestao')) { const n = totalGestao(); $('bGestao').textContent = n; $('bGestao').hidden = !n; }
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
-  if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
   mostrarFab();
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());

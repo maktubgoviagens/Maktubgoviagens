@@ -98,6 +98,21 @@ const endereco = () => '#marketing/' + VIEW + (ED ? (ED === 'nova' ? '/nova' : '
 // abre um post (ou um novo) criando uma entrada no histórico; fechar volta no histórico
 function abrirPost(id, pre) { ED = id; PRE = pre || null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); }
 function fecharPost() { if (X.sairOk && !X.sairOk()) return; const h = location.hash; ED = null; PRE = null; if (/\/(post|nova)/.test(h)) history.back(); else rerender(); scrollTo(0, 0); }
+// tarefas da pessoa no marketing, para o sino: gravar, ajustes, editar, criar, postar (e aprovar, para a coordenação)
+export function minhasTarefas(eu, coord) {
+  if (!LISTA) return [];
+  const T = [], ja = new Set();
+  const add = (p, oQue, quando) => { if (ja.has(p.id)) return; ja.add(p.id); T.push({ id: p.id, titulo: p.titulo, desc: oQue + (quando ? (/até$/.test(oQue) ? ' ' : ' · ') + dm(quando) : ''), atrasado: !!(quando && quando < hoje()) }); };
+  LISTA.filter(p => equipeG(p).includes(eu) && !p.gravado_em && p.status !== 'publicado').forEach(p => add(p, 'Gravar até', p.gravacao_data || p.data_prevista));
+  LISTA.filter(p => p.ajuste && EM_PRODUCAO.includes(p.status) && (p.responsavel_id === eu || p.edicao_por === eu)).forEach(p => add(p, 'Ajuste pedido', p.data_prevista));
+  LISTA.filter(p => p.edicao_por === eu && (p.status === 'edicao' || (p.status === 'gravacao' && p.gravado_em))).forEach(p => add(p, 'Editar', p.data_prevista));
+  LISTA.filter(p => p.responsavel_id === eu && (p.status === 'producao' || (p.status === 'ideia' && p.data_prevista))).forEach(p => add(p, ehVideo(p) ? 'Fazer o roteiro' : 'Criar a arte', p.data_prevista));
+  LISTA.filter(p => p.postagem_por === eu && p.status !== 'publicado' && (p.status !== 'ideia' || p.data_prevista)).forEach(p => add(p, 'Postar', p.data_prevista));
+  if (coord) LISTA.filter(p => p.status === 'aprovacao').forEach(p => add(p, 'Aprovar', p.data_prevista));
+  return T;
+}
+// abre um post direto (vindo do sino)
+export function editar(id) { ED = String(id); PRE = null; ED_EST = null; CONF = null; }
 export function postar(id) { ED = String(id); PRE = { status: 'publicado' }; ED_EST = null; CONF = null; }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
@@ -237,7 +252,7 @@ export function tela(P, ctx) {
   const vistas = X.DELEGA ? [...abas, 'tarefas'] : abas;
   if (!vistas.includes(VIEW)) VIEW = vistas[0];
   if (!MES) MES = mesK(hoje());
-  if (ED) return formPost(P);
+  if (ED) { if (location.hash !== endereco()) history.replaceState(null, '', endereco()); return formPost(P); }
   if (ED_EST) return formEst(P);
   const nomes = { painel: 'Painel', calendario: 'Calendário', producao: 'Kanban', estrategia: 'Estratégia', semana: 'Semana', ideias: 'Ideias', tarefas: 'Tarefas' };
   const seg = `<div class="seg" id="mkSeg" style="margin-top:${X.COORD ? 12 : 16}px">${abas.map(v => `<button data-v="${v}" class="${VIEW === v ? 'on' : ''}">${nomes[v]}</button>`).join('')}</div>`;
@@ -258,7 +273,7 @@ export function tela(P, ctx) {
   ligar(P);
 }
 const sairBtn = () => '<button class="sec" data-sair style="width:100%;margin-top:28px">Sair do app</button>';
-const rerender = () => { const P = document.getElementById('pagina'); if (P && X.aba() === 'marketing') tela(P, X); };
+const rerender = () => { const P = document.getElementById('pagina'); if (P && X.aba() === 'marketing') tela(P, X); if (X.sino) X.sino(); };
 
 /* ---------- administradores: painel ---------- */
 function vPainel() {
