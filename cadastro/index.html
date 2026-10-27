@@ -81,7 +81,7 @@
         <label><span>CPF</span><input name="cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" /></label>
         <label><span>Celular com DDD</span><input name="celular" type="tel" inputmode="tel" autocomplete="tel" /></label>
         <label><span>E-mail</span><input name="email" type="email" autocomplete="email" /></label>
-        <details>
+        <details id="viagemExtra">
           <summary>Vai viajar para fora do Brasil?</summary>
           <label><span>Número do passaporte</span><input name="passaporte" autocapitalize="characters" /></label>
           <div class="duo">
@@ -92,7 +92,23 @@
         <label class="check"><input type="checkbox" name="aceita" /><span>Quero receber novidades, oportunidades e convites da Maktub Go.</span></label>
       </div>
 
-      <div class="card">
+      <div class="card" id="contratoCard" hidden>
+        <h2>Para o seu contrato</h2>
+        <div class="hint">São os dados que entram no contrato da Gestão de Milhas.</div>
+        <div class="duo">
+          <label><span>RG</span><input name="rg" /></label>
+          <label><span>Órgão emissor e UF</span><input name="rg_orgao_uf" placeholder="Ex.: SSP/BA" /></label>
+        </div>
+        <div class="duo">
+          <label><span>Nacionalidade</span><input name="nacionalidade_c" value="brasileiro(a)" /></label>
+          <label><span>Estado civil</span><select name="estado_civil"><option value="">Selecione</option><option>solteiro(a)</option><option>casado(a)</option><option>divorciado(a)</option><option>viúvo(a)</option><option>separado(a)</option><option>em união estável</option></select></label>
+        </div>
+        <label><span>Profissão</span><input name="profissao" /></label>
+        <label><span>Endereço completo</span><input name="endereco_completo" autocomplete="street-address" placeholder="Rua, número, complemento, bairro, cidade/UF" /></label>
+        <label><span>CEP</span><input name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" /></label>
+      </div>
+
+      <div class="card" id="acompCard">
         <h2>Quem viaja com você</h2>
         <div class="hint">Família ou acompanhantes. Se for viajar sozinho, pode pular esta parte.</div>
         <div id="lista"></div>
@@ -101,7 +117,7 @@
 
       <button type="submit" class="btn main" id="enviar">Enviar meus dados</button>
       <div class="msg" id="msg"></div>
-      <p class="priv">Seus dados são usados só para emitir as suas passagens e cuidar da sua viagem. Veja a nossa <a href="/privacidade/">política de privacidade</a>.</p>
+      <p class="priv" id="priv">Seus dados são usados só para emitir as suas passagens e cuidar da sua viagem. Veja a nossa <a href="/privacidade/">política de privacidade</a>.</p>
     </form>
   </div></main>
 
@@ -136,12 +152,31 @@ function addAcomp() {
 $('add').onclick = addAcomp;
 document.querySelector('[name="cpf"]').oninput = (e) => fmtCpf(e.target);
 
+// link da Gestão de Milhas: pede só o que o contrato precisa
+let GESTAO = false;
+function modoGestao(d) {
+  GESTAO = true;
+  document.title = 'Seus dados para o contrato | Maktub Go';
+  $('ola').innerHTML = `Olá${d.nome_completo ? ', <em>' + esc(String(d.nome_completo).split(' ')[0]) + '</em>' : ''}`;
+  $('intro').textContent = 'Estes são os dados para o contrato da sua Gestão de Milhas. Leva uns 2 minutos e, assim que você enviar, o contrato chega no seu e-mail para assinar.';
+  $('viagemExtra').hidden = true; $('acompCard').hidden = true; $('contratoCard').hidden = false;
+  const f = $('f');
+  f.querySelector('[name="aceita"]').closest('label').hidden = true;
+  f.querySelector('[name="sexo"]').closest('label').hidden = true;
+  const pre = { nome: d.nome_completo, email: d.email, celular: d.celular, nascimento: d.nascimento, rg: d.rg, rg_orgao_uf: d.rg_orgao_uf, nacionalidade_c: d.nacionalidade, estado_civil: d.estado_civil, profissao: d.profissao, endereco_completo: d.endereco_completo, cep: d.cep };
+  Object.entries(pre).forEach(([k, v]) => { if (v && f.elements[k]) f.elements[k].value = k === 'cep' && /^\d{8}$/.test(v) ? v.slice(0, 5) + '-' + v.slice(5) : v; });
+  $('priv').innerHTML = 'Seus dados são usados para o seu contrato e para cuidar da sua Gestão de Milhas. Veja a nossa <a href="/privacidade/">política de privacidade</a>.';
+}
+document.querySelector('[name="cep"]').oninput = (e) => { const d = soDig(e.target.value).slice(0, 8); e.target.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
+
 async function iniciar() {
   if (!token) return estado('Link incompleto', 'Abra o link exatamente como recebeu da Maktub Go, ou peça um novo para quem te atendeu.');
   const { data, error } = await sb.rpc('cadastro_ver', { p_token: token });
   if (error || !data || !data.ok) return estado('Este link expirou', 'Por segurança, os links valem por 30 dias. Peça um novo para quem te atendeu na Maktub Go.');
   if (data.nome) { $('ola').innerHTML = `Olá, <em>${esc(data.nome)}</em>`; }
   if (data.usado) $('intro').textContent = 'Você já enviou seus dados por este link. Se algo mudou, é só preencher de novo e enviar.';
+  let gv = null; try { gv = await sb.rpc('cadastro_ver_gestao', { p_token: token }); } catch (_) {}
+  if (gv && gv.data && gv.data.tipo === 'gestao') modoGestao(gv.data);
   $('f').hidden = false;
 }
 
@@ -151,6 +186,20 @@ $('f').onsubmit = async (ev) => {
   $('msg').textContent = '';
   if (g('nome').split(' ').filter(Boolean).length < 2) { $('msg').textContent = 'Informe o nome completo, com sobrenome.'; f.elements.nome.focus(); return; }
   if (g('cpf') && !cpfOk(g('cpf'))) { $('msg').textContent = 'Confira o CPF: os números não batem.'; f.elements.cpf.focus(); return; }
+  if (GESTAO) {
+    const obrig = [['cpf', 'o CPF'], ['nascimento', 'a data de nascimento'], ['celular', 'o celular'], ['email', 'o e-mail'], ['rg', 'o RG'], ['rg_orgao_uf', 'o órgão emissor do RG'], ['nacionalidade_c', 'a nacionalidade'], ['estado_civil', 'o estado civil'], ['profissao', 'a profissão'], ['endereco_completo', 'o endereço completo'], ['cep', 'o CEP']];
+    const falta = obrig.find(([k]) => !g(k));
+    if (falta) { $('msg').textContent = 'Falta preencher ' + falta[1] + '.'; f.elements[falta[0]].focus(); return; }
+    if (soDig(g('cep')).length !== 8) { $('msg').textContent = 'Confira o CEP: são 8 números.'; f.elements.cep.focus(); return; }
+    const dadosC = { nome: g('nome'), cpf: g('cpf'), nascimento: g('nascimento'), celular: g('celular'), email: g('email'), rg: g('rg'), rg_orgao_uf: g('rg_orgao_uf'),
+      nacionalidade: g('nacionalidade_c'), estado_civil: g('estado_civil'), profissao: g('profissao'), endereco_completo: g('endereco_completo'), cep: g('cep') };
+    $('enviar').disabled = true; $('enviar').textContent = 'Enviando...';
+    const { error } = await sb.rpc('cadastro_contrato_enviar', { p_token: token, p_dados: dadosC });
+    $('enviar').disabled = false; $('enviar').textContent = 'Enviar meus dados';
+    if (error) { $('msg').textContent = error.message || 'Não foi possível enviar agora. Tente de novo em instantes.'; return; }
+    scrollTo(0, 0);
+    return estado('Tudo certo!', 'Recebemos seus dados. Agora preparamos o seu contrato, e ele chega no seu e-mail para você assinar digitalmente.');
+  }
   const acomp = [...document.querySelectorAll('.acomp')].map(div => Object.fromEntries([...div.querySelectorAll('[data-k]')].map(el => [el.dataset.k, el.value.trim()]))).filter(a => a.nome);
   const ruim = acomp.find(a => a.cpf && !cpfOk(a.cpf));
   if (ruim) { $('msg').textContent = `Confira o CPF de ${ruim.nome}: os números não batem.`; return; }

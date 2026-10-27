@@ -280,6 +280,7 @@ export async function bloco(el, c, X) {
         <button class="mini" data-k-ver="${k.id}" data-arq="${esc(k.arquivo_assinado || k.arquivo_original || '')}">${k.arquivo_assinado ? 'Ver assinado' : 'Ver PDF'}</button>
         ${['gerado', 'enviado'].includes(k.status) && X.ADMIN ? `<button class="mini" data-k-cancelar="${k.id}">Cancelar</button>` : ''}
       </div></div></div>`; }).join('') : '<div class="vazio" style="margin-top:0">Nenhum contrato gerado ainda.</div>'}
+    ${pf ? `<button class="sec" id="ctrPedir" style="width:100%;margin-top:10px">Pedir os dados do contrato ao cliente por e-mail</button><div id="ctrPedirRes"></div>` : ''}
     <button class="zap" id="ctrNovo" style="width:100%;margin-top:10px">Gerar contrato</button>
     <div id="ctrForm"></div>`;
   const acha = (id) => L.find(k => String(k.id) === String(id));
@@ -311,6 +312,19 @@ export async function bloco(el, c, X) {
     if (error) X.aviso('Não cancelou: ' + error.message); else { X.aviso('Contrato cancelado no app. Se já foi enviado, cancele também no Autentique.'); bloco(el, c, X); }
   });
   const enviadosMes = L.filter(k => k.enviado_em && String(k.enviado_em).slice(0, 7) === mes).length;
+  // manda ao cliente o link que pede só os dados do contrato; ao preencher, tudo cai na ficha e vocês recebem o aviso
+  if (X.$('ctrPedir')) X.$('ctrPedir').onclick = async () => {
+    const b = X.$('ctrPedir'), res = X.$('ctrPedirRes'); b.disabled = true; b.textContent = 'Enviando...';
+    const { data, error } = await sb.functions.invoke('email-enviar', { body: { acao: 'cadastro_gestao', pessoa_id: pf.id } });
+    b.disabled = false; b.textContent = 'Pedir os dados do contrato ao cliente por e-mail';
+    if (data && data.ok) { X.aviso(`E-mail enviado para ${data.email}. Quando ele preencher, vocês recebem o aviso.`); res.innerHTML = `<div class="sub" style="margin-top:6px">Enviado para ${esc(data.email)} em ${new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</div>`; return; }
+    const msg = (data && data.erro) || (error && error.message) || 'erro';
+    if (!data || !data.link) { X.aviso(/not found|404|Failed to send/i.test(msg) ? 'A função email-enviar ainda não está ativa no Supabase.' : 'Não enviou: ' + msg); return; }
+    const nome = String(pf.nome || '').split(' ')[0], texto = `Oi, ${nome}! Para deixarmos o contrato da sua Gestão de Milhas pronto, preencha seus dados neste link seguro. Leva 2 minutos: ${data.link}`;
+    const zap = X.zapLink(pf.celular, nome, texto);
+    res.innerHTML = `<div class="config" style="margin-top:8px">${esc(msg)}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">Mandar no WhatsApp</a>` : ''}<button class="mini" id="ctrPedirCopiar">Copiar link</button></div></div>`;
+    X.$('ctrPedirCopiar').onclick = async () => { try { await navigator.clipboard.writeText(texto); X.aviso('Mensagem com o link copiada.'); } catch (_) { prompt('Copie o link:', data.link); } };
+  };
   X.$('ctrNovo').onclick = () => { FORM = { mes }; formulario(X.$('ctrForm'), c, pf, mod.data, X, el); };
   if (FORM) formulario(X.$('ctrForm'), c, pf, mod.data, X, el);
   void enviadosMes;
