@@ -67,6 +67,7 @@ const isoDe = (d) => new Date(d - d.getTimezoneOffset() * 6e4).toISOString().sli
 const hoje = () => isoDe(new Date());
 const maisDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDe(d); };
 const dm = (s) => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}` : '';
+const hhmm = (s) => String(s || '').slice(0, 5); // o banco devolve 18:00:00
 const mesK = (s) => String(s || '').slice(0, 7);
 const mesNome = (k) => { const [y, m] = k.split('-').map(Number); const s = new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 const mesMais = (k, n) => { const [y, m] = k.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
@@ -99,7 +100,8 @@ export function postar(id) { ED = String(id); PRE = { status: 'publicado' }; ED_
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
 const fmtN = (p) => (FMT[p.formato] || FMT.feed)[0] + (p.formato === 'reels' && p.reels_teste ? ' teste' : '');
-const atrasado = (p) => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista < hoje();
+// post com data que passou e não foi publicado, inclusive o que ficou em Planejado (antes sumia sem aviso)
+const atrasado = (p) => p.status !== 'publicado' && p.data_prevista && p.data_prevista < hoje();
 const cfg = () => EST.find(e => e.chave === 'config');
 const exigir = () => !(cfg() && cfg().valores && cfg().valores.aprovacao === false);
 const meta = (k) => (EST.find(e => e.chave === 'meta-' + k) || {}).valores || {};
@@ -136,7 +138,7 @@ function estilos() {
 .mk-cm .d.sel{outline:2px solid var(--verde);outline-offset:-2px}
 .mk-cm .n{align-self:flex-end;font-size:11px;color:var(--tinta-2);line-height:16px;margin:0 2px 1px}
 .mk-chip{display:block;width:100%;border:0;border-radius:3px;padding:2px 4px;font-size:10px;line-height:1.3;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
-.mk-chip.planejado{opacity:.5}.mk-chip.atrasado{box-shadow:inset 4px 0 0 #b5533c;padding-left:8px}
+.mk-chip.planejado{background:var(--branco)!important;color:var(--c);border:1px dashed var(--c);padding:1px 3px}.mk-chip.atrasado{box-shadow:inset 4px 0 0 #b5533c;padding-left:8px}
 .mk-mais{font-size:10px;color:var(--tinta-3);padding-left:3px}
 .mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 @media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
@@ -173,7 +175,8 @@ function estilos() {
 .mk-semana button{background:rgba(249,246,241,.07);border:1px solid rgba(249,246,241,.12);color:var(--creme);padding:8px 0 7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
 .mk-semana .d{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.7}.mk-semana .n{font-family:'Cormorant Garamond',serif;font-size:21px;line-height:1}
 .mk-semana button.hj{border-color:var(--dourado-claro)}.mk-semana button.sel{background:var(--creme);color:var(--verde)}
-.mk-semana .mk-dots{min-height:6px}
+.mk-semana .mk-dots{min-height:6px}.mk-semana .mk-dots i{background:var(--c)}.mk-semana .mk-dots i.pl{background:transparent;box-shadow:inset 0 0 0 1.5px var(--c)}
+.mk-vcard.pl{border-left-style:dashed}.mk-vcard.pl .st:first-of-type{color:var(--dourado)}
 .mk-vcard{background:var(--branco);border:1px solid var(--linha);border-left:5px solid var(--c);margin-top:8px}
 .mk-vcard>button{display:block;width:100%;background:none;border:0;text-align:left;padding:13px 14px 10px;cursor:pointer}
 .mk-vcard .pill{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:3px 9px;border-radius:12px;background:var(--c);color:#fff;font-weight:500}
@@ -244,13 +247,13 @@ function vPainel() {
   const { esc } = X, k = mesK(hoje()), m = meta(k), pub = pubNoMes(k), reels = pub.filter(p => p.formato === 'reels');
   const aprov = LISTA.filter(p => p.status === 'aprovacao').sort(porData);
   const atras = LISTA.filter(atrasado).sort(porData);
-  const prox = LISTA.filter(p => !['ideia', 'publicado'].includes(p.status) && p.data_prevista && p.data_prevista >= hoje() && p.data_prevista <= maisDias(hoje(), 7)).sort(porData);
+  const prox = LISTA.filter(p => p.status !== 'publicado' && p.data_prevista && p.data_prevista >= hoje() && p.data_prevista <= maisDias(hoje(), 7)).sort(porData);
   const aFazer = LISTA.filter(p => [...EM_PRODUCAO, 'aprovacao', 'agendado'].includes(p.status));
   const noMes = LISTA.filter(p => p.status !== 'ideia' && mesK(diaPost(p)) === k);
   const porPilar = pilares().map(pl => [pl, noMes.filter(p => p.pilar_id === pl.id).length]);
   const semPilar = noMes.filter(p => !p.pilar_id).length;
   const maxP = Math.max(1, ...porPilar.map(x => x[1]), semPilar);
-  const ideias = LISTA.filter(p => p.status === 'ideia').length;
+  const ideias = LISTA.filter(p => p.status === 'ideia' && !p.data_prevista).length; // planejado com data já conta como post
   return `
     <div class="botoes4" style="display:flex;gap:8px;margin-top:12px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
     <div class="numeros" style="margin-top:12px">
@@ -279,7 +282,7 @@ function linhaGrav(p) {
 const porData = (a, b) => String(a.data_prevista || '9999').localeCompare(String(b.data_prevista || '9999'));
 function linha(p) {
   const { esc } = X, pl = est(p.pilar_id);
-  const det = [contaN(p), fmtN(p), diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + p.hora : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).join(' · ');
+  const det = [contaN(p), fmtN(p), diaPost(p) ? dm(diaPost(p)) + (p.hora ? ' ' + hhmm(p.hora) : '') : 'sem data', pl ? pl.titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).join(' · ');
   const tag = `<span class="tag ${atrasado(p) ? 'alerta' : GR_TAG[grupo(p)]}">${atrasado(p) ? 'Atrasado' : grupo(p) === 'andamento' ? stNome(p) : grNome(p)}</span>`;
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${corP(p)}"></i><span class="t">${esc(p.titulo)}<small>${esc(det)}</small></span>${tag}</button>`;
 }
@@ -290,7 +293,7 @@ function links(p) {
 function cardAprovar(p) {
   const { esc } = X, pl = est(p.pilar_id);
   return `<div class="mk-aprov">
-    <div style="display:flex;justify-content:space-between;gap:8px"><span class="tag" style="margin:0;border-color:${corP(p)};color:${corP(p)}">${fmtN(p)}</span><span class="sub" style="margin:0">${p.data_prevista ? dm(p.data_prevista) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'}</span></div>
+    <div style="display:flex;justify-content:space-between;gap:8px"><span class="tag" style="margin:0;border-color:${corP(p)};color:${corP(p)}">${fmtN(p)}</span><span class="sub" style="margin:0">${p.data_prevista ? dm(p.data_prevista) + (p.hora ? ' às ' + esc(hhmm(p.hora)) : '') : 'sem data'}</span></div>
     <button data-p="${p.id}" style="background:none;border:0;text-align:left;padding:0;cursor:pointer;margin-top:8px;display:block"><div class="nome">${esc(p.titulo)}</div></button>
     <div class="sub">${[pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', p.responsavel_id ? 'por ' + primeiro(nomeT(p.responsavel_id)) : ''].filter(Boolean).map(esc).join(' · ')}</div>
     ${p.legenda ? `<div class="leg">${esc(p.legenda)}</div>` : ''}
@@ -306,7 +309,7 @@ function vCalendario() {
   const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate();
   const doMes = vis().filter(p => mesK(diaPost(p)) === k);
   if (DIA && mesK(DIA) !== k) DIA = null;
-  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(contaN(p) + ': ' + p.titulo)}" style="background:${contaCor(p)}">${c === 'publicado' ? '✓ ' : c === 'atrasado' ? '! ' : ''}<span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
+  const chip = (p) => { const c = atrasado(p) ? 'atrasado' : grupo(p); return `<button class="mk-chip ${c}" data-p="${p.id}" title="${esc(contaN(p) + ': ' + p.titulo)}" style="--c:${contaCor(p)};background:${contaCor(p)}">${c === 'publicado' ? '✓ ' : c === 'atrasado' ? '! ' : ''}<span class="f">[${fmtN(p).toUpperCase()}] </span>${esc(p.titulo)}</button>`; };
   let cel = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(d => `<div class="h">${d}</div>`).join('');
   for (let i = 0; i < prim; i++) cel += '<div class="d fora"></div>';
   for (let d = 1; d <= dias; d++) {
@@ -321,7 +324,7 @@ function vCalendario() {
     <div class="mesnav" id="mkMes" style="margin-top:12px"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="mk-cm">${cel}</div>
     <div class="mk-leg">${CONTAS.map(c => `<span><i style="background:${c[2]}"></i>${c[1]}</span>`).join('')}</div>
-    <div class="mk-leg" style="margin-top:4px"><span>Clarinho: planejado</span><span>Cor cheia: em andamento</span><span>✓ publicado</span><span>! atrasado</span></div>
+    <div class="mk-leg" style="margin-top:4px"><span>Contorno: planejado</span><span>Cor cheia: em andamento</span><span>✓ publicado</span><span>! atrasado</span></div>
     <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele.</div>
     ${DIA ? `<div class="secao">${new Date(DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} <button data-novo-dia="${DIA}">+ Post neste dia</button></div>${doDia.length ? `<div class="mk-lista">${doDia.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))).map(linha).join('')}</div>` : '<div class="vazio">Nenhum post neste dia.</div>'}` : ''}
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
@@ -347,7 +350,7 @@ function kcard(p) {
       <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:var(--alerta)">atrasado</span>' : ''}</span>
       <span class="mk-conta" style="color:${contaCor(p)}">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
       <b>${esc(p.titulo)}</b>
-      <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
+      <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(hhmm(p.hora)) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
       ${quem ? `<small>${esc(quem)}</small>` : ''}
       ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
     <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(urlOk(p.link_referencia))}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(urlOk(p.link_bruto))}" target="_blank" rel="noopener">Material bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(urlOk(p.link_arquivo))}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
@@ -363,9 +366,9 @@ export function mover(id, g) {
 const jaPostei = (p) => `<button data-publicar="${p.id}">Já postei</button>`;
 // botão de próxima etapa de cada post
 function acao(p) {
-  if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">${ehVideo(p) ? 'Fazer roteiro' : 'Criar arte'}</button>`;
+  if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">${ehVideo(p) ? 'Fazer roteiro' : 'Criar arte'}</button>` + (p.data_prevista ? jaPostei(p) : '');
   if (p.status === 'producao' && ehVideo(p)) return `<button data-gravar="${p.id}">Pronto para gravar</button>`;
-  if (p.status === 'gravacao') return `<button data-gravado="${p.id}">Já gravado</button>`;
+  if (p.status === 'gravacao') return `<button data-gravado="${p.id}">Já gravei</button>`;
   if (p.status === 'producao' || p.status === 'edicao') return (exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`) + jaPostei(p);
   if (p.status === 'aprovacao') return (X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>') + jaPostei(p);
   if (p.status === 'agendado') return jaPostei(p);
@@ -380,12 +383,24 @@ function anel(v, total, cor) {
 function vSemana() {
   const { esc } = X, h = hoje(), k = mesK(h), m = meta(k), pub = pubNoMes(k), reels = pub.filter(p => p.formato === 'reels');
   const dias = [...Array(7)].map((_, i) => maisDias(h, i));
-  const ativos = LISTA.filter(p => !['ideia'].includes(p.status));
+  // post planejado com data também é post da semana; só a ideia solta (sem data) fica no Kanban
+  const ativos = LISTA.filter(p => p.status !== 'ideia' || p.data_prevista);
   const naSemana = (d) => ativos.filter(p => diaPost(p) === d);
   const hora = new Date().getHours();
-  const ajustes = LISTA.filter(p => EM_PRODUCAO.includes(p.status) && p.ajuste);
-  const atras = LISTA.filter(atrasado);
+  // cada post aparece uma vez só, no primeiro bloco em que se encaixa (com a data no card)
+  const visto = new Set(), unico = (L) => L.filter(p => !visto.has(p.id) && visto.add(p.id));
+  const gravar = unico(gravPend().filter(p => equipeG(p).includes(X.meuId)));
+  const postar = unico(LISTA.filter(p => p.postagem_por === X.meuId && p.status !== 'publicado' && (p.status !== 'ideia' || p.data_prevista)).sort(porData));
+  const ajustes = unico(LISTA.filter(p => EM_PRODUCAO.includes(p.status) && p.ajuste).sort(porData));
+  const atras = unico(LISTA.filter(atrasado).sort(porData));
+  const semData = LISTA.filter(p => grupo(p) === 'andamento' && !p.data_prevista && !visto.has(p.id));
   const mostrar = DIA && dias.includes(DIA) ? [DIA] : dias;
+  const bloco = (t, L, extra, data) => L.length ? `<div class="mk-dia" style="color:var(--alerta)">${t}</div>${L.map(p => vcard(p, data ? data(p) : true) + (extra ? extra(p) : '')).join('')}` : '';
+  // no topo verde, a cor da conta Maktub sumia no fundo: as bolinhas usam o dourado; planejado fica vazado
+  const bola = (p) => `<i class="${grupo(p) === 'planejado' ? 'pl' : ''}" style="--c:${contaDe(p) === 'maktub' ? 'var(--dourado-claro)' : contaCor(p)}"></i>`;
+  const dia = (d) => d === h ? 'Hoje' : d === maisDias(h, 1) ? 'Amanhã' : SEMANA[new Date(d + 'T12:00:00').getDay()] + ' ' + dm(d);
+  // com um dia escolhido no topo, mostra tudo daquele dia; na semana inteira, só o que não apareceu nos blocos acima
+  const doDia = mostrar.map(d => { const L = naSemana(d).filter(p => DIA || !visto.has(p.id)).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))); return L.length ? `<div class="mk-dia">${dia(d)}</div>${L.map(p => vcard(p)).join('')}` : ''; }).join('');
   return `
     <div class="mk-hero">
       <div class="s">Estúdio de conteúdo</div>
@@ -394,20 +409,22 @@ function vSemana() {
         <div class="mk-anel">${anel(pub.length, m.posts, '#c9a96e')}<div><div class="n">${pub.length}${m.posts ? '/' + m.posts : ''}</div><small>posts no mês</small></div></div>
         <div class="mk-anel">${anel(reels.length, m.reels, '#f2ece1')}<div><div class="n">${reels.length}${m.reels ? '/' + m.reels : ''}</div><small>reels no mês</small></div></div>
       </div>
-      <div class="mk-semana">${dias.map(d => { const L = naSemana(d), dd = new Date(d + 'T12:00:00'); return `<button data-sdia="${d}" class="${d === h ? 'hj' : ''} ${d === DIA ? 'sel' : ''}"><span class="d">${SEMANA[dd.getDay()]}</span><span class="n">${dd.getDate()}</span><span class="mk-dots">${L.slice(0, 4).map(p => `<i style="background:${corP(p)}"></i>`).join('')}</span></button>`; }).join('')}</div>
+      <div class="mk-semana">${dias.map(d => { const L = naSemana(d), dd = new Date(d + 'T12:00:00'); return `<button data-sdia="${d}" class="${d === h ? 'hj' : ''} ${d === DIA ? 'sel' : ''}"><span class="d">${SEMANA[dd.getDay()]}</span><span class="n">${dd.getDate()}</span><span class="mk-dots">${L.slice(0, 4).map(bola).join('')}</span></button>`; }).join('')}</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
-    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você gravar</div>${L.map(p => vcard(p) + `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei: ${X.esc(p.titulo)}</button>`).join('')}` : '')(gravPend().filter(p => equipeG(p).includes(X.meuId)))}
-    ${(L => L.length ? `<div class="mk-dia" style="color:var(--alerta)">Para você postar</div>${L.map(vcard).join('')}` : '')(LISTA.filter(p => p.postagem_por === X.meuId && !['ideia', 'publicado'].includes(p.status)).sort(porData))}
-    ${ajustes.length ? `<div class="mk-dia" style="color:var(--alerta)">Ajustes pedidos</div>${ajustes.map(vcard).join('')}` : ''}
-    ${atras.length ? `<div class="mk-dia" style="color:var(--alerta)">Atrasados</div>${atras.map(vcard).join('')}` : ''}
-    ${(c => c || `<div class="mk-dia">${DIA ? (DIA === h ? 'Hoje' : SEMANA[new Date(DIA + 'T12:00:00').getDay()] + ' ' + dm(DIA)) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">Nada programado.</div>`)(mostrar.map(d => { const L = naSemana(d).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))); const dd = new Date(d + 'T12:00:00'); return L.length ? `<div class="mk-dia">${d === h ? 'Hoje' : d === maisDias(h, 1) ? 'Amanhã' : SEMANA[dd.getDay()] + ' ' + dm(d)}</div>${L.map(vcard).join('')}` : ''; }).join(''))}
+    ${DIA ? '' : bloco('Para você gravar', gravar, p => p.status === 'gravacao' ? '' : `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei</button>`, p => (p.gravacao_data ? 'gravar até ' + dm(p.gravacao_data) + ' · ' : '') + (diaPost(p) ? 'post em ' + dm(diaPost(p)) : '')) + bloco('Para você postar', postar) + bloco('Ajustes pedidos', ajustes) + bloco('Atrasados', atras)}
+    ${doDia || `<div class="mk-dia">${DIA ? dia(DIA) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">${!DIA && visto.size ? 'Nada mais programado. O que é seu está nos blocos acima.' : 'Nada programado.'}</div>`}
+    ${!DIA && semData.length ? `<div class="mk-dia">Em andamento sem data</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}
     ${DIA && dias.includes(DIA) ? '<button class="sec" data-sdia="" style="width:100%;margin-top:12px">Ver a semana inteira</button>' : ''}`;
 }
-function vcard(p) {
-  const { esc } = X, pl = est(p.pilar_id), a = acao(p);
-  return `<div class="mk-vcard" style="--c:${corP(p)};background:${contaFundo(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span><span class="st" style="color:${contaCor(p)};font-weight:600">${contaN(p)}</span>
-    <b>${esc(p.titulo)}</b><small>${[p.hora ? 'às ' + p.hora : '', pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id))].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
+// comData: nos blocos "Para você..." e "Atrasados" o card não está debaixo de um dia, então mostra a data
+// (ou o texto de data recebido, como o prazo de gravação)
+function vcard(p, comData) {
+  const { esc } = X, pl = est(p.pilar_id), a = acao(p), q = diaPost(p);
+  const quando = typeof comData === 'string' ? comData : comData && q ? dm(q) + (p.hora ? ' às ' + hhmm(p.hora) : '') : p.hora ? 'às ' + hhmm(p.hora) : '';
+  const posta = p.postagem_por && p.postagem_por !== X.meuId ? 'posta: ' + primeiro(nomeT(p.postagem_por)) : '';
+  return `<div class="mk-vcard ${grupo(p) === 'planejado' ? 'pl' : ''}" style="--c:${corP(p)};background:${contaFundo(p)}"><button data-p="${p.id}"><span class="pill">${fmtN(p)}</span><span class="st">${stNome(p)}</span><span class="st" style="color:${contaCor(p)};font-weight:600">${contaN(p)}</span>
+    <b>${esc(p.titulo)}</b><small>${[quando, pl ? pl.titulo : '', est(p.campanha_id) ? est(p.campanha_id).titulo : '', primeiro(nomeT(p.responsavel_id)), posta].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</small>
     ${p.ajuste && EM_PRODUCAO.includes(p.status) ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : ''}</button>
     ${a ? `<div class="ac">${a}</div>` : ''}</div>`;
 }
