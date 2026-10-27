@@ -42,6 +42,21 @@ const DOCS = [
   ['doc-referencias', 'Hashtags e referências', 'Hashtags, perfis de referência e links úteis.']
 ];
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+/* link colado de qualquer jeito (sem https, com texto antes, com espaço no fim): vira um endereço que abre.
+   Sem isso, "drive.google.com/..." virava um endereço dentro do próprio site e o "Abrir pasta" dava erro. */
+export const urlOk = (s) => { s = String(s || '').trim(); if (!s) return ''; const m = s.match(/https?:\/\/\S+/i); if (m) return m[0]; return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s) ? 'https://' + s : s; };
+const pareceLink = (s) => /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(s);
+/* campos de link do post: nome, rótulo na mensagem e aba onde ficam */
+const LINKS = [['link_referencia', 'O link do post de referência', 'briefing'], ['link_bruto', 'O link do material bruto', 'briefing'], ['link_arquivo', 'O link da pasta de arquivos', 'arquivos'], ['link_post', 'O link do post no Instagram', 'arquivos']];
+/* rascunho do post guardado no próprio celular enquanto a pessoa digita: se o app fechar
+   (por exemplo, foi ao Drive copiar o link e o celular recarregou o app), o que foi digitado volta */
+const RASC = (id) => 'mk_rasc_' + (id || 'nova');
+const lerRasc = (id) => { try { return JSON.parse(localStorage.getItem(RASC(id)) || 'null'); } catch (_) { return null; } };
+let T_RASC = null;
+const apagarRasc = (id) => { clearTimeout(T_RASC); try { localStorage.removeItem(RASC(id)); } catch (_) {} };
+const carimbo = (b) => b.atualizado_em || JSON.stringify(b);
+// a pessoa confirmou que quer sair sem salvar: o rascunho vai junto
+addEventListener('app:descartar', () => { if (ED) apagarRasc(ED === 'nova' ? null : ED); });
 
 let LISTA = null, EST = [], TIME = [], ERRO = null, X = null;
 let FCONTA = '';
@@ -79,7 +94,7 @@ export function rota(h) { VIEW = h[1] || null; ED = h[2] === 'post' && h[3] ? h[
 const endereco = () => '#marketing/' + VIEW + (ED ? (ED === 'nova' ? '/nova' : '/post/' + ED) : '');
 // abre um post (ou um novo) criando uma entrada no histórico; fechar volta no histórico
 function abrirPost(id, pre) { ED = id; PRE = pre || null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); }
-function fecharPost() { const h = location.hash; ED = null; PRE = null; if (/\/(post|nova)/.test(h)) history.back(); else rerender(); scrollTo(0, 0); }
+function fecharPost() { if (X.sairOk && !X.sairOk()) return; const h = location.hash; ED = null; PRE = null; if (/\/(post|nova)/.test(h)) history.back(); else rerender(); scrollTo(0, 0); }
 export function postar(id) { ED = String(id); PRE = { status: 'publicado' }; ED_EST = null; CONF = null; }
 export function abrir(v) { VIEW = v; ED = null; ED_EST = null; PRE = null; CONF = null; }
 
@@ -182,6 +197,10 @@ function estilos() {
 .mk-kac{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);padding:7px 10px;font-size:12px}
 .mk-kac a{color:var(--dourado)}.mk-kl{display:flex;gap:12px}.mk-conta{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin-top:7px}.mk-kac span{color:var(--tinta-3)}
 .mk-kac button{background:none;border:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--verde);font-weight:600;cursor:pointer;padding:2px 0}
+.mk-salvar{position:sticky;z-index:5;margin:16px -16px 0;padding:10px 16px;background:var(--branco);border-top:1px solid var(--linha);box-shadow:0 -6px 14px rgba(0,0,0,.05)}
+.mk-msg{font-size:13px;line-height:1.4;margin-bottom:8px;color:var(--tinta-2)}.mk-msg.aguarda{color:var(--dourado)}.mk-msg.erro{color:var(--alerta);font-weight:500}
+.mk-rasc{background:rgba(168,139,74,.1);border-left:3px solid var(--dourado);padding:10px 12px;font-size:13.5px;margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.mk-rasc button{flex:0 0 auto;background:none;border:1px solid var(--linha);padding:7px 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);cursor:pointer}
 .mk-rapida{display:flex;gap:8px;margin-top:12px}.mk-rapida input{flex:1;min-width:0;padding:12px;border:1px solid var(--linha);font-size:16px;background:var(--branco)}
 `;
   document.head.appendChild(s);
@@ -266,7 +285,7 @@ function linha(p) {
 }
 function links(p) {
   const L = [[p.link_arquivo, 'Abrir pasta'], [p.link_post, 'Ver no Instagram']].filter(x => x[0]);
-  return L.length ? `<div class="mk-links">${L.map(([u, t]) => `<a href="${X.esc(u)}" target="_blank" rel="noopener">${t} ›</a>`).join('')}</div>` : '';
+  return L.length ? `<div class="mk-links">${L.map(([u, t]) => `<a href="${X.esc(urlOk(u))}" target="_blank" rel="noopener">${t} ›</a>`).join('')}</div>` : '';
 }
 function cardAprovar(p) {
   const { esc } = X, pl = est(p.pilar_id);
@@ -331,7 +350,7 @@ function kcard(p) {
       <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(p.hora) : '') : 'sem data'} · ${esc(primeiro(nomeT(p.responsavel_id)) || 'sem responsável')}</small>
       ${quem ? `<small>${esc(quem)}</small>` : ''}
       ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
-    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Material bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
+    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(urlOk(p.link_referencia))}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(urlOk(p.link_bruto))}" target="_blank" rel="noopener">Material bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(urlOk(p.link_arquivo))}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
 }
 // mudar de coluna (botão ou arrastar)
 export function mover(id, g) {
@@ -462,28 +481,28 @@ function formPost(P) {
       <div class="sub" style="margin-top:0">O que é o post e em que ele deve se inspirar.</div>
       <label class="fl"><span>Descrição</span><textarea name="obs" rows="6" placeholder="Do que se trata o post, mensagem principal, o que precisa aparecer">${esc(p.obs || '')}</textarea></label>
       ${campo('link_referencia', 'Post de referência (link)', p.link_referencia, 'url', 'placeholder="https://www.instagram.com/..."')}
-      ${p.link_referencia ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_referencia)}" target="_blank" rel="noopener">Abrir referência ›</a></div>` : ''}
+      ${p.link_referencia ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(urlOk(p.link_referencia))}" target="_blank" rel="noopener">Abrir referência ›</a></div>` : ''}
       ${campo('link_bruto', 'Material bruto (link da pasta)', p.link_bruto, 'url', 'placeholder="https://drive.google.com/..."')}
-      ${p.link_bruto ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_bruto)}" target="_blank" rel="noopener">Abrir material bruto ›</a></div>` : ''}
+      ${p.link_bruto ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(urlOk(p.link_bruto))}" target="_blank" rel="noopener">Abrir material bruto ›</a></div>` : ''}
       </div>
       <div data-tab="arquivos" hidden>
       <div class="sub" style="margin-top:0">Tudo o que a pessoa precisa na hora de postar.</div>
       ${campo('link_arquivo', 'Pasta de arquivos (link da pasta do post no Drive)', p.link_arquivo, 'url', 'placeholder="https://drive.google.com/..."')}
-      ${p.link_arquivo ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">Abrir pasta ›</a></div>` : ''}
+      ${p.link_arquivo ? `<div class="mk-links" style="margin-top:-4px"><a href="${esc(urlOk(p.link_arquivo))}" target="_blank" rel="noopener">Abrir pasta ›</a></div>` : ''}
       <label class="fl"><span>Legenda</span><textarea name="legenda" rows="5">${esc(p.legenda || '')}</textarea></label>
       <label class="fl"><span>Como postar</span><textarea name="instrucoes_post" rows="5" placeholder="Ordem das fotos, capa, música, marcações, hashtags, localização, colaboração...">${esc(p.instrucoes_post || '')}</textarea></label>
       <div id="mkPub">${campo('link_post', 'Link do post no Instagram', p.link_post, 'url', 'placeholder="https://www.instagram.com/..."')}
         ${campo('publicado_em', 'Publicado em', p.publicado_em || (p.status === 'publicado' ? hoje() : ''), 'date')}</div>
       </div>
-      <button class="zap grande" type="submit" id="mkSalvar" style="margin-top:16px;width:100%">${nova ? 'Salvar' : 'Salvar alterações'}</button>
+      <div class="mk-salvar" style="bottom:calc(${navVisivel() ? 'var(--barra-h)' : '0px'} + env(safe-area-inset-bottom))"><div class="mk-msg" id="mkMsg" hidden></div><button class="zap grande" type="submit" id="mkSalvar">${nova ? 'Salvar' : 'Salvar alterações'}</button></div>
       ${!nova ? '<button class="sec grande" type="button" id="mkExcluir" style="margin-top:10px;width:100%">Excluir post</button>' : ''}
-      <div class="sub" id="mkMsg"></div>
     </form>`;
   const f = document.getElementById('mkF'), el = f.elements;
   let fmtAnt = p.formato;
   const vidSel = () => (f.querySelector('[name=video]:checked') || {}).value === '1';
   const marcarVid = (on) => { const r = f.querySelector(`[name=video][value="${on ? 1 : 0}"]`); if (r) r.checked = true; };
-  const abaF = (k) => { f.querySelectorAll('[data-tab]').forEach(d => { d.hidden = d.dataset.tab !== k; }); document.querySelectorAll('#mkAbasF button').forEach(b => b.classList.toggle('on', b.dataset.aba === k)); };
+  let ABA_F = 'geral';
+  const abaF = (k) => { ABA_F = k; f.querySelectorAll('[data-tab]').forEach(d => { d.hidden = d.dataset.tab !== k; }); document.querySelectorAll('#mkAbasF button').forEach(b => b.classList.toggle('on', b.dataset.aba === k)); };
   document.querySelectorAll('#mkAbasF button').forEach(b => b.onclick = () => abaF(b.dataset.aba));
   const etapas = () => {
     const vid = vidSel(), atual = el.status.value || p.status;
@@ -503,6 +522,25 @@ function formPost(P) {
   mostrar(); f.addEventListener('change', mostrar);
   f.querySelectorAll('[name=conta]').forEach(r => r.addEventListener('change', () => f.style.setProperty('--kc', contaCor({ conta: r.value }))));
   document.getElementById('mkVoltarF').onclick = () => fecharPost();
+  const idR = nova ? null : base.id;
+  // rascunho no celular: guarda a cada digitação; ao abrir de novo o mesmo post, devolve o que não foi salvo
+  const guardar = () => { clearTimeout(T_RASC); T_RASC = setTimeout(() => { try { localStorage.setItem(RASC(idR), JSON.stringify({ em: Date.now(), base: carimbo(base), aba: ABA_F, v: valores(f) })); } catch (_) {} }, 300); };
+  const naoSalvo = () => { msg('Você tem alterações que ainda não foram salvas.', 'aguarda'); };
+  f.addEventListener('input', () => { guardar(); naoSalvo(); });
+  f.addEventListener('change', () => { guardar(); naoSalvo(); });
+  const r0 = lerRasc(idR);
+  if (r0 && r0.v && r0.base === carimbo(base)) {
+    aplicar(f, r0.v, etapas); mostrar(); abaF(r0.aba || 'geral');
+    f.style.setProperty('--kc', contaCor({ conta: (f.querySelector('[name=conta]:checked') || {}).value }));
+    f.insertAdjacentHTML('beforebegin', `<div class="mk-rasc" id="mkRasc">Voltou o que você tinha preenchido e não salvou (${new Date(r0.em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}). Confira e toque em Salvar.<button type="button" id="mkRascX">Descartar</button></div>`);
+    document.getElementById('mkRascX').onclick = () => { apagarRasc(idR); X.limpo && X.limpo(); formPost(P); };
+    naoSalvo(); X.preenchido && X.preenchido(f);
+  } else if (r0) apagarRasc(idR);
+  // "Já postei": abre direto na aba do link do Instagram e conta como alteração (se sair sem salvar, o app avisa)
+  if (!nova && PRE && PRE.status && PRE.status !== base.status && !(r0 && r0.base === carimbo(base))) {
+    if (PRE.status === 'publicado') { abaF('arquivos'); setTimeout(() => { const l = el.link_post; if (l) { l.scrollIntoView({ block: 'center' }); l.focus(); } }, 50); }
+    naoSalvo(); X.preenchido && X.preenchido(f);
+  }
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const v = (n) => (el[n].value || '').trim() || null;
@@ -512,28 +550,54 @@ function formPost(P) {
       pilar_id: v('pilar_id'), campanha_id: v('campanha_id'), responsavel_id: v('responsavel_id'), gravacao_equipe: equipe, gravacao_por: equipe[0] || null, postagem_por: v('postagem_por'), gravacao_data: v('gravacao_data'), legenda: v('legenda'), link_arquivo: v('link_arquivo'),
       link_post: v('link_post'), publicado_em: el.status.value === 'publicado' ? v('publicado_em') : null, obs: v('obs'), link_referencia: v('link_referencia'), link_bruto: v('link_bruto'), instrucoes_post: v('instrucoes_post'),
       conta: (f.querySelector('[name=conta]:checked') || {}).value || 'maktub', collab: [...f.querySelectorAll('[name=collab]:checked')].map(c => c.value), reels_teste: fmtSel === 'reels' && (f.querySelector('[name=reels_teste]:checked') || {}).value === '1' };
-    if (!reg.titulo) { abaF('geral'); msg('Escreva o título do post.'); return; }
-    if (reg.status === 'gravacao' && !equipe.length) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.'); return; }
+    if (!reg.titulo) { abaF('geral'); msg('Escreva o título do post.', 'erro'); el.titulo.focus(); return; }
+    if (reg.status === 'gravacao' && !equipe.length) { abaF('geral'); msg('Escolha quem grava antes de mandar para a gravação.', 'erro'); return; }
+    for (const [k, nome, aba] of LINKS) {
+      if (!reg[k]) continue;
+      reg[k] = urlOk(reg[k]); el[k].value = reg[k];
+      if (!pareceLink(reg[k])) { abaF(aba); el[k].focus(); msg(`${nome} não parece um endereço de internet. No Drive ou no Instagram, use "Copiar link" e cole aqui.`, 'erro'); return; }
+    }
     if (reg.status === 'aprovacao' && base.status !== 'aprovacao') reg.ajuste = null;
+    msg('Salvando...', 'aguarda');
     const r = await salvar(nova ? null : base.id, reg);
     if (!r) return;
+    apagarRasc(idR); X.limpo && X.limpo();
     X.aviso(nova ? (reg.status === 'ideia' ? 'Ideia guardada.' : 'Post criado.') : 'Post atualizado.'); fecharPost();
   };
-  const msg = (t) => { document.getElementById('mkMsg').textContent = t; };
+  function msg(t, tipo) { const m = document.getElementById('mkMsg'); if (!m) return; m.textContent = t; m.className = 'mk-msg ' + (tipo || ''); m.hidden = !t; }
   if (document.getElementById('mkExcluir')) document.getElementById('mkExcluir').onclick = async () => {
     const b = document.getElementById('mkExcluir');
     if (CONF !== base.id) { CONF = base.id; b.textContent = 'Toque de novo para excluir'; return; }
     CONF = null;
     const { error } = await X.sb.from('marketing_posts').delete().eq('id', base.id);
     if (error) { X.aviso('Não excluiu: ' + error.message); return; }
-    LISTA = LISTA.filter(x => x.id !== base.id); X.aviso('Post excluído.'); fecharPost();
+    LISTA = LISTA.filter(x => x.id !== base.id); apagarRasc(base.id); X.limpo && X.limpo(); X.aviso('Post excluído.'); fecharPost();
   };
+}
+const navVisivel = () => { const n = document.getElementById('nav'); return !!n && !n.hidden; };
+// valores do formulário para o rascunho (escolhas e caixas viram listas)
+function valores(f) {
+  const v = {};
+  [...f.elements].forEach(e => { if (!e.name) return; if (e.type === 'radio') { if (e.checked) v[e.name] = e.value; } else if (e.type === 'checkbox') { v[e.name] = v[e.name] || []; if (e.checked) v[e.name].push(e.value); } else v[e.name] = e.value; });
+  return v;
+}
+// devolve o rascunho: primeiro as escolhas (definem as etapas possíveis), depois textos e listas
+function aplicar(f, v, etapas) {
+  const campos = (n) => f.querySelectorAll(`[name="${n}"]`);
+  Object.entries(v).forEach(([n, x]) => campos(n).forEach(i => { if (i.type === 'radio') i.checked = i.value === x; else if (i.type === 'checkbox') i.checked = [].concat(x || []).includes(i.value); }));
+  etapas();
+  Object.entries(v).forEach(([n, x]) => campos(n).forEach(i => { if (i.type !== 'radio' && i.type !== 'checkbox' && typeof x === 'string') i.value = x; }));
 }
 async function salvar(id, reg) {
   const b = document.getElementById('mkSalvar'); if (b) b.disabled = true;
   const r = id ? await X.sb.from('marketing_posts').update(reg).eq('id', id).select().single() : await X.sb.from('marketing_posts').insert(reg).select().single();
   if (b) b.disabled = false;
-  if (r.error) { X.aviso(/aprovação/.test(r.error.message) ? r.error.message : 'Não salvou: ' + r.error.message); return null; }
+  if (r.error) {
+    const t = /aprovação/.test(r.error.message) ? r.error.message : 'Não salvou: ' + r.error.message;
+    X.aviso(t);
+    const m = document.getElementById('mkMsg'); if (m) { m.textContent = t + ' O que você preencheu continua aqui; tente salvar de novo.'; m.className = 'mk-msg erro'; m.hidden = false; }
+    return null;
+  }
   if (id) LISTA[LISTA.findIndex(x => x.id === id)] = r.data; else LISTA.push(r.data);
   return r.data;
 }
@@ -556,7 +620,7 @@ function formEst(P) {
       ${!nova && !doc ? '<button class="sec grande" type="button" id="mkExcluirE" style="margin-top:10px;width:100%">Excluir</button><div class="sub">Os posts ligados a ele continuam, só ficam sem ' + (e.tipo === 'pilar' ? 'pilar.' : 'campanha.') + '</div>' : ''}
     </form>`;
   const f = document.getElementById('mkE'), el = f.elements;
-  document.getElementById('mkVoltarE').onclick = () => { ED_EST = null; rerender(); scrollTo(0, 0); };
+  document.getElementById('mkVoltarE').onclick = () => { if (!X.sairOk()) return; ED_EST = null; X.limpo(); rerender(); scrollTo(0, 0); };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const reg = { tipo: e.tipo, descricao: el.descricao.value.trim() || null };
@@ -598,7 +662,7 @@ async function guardarEst(chave, tipo, valores, titulo) {
 function ligar(P) {
   const q = (s) => P.querySelectorAll(s), by = (id) => document.getElementById(id);
   if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('empresa');
-  q('[data-v]').forEach(b => b.onclick = () => { if (VIEW === b.dataset.v) return; VIEW = b.dataset.v; DIA = null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); });
+  q('[data-v]').forEach(b => b.onclick = () => { if (VIEW === b.dataset.v || !X.sairOk()) return; VIEW = b.dataset.v; DIA = null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); });
   q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); abrirPost(b.dataset.p); });
   q('[data-novo]').forEach(b => b.onclick = () => abrirPost('nova', { status: b.dataset.novo }));
   q('[data-novo-dia]').forEach(b => b.onclick = () => abrirPost('nova', { status: 'ideia', data_prevista: b.dataset.novoDia }));

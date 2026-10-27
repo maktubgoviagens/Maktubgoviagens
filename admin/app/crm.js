@@ -102,7 +102,7 @@ export function telaCRM(P, X) {
   return telaLista(P, X);
 }
 
-function ir(X, v, id) { VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
+function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
 
 function telaLista(P, X) {
   const { D, $, esc, brlC, ADMIN } = X;

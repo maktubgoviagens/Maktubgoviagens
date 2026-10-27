@@ -35,7 +35,7 @@ export async function tela(P, X) {
   if (VISTA === 'ficha' && FID) return ficha(P, X);
   return telaLista(P, X);
 }
-function ir(X, v, id) { VISTA = v; FID = id || null; history.pushState(null, '', v === 'lista' ? '#fornecedores' : v === 'novo' ? '#fornecedores/novo' : '#fornecedores/' + (id || '')); tela(X.$('pagina'), X); scrollTo(0, 0); }
+function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; VISTA = v; FID = id || null; history.pushState(null, '', v === 'lista' ? '#fornecedores' : v === 'novo' ? '#fornecedores/novo' : '#fornecedores/' + (id || '')); tela(X.$('pagina'), X); scrollTo(0, 0); }
 
 function telaLista(P, X) {
   const { $, esc } = X;

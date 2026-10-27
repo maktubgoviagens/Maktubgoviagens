@@ -513,13 +513,13 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=14';
+import * as MKT from '/admin/app/marketing.js?v=15';
 import * as CART from '/admin/app/carteira.js?v=2';
 import * as CARTOES from '/admin/app/cartoes.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=16';
+import * as CRM from '/admin/app/crm.js?v=17';
 import * as CTR from '/admin/app/contrato.js?v=2';
-import * as FORN from '/admin/app/fornecedores.js?v=9';
+import * as FORN from '/admin/app/fornecedores.js?v=10';
 import * as COT from '/admin/app/cotador.js?v=49';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=22';
@@ -529,7 +529,17 @@ import * as CX from '/admin/app/caixa.js?v=1';
 import * as DRE from '/admin/app/dre.js?v=6';
 import * as B2B from '/admin/app/b2b.js?v=10';
 const EXIGIR_CODIGO = true;
-const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
+// gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
+const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
+const fetchApp = async (url, o = {}) => {
+  const r = await fetch(url, o);
+  try {
+    const m = String(o.method || 'GET').toUpperCase(), u = String(url);
+    if (r.ok && m !== 'GET' && m !== 'HEAD' && u.includes('/rest/v1/') && (!u.includes('/rpc/') || RPC_GRAVA.test(u.split('/rpc/')[1]))) PREENCHIDO = false;
+  } catch (_) {}
+  return r;
+};
+const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: fetchApp } });
 CART.usar(sb);
 
 /* ================= utilidades ================= */
@@ -679,16 +689,32 @@ $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); loc
    Se houver algo digitado e não salvo, pergunta antes para não perder o preenchimento. */
 $('recarregar').onclick = () => {
   if (SUJO && !confirm('Você tem um preenchimento não salvo nesta tela. Recarregar agora descarta o que não foi salvo. Recarregar mesmo assim?')) return;
-  location.reload();
+  RECARREGANDO = true; location.reload();
 };
 $('sino').onclick = () => ir('avisos');
-$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
+$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b && sairOk()) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
-$('clientesTopo').onclick = () => { CRM.abrir(null); ir('crm'); };
+$('clientesTopo').onclick = () => { if (sairOk()) { CRM.abrir(null); ir('crm'); } };
 /* ao voltar para o app: atualiza os dados, mas não redesenha a tela se a pessoa estava digitando */
 let SUJO = false, ULT_CARGA = 0;
-$('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
-$('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
+$('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) { SUJO = true; marcarPreenchido(e); } });
+$('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) { SUJO = true; marcarPreenchido(e); } });
+/* formulário preenchido e ainda não salvo: antes de sair da tela (menu, voltar do app ou do celular, fechar), o app pergunta.
+   Filtros fora de formulário não contam. O cotador fica de fora: lá a cotação costuma ser enviada sem salvar o rascunho. */
+let PREENCHIDO = false, URL_PREENCHIDO = '', FORM_PREENCHIDO = null, RECARREGANDO = false;
+function marcarPreenchido(e) {
+  if (ABA === 'cotador' || !e.target.closest('form') || e.target.closest('[data-livre]')) return;
+  PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = e.target.closest('form');
+}
+// o formulário já saiu da tela (o módulo redesenhou por conta própria): não há mais nada para perder
+const pendente = () => { if (PREENCHIDO && FORM_PREENCHIDO && !FORM_PREENCHIDO.isConnected) PREENCHIDO = false; return PREENCHIDO; };
+function sairOk() {
+  if (!pendente()) return true;
+  if (!confirm('Você preencheu algo nesta tela e ainda não salvou.\n\nOK: sair sem salvar (o que foi digitado se perde).\nCancelar: continuar aqui para salvar.')) return false;
+  PREENCHIDO = false; SUJO = false; window.dispatchEvent(new Event('app:descartar'));
+  return true;
+}
+window.addEventListener('beforeunload', (e) => { if (pendente() && !RECARREGANDO) { e.preventDefault(); e.returnValue = ''; } });
 // versão publicada: nunca recarrega sozinho. Quando sai versão nova, aparece um aviso no topo
 // e a tela só atualiza quando a pessoa toca em "Atualizar".
 let VERSAO_BASE = null;
@@ -716,7 +742,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
 });
-window.addEventListener('popstate', () => { ANTERIOR = null; lerHash(); marcarNav(); tela(); });
+window.addEventListener('popstate', () => {
+  // voltar do celular (ou do app) com formulário não salvo: se a pessoa cancelar, fica na mesma tela com tudo preenchido
+  if (pendente() && !sairOk()) { history.pushState(null, '', URL_PREENCHIDO || location.href); return; }
+  ANTERIOR = null; lerHash(); marcarNav(); tela();
+});
 $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
@@ -779,7 +809,7 @@ function detalheMkt(tipo, id) {
     <div class="nome" style="font-size:17px;margin-bottom:6px">${esc(p.titulo)}</div>
     <span class="tag">${esc(conta)}</span> <span class="tag">${esc(fmt)}</span>${prazo ? ` <span class="tag ouro">${tipo === 'g' ? 'gravar até' : 'postar'} ${ddmm(prazo)}${tipo === 'p' && p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}
     ${texto ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.5;margin-top:12px">${esc(texto)}</div>` : ''}
-    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : `<button class="zap" data-postei="${esc(p.id)}">Já postei</button>`}</div>
+    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(MKT.urlOk(p.link_arquivo))}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : `<button class="zap" data-postei="${esc(p.id)}">Já postei</button>`}</div>
     <button class="sec" data-fmk style="width:100%;margin-top:12px">Fechar</button></div>`;
   f.hidden = false;
 }
@@ -848,7 +878,7 @@ const VER_TODAS = () => ADMIN || pode('financeiro');
 const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'checkin', 'leads', 'talentos'];
 const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && pode(k));
 const MKT_ABAS = () => ['marketing', ...(pode('leads') || pode('talentos') ? ['leads'] : [])];
-function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar }; }
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -910,6 +940,7 @@ function montarNav() {
 let ANTERIOR = null;
 function voltarA(dest) { if (ANTERIOR === dest) { ANTERIOR = null; history.back(); } else ir(dest); }
 function ir(aba, extra) {
+  if (!sairOk()) return;
   const antes = ABA;
   if (antes === 'leads' && aba !== 'leads') TAL_DESTAQUE = null;
   if (soMarketing() && !MKT_ABAS().includes(aba)) aba = 'marketing';
@@ -1113,7 +1144,7 @@ async function fecharMesesAuto() {
 
 function ctxCTR() { return { D, sb, $, esc, aviso, campo, zapLink, ADMIN, programas: (id) => progsDe(id).map(p => p.programa).filter(Boolean) }; }
 function ctxCRM() {
-  return { D, $, esc, sb, aviso, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
+  return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true),
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
@@ -1176,7 +1207,7 @@ function htmlEvento(e) {
 
 /* ================= telas ================= */
 function tela() {
-  SUJO = false;
+  SUJO = false; PREENCHIDO = false;
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
   if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); }
@@ -1186,7 +1217,7 @@ function tela() {
   const P = $('pagina');
   mostrarFab();
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
-  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)) });
+  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, sairOk, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)) });
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
