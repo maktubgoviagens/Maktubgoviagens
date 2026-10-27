@@ -140,7 +140,61 @@ function paginaAssinaturas(linhas, dados, F) {
     { text: 'Documento assinado eletronicamente, com validade jurídica nos termos da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020. As assinaturas e as rubricas são inseridas pela plataforma de assinatura, e a página de autenticação ao final integra este contrato.', fontSize: 7, color: COR.cinza, lineHeight: 1.4, absolutePosition: abs(ASS.membro + ASS.altura + 70) }
   ];
 }
+// ---------- versão cortesia ----------
+// Cliente estratégico que não paga: a cláusula de investimento vira cortesia (com o valor de referência),
+// a de cancelamento vira encerramento sem custo, e o Anexo I mostra "Cortesia". O resto do contrato não muda.
+function versaoCortesia(blocos) {
+  const txt = (b) => (b.r || []).map(([t]) => t).join('');
+  const kItem = ((blocos || []).find(b => /^\d+\.\d+\.\s/.test(txt(b))) || {}).k || 'p';
+  const item = (t) => ({ k: kItem, r: [[t, false]] });
+  const out = []; let pular = false, nCanc = 13;
+  for (const b of blocos || []) {
+    const t = txt(b);
+    if (['h1', 'h2', 'tabela', 'quadro', 'capa', 'assinaturas'].includes(b.k)) pular = false;
+    if (b.k === 'h2' && /^Cláusula \d+\. Arrependimento/.test(t)) nCanc = +t.match(/^Cláusula (\d+)/)[1];
+  }
+  for (const b of blocos || []) {
+    const t = txt(b);
+    if (['h1', 'h2', 'tabela', 'quadro', 'capa', 'assinaturas'].includes(b.k)) pular = false;
+    if (b.k === 'h2' && /^Cláusula \d+\. Investimento/.test(t)) {
+      const n = t.match(/^Cláusula (\d+)/)[1];
+      out.push({ ...b, r: [[`Cláusula ${n}. Cortesia`]] },
+        item(`${n}.1. Os serviços deste contrato são prestados ao MEMBRO como cortesia da CONTRATADA, por mera liberalidade, sem investimento por parte do MEMBRO.`),
+        item(`${n}.2. Para referência, o plano corresponde ao investimento de R$ {{valor_total}} ({{valor_total_extenso}}) por 12 (doze) meses. O valor é apenas informativo e não gera cobrança.`),
+        item(`${n}.3. Não estão incluídos na cortesia, e serão pagos pelo MEMBRO à parte: passagens e reservas adquiridas, taxas de embarque, taxas cobradas pelas companhias e pelos programas de fidelidade nas emissões, e os serviços adicionais previstos na Cláusula 8.`),
+        item(`${n}.4. A cortesia é pessoal e intransferível. A renovação ao fim da vigência, se houver, segue as condições da proposta de renovação.`));
+      pular = true; continue;
+    }
+    if (b.k === 'h2' && /^Cláusula \d+\. Arrependimento/.test(t)) {
+      const n = nCanc;
+      out.push({ ...b, r: [[`Cláusula ${n}. Encerramento`]] },
+        item(`${n}.1. O MEMBRO pode encerrar este contrato a qualquer momento, por escrito, pelos canais oficiais da CONTRATADA, sem multa e sem valores a pagar ou a receber.`),
+        item(`${n}.2. A CONTRATADA pode encerrar a cortesia mediante aviso por escrito com 30 (trinta) dias de antecedência, ou de imediato em caso de fornecimento de informações falsas pelo MEMBRO ou de conduta contrária aos regulamentos dos programas de fidelidade.`),
+        item(`${n}.3. O encerramento não afeta as emissões e reservas já realizadas, que seguem com o pós-venda previsto na Cláusula 7.4.`));
+      pular = true; continue;
+    }
+    if (pular) continue;
+    if (b.k === 'tabela') {
+      const mapa = { 'Investimento total': 'Cortesia, sem investimento (valor de referência: R$ {{valor_total}} por 12 meses)', 'Implantação': 'Incluída na cortesia, concluída em até 30 dias, em 5 etapas', 'Acompanhamento': 'Incluído na cortesia, por 12 meses', 'Forma de pagamento': 'Não se aplica', 'Parcelas no cartão': 'Não se aplica', 'Nota fiscal': 'Não se aplica', 'Cancelamento': `A qualquer momento, sem custo. Ver Cláusula ${nCanc}` };
+      out.push({ ...b, linhas: (b.linhas || []).map(l => mapa[l[0]] ? [l[0], mapa[l[0]]] : l) });
+      continue;
+    }
+    if (b.r && b.r.length) {
+      if (/^\d+\.\d+\.\s*O congelamento não conta como mês|^\d+\.\d+\.\s*O período de congelamento não conta/.test(t)) continue;
+      let novo = t
+        .replace('O investimento previsto na Cláusula 4 remunera duas entregas distintas:', 'Os serviços deste contrato compreendem duas entregas distintas:')
+        .replace(/^(3\.2\.)\s.*$/, '$1 A cortesia é concedida pelo prazo de 12 (doze) meses.')
+        .replace(/cancelar este contrato na forma da Cláusula \d+\.2, sem a multa rescisória/, `encerrar este contrato na forma da Cláusula ${nCanc}.1`)
+        .replace(/^(\d+\.\d+\.)\s*O congelamento não altera a Implantação.*$/, '$1 O congelamento não altera a Implantação e não gera nenhuma cobrança.');
+      if (novo !== t) { out.push({ ...b, r: [[novo, false]] }); continue; }
+    }
+    out.push(b);
+  }
+  return out;
+}
+
 export async function gerarPdf(modelo, dados) {
+  if (dados && dados.cortesia) modelo = { ...modelo, blocos: versaoCortesia(modelo.blocos) };
   const pm = await pdfMake(), F = await fontesMarca(pm);
   const [logo, simbolo] = await Promise.all([imagem('/ativos/logo-verde-transparente.png'), imagem('/ativos/simbolo-verde.png')]);
   const content = [];
@@ -229,8 +283,9 @@ export async function gerarPdf(modelo, dados) {
 export function montarDados({ p, doc, ext, cond }) {
   const total = Number(cond.valor_total) || 0;
   const impl = Math.round(total * 0.25 * 100) / 100, acomp = Math.round((total - impl) * 100) / 100, mensal = Math.round(acomp / 12 * 100) / 100;
-  const cartao = cond.forma === 'cartao';
+  const cartao = cond.forma === 'cartao' && !cond.cortesia;
   return {
+    cortesia: !!cond.cortesia,
     nome_completo: (p.nome || '').trim(), nacionalidade: ext.nacionalidade || (doc && doc.nacionalidade) || '', estado_civil: ext.estado_civil || '', profissao: ext.profissao || '',
     cpf: doc && doc.cpf ? fmtCpf(doc.cpf) : '', rg: ext.rg || '', rg_orgao_uf: ext.rg_orgao_uf || '', endereco_completo: ext.endereco_completo || '', cep: ext.cep ? fmtCep(ext.cep) : '',
     email: p.email || '', telefone: p.celular || '', data_nascimento: p.nascimento ? new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '',
@@ -238,7 +293,7 @@ export function montarDados({ p, doc, ext, cond }) {
     valor_implantacao: total ? dinheiro(impl) : '', valor_implantacao_extenso: total ? extenso(impl) : '',
     valor_acompanhamento: total ? dinheiro(acomp) : '', valor_acompanhamento_extenso: total ? extenso(acomp) : '',
     valor_mensal: total ? dinheiro(mensal) : '', valor_mensal_extenso: total ? extenso(mensal) : '',
-    forma_pagamento: cartao ? 'Parcelado no cartão de crédito' : 'À vista, via Pix', parcelas: cartao ? `${cond.parcelas}x de R$ ${dinheiro(total / (Number(cond.parcelas) || 1))}` : 'Não se aplica',
+    forma_pagamento: cond.cortesia ? 'Cortesia, sem investimento' : cartao ? 'Parcelado no cartão de crédito' : 'À vista, via Pix', parcelas: cartao ? `${cond.parcelas}x de R$ ${dinheiro(total / (Number(cond.parcelas) || 1))}` : 'Não se aplica',
     programas_fidelidade: cond.programas || '', uso_imagem: cond.uso_imagem || '', cidade_assinatura: cond.cidade || '', data_assinatura: cond.data ? dataExtensa(cond.data) : ''
   };
 }
@@ -271,7 +326,7 @@ export async function bloco(el, c, X) {
   const mes = new Date().toISOString().slice(0, 7);
   el.innerHTML = `
     ${L.length ? L.map(k => { const [rot, cls] = STATUS[k.status] || [k.status, '']; return `<div class="lanc" style="align-items:flex-start"><div style="flex:1"><b>Contrato de ${new Date(k.criado_em).toLocaleDateString('pt-BR')}</b>
-      <small style="display:block">${k.valor_total ? 'R$ ' + dinheiro(k.valor_total) + ' · ' : ''}${k.assinado_em ? 'assinado em ' + new Date(k.assinado_em).toLocaleDateString('pt-BR') : k.enviado_em ? 'enviado em ' + new Date(k.enviado_em).toLocaleDateString('pt-BR') : 'ainda não enviado'}</small>
+      <small style="display:block">${k.dados && k.dados.cortesia ? 'Cortesia · ' : k.valor_total ? 'R$ ' + dinheiro(k.valor_total) + ' · ' : ''}${k.assinado_em ? 'assinado em ' + new Date(k.assinado_em).toLocaleDateString('pt-BR') : k.enviado_em ? 'enviado em ' + new Date(k.enviado_em).toLocaleDateString('pt-BR') : 'ainda não enviado'}</small>
       <span class="tag ${cls}" style="margin-top:6px;display:inline-block">${rot}</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         ${k.status === 'gerado' ? `<button class="mini" data-k-enviar="${k.id}">Enviar para assinatura</button>` : ''}
@@ -361,6 +416,7 @@ async function formulario(box, c, pf, modelo, X, el) {
     <div class="grupo">Condições</div>
     ${campo('valor_total', 'Investimento total (R$)', at ? at.valor_estimado : '', 'number', 'required')}
     <div class="sub" id="ctrConta" style="margin-top:0"></div>
+    <label class="fc"><input type="checkbox" name="cortesia"><span>Cortesia: cliente estratégico, sem investimento. O valor acima entra só como referência.</span></label>
     <label class="fl"><span>Forma de pagamento</span><select name="forma"><option value="pix">À vista, via Pix</option><option value="cartao">Parcelado no cartão de crédito</option></select></label>
     <div id="ctrParc" hidden>${campo('parcelas', 'Número de parcelas', '', 'number', 'min="2" max="12"')}</div>
     <label class="fl"><span>Uso de imagem (Cláusula de uso de imagem)</span><select name="uso_imagem" required><option value="">Pergunte ao cliente</option><option value="sim">Autoriza</option><option value="nao">Não autoriza</option></select></label>
@@ -376,18 +432,19 @@ async function formulario(box, c, pf, modelo, X, el) {
     <button class="voltar" type="button" id="ctrFechar" style="margin-top:10px">Fechar</button>
   </form>`;
   const f = box.querySelector('#fCtr'), g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
-  const conta = () => { const t = Number(String(g('valor_total')).replace(',', '.')) || 0; X.$('ctrConta').textContent = t ? `Implantação R$ ${dinheiro(t * 0.25)} (25%) · acompanhamento R$ ${dinheiro(t * 0.75)}, ou R$ ${dinheiro(t * 0.75 / 12)} por mês` : ''; };
+  const conta = () => { const t = Number(String(g('valor_total')).replace(',', '.')) || 0; if (f.elements.cortesia.checked) { X.$('ctrConta').textContent = t ? `Cortesia: o contrato mostra R$ ${dinheiro(t)} como valor de referência, sem cobrança.` : ''; return; } X.$('ctrConta').textContent = t ? `Implantação R$ ${dinheiro(t * 0.25)} (25%) · acompanhamento R$ ${dinheiro(t * 0.75)}, ou R$ ${dinheiro(t * 0.75 / 12)} por mês` : ''; };
   f.elements.valor_total.oninput = conta; conta();
-  f.elements.forma.onchange = () => { X.$('ctrParc').hidden = g('forma') !== 'cartao'; };
+  f.elements.forma.onchange = () => { X.$('ctrParc').hidden = g('forma') !== 'cartao' || f.elements.cortesia.checked; };
+  f.elements.cortesia.onchange = () => { const c = f.elements.cortesia.checked; f.elements.forma.closest('label').hidden = c; X.$('ctrParc').hidden = c || g('forma') !== 'cartao'; conta(); };
   f.elements.cpf.oninput = (e) => { const d = so(e.target.value).slice(0, 11); e.target.value = d.length === 11 ? fmtCpf(d) : d; };
   X.$('ctrFechar').onclick = () => { FORM = null; box.innerHTML = ''; };
   const coletar = () => {
     const extNovo = { pessoa_id: pf.id, rg: g('rg') || null, rg_orgao_uf: g('rg_orgao_uf') || null, nacionalidade: g('nacionalidade') || null, estado_civil: g('estado_civil') || null, profissao: g('profissao') || null, endereco_completo: g('endereco_completo') || null, cep: so(g('cep')) || null };
-    const cond = { valor_total: Number(String(g('valor_total')).replace(',', '.')) || 0, forma: g('forma'), parcelas: Number(g('parcelas')) || 0, programas: g('programas'), cidade: g('cidade'), data: g('data'), uso_imagem: g('uso_imagem') };
+    const cond = { valor_total: Number(String(g('valor_total')).replace(',', '.')) || 0, forma: g('forma'), parcelas: Number(g('parcelas')) || 0, programas: g('programas'), cidade: g('cidade'), data: g('data'), uso_imagem: g('uso_imagem'), cortesia: f.elements.cortesia.checked };
     const dados = montarDados({ p: pf, doc: { cpf: g('cpf'), nacionalidade: g('nacionalidade') }, ext: extNovo, cond });
     const falta = faltando(camposDoModelo(modelo.blocos), dados);
     if (g('cpf') && !cpfOk(g('cpf'))) falta.unshift('CPF válido');
-    if (cond.forma === 'cartao' && !(cond.parcelas >= 2 && cond.parcelas <= 12)) falta.push('Número de parcelas (2 a 12)');
+    if (cond.forma === 'cartao' && !cond.cortesia && !(cond.parcelas >= 2 && cond.parcelas <= 12)) falta.push('Número de parcelas (2 a 12)');
     if (!cond.uso_imagem) falta.push('Uso de imagem (autoriza ou não)');
     if (!pf.email && !pf.celular) falta.push('E-mail ou celular na ficha, para enviar o link');
     X.$('ctrFalta').textContent = falta.length ? 'Falta: ' + falta.join(', ') + '.' : '';
@@ -416,7 +473,7 @@ async function formulario(box, c, pf, modelo, X, el) {
     try {
       await salvarDados(extNovo);
       const blob = await gerarPdf(modelo, dados);
-      const ins = await sb.from('contratos').insert({ cliente_id: c.id, pessoa_id: pf.id, modelo_id: modelo.id, modelo_versao: modelo.versao, dados: { ...dados, _assinaturas: blob.layout }, valor_total: cond.valor_total, forma_pagamento: cond.forma, parcelas: cond.forma === 'cartao' ? cond.parcelas : null, pedir_selfie: f.elements.selfie.checked, status: 'gerado' }).select().single();
+      const ins = await sb.from('contratos').insert({ cliente_id: c.id, pessoa_id: pf.id, modelo_id: modelo.id, modelo_versao: modelo.versao, dados: { ...dados, _assinaturas: blob.layout }, valor_total: cond.valor_total, forma_pagamento: cond.cortesia ? 'pix' : cond.forma, parcelas: cond.forma === 'cartao' && !cond.cortesia ? cond.parcelas : null, pedir_selfie: f.elements.selfie.checked, status: 'gerado' }).select().single();
       if (ins.error) throw new Error(ins.error.message);
       criado = ins.data;
       const path = `${c.id}/${criado.id}/contrato.pdf`;
