@@ -734,6 +734,27 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .hero-vs .vs-nota{margin-top:10px;font-size:.75rem;line-height:1.55;color:var(--tinta-suave)}
 .hero-vs .link-texto{margin-top:12px}
 @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero-vs{margin-top:var(--e2)}}
+.hero-selo-celular{display:none}
+/* celular: selo, título, frase e botão primeiro; comparativo logo depois; nota do Google no fim */
+@media (max-width:768px){
+  .hero{padding-top:108px}
+  .hero .wrap{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .hero-texto{display:contents}
+  .hero .olho,.hero-vs .hero-vs-selo{display:none}
+  .hero-selo-celular{display:block;align-self:flex-start}
+  .hero h1{margin-top:var(--e3)}
+  .hero .acoes{margin-top:var(--e3)}
+  .hero-vs{margin-top:var(--e3)}
+  .hero-vs .vs{margin-top:0}
+  .hero-confianca{order:1;margin-top:var(--e3)}
+  .hero-confianca .hero-google{margin-top:0}
+  .hero-vs .vs-item{padding:10px}
+  .hero-vs .vs-rot{margin-bottom:8px}
+  .hero-vs .vs-foto{aspect-ratio:16/9}
+  .hero-vs .vs-nome{margin-top:10px}
+  .hero-vs .vs-valor{margin-top:6px}
+  .hero-vs .vs-pts{margin-top:4px}
+}
 </style>
 </head>
 <body>
@@ -767,6 +788,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="hero-fundo" aria-hidden="true"></div>
   <div class="wrap">
     <div class="hero-texto">
+      <span class="hero-vs-selo hero-selo-celular">Exemplo real · 24/10/2026</span>
       <span class="olho">Gestão de milhas com alfaiataria de viagens</span>
       <h1 id="t-hero">Seus pontos viram<em>viagens inteiras.</em></h1>
       <p>Um gestor cuida dos seus pontos o ano inteiro para que eles virem viagens.</p>
@@ -774,11 +796,13 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20meu%20diagn%C3%B3stico%20de%20pontos%20com%20o%20time%20da%20Maktub%20Go." target="_blank" rel="noopener">Quero meu diagnóstico</a>
         <a class="link-texto" href="#contato">Planejar minha viagem</a>
       </div>
-      <a class="hero-google" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">
-        <span class="hg-estrelas" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-        <span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span>
-      </a>
-      <p class="hero-nota">Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
+      <div class="hero-confianca">
+        <a class="hero-google" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">
+          <span class="hg-estrelas" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+          <span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span>
+        </a>
+        <p class="hero-nota">Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
+      </div>
     </div>
     <!-- Exemplo real panela x viagem. Atualizar valores e data a cada 3 meses, junto com a página /gestao-de-milhas/. -->
     <figure class="hero-vs">
