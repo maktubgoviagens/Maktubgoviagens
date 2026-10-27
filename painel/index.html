@@ -1256,7 +1256,7 @@
             </div>
             <div>
               <div class="c-chip"></div>
-              <div class="c-num">•••• •••• •••• ${escapeHtml(c.final_cartao || '••••')}</div>
+              <div class="c-num">•••• •••• •••• ••••</div>
             </div>
           </div>
           <div class="card-body">
@@ -1285,7 +1285,7 @@
         <div class="kpi"><div class="l">Disponível</div><div class="v">${comDisp.length ? 'R$ ' + fmtMoney(disp) : '·'}</div><div class="s">${comDisp.length ? `Informado em ${comDisp.length} de ${cartoes.length} cartões` : 'Informe abaixo, cartão a cartão'}</div></div>
       </div>
       <div class="mc-list">${cartoes.map(c => `<div class="mc">
-        <div class="mc-nome"><b>${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.final_cartao ? 'Final ' + escapeHtml(c.final_cartao) : '', c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
+        <div class="mc-nome"><b>${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
         <div class="mc-lim"><span class="l">Limite</span><span class="v">${c.limite !== null && c.limite !== undefined ? 'R$ ' + fmtMoney(c.limite) : 'A confirmar'}</span></div>
         <div class="mc-disp"><span class="l">Disponível</span><label class="mc-in"><span>R$</span><input type="text" inputmode="decimal" data-disp="${escapeHtml(c.id)}" value="${brInt(c.disponivel)}" placeholder="Informar" aria-label="Disponível em ${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}"></label><small data-dispq="${escapeHtml(c.id)}">${quando(c.disponivel_em)}</small></div>
       </div>`).join('')}</div>
