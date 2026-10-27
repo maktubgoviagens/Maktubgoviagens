@@ -4080,7 +4080,7 @@ function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
-  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['cartoes', 'Cartões'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
   if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
@@ -4093,7 +4093,7 @@ function telaFicha(P, id) {
   $('voltar').onclick = () => history.back();
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
-  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
 function fiResumo(el, c) {
@@ -4758,7 +4758,7 @@ async function fiTarefas(el, c) {
     const dv = t.prazo ? diasPara(t.prazo) : null;
     const extra = t.chave === 'ob_painel' ? '<button class="mini" data-gt-painel="1">mensagem de acesso</button>'
       : t.chave === 'ob_contas' ? '<button class="mini" data-gt-ir="gtTexto">texto dos programas</button>'
-      : t.chave === 'ob_cadastro' || t.chave === 'cartoes' ? '<button class="mini" data-gt-ir="gtCartoes">cartões</button>'
+      : t.chave === 'ob_cadastro' || t.chave === 'cartoes' ? '<button class="mini" data-fa="cartoes">cartões</button>'
       : t.chave === 'ob_escuta' && !t.feito ? '<button class="mini" data-gt-ata="1">registrar reunião</button>'
       : t.chave === 'ob_mapa' && !t.feito ? '<button class="mini" data-gt-ir="gtRotina">dia dos saldos</button>'
       : t.chave === 'enviar_check' && !t.feito ? '<button class="mini" data-gt-ir="gtTexto">ver texto</button>'
@@ -4802,8 +4802,6 @@ async function fiTarefas(el, c) {
         <button class="sec" id="gtModeloOk" style="margin-top:8px;width:100%">Salvar texto padrão</button></details>
     </section>
 
-    <div class="secao" id="gtCartoes">Cartões do cliente</div>
-    <section class="bloco" style="margin-top:0" id="gtCartBox"></section>
 
     <div class="secao" id="gtRotina">Rotina mensal</div>
     <section class="bloco" style="margin-top:0">
@@ -4827,6 +4825,7 @@ async function fiTarefas(el, c) {
     D.gtar = D.gtar.filter(x => String(x.id) !== b.dataset.gtDel); de();
   });
   el.querySelectorAll('[data-gt-ir]').forEach(b => b.onclick = () => $(b.dataset.gtIr).scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FI_ABA = b.dataset.fa; de(); });
   el.querySelectorAll('[data-gt-ata]').forEach(b => b.onclick = () => { FI_ABA = 'reunioes'; FI_ONB = true; de(); });
 
   if ($('gtIni')) $('gtIni').onclick = async () => {
@@ -4874,13 +4873,16 @@ async function fiTarefas(el, c) {
     c.dia_saldos = v; if (v) await gtMarcarChave(c, 'dia_saldos');
     aviso(v ? 'Saldos todo dia ' + v + '.' : 'Dia fixo removido.'); de();
   };
-
-  // cartões do cliente: ligados à base de cartões, com as contas de anuidade e pontos
-  CARTOES.secaoCliente($('gtCartBox'), c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec }, async () => {
-    if (L.some(t => t.chave === 'cartoes' && !t.feito)) { await gtMarcarChave(c, 'cartoes'); de(); }
-  });
 }
 let FI_ONB = false;
+
+// cartões do cliente: ligados à base de cartões, com as contas de anuidade e pontos
+function fiCartoes(el, c) {
+  el.innerHTML = '<section class="bloco" style="margin-top:14px" id="gtCartBox"></section>';
+  CARTOES.secaoCliente($('gtCartBox'), c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec }, async () => {
+    if ((D.gtar || []).some(t => String(t.cliente_id) === String(c.id) && t.chave === 'cartoes' && !t.feito)) await gtMarcarChave(c, 'cartoes');
+  });
+}
 
 /* ---------- contrato e reuniões do cliente da Gestão ---------- */
 function htmlContrato(c) {
