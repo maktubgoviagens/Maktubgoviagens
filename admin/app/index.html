@@ -4359,7 +4359,7 @@ function htmlLeitura(L) {
     ${L.linhas.length ? `<div class="pnota" style="margin:0 0 2px">Movimentações novas desde ${L.corte ? dataBR(L.corte) : 'a última conferência'}</div>${linhas}` : L.primeira ? '' : '<div class="pnota" style="margin:0">Nenhuma movimentação nova no print.</div>'}
     ${L.antigas && !L.primeira ? `<small class="pnota">${plural(L.antigas, 'movimentação anterior à última conferência ficou de fora', 'movimentações anteriores à última conferência ficaram de fora')}.</small>` : ''}
     ${L.avisoResumo ? `<div class="pav">${esc(L.avisoResumo)}</div>` : ''}
-    ${L.obs ? `<div class="pav">${esc(L.obs)}</div>` : ''}
+    ${L.obs ? `<small class="pnota">${esc(L.obs)}</small>` : ''}
     <div class="pst">${status}</div>
     <small class="pnota">${venc}</small>
     <button type="button" class="sec" data-p="remover" style="margin-top:8px;padding:7px 10px;font-size:11px">Remover esta leitura</button>
