@@ -14,6 +14,25 @@ export async function carregarBase(sb, forcar) {
 const nomeBase = (b) => `${b.banco} ${b.nome}`.trim();
 // redução parcial da anuidade depende das colunas reducao_gasto_mes e reducao_pct (SQL da redução de anuidade)
 const TEM_REDUCAO = () => (BASE || []).some(b => 'reducao_pct' in b);
+// cor do cartão (parecida com a do cartão físico): depende da coluna cor (SQL da cor do cartão)
+const TEM_COR = () => (BASE || []).some(b => 'cor' in b);
+const HEX = /^#[0-9a-f]{6}$/i;
+export function corCartao(hex) {
+  if (!HEX.test(hex || '')) return null;
+  const v = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const esc = '#' + v.map(c => Math.round(c * 0.62).toString(16).padStart(2, '0')).join('');
+  const claro = (0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2]) / 255 > 0.62;
+  return { fundo: `linear-gradient(135deg,${hex},${esc})`, texto: claro ? '#1d1d1b' : '#ffffff', claro };
+}
+// miniatura do cartão (lista da ficha e da base)
+export function mini(hex) {
+  const k = corCartao(hex) || corCartao('#1a3826');
+  return `<span style="display:inline-block;width:34px;height:22px;border-radius:4px;background:${k.fundo};vertical-align:middle;margin-right:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)"></span>`;
+}
+// campo de cor: seletor + código; só grava se mexeu ou se já tinha cor
+const campoCor = (nome, v) => `<label class="fl"><span>Cor do cartão (parecida com o físico)</span><span style="display:flex;gap:8px;align-items:center"><input type="color" name="${nome}" value="${HEX.test(v || '') ? v : '#1a3826'}" data-tem="${HEX.test(v || '') ? 1 : 0}" style="width:56px;height:40px;padding:2px;border:1px solid var(--linha);background:none"><small style="color:var(--tinta-3)">${HEX.test(v || '') ? '' : 'sem cor definida: o cliente vê o verde da Maktub'}</small></span></label>`;
+const lerCor = (el) => el && (el.dataset.tem === '1' || el.dataset.mexeu === '1') ? el.value : null;
+const marcarCor = (root) => root.querySelectorAll('input[type=color]').forEach(el => el.oninput = () => { el.dataset.mexeu = '1'; const sm = el.parentElement.querySelector('small'); if (sm) sm.textContent = ''; });
 const dec = (x) => Number(x).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 export const salaVip = (b) => !b ? '' : b.salas_vip_ilimitado ? `sala VIP ilimitada${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}`
   : n(b.salas_vip_ano) ? `${b.salas_vip_ano} ${Number(b.salas_vip_ano) === 1 ? 'acesso' : 'acessos'}/ano a sala VIP${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}` : '';
@@ -50,8 +69,11 @@ function textosPainel(cart, cat, k) {
   const brl = (x) => 'R$ ' + Math.round(x).toLocaleString('pt-BR');
   const anuidade = k.custo === null ? null : k.custo === 0 ? (k.paga === null && k.cheia === 0 ? 'Sem anuidade' : k.isentaGasto ? 'Isenta pelo gasto' : 'Isenta') : `${brl(k.custo)}/ano` + (k.reduzida && k.paga === null ? ` (${dec(k.redPct)}% de desconto pelo gasto)` : '');
   const pont = cat && n(cat.pontos_por) ? (cat.pontos_moeda === 'PCT' ? `${dec(cat.pontos_por)}% de cashback` : `${dec(cat.pontos_por)} ${Number(cat.pontos_por) === 1 ? 'pt' : 'pts'} por ${cat.pontos_moeda === 'USD' ? 'US$' : 'R$'}${cat.programa ? ' · ' + cat.programa : ''}`) : null;
-  return { anuidade, pontuacao: pont };
+  const t = { anuidade, pontuacao: pont };
+  if (cat && HEX.test(cat.cor || '')) t.cor_visual = cat.cor;
+  return t;
 }
+const mudou = (t, x) => Object.keys(t).some(k => t[k] !== (x[k] ?? null));
 
 /* ---------------- tela da base de cartões (aba Empresa) ---------------- */
 export async function telaBase(P, X) {
@@ -77,7 +99,7 @@ export async function telaBase(P, X) {
     <div class="duas-col" style="margin-top:14px;align-items:end"><label class="fl"><span>Buscar</span><input id="bBusca" value="${esc(BUSCA)}" placeholder="Banco, cartão ou programa"></label><button class="zap" id="bNovo" style="height:44px">+ Novo cartão</button></div>
     <label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${SO_ILIM ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>
     <section class="bloco" style="margin-top:10px">${L.length ? L.map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
-        <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${!b.ativo ? ' <small>(fora de linha)</small>' : ''}
+        <span>${TEM_COR() ? mini(b.cor) : ''}<b style="font-weight:600">${esc(nomeBase(b))}</b>${!b.ativo ? ' <small>(fora de linha)</small>' : ''}
           <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.reducao_gasto_mes) && n(b.reducao_pct) ? 'cai ' + dec(b.reducao_pct) + '% com ' + brl(b.reducao_gasto_mes) + '/mês' : '', n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
         <span${velho(b.conferido_em) ? ' style="color:var(--alerta)"' : ''}>${b.conferido_em ? 'conferido ' + b.conferido_em.split('-').reverse().join('/') : 'não conferido'}</span></button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
@@ -113,6 +135,7 @@ function formBase(P, X) {
       <div class="duas-col">${campo('pontos_por', 'Pontuação', b.pontos_por, 'number', 'placeholder="Ex.: 2,2"')}${sel('pontos_moeda', 'Por', MOEDAS, b.pontos_moeda)}</div>
       ${campo('programa', 'Programa de pontos', b.programa, 'text', 'placeholder="Ex.: Esfera, Livelo, Átomos, Azul"')}
       <div class="duas-col">${campo('salas_vip_programa', 'Sala VIP: programa', b.salas_vip_programa, 'text', 'placeholder="LoungeKey, Priority Pass, DragonPass..."')}${campo('salas_vip_ano', 'Acessos por ano (titular)', b.salas_vip_ano, 'number', 'placeholder="em branco se não tiver"')}</div>
+      ${TEM_COR() ? campoCor('cor', b.cor) : X.tec('<div class="sub">Para guardar a cor do cartão, rode no Supabase o SQL da cor do cartão.</div>')}
       <label class="fc"><input type="checkbox" name="salas_vip_ilimitado" ${b.salas_vip_ilimitado ? 'checked' : ''}><span>Sala VIP ilimitada</span></label>
       ${campo('beneficios', 'Outros benefícios e condições', b.beneficios, 'text', 'placeholder="Ex.: acesso exige gasto mínimo, seguro viagem"')}
       <div class="duas-col">${campo('fonte', 'Fonte (site do banco)', b.fonte, 'url', 'placeholder="https://..."')}${campo('conferido_em', 'Conferido em', b.conferido_em, 'date')}</div>
@@ -121,6 +144,7 @@ function formBase(P, X) {
     </form>`;
   const voltar = () => { ED = null; telaBase(P, X); };
   $('voltar').onclick = voltar;
+  marcarCor(P);
   const f = $('fBase'), v = (k) => f.elements[k].value.trim(), nv = (k) => v(k) === '' ? null : Number(v(k).replace(',', '.'));
   f.onsubmit = async (e) => {
     e.preventDefault();
@@ -128,7 +152,8 @@ function formBase(P, X) {
       isencao: v('isencao') || null, pontos_por: nv('pontos_por'), pontos_moeda: v('pontos_moeda'), programa: v('programa') || null, beneficios: v('beneficios') || null,
       fonte: v('fonte') || null, conferido_em: v('conferido_em') || null, ativo: f.elements.ativo.checked, atualizado_em: new Date().toISOString(),
       salas_vip_programa: v('salas_vip_programa') || null, salas_vip_ano: nv('salas_vip_ano') === null ? null : Math.round(nv('salas_vip_ano')), salas_vip_ilimitado: f.elements.salas_vip_ilimitado.checked,
-      ...(TEM_REDUCAO() ? { reducao_gasto_mes: nv('reducao_gasto_mes'), reducao_pct: nv('reducao_pct') } : {}) };
+      ...(TEM_REDUCAO() ? { reducao_gasto_mes: nv('reducao_gasto_mes'), reducao_pct: nv('reducao_pct') } : {}),
+      ...(TEM_COR() ? { cor: lerCor(f.elements.cor) } : {}) };
     if (row.reducao_pct !== undefined && row.reducao_pct !== null && !(row.reducao_pct > 0 && row.reducao_pct <= 100)) { aviso('A redução é uma porcentagem entre 1 e 100.'); return; }
     if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
     if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por', 'salas_vip_ano'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
@@ -157,7 +182,7 @@ async function atualizarPaineis(sb, CART, D, cat) {
   const cot = D && D.cfg ? n(D.cfg.cotacao_dolar) : null;
   for (const x of r.data || []) {
     const t = textosPainel(x, cat, calc(x, cat, cot, refs, CART.normProg));
-    if (t.anuidade !== (x.anuidade ?? null) || t.pontuacao !== (x.pontuacao ?? null)) await sb.from('cartoes').update(t).eq('id', x.id);
+    if (mudou(t, x)) await sb.from('cartoes').update(t).eq('id', x.id);
   }
 }
 
@@ -245,7 +270,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   const C = r.data || [], cot = D.cfg && n(D.cfg.cotacao_dolar), porId = Object.fromEntries(BASE.map(b => [b.id, b]));
   const K = C.map(x => ({ x, cat: porId[x.catalogo_id] || null, k: calc(x, porId[x.catalogo_id] || null, cot, refs, CART.normProg) }));
   // cartão cadastrado pela lista no SQL ou base corrigida depois: o texto que o cliente vê no painel é refeito aqui
-  K.forEach(({ x, cat, k }) => { const t = textosPainel(x, cat, k); if (t.anuidade !== (x.anuidade ?? null) || t.pontuacao !== (x.pontuacao ?? null)) sb.from('cartoes').update(t).eq('id', x.id).then(({ error }) => { if (!error) Object.assign(x, t); }); });
+  K.forEach(({ x, cat, k }) => { const t = textosPainel(x, cat, k); if (mudou(t, x)) sb.from('cartoes').update(t).eq('id', x.id).then(({ error }) => { if (!error) Object.assign(x, t); }); });
   const soma = (f) => K.reduce((s, o) => s + (f(o) || 0), 0);
   const tot = { limite: soma(o => n(o.x.limite)), custo: soma(o => o.k.custo), valor: soma(o => o.k.valor), pontos: soma(o => o.k.pontos), semAnu: K.filter(o => o.k.custo === null).length,
     vip: soma(o => o.cat && !o.cat.salas_vip_ilimitado ? n(o.cat.salas_vip_ano) : 0), vipIlim: K.filter(o => o.cat && o.cat.salas_vip_ilimitado).map(o => nomeBase(o.cat)) };
@@ -256,7 +281,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       k.pontos !== null ? `${num(Math.round(k.pontos))} pts/ano` : '', k.valor !== null ? `vale ${brl(k.valor)}/ano` : k.semValor, salaVip(cat),
     ].filter(Boolean).join(' · ');
     const res = k.resultado === null ? '' : `<b style="font-weight:600;color:${k.resultado >= 0 ? 'var(--verde)' : 'var(--alerta)'}">${k.resultado >= 0 ? '+' : '−'} ${brl(Math.abs(k.resultado))}/ano</b>`;
-    return `<div class="lin" style="align-items:flex-start"><span><b style="font-weight:600">${esc(cat ? nomeBase(cat) : [x.banco, x.categoria].filter(Boolean).join(' '))}</b>${!cat ? ' <small style="color:var(--alerta)">(fora da base)</small>' : ''}
+    return `<div class="lin" style="align-items:flex-start"><span>${mini(cat && cat.cor || x.cor_visual)}<b style="font-weight:600">${esc(cat ? nomeBase(cat) : [x.banco, x.categoria].filter(Boolean).join(' '))}</b>${!cat ? ' <small style="color:var(--alerta)">(fora da base)</small>' : ''}
         <small style="display:block;color:var(--tinta-3);font-size:12px">${esc(det)}</small>
         ${x.disponivel !== null && x.disponivel !== undefined ? `<small style="display:block;color:var(--tinta-3);font-size:12px">disponível ${brl(x.disponivel)}, informado pelo cliente em ${data(x.disponivel_em)}</small>` : ''}
         ${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span>
@@ -321,13 +346,14 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       <div class="duas-col">${campo('nb_anu', 'Anuidade cheia (R$/ano)', '', 'number', 'placeholder="0 se não tiver"')}${campo('nb_isen', 'Gasto por mês que isenta (R$)', '', 'number', 'placeholder="em branco se não houver"')}</div>
       <div class="duas-col">${campo('nb_pts', 'Pontuação', '', 'number', 'placeholder="Ex.: 2,2"')}<label class="fl"><span>Por</span><select name="nb_moeda">${MOEDAS.map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}</select></label></div>
       <div class="duas-col">${campo('nb_prog', 'Programa de pontos', '', 'text', 'placeholder="Ex.: Esfera, Livelo"')}${campo('nb_fonte', 'Fonte (site do banco)', '', 'url', 'placeholder="https://..."')}</div>
+      ${TEM_COR() ? campoCor('nb_cor', null) : ''}
       <div class="sub">Entra na Base de cartões e passa a valer para todos os clientes. Sala VIP e redução parcial você completa em Empresa > Base de cartões.</div>
       <button class="zap" type="button" data-cbok style="width:100%;margin-top:8px">Cadastrar na base</button></div>`;
-    f.hidden = false;
+    f.hidden = false; marcarCor(f);
     f.querySelector('[data-cbok]').onclick = async (e) => {
       const q = (k) => f.querySelector(`[name=${k}]`).value.trim(), nq = (k) => q(k) === '' ? null : Number(q(k).replace(',', '.'));
       const row = { banco: q('nb_banco'), nome: q('nb_nome'), anuidade_anual: nq('nb_anu'), isencao_gasto_mes: nq('nb_isen'), pontos_por: nq('nb_pts'), pontos_moeda: q('nb_moeda'),
-        programa: q('nb_prog') || null, fonte: q('nb_fonte') || null, ativo: true, conferido_em: new Date().toISOString().slice(0, 10), atualizado_em: new Date().toISOString() };
+        programa: q('nb_prog') || null, fonte: q('nb_fonte') || null, ativo: true, conferido_em: new Date().toISOString().slice(0, 10), atualizado_em: new Date().toISOString(), ...(TEM_COR() ? { cor: lerCor(f.querySelector('[name=nb_cor]')) } : {}) };
       if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
       if (row.anuidade_anual === null) { aviso('Informe a anuidade cheia (0 se o cartão não tiver).'); return; }
       if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }

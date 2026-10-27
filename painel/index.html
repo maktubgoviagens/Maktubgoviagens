@@ -159,6 +159,11 @@
     .card-vis.santander{background:linear-gradient(135deg,#7a1818,#4d0e0e);border-bottom:2px solid #ec0000}
     .card-vis.bradesco{background:linear-gradient(135deg,#4a1a1a,#2d0d0d);border-bottom:2px solid #cc092f}
     .card-vis.green{background:linear-gradient(135deg,#1a3826,#142d1f);border-bottom:2px solid var(--gold-warm)}
+    .card-vis.hex{border-bottom:2px solid var(--gold-warm);border-radius:0}
+    .card-vis.hex::after{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 85% 0%,rgba(255,255,255,.14),transparent 60%);pointer-events:none}
+    .card-vis.hex .c-bank{color:inherit;opacity:.75}.card-vis.hex .c-tier{color:inherit}.card-vis.hex .c-num{color:inherit;opacity:.7}
+    .card-vis.hex.claro .c-tier{color:inherit}
+    .mc-mini{display:inline-block;width:34px;height:22px;border-radius:4px;vertical-align:-5px;margin-right:10px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
     .c-bank{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:500}
     .c-tier{font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;margin-top:3px;font-weight:400;color:var(--gold-warm)}
     .c-chip{width:30px;height:22px;background:linear-gradient(135deg,var(--gold-warm),var(--gold));border-radius:3px;margin-bottom:10px}
@@ -1246,6 +1251,17 @@
     }).join('');
   }
  
+  // cor parecida com a do cartão físico (#rrggbb), com degradê e texto claro ou escuro conforme o fundo
+  function corCartao(hex) {
+    const v = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const esc = '#' + v.map(c => Math.round(c * 0.62).toString(16).padStart(2, '0')).join('');
+    const claro = (0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2]) / 255 > 0.62;
+    return { fundo: `linear-gradient(135deg,${hex},${esc})`, texto: claro ? '#1d1d1b' : '#ffffff', claro };
+  }
+  function miniCartao(c) {
+    const hex = /^#[0-9a-f]{6}$/i.test(c.cor_visual || '') ? c.cor_visual : '#1a3826';
+    return `<span class="mc-mini" style="background:${corCartao(hex).fundo}"></span>`;
+  }
   function renderCartoes(cartoes) {
     const cont = $('cardsContainer');
     if (!cartoes || cartoes.length === 0) {
@@ -1259,7 +1275,8 @@
     const mais = $('cardsMais');
     if (mais) { mais.hidden = cartoes.length <= 3; mais.textContent = `Ver os ${cartoes.length} cartões →`; }
     cont.innerHTML = principais.map(c => {
-      const cor = c.cor_visual || 'green';
+      const hex = /^#[0-9a-f]{6}$/i.test(c.cor_visual || '') ? c.cor_visual : null, k = hex ? corCartao(hex) : null;
+      const cor = hex ? 'hex' + (k.claro ? ' claro' : '') : (c.cor_visual || 'green');
       const upgradeBlock = c.upgrade_titulo || c.upgrade_texto ? `
         <div class="c-upgrade">
           <div class="l">${escapeHtml(c.upgrade_titulo || 'Recomendação')}</div>
@@ -1275,7 +1292,7 @@
       ` : '';
       return `
         <div class="card-item">
-          <div class="card-vis ${escapeHtml(cor)}">
+          <div class="card-vis ${escapeHtml(cor)}"${k ? ` style="background:${k.fundo};color:${k.texto}"` : ''}>
             <div>
               <div class="c-bank">${escapeHtml(c.banco || 'Cartão')}</div>
               <div class="c-tier">${escapeHtml(c.categoria || '')}</div>
@@ -1311,7 +1328,7 @@
         <div class="kpi"><div class="l">Disponível</div><div class="v">${comDisp.length ? 'R$ ' + fmtMoney(disp) : '·'}</div><div class="s">${comDisp.length ? `Informado em ${comDisp.length} de ${cartoes.length} cartões` : 'Informe abaixo, cartão a cartão'}</div></div>
       </div>
       <div class="mc-list">${cartoes.map(c => `<div class="mc">
-        <div class="mc-nome"><b>${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
+        <div class="mc-nome"><b>${miniCartao(c)}${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
         <div class="mc-lim"><span class="l">Limite</span><span class="v">${c.limite !== null && c.limite !== undefined ? 'R$ ' + fmtMoney(c.limite) : 'A confirmar'}</span></div>
         <div class="mc-disp"><span class="l">Disponível</span><label class="mc-in"><span>R$</span><input type="text" inputmode="decimal" data-disp="${escapeHtml(c.id)}" value="${brInt(c.disponivel)}" placeholder="Informar" aria-label="Disponível em ${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}"></label><small data-dispq="${escapeHtml(c.id)}">${quando(c.disponivel_em)}</small></div>
       </div>`).join('')}</div>
