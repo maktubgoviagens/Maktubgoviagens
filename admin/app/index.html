@@ -745,7 +745,22 @@ function abrirSino() {
       .map(([t, i]) => `<button class="folha-item" data-tarefa="${i}"><span>${esc(t.titulo)}<small${t.atrasado ? ' style="color:var(--alerta)"' : ''}>${esc(t.desc)}</small></span><span class="seta">›</span></button>`).join('')).join('')
     : '<div class="vazio">Nada pendente com você agora.</div>';
   $('folhaItens').querySelectorAll('[data-tarefa]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.tarefa].acao(); scrollTo(0, 0); });
+  // ligar ou desligar as notificações deste celular (antes só administradores tinham esse botão, na tela Avisos)
+  $('folhaItens').insertAdjacentHTML('beforeend', '<div class="res-grupo">Notificações neste celular</div><div id="sinoPush" class="sub" style="margin:4px 0 6px">Conferindo...</div>');
+  pushNoSino();
   $('folhaBusca').hidden = true; $('folhaMais').hidden = false;
+}
+async function pushNoSino() {
+  const el = $('sinoPush'); if (!el) return;
+  let st = 'sem'; try { st = await estadoPush(); } catch (_) {}
+  const bt = (id, cls, txt) => `<button type="button" class="${cls}" id="${id}" style="width:100%;margin-top:8px">${txt}</button>`;
+  el.innerHTML = st === 'ativo' ? 'Ligadas. As tarefas que são suas chegam aqui, mesmo com o app fechado.' + bt('spOff', 'sec', 'Desligar neste celular')
+    : st === 'inativo' ? 'Desligadas. Ligue para receber as tarefas que são suas, mesmo com o app fechado.' + bt('spOn', 'zap', 'Ligar neste celular')
+    : st === 'negado' ? 'Bloqueadas nas configurações do celular. Para ligar, libere as notificações deste app nas configurações do celular (ou do navegador) e volte aqui.'
+    : ehIOS() && !instalado() ? 'No iPhone, as notificações só funcionam pelo ícone do app: toque em Compartilhar, depois em Adicionar à Tela de Início, e abra o app por ele.'
+    : 'Este navegador não recebe notificações. Abra o app pelo Chrome (Android) ou pelo ícone na tela de início (iPhone).';
+  if ($('spOn')) $('spOn').onclick = async () => { $('spOn').disabled = true; if (await ativarPush()) { try { localStorage.removeItem('mk_push_adiado'); } catch (_) {} if ($('faixaPush')) $('faixaPush').hidden = true; } pushNoSino(); };
+  if ($('spOff')) $('spOff').onclick = async () => { $('spOff').disabled = true; await desativarPush(); pushNoSino(); };
 }
 $('sino').onclick = () => ADMIN ? ir('avisos') : abrirSino();
 $('nav').onclick = (e) => { const b = e.target.closest('button'); if (b && sairOk()) ir(b.dataset.t); };
