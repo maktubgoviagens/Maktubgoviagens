@@ -173,15 +173,18 @@ function valorBR(t) {
   t = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t.replace(/\./g, '');
   const v = Number(t); return v >= 0 ? v : null;
 }
-// cada linha: nome do cartão, limite no fim (separado por tab ou espaço) e o que estiver entre parênteses vira observação
+// cada linha: nome do cartão, depois o limite e, se tiver, o gasto médio por mês (separados por tab ou espaço).
+// O que estiver entre parênteses vira observação. "pendente" ou "a confirmar" no lugar do limite.
+const VALOR = /^(?:R\$)?[\d.,]*\d[\d.,]*$|^pendente$/i;
 function lerLista(texto) {
   return String(texto || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(l => {
-    let nome = l, lim = null, txt = '';
-    const m = l.match(/^(.*?)[\t ]+((?:r\$\s*)?[\d.,]+|pendente|a confirmar)\s*$/i);
-    if (m) { nome = m[1].trim(); txt = m[2]; lim = valorBR(m[2]); }
-    if (/^(cart[aã]o|nome)\b/i.test(nome) && /limite/i.test(l)) return null; // linha de título
-    const obs = (nome.match(/\(([^)]+)\)/) || [])[1] || '';
-    return { linha: l, nome: nome.replace(/\([^)]*\)/g, '').trim(), limite: lim, pendente: !m || /pendente|confirmar/i.test(txt), obs };
+    if (/^(cart[aã]o|nome)\b/i.test(l) && /limite/i.test(l)) return null; // linha de título
+    const obs = (l.match(/\(([^)]+)\)/) || [])[1] || '';
+    const tk = l.replace(/\([^)]*\)/g, ' ').replace(/r\$\s*/gi, 'R$').replace(/a\s+confirmar/gi, 'pendente').split(/[\t ]+/).filter(Boolean);
+    const vals = [];
+    while (vals.length < 2 && tk.length > 1 && VALOR.test(tk[tk.length - 1])) vals.unshift(tk.pop());
+    const limTxt = vals[0] || '', gasTxt = vals[1] || '';
+    return { linha: l, nome: tk.join(' ').trim(), limite: valorBR(limTxt), gasto: valorBR(gasTxt), pendente: !limTxt || /pendente/i.test(limTxt), obs: obs.trim() };
   }).filter(Boolean);
 }
 // cartões da base que combinam com o nome colado (todas as palavras do nome aparecem no cartão da base);
@@ -190,7 +193,7 @@ function acharNaBase(nome) {
   const w = palavras(nome); if (!w.length) return [];
   const nota = (b) => { const wb = palavras(nomeBase(b)); return w.filter(x => wb.includes(x)).length / w.length; };
   const ativos = (BASE || []).filter(b => b.ativo !== false), todas = ativos.filter(b => nota(b) === 1);
-  return todas.length ? todas : ativos.filter(b => nota(b) >= 0.5);
+  return todas.length ? todas : ativos.filter(b => nota(b) >= 0.5).map(b => Object.assign(Object.create(b), { _parcial: true }));
 }
 function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
   const { sb, esc, aviso, brl } = X;
@@ -202,23 +205,64 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
       .map(([k, l]) => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
     const ja = new Set(C.map(x => x.catalogo_id).filter(Boolean));
     rev.innerHTML = `<div class="sub" style="margin-top:10px">Confira o cartão que o app achou na base para cada linha. Os que ficarem em "Outro, fora da base" entram com o nome como você escreveu, sem as contas de anuidade e pontos.</div>
-      ${L.map((x, i) => { const A = acharNaBase(x.nome), b = A.length === 1 ? A[0] : null;
+      ${L.map((x, i) => { const A0 = acharNaBase(x.nome), A = A0.map(a => a._parcial ? Object.getPrototypeOf(a) : a), b = A0.length === 1 && !A0[0]._parcial ? A[0] : null;
         const rot = b ? 'Achei na base: confira' + (ja.has(b.id) ? ' (o cliente já tem esse cartão)' : '')
-          : A.length ? `Mais de um na base (${A.map(nomeBase).join(', ')}): escolha qual é` : 'Não achei na base: escolha ou deixe como outro';
+          : A.length ? `${A0[0]._parcial ? 'Parecido na base' : 'Mais de um na base'} (${A.map(nomeBase).join(', ')}): escolha qual é ou cadastre` : 'Não achei na base: cadastre, escolha ou deixe como outro';
         return `<div class="bloco" style="padding:10px 12px;margin-top:8px;${b ? '' : 'border-left:3px solid var(--alerta)'}" data-li="${i}">
         <div style="font-size:13px;color:var(--tinta-2)">${esc(x.linha)}</div>
-        <label class="fl" style="margin-top:6px"><span${b ? '' : ' style="color:var(--alerta)"'}>${esc(rot)}</span><select name="li_base">${ops(b ? b.id : A.length ? '' : 'outro')}</select></label>
-        <div class="duas-col"><label class="fl"><span>Limite (R$)</span><input name="li_lim" type="number" inputmode="decimal" step="any" value="${x.limite ?? ''}" placeholder="pendente"></label><label class="fl"><span>Observação</span><input name="li_obs" value="${esc(x.obs)}" placeholder="opcional"></label></div></div>`; }).join('')}
+        <label class="fl" style="margin-top:6px"><span data-rot${b ? '' : ' style="color:var(--alerta)"'}>${esc(rot)}</span><select name="li_base">${ops(b ? b.id : A.length ? '' : 'outro')}</select></label>
+        ${b ? '' : `<button class="mini" type="button" data-nb style="margin-top:6px">+ Cadastrar na base</button><div data-nbf hidden></div>`}
+        <div class="duas-col"><label class="fl"><span>Limite (R$)</span><input name="li_lim" type="number" inputmode="decimal" step="any" value="${x.limite ?? ''}" placeholder="pendente"></label><label class="fl"><span>Gasto médio por mês (R$)</span><input name="li_gasto" type="number" inputmode="decimal" step="any" value="${x.gasto ?? ''}" placeholder="opcional"></label></div>
+        <label class="fl"><span>Observação</span><input name="li_obs" value="${esc(x.obs)}" placeholder="opcional"></label></div>`; }).join('')}
       <button class="zap grande" type="button" id="cxSalvarLista" style="width:100%;margin-top:10px">Salvar ${L.length} ${L.length === 1 ? 'cartão' : 'cartões'}</button><div class="sub" id="cxMsgLista"></div>`;
+    // cartão que não está na base: cadastra ali mesmo e já liga à linha (e às outras linhas iguais)
+    const today = new Date().toISOString().slice(0, 10);
+    rev.querySelectorAll('[data-li]').forEach(d => {
+      const bt = d.querySelector('[data-nb]'); if (!bt) return;
+      const f = d.querySelector('[data-nbf]'), x = L[+d.dataset.li];
+      bt.onclick = () => {
+        if (!f.hidden) { f.hidden = true; return; }
+        f.innerHTML = `<div class="bloco" style="padding:10px;margin-top:6px">
+          <div class="duas-col">${X.campo('nb_banco', 'Banco *', '', 'text', 'placeholder="Ex.: Sicoob"')}${X.campo('nb_nome', 'Cartão *', x.nome, 'text')}</div>
+          <div class="duas-col">${X.campo('nb_anu', 'Anuidade cheia (R$/ano)', '', 'number', 'placeholder="0 se não tiver"')}${X.campo('nb_isen', 'Gasto por mês que isenta (R$)', '', 'number', 'placeholder="em branco se não houver"')}</div>
+          <div class="duas-col">${X.campo('nb_pts', 'Pontuação', '', 'number', 'placeholder="Ex.: 2,2"')}<label class="fl"><span>Por</span><select name="nb_moeda">${MOEDAS.map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}</select></label></div>
+          <div class="duas-col">${X.campo('nb_prog', 'Programa de pontos', '', 'text', 'placeholder="Ex.: Esfera, Livelo"')}${X.campo('nb_fonte', 'Fonte (site do banco)', '', 'url', 'placeholder="https://..."')}</div>
+          <div class="sub">Entra na Base de cartões (aba Empresa) e passa a valer para todos os clientes. Os detalhes (sala VIP, redução) você completa lá depois.</div>
+          <button class="zap" type="button" data-nbok style="width:100%;margin-top:8px">Cadastrar e usar nesta linha</button></div>`;
+        f.hidden = false;
+        f.querySelector('[data-nbok]').onclick = async (e) => {
+          const q = (k) => f.querySelector(`[name=${k}]`).value.trim(), nq = (k) => q(k) === '' ? null : Number(q(k).replace(',', '.'));
+          const row = { banco: q('nb_banco'), nome: q('nb_nome'), anuidade_anual: nq('nb_anu'), isencao_gasto_mes: nq('nb_isen'), pontos_por: nq('nb_pts'), pontos_moeda: q('nb_moeda'),
+            programa: q('nb_prog') || null, fonte: q('nb_fonte') || null, ativo: true, conferido_em: today, atualizado_em: new Date().toISOString() };
+          if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
+          if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
+          e.target.disabled = true;
+          const r = await sb.from('cartoes_catalogo').insert(row).select().single();
+          if (r.error) { e.target.disabled = false; aviso('Não salvou na base: ' + X.limparTec(r.error.message)); return; }
+          const novo = r.data; BASE.push(novo); BASE.sort((a, c2) => nomeBase(a).localeCompare(nomeBase(c2)));
+          const opt = () => { const o = document.createElement('option'); o.value = novo.id; o.textContent = nomeBase(novo); return o; };
+          rev.querySelectorAll('[data-li]').forEach(d2 => {
+            const s2 = d2.querySelector('[name=li_base]'); s2.insertBefore(opt(), s2.querySelector('option[value=outro]'));
+            const x2 = L[+d2.dataset.li], livre = s2.value === '' || s2.value === 'outro';
+            const ac = acharNaBase(x2.nome), casa = d2 === d || (livre && ac.length === 1 && !ac[0]._parcial && ac[0].id === novo.id);
+            if (!casa) return;
+            s2.value = novo.id; d2.style.borderLeft = '';
+            const rt = d2.querySelector('[data-rot]'); rt.textContent = 'Cadastrado na base agora'; rt.style.color = '';
+            const b2 = d2.querySelector('[data-nb]'); if (b2) b2.remove(); const f2 = d2.querySelector('[data-nbf]'); if (f2) f2.remove();
+          });
+          aviso('Cartão cadastrado na base.');
+        };
+      };
+    });
     rev.querySelector('#cxSalvarLista').onclick = async () => {
       const bt = rev.querySelector('#cxSalvarLista'), msg = rev.querySelector('#cxMsgLista');
-      const linhas = [...rev.querySelectorAll('[data-li]')].map(d => ({ x: L[+d.dataset.li], base: d.querySelector('[name=li_base]').value, lim: d.querySelector('[name=li_lim]').value, obs: d.querySelector('[name=li_obs]').value.trim() }));
+      const linhas = [...rev.querySelectorAll('[data-li]')].map(d => ({ x: L[+d.dataset.li], base: d.querySelector('[name=li_base]').value, lim: d.querySelector('[name=li_lim]').value, gasto: d.querySelector('[name=li_gasto]').value, obs: d.querySelector('[name=li_obs]').value.trim() }));
       if (linhas.some(l => !l.base)) { msg.textContent = 'Escolha o cartão (ou "Outro, fora da base") em todas as linhas.'; return; }
       bt.disabled = true; let feitos = 0; const erros = [];
       for (const [k, l] of linhas.entries()) {
-        const cat = (BASE || []).find(b => b.id === l.base) || null, lim = l.lim === '' ? null : Number(l.lim);
+        const cat = (BASE || []).find(b => b.id === l.base) || null, lim = l.lim === '' ? null : Number(l.lim), gas = l.gasto === '' ? null : Number(l.gasto);
         const row = { catalogo_id: cat ? cat.id : null, banco: cat ? cat.banco : l.x.nome, categoria: cat ? cat.nome : null, limite: lim >= 0 ? lim : null, final_cartao: null,
-          gasto_medio_mes: null, anuidade_paga: null, observacao_interna: l.obs || null };
+          gasto_medio_mes: gas >= 0 ? gas : null, anuidade_paga: null, observacao_interna: l.obs || null };
         Object.assign(row, textosPainel(row, cat, calc(row, cat, cot, refs, X.CART.normProg)));
         const r = await sb.from('cartoes').insert({ ...row, cliente_id: c.id, ordem: C.length + k + 1 });
         if (r.error) erros.push(l.x.nome + ': ' + X.limparTec(r.error.message)); else feitos++;
@@ -267,8 +311,8 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       </div>${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
     + `<details style="margin-top:8px" id="cxForm"${C.length ? '' : ' open'}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary><div id="cxCampos"></div></details>`
     + `<details style="margin-top:8px" id="cxLista"><summary class="sub" style="cursor:pointer">+ Colar lista de cartões</summary>
-        <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome e o limite (ou "pendente"). Ex.: Inter Prime 50.000. O app procura cada um na base para você confirmar.</div>
-        <label class="fl"><span>Lista</span><textarea name="cx_lista" rows="8" placeholder="Banco BV Gold&#9;75.000&#10;Sicoob&#9;pendente"></textarea></label>
+        <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome, o limite (ou "pendente") e, se souber, o gasto médio por mês. Ex.: Inter Prime 50.000 15.000. O app procura cada um na base e puxa a anuidade, já com a isenção pelo gasto.</div>
+        <label class="fl"><span>Lista</span><textarea name="cx_lista" rows="8" placeholder="Banco BV Gold&#9;75.000&#9;20.000&#10;Inter Prime&#9;50.000&#10;Sicoob&#9;pendente"></textarea></label>
         <button class="sec" type="button" id="cxConferir" style="width:100%">Conferir a lista</button><div id="cxRevisao"></div></details>`;
   const ED_C = { id: null };
   const desenharForm = (x) => {
