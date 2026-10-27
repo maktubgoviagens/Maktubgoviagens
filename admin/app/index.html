@@ -21,7 +21,7 @@
 :root{
   --verde:#1a3826;--verde-2:#234832;--dourado:#8a6520;--dourado-claro:#c9a96e;
   --creme:#f9f6f1;--creme-2:#f2ece1;--branco:#fff;
-  --tinta:#2b2b26;--tinta-2:#5c5c55;--tinta-3:#86867c;
+  --tinta:#2b2b26;--tinta-2:#5c5c55;--tinta-3:#6b6b62;
   --linha:rgba(26,56,38,.12);
   --alerta:#a0561f;--ok:#2f6b4a;
   --barra-h:64px;
@@ -32,6 +32,8 @@ html{-webkit-text-size-adjust:100%}
 body{background:var(--creme);color:var(--tinta);font-family:'Jost',-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.5}
 a{color:inherit}
 button,select,textarea,input{font-family:inherit;font-size:15px;color:inherit}
+button:not([class]){-webkit-appearance:none;appearance:none;background:none;border:0;padding:0;color:inherit;cursor:pointer}
+@media (max-width:760px){input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}}
 
 /* topo */
 .topo{position:sticky;top:0;z-index:30;background:var(--verde);color:var(--creme);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px}
@@ -56,7 +58,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .titulo em{color:var(--dourado)}
 .sub{font-size:12.5px;color:var(--tinta-3);margin-top:4px}
 .secao{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:center}
-.secao a,.secao button{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--tinta-2);background:none;border:0;cursor:pointer;font-weight:400}
+.secao a,.secao button{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--tinta-2);background:none;border:0;cursor:pointer;font-weight:400;padding:12px 0 12px 14px;margin:-12px 0}
 
 /* números */
 .numeros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -96,7 +98,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .gsec{background:var(--branco);border:1px solid var(--linha);padding:0 14px;margin-top:10px}.gsec>summary{padding:13px 0;cursor:pointer;font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}.gsec>summary::-webkit-details-marker{display:none}.gsec>summary::after{content:'›';color:var(--tinta-3);transition:transform .15s}.gsec[open]>summary::after{transform:rotate(90deg)}.gsec[open]{padding-bottom:14px}.gsec>summary small{display:block;font-size:12px;color:var(--tinta-3)}.gsec .bloco{border:0;padding:0;margin-top:0}
 .gtr{background:var(--branco);border:1px solid var(--linha);padding:14px 10px 12px;margin-top:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));row-gap:14px}.gtr div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}.gtr i{font-style:normal;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;background:#efe9dc;color:var(--tinta-3)}.gtr i.f{background:var(--dourado);color:#fff}.gtr i.f.pv{background:var(--verde)}.gtr i.a{background:#fff;color:var(--dourado);box-shadow:0 0 0 2px var(--dourado)}.gtr i.a.pv{color:var(--verde);box-shadow:0 0 0 2px var(--verde)}.gtr i.x{background:var(--alerta);color:#fff}.gtr span{font-size:11.5px;line-height:1.2;color:var(--tinta-3)}.gtr span.on{color:var(--tinta);font-weight:500}.gtr small{font-size:10.5px;color:var(--tinta-3);line-height:1.2;min-height:12px}
 .gagora{background:var(--verde);color:var(--creme);padding:16px;margin-top:10px;display:flex;flex-direction:column;gap:8px}.gagora .r{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado-claro);font-weight:600}.gagora .t{font-family:'Cormorant Garamond',serif;font-size:24px;line-height:1.15}.gagora .d{font-size:13px;color:rgba(249,246,241,.85)}.gagora .b{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.gagora .b>*{display:block;text-align:center;text-decoration:none;font:inherit;font-size:13.5px;padding:12px 8px;cursor:pointer}.gagora .b .p{background:var(--dourado);color:#fff;border:0;font-weight:600}.gagora .b .s{background:transparent;color:var(--creme);border:1px solid rgba(201,169,110,.6)}.gagora .b>*:only-child{grid-column:1/-1}
-.glib{display:flex;flex-direction:column;margin-top:2px}.glib>div{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(201,169,110,.3)}.glib>div:first-child{border-top:0;padding-top:4px}.glib i{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid rgba(201,169,110,.7);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;color:var(--dourado-claro)}.glib i.ok{background:var(--dourado);border-color:var(--dourado);color:#fff}.glib .x{flex:1;min-width:0}.glib b{display:block;font-weight:600;font-size:14px;color:var(--creme)}.glib small{display:block;font-size:12.5px;color:rgba(249,246,241,.8);margin-top:2px}.glib .ac{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.glib .ac button,.glib .ac a{font:inherit;font-size:12.5px;padding:8px 10px;cursor:pointer;background:transparent;color:var(--creme);border:1px solid rgba(201,169,110,.6);text-decoration:none}.glib .ac .p{background:var(--dourado);border-color:var(--dourado);color:#fff;font-weight:600}.glib input{width:100%;margin-top:6px;padding:9px 10px;font:inherit;font-size:14px;border:1px solid rgba(201,169,110,.6);background:rgba(255,255,255,.95);color:var(--tinta)}.glib .pular{-webkit-user-select:none;user-select:none;background:none;border:0;color:rgba(249,246,241,.65);font:inherit;font-size:12px;text-decoration:underline;padding:6px 0 0;cursor:pointer;text-align:left}
+.glib{display:flex;flex-direction:column;margin-top:2px}.glib>div{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(201,169,110,.3)}.glib>div:first-child{border-top:0;padding-top:4px}.glib i{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid rgba(201,169,110,.7);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;color:var(--dourado-claro)}.glib i.ok{background:var(--dourado);border-color:var(--dourado);color:#fff}.glib .x{flex:1;min-width:0}.glib b{display:block;font-weight:600;font-size:14px;color:var(--creme)}.glib small{display:block;font-size:12.5px;color:rgba(249,246,241,.8);margin-top:2px}.glib .ac{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.glib .ac button,.glib .ac a{font:inherit;font-size:12.5px;padding:8px 10px;cursor:pointer;background:transparent;color:var(--creme);border:1px solid rgba(201,169,110,.6);text-decoration:none}.glib .ac .p{background:var(--dourado);border-color:var(--dourado);color:#fff;font-weight:600}.glib input{width:100%;margin-top:6px;padding:9px 10px;font:inherit;font-size:14px;border:1px solid rgba(201,169,110,.6);background:rgba(255,255,255,.95);color:var(--tinta)}.pular{display:block;width:100%;margin-top:14px;-webkit-appearance:none;appearance:none;-webkit-user-select:none;user-select:none;background:transparent;border:1px solid rgba(249,246,241,.55);border-radius:0;color:var(--creme);font:inherit;font-size:13px;line-height:1.35;padding:11px 14px;cursor:pointer;text-align:center}
 .gt .dono{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3);margin-left:30px;margin-top:2px}.gt details.rot{margin:6px 0 0 30px}.gt details.rot summary{font-size:12.5px;color:var(--dourado);cursor:pointer}.gt details.rot div{font-size:13px;line-height:1.5;color:var(--tinta-2);white-space:pre-line;margin-top:6px}
 .gjseg{display:flex;border:1px solid var(--linha);background:var(--branco);margin-top:12px}.gjseg button{flex:1;background:none;border:0;padding:10px 4px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}.gjseg button.on{background:var(--verde);color:var(--creme)}
 .gjres{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}.gjres button{background:var(--branco);border:1px solid var(--linha);padding:10px 12px;text-align:left;cursor:pointer;font:inherit}.gjres .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}.gjres .bs{display:flex;gap:3px;margin-top:8px}.gjres .bs i{flex:1;height:8px;background:#efe9dc}.gjres .d{font-size:12.5px;color:var(--tinta-2);margin-top:6px}
@@ -105,7 +107,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .pia h4{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:14px 0 6px}.pia ul{margin:0;padding-left:18px}.pia li{margin:3px 0;font-size:14px}.pia p{margin:4px 0;font-size:14px}.pia .ob{border-top:1px solid var(--linha);padding:6px 0;font-size:14px}.pia .ob b{color:var(--verde);font-weight:600}.pia .acs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pia .acs>*{flex:1;min-width:140px}
 .lint{margin-top:12px}.lint .l{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:500;margin-bottom:2px}.lint .l b{color:var(--alerta);font-weight:600}.lint .chips{flex-wrap:wrap;overflow:visible}.lint .chips button{padding:7px 11px}
 .seg{display:flex;border:1px solid var(--linha);background:var(--branco);margin:14px 0 4px}
-.seg button{flex:1;background:none;border:0;padding:10px 4px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
+.seg button{flex:1;background:none;border:0;padding:var(--seg-pad,10px 4px);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--tinta-2)}
 .seg button.on{background:var(--verde);color:var(--creme)}
 .busca{width:100%;padding:12px 14px;border:1px solid var(--linha);background:var(--branco);font-size:16px;margin-top:14px}
 
@@ -181,7 +183,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .perm input{flex:none;margin-top:3px;width:18px;height:18px;accent-color:var(--verde)}
 .perm b{display:block;font-weight:600;font-size:14px;color:var(--verde)}
 .perm small{display:block;font-size:12px;color:var(--tinta-3)}
-.perm.off{opacity:.55;cursor:default;padding-left:38px;margin-top:6px}
+.perm.off{opacity:1;cursor:default;padding-left:38px;margin-top:6px}
 .pgrupo{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta-3);font-weight:600;margin:10px 0 0}
 .pgrupo:first-child{margin-top:2px}
 .tag.alerta{border-color:rgba(160,86,31,.45);color:var(--alerta)}
@@ -211,7 +213,7 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .prog .s{font-size:12.5px;color:var(--tinta-3)}
 .prog .v{text-align:right;font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde)}
 .prog .venc{grid-column:1/-1;font-size:12px;color:var(--alerta)}
-.voltar{background:none;border:0;color:var(--tinta-2);font-size:13px;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:6px}
+.voltar{background:none;border:0;color:var(--tinta-2);font-size:13px;cursor:pointer;padding:10px 14px 10px 0;margin:-6px 0;min-height:40px;display:flex;align-items:center;gap:6px}
 
 /* agenda */
 .dia{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta-2);font-weight:600;margin:18px 0 6px;display:flex;align-items:center;gap:8px}
@@ -339,7 +341,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .kc[data-kid]{-webkit-touch-callout:none}
 .kc{background:var(--branco);border:1px solid var(--linha);padding:10px;margin-bottom:8px}
 .kc.atr{border-left:3px solid var(--alerta)}
-.kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:0;text-align:left;cursor:pointer;width:100%}
+.kc .n{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--verde);line-height:1.15;background:none;border:0;padding:4px 0;margin:-4px 0;text-align:left;cursor:pointer;width:100%}
 .kzap{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#25d366;color:#fff}
 .kzap svg{width:17px;height:17px;fill:currentColor}
 .kc .i{font-size:12.5px;color:var(--tinta-2);margin-top:3px}
@@ -369,7 +371,9 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .resumo{background:var(--creme-2);border-left:3px solid var(--dourado);padding:10px 14px;margin-top:16px}
 .resumo .lin{border-top-color:rgba(26,56,38,.08)}
 .lin.forte span{color:var(--verde);font-weight:600}
-.mini{background:none;border:1px solid var(--linha);padding:3px 8px;font-size:11px;margin-left:6px;cursor:pointer;color:var(--tinta-2)}
+.mini{background:none;border:1px solid var(--linha);padding:7px 12px;min-height:34px;font-size:12px;margin-left:6px;cursor:pointer;color:var(--tinta-2)}
+/* botões de pagar, desfazer e confirmar nas listas de dinheiro: área de toque de pelo menos 40px */
+button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-height:40px;padding:8px 14px!important;font-size:12px!important}
 .ev .ck{grid-column:2;justify-self:start;margin-top:8px;background:var(--branco);border:1px solid var(--linha);padding:7px 12px;font-size:12px;cursor:pointer;color:var(--tinta-2)}
 .ev .ck.feito{background:var(--verde);border-color:var(--verde);color:var(--creme)}
 /* agenda da operação em calendário (mesmo desenho do calendário do marketing) */
@@ -512,24 +516,56 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=14';
+import * as OPM from '/admin/app/op-milhas.js?v=4';
+import * as MKT from '/admin/app/marketing.js?v=19';
 import * as CART from '/admin/app/carteira.js?v=2';
-import * as CARTOES from '/admin/app/cartoes.js?v=1';
-import * as ACV from '/admin/app/acervo.js?v=5';
-import * as CRM from '/admin/app/crm.js?v=16';
+import * as CARTOES from '/admin/app/cartoes.js?v=4';
+import * as ACV from '/admin/app/acervo.js?v=7';
+import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=2';
-import * as FORN from '/admin/app/fornecedores.js?v=9';
-import * as COT from '/admin/app/cotador.js?v=49';
+import * as FORN from '/admin/app/fornecedores.js?v=11';
+import * as COT from '/admin/app/cotador.js?v=50';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
-import * as VENDA from '/admin/app/venda.js?v=22';
+import * as VENDA from '/admin/app/venda.js?v=23';
 import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=15';
-import * as CX from '/admin/app/caixa.js?v=1';
-import * as DRE from '/admin/app/dre.js?v=6';
+import * as CMP from '/admin/app/compromissos.js?v=16';
+import * as CX from '/admin/app/caixa.js?v=2';
+import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
 const EXIGIR_CODIGO = true;
-const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true } });
+// gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
+const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
+const ehGravacao = (u, m) => m !== 'GET' && m !== 'HEAD' && (!u.includes('/rpc/') || RPC_GRAVA.test(u.split('/rpc/')[1]));
+let GRAVANDO = 0, GRAVA_FUNDO = 0; // GRAVA_FUNDO: rascunho automático de uma parte da tela (não quer dizer que a tela toda foi salva)
+const fetchApp = async (url, o = {}) => {
+  const m = String(o.method || 'GET').toUpperCase(), u = String(url), grava = ehGravacao(u, m);
+  if (grava) GRAVANDO++;
+  try {
+    const r = await fetch(url, o);
+    try { if (r.ok && grava && !GRAVA_FUNDO && u.includes('/rest/v1/')) PREENCHIDO = false; } catch (_) {}
+    return r;
+  } finally { if (grava) GRAVANDO--; }
+};
+/* toque duplo: o segundo toque no mesmo botão (ou o segundo Enter no mesmo formulário), enquanto a gravação
+   do primeiro ainda está indo para o servidor, é ignorado. Evita pagamento, despesa, reunião ou cadastro em dobro. */
+let ULT_TOQUE = null, ULT_ENVIO = null;
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button, input[type=submit]'); if (!b) return;
+  if (b === ULT_TOQUE && GRAVANDO > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  ULT_TOQUE = b;
+}, true);
+/* segurança: link com javascript: (ou página em data:) colado em qualquer campo nunca roda ao ser tocado.
+   Sem isso, um link malicioso num campo de pasta, roteiro ou reunião podia levar a sessão de quem clicasse. */
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]'); if (!a) return;
+  const h = String(a.getAttribute('href') || '').replace(/[\s\u0000-\u001f]/g, '').toLowerCase();
+  if (/^(javascript|vbscript):/.test(h) || (/^data:/.test(h) && !/^data:(image\/|application\/pdf)/.test(h))) { e.preventDefault(); e.stopImmediatePropagation(); aviso('Esse link não é um endereço de internet e foi bloqueado.'); }
+}, true);
+document.addEventListener('submit', (e) => {
+  if (e.target === ULT_ENVIO && GRAVANDO > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  ULT_ENVIO = e.target;
+}, true);
+const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: fetchApp } });
 CART.usar(sb);
 
 /* ================= utilidades ================= */
@@ -679,16 +715,79 @@ $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); loc
    Se houver algo digitado e não salvo, pergunta antes para não perder o preenchimento. */
 $('recarregar').onclick = () => {
   if (SUJO && !confirm('Você tem um preenchimento não salvo nesta tela. Recarregar agora descarta o que não foi salvo. Recarregar mesmo assim?')) return;
-  location.reload();
+  RECARREGANDO = true; location.reload();
 };
-$('sino').onclick = () => ir('avisos');
-$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b) ir(b.dataset.t); };
+/* sino: administradores veem os avisos da empresa; o resto da equipe vê as tarefas que são dela agora */
+function minhasTarefas() {
+  const eu = D.meuId, hj = hojeISO(), L = [];
+  const add = (area, titulo, desc, acao, atrasado) => L.push({ area, titulo, desc, acao, atrasado: !!atrasado });
+  const n2 = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+  if (podeAba('marketing')) MKT.minhasTarefas(eu, pode('mkt_aprovar')).forEach(t => add('Marketing', t.titulo, t.desc, () => ir('marketing', () => MKT.editar(t.id)), t.atrasado));
+  else {
+    (D.gravar || []).forEach(p => add('Marketing', p.titulo, 'Gravar até ' + ddmm(p.gravacao_data || p.data_prevista), () => detalheMkt('g', p.id), (p.gravacao_data || p.data_prevista) < hj));
+    (D.postar || []).forEach(p => add('Marketing', p.titulo, 'Postar ' + ddmm(p.data_prevista), () => detalheMkt('p', p.id), p.data_prevista < hj));
+  }
+  if (podeAba('leads') && pode('leads')) { const n = leadsSemDono().length; if (n) add('Comercial', n2(n, 'lead do site sem ninguém', 'leads do site sem ninguém'), 'Assuma e responda pelo WhatsApp', () => ir('leads'), true); }
+  if (!soMarketing()) {
+    if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (r.proximo_passo_data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + (r.proximo_passo ? ': ' + r.proximo_passo : ''), () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
+    const av = avaliacoesParaPedir(true).length; if (av) add('Comercial', n2(av, 'avaliação de atendimento para pedir', 'avaliações de atendimento para pedir'), 'Reuniões realizadas nos últimos 14 dias', () => ir('agenda'));
+    if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 48 horas', () => ir('agenda'), true); }
+    if (pode('gestao')) { const n = tarefasParaHoje().length; if (n) add('Gestão de Milhas', n2(n, 'tarefa da Gestão para hoje', 'tarefas da Gestão para hoje'), 'Implantação e acompanhamento dos clientes', () => ir('gestao')); }
+  }
+  return L;
+}
+function atualizarSino() {
+  const n = ADMIN ? avisosNovos().length : minhasTarefas().length;
+  $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n;
+}
+function abrirSino() {
+  const L = minhasTarefas(), areas = [...new Set(L.map(t => t.area))];
+  document.querySelector('#folhaMais .folha-tit').textContent = 'Para você';
+  $('folhaItens').innerHTML = L.length ? areas.map(a => `<div class="res-grupo">${esc(a)}</div>` + L.map((t, i) => [t, i]).filter(([t]) => t.area === a).sort((x, y) => y[0].atrasado - x[0].atrasado)
+      .map(([t, i]) => `<button class="folha-item" data-tarefa="${i}"><span>${esc(t.titulo)}<small${t.atrasado ? ' style="color:var(--alerta)"' : ''}>${esc(t.desc)}</small></span><span class="seta">›</span></button>`).join('')).join('')
+    : '<div class="vazio">Nada pendente com você agora.</div>';
+  $('folhaItens').querySelectorAll('[data-tarefa]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.tarefa].acao(); scrollTo(0, 0); });
+  // ligar ou desligar as notificações deste celular (antes só administradores tinham esse botão, na tela Avisos)
+  $('folhaItens').insertAdjacentHTML('beforeend', '<div class="res-grupo">Notificações neste celular</div><div id="sinoPush" class="sub" style="margin:4px 0 6px">Conferindo...</div>');
+  pushNoSino();
+  $('folhaBusca').hidden = true; $('folhaMais').hidden = false;
+}
+async function pushNoSino() {
+  const el = $('sinoPush'); if (!el) return;
+  let st = 'sem'; try { st = await estadoPush(); } catch (_) {}
+  const bt = (id, cls, txt) => `<button type="button" class="${cls}" id="${id}" style="width:100%;margin-top:8px">${txt}</button>`;
+  el.innerHTML = st === 'ativo' ? 'Ligadas. As tarefas que são suas chegam aqui, mesmo com o app fechado.' + bt('spOff', 'sec', 'Desligar neste celular')
+    : st === 'inativo' ? 'Desligadas. Ligue para receber as tarefas que são suas, mesmo com o app fechado.' + bt('spOn', 'zap', 'Ligar neste celular')
+    : st === 'negado' ? 'Bloqueadas nas configurações do celular. Para ligar, libere as notificações deste app nas configurações do celular (ou do navegador) e volte aqui.'
+    : ehIOS() && !instalado() ? 'No iPhone, as notificações só funcionam pelo ícone do app: toque em Compartilhar, depois em Adicionar à Tela de Início, e abra o app por ele.'
+    : 'Este navegador não recebe notificações. Abra o app pelo Chrome (Android) ou pelo ícone na tela de início (iPhone).';
+  if ($('spOn')) $('spOn').onclick = async () => { $('spOn').disabled = true; if (await ativarPush()) { try { localStorage.removeItem('mk_push_adiado'); } catch (_) {} if ($('faixaPush')) $('faixaPush').hidden = true; } pushNoSino(); };
+  if ($('spOff')) $('spOff').onclick = async () => { $('spOff').disabled = true; await desativarPush(); pushNoSino(); };
+}
+$('sino').onclick = () => ADMIN ? ir('avisos') : abrirSino();
+$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b && sairOk()) ir(b.dataset.t); };
 $('maisTopo').onclick = () => ir('mais');
-$('clientesTopo').onclick = () => { CRM.abrir(null); ir('crm'); };
+$('clientesTopo').onclick = () => { if (sairOk()) { CRM.abrir(null); ir('crm'); } };
 /* ao voltar para o app: atualiza os dados, mas não redesenha a tela se a pessoa estava digitando */
 let SUJO = false, ULT_CARGA = 0;
-$('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
-$('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) SUJO = true; });
+$('pagina').addEventListener('input', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) { SUJO = true; marcarPreenchido(e); } });
+$('pagina').addEventListener('change', (e) => { if (e.target.matches('input:not([type=search]), textarea, select')) { SUJO = true; marcarPreenchido(e); } });
+/* formulário preenchido e ainda não salvo: antes de sair da tela (menu, voltar do app ou do celular, fechar), o app pergunta.
+   Filtros fora de formulário não contam. O cotador fica de fora: lá a cotação costuma ser enviada sem salvar o rascunho. */
+let PREENCHIDO = false, URL_PREENCHIDO = '', FORM_PREENCHIDO = null, RECARREGANDO = false;
+function marcarPreenchido(e) {
+  if (ABA === 'cotador' || !e.target.closest('form') || e.target.closest('[data-livre]')) return;
+  PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = e.target.closest('form');
+}
+// o formulário já saiu da tela (o módulo redesenhou por conta própria): não há mais nada para perder
+const pendente = () => { if (PREENCHIDO && FORM_PREENCHIDO && !FORM_PREENCHIDO.isConnected) PREENCHIDO = false; return PREENCHIDO; };
+function sairOk() {
+  if (!pendente()) return true;
+  if (!confirm('Você preencheu algo nesta tela e ainda não salvou.\n\nOK: sair sem salvar (o que foi digitado se perde).\nCancelar: continuar aqui para salvar.')) return false;
+  PREENCHIDO = false; SUJO = false; window.dispatchEvent(new Event('app:descartar'));
+  return true;
+}
+window.addEventListener('beforeunload', (e) => { if (pendente() && !RECARREGANDO) { e.preventDefault(); e.returnValue = ''; } });
 // versão publicada: nunca recarrega sozinho. Quando sai versão nova, aparece um aviso no topo
 // e a tela só atualiza quando a pessoa toca em "Atualizar".
 let VERSAO_BASE = null;
@@ -716,7 +815,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
 });
-window.addEventListener('popstate', () => { ANTERIOR = null; lerHash(); marcarNav(); tela(); });
+window.addEventListener('popstate', () => {
+  // voltar do celular (ou do app) com formulário não salvo: se a pessoa cancelar, fica na mesma tela com tudo preenchido
+  if (pendente() && !sairOk()) { history.pushState(null, '', URL_PREENCHIDO || location.href); return; }
+  // folha aberta (sino, botão +, busca, detalhe do marketing) fecha junto ao trocar de tela pelo voltar
+  document.querySelectorAll('.folha').forEach(f => { f.hidden = true; });
+  ANTERIOR = null; lerHash(); marcarNav(); tela();
+});
 $('pagina').addEventListener('click', async (e) => {
   const b = e.target.closest('.ck'); if (!b) return;
   e.preventDefault();
@@ -779,7 +884,7 @@ function detalheMkt(tipo, id) {
     <div class="nome" style="font-size:17px;margin-bottom:6px">${esc(p.titulo)}</div>
     <span class="tag">${esc(conta)}</span> <span class="tag">${esc(fmt)}</span>${prazo ? ` <span class="tag ouro">${tipo === 'g' ? 'gravar até' : 'postar'} ${ddmm(prazo)}${tipo === 'p' && p.hora ? ' às ' + esc(String(p.hora).slice(0, 5)) : ''}</span>` : ''}
     ${texto ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.5;margin-top:12px">${esc(texto)}</div>` : ''}
-    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(p.link_arquivo)}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : `<button class="zap" data-postei="${esc(p.id)}">Já postei</button>`}</div>
+    <div class="acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${p.link_arquivo ? `<a class="sec" href="${esc(MKT.urlOk(p.link_arquivo))}" target="_blank" rel="noopener">${tipo === 'g' ? 'Ver roteiro ou arte' : 'Abrir arquivos'}</a>` : ''}${tipo === 'g' ? `<button class="zap" data-gravado="${esc(p.id)}">Já gravei</button>` : `<button class="zap" data-postei="${esc(p.id)}">Já postei</button>`}</div>
     <button class="sec" data-fmk style="width:100%;margin-top:12px">Fechar</button></div>`;
   f.hidden = false;
 }
@@ -832,7 +937,7 @@ const PERMS = [
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
-  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0]]],
+  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0], ['mkt_delegar', 'Distribuir tarefas do marketing', 'Escolhe quem faz o roteiro ou a arte, quem grava, quem edita e quem posta cada post. Não aprova posts', 0]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
@@ -845,10 +950,10 @@ const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'in
 const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
-const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'checkin', 'leads', 'talentos'];
+const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
 const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && pode(k));
 const MKT_ABAS = () => ['marketing', ...(pode('leads') || pode('talentos') ? ['leads'] : [])];
-function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar }; }
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), DELEGA: ADMIN || pode('mkt_aprovar') || pode('mkt_delegar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, sino: () => { try { atualizarSino(); } catch (_) {} }, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -900,7 +1005,7 @@ function montarNav() {
   const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
   $('nav').hidden = !itens.length; $('buscaTopo').hidden = soMarketing();
-  $('sino').hidden = !ADMIN;
+  $('sino').hidden = false; $('sino').setAttribute('aria-label', ADMIN ? 'Avisos' : 'Suas tarefas');
   $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
@@ -909,14 +1014,23 @@ function montarNav() {
 // voltar de uma tela interna: se veio da tela de destino, volta no histórico (sem empilhar telas); senão, vai para ela
 let ANTERIOR = null;
 function voltarA(dest) { if (ANTERIOR === dest) { ANTERIOR = null; history.back(); } else ir(dest); }
+// voltar de uma tela interna aberta direto (por notificação ou link): sem tela anterior no app, vai para a lista da área
+function voltarSeguro(dest) {
+  if (!sairOk()) return;
+  const antes = location.href; history.back();
+  setTimeout(() => { if (location.href === antes) ir(dest); }, 350);
+}
 function ir(aba, extra) {
+  if (!sairOk()) return;
   const antes = ABA;
   if (antes === 'leads' && aba !== 'leads') TAL_DESTAQUE = null;
   if (soMarketing() && !MKT_ABAS().includes(aba)) aba = 'marketing';
   if (aba === 'operacao') aba = podeAba(OP_ULT) ? OP_ULT : podeAba('emissoes') ? 'emissoes' : 'agenda';
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
-  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_MES = null;
+  // subtelas de Caixa, Operação de milhas, Base de cartões e Despesas fixas voltam ao começo ao entrar pelo menu
+  if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); FX_ED = null; }
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
   if (extra) extra();
   // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
   const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : '';
@@ -980,7 +1094,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Equipe', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1113,7 +1227,7 @@ async function fecharMesesAuto() {
 
 function ctxCTR() { return { D, sb, $, esc, aviso, campo, zapLink, ADMIN, programas: (id) => progsDe(id).map(p => p.programa).filter(Boolean) }; }
 function ctxCRM() {
-  return { D, $, esc, sb, aviso, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
+  return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true),
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
@@ -1176,17 +1290,17 @@ function htmlEvento(e) {
 
 /* ================= telas ================= */
 function tela() {
-  SUJO = false;
+  SUJO = false; PREENCHIDO = false;
+  try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
   if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); }
-  if ($('bGestao')) { const n = reunioesAConfirmar().length + pedidosSite().length + indicacoesNovas().length + retornosHoje().filter(ehGestao).length; $('bGestao').textContent = n; $('bGestao').hidden = !n; }
+  if ($('bGestao')) { const n = totalGestao(); $('bGestao').textContent = n; $('bGestao').hidden = !n; }
   const ag = checkinsTotal(); if ($('bAgenda')) { $('bAgenda').textContent = ag; $('bAgenda').hidden = !ag; }
-  if (ADMIN) { const n = avisosNovos().length; $('bSino').textContent = n > 99 ? '99+' : n; $('bSino').hidden = !n; }
   const P = $('pagina');
   mostrarFab();
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
-  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)) });
+  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, sairOk, limparTec, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)), voltarSeguro });
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
@@ -1202,7 +1316,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()) });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
-  if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, aba: () => ABA });
+  if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
@@ -1234,7 +1348,7 @@ function telaInicio(P) {
     ['Vendas fechadas aguardando emissão ou planilha', posVenda().length, () => ir('reunioes')],
     ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
-    ['Gestão de Milhas', pendGestao().reduce((t, x) => t + x[1], 0), () => ir('gestao')],
+    ['Gestão de Milhas', totalGestao(), () => ir('gestao')],
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => { const el = $('anivHoje'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }],
@@ -1373,7 +1487,7 @@ function calcular(v) {
 const semVend = () => D.emissoes.filter(e => !e.vendedor_id);
 let EM_PEND = 'todas';
 function telaEmissoes(P) {
-  if (EM_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, voltar: () => { EM_ED = null; history.back(); } });
+  if (EM_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, voltar: () => voltarSeguro('emissoes') });
   if (EM_ED) return telaFormEmissao(P);
   const VER = VER_TODAS(), LST = VER_LISTA(), minha = (e) => e.vendedor_id === D.meuId;
   let L = doMes(EM_MES);
@@ -1513,7 +1627,7 @@ function telaFormEmissao(P) {
     ${B2B.blocoCancelar(e, { D, ADMIN, brl2, fechado: travado })}
     ${(() => { const at = D.reunioes.find(r => (r.itens || []).some(x => x.planilha_id === e.id)); if (!at) return ''; const x = at.itens.find(y => y.planilha_id === e.id);
       const l = (a, b) => b ? `<div class="lin"><span>${a}</span><span style="white-space:normal;text-align:right">${b}</span></div>` : '';
-      return `<section class="bloco" style="margin-top:12px"><h2>Detalhes da venda <button type="button" data-r="${at.id}" style="font-size:12px;color:var(--verde);text-decoration:underline">${VENDA.numCard(at) || 'abrir card'} ›</button></h2>
+      return `<section class="bloco" style="margin-top:12px"><h2>Detalhes da venda <button type="button" data-r="${at.id}" style="font-size:12px;color:var(--verde);text-decoration:underline;padding:8px 0;margin:-8px 0">${VENDA.numCard(at) || 'abrir card'} ›</button></h2>
         ${l('Trecho', x.tipo_trecho === 'multi' ? 'Multitrecho' + (x.trechos ? ': ' + esc(String(x.trechos).replace(/\n/g, ' · ')) : '') : x.tipo_trecho === 'ida' ? 'Só ida' : x.tipo_trecho === 'iv' ? 'Ida e volta' : '')}
         ${l('Pago em', x.pago_em === 'pagante' ? 'Pagante' : x.pago_em === 'milhas' ? 'Milhas' : '')}
         ${l('Companhia', x.cia_voo && x.cia_emissora && x.cia_voo !== x.cia_emissora ? `Emitido na ${esc(x.cia_emissora)}, voa de <b>${esc(x.cia_voo)}</b> (check-in pela ${esc(x.cia_voo)})` : esc(x.cia_emissora || ''))}
@@ -1657,7 +1771,7 @@ function telaFormEmissao(P) {
       : `<div class="lin"><span>Lucro da venda</span><span>${brl2(r.lucro_bruto)}</span></div><div class="lin forte"><span>Sua comissão estimada</span><span>${brl2(r.comissao)}</span></div>`;
   };
   f.oninput = atualizar; atualizar();
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => voltarSeguro('emissoes');
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : undefined;
@@ -1691,13 +1805,13 @@ function telaFormEmissao(P) {
     if (data.pessoa_id) virarCliente(data.pessoa_id);
     EM_MES = String(data.data_negociacao).slice(0, 7);
     carregarAgendaEm().then(() => {});
-    history.back();
+    voltarSeguro('emissoes');
   };
   if ($('excluir')) $('excluir').onclick = async () => {
     if (CONFIRMA !== e.id) { CONFIRMA = e.id; $('excluir').textContent = 'Toque de novo para confirmar a exclusão'; return; }
     const { error } = await sb.from('emissoes').delete().eq('id', e.id);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
-    D.emissoes = D.emissoes.filter(x => x.id !== e.id); CONFIRMA = null; aviso('Emissão excluída.'); history.back();
+    D.emissoes = D.emissoes.filter(x => x.id !== e.id); CONFIRMA = null; aviso('Emissão excluída.'); voltarSeguro('emissoes');
   };
 }
 
@@ -1910,8 +2024,10 @@ async function telaMetas(P) {
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div><div class="vazio">Carregando...</div>`;
   $('voltar').onclick = () => voltarA('empresa');
-  const { data: m, error } = await sb.rpc('metas_progresso', { p_mes: MT_MES + '-01' });
-  if (ABA !== 'metas') return;
+  const mesPedido = MT_MES;
+  const { data: m, error } = await sb.rpc('metas_progresso', { p_mes: mesPedido + '-01' });
+  // tocou rápido nas setas: a resposta de um mês anterior chegou depois e é descartada
+  if (ABA !== 'metas' || MT_MES !== mesPedido) return;
   if (error) { P.querySelector('.vazio').textContent = tec('Metas ainda não ativadas no Supabase. Rode o 9-funil-e-metas.sql.'); return; }
   const e = m.empresa || {};
   const v = (x) => x === null || x === undefined ? '' : x;
@@ -1952,9 +2068,10 @@ async function telaMetas(P) {
     $('salvarMeta').disabled = true; $('msgMeta').textContent = 'Salvando...';
     const chamadas = [sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: null, p_lucro1: n(f.elements.lucro1.value), p_lucro2: n(f.elements.lucro2.value), p_lucro3: n(f.elements.lucro3.value), p_lucro4: n(f.elements.lucro4.value), p_vendas: n(f.elements.vendas.value), p_qtd: n(f.elements.qtd.value) })];
     f.querySelectorAll('[data-u]').forEach(d => chamadas.push(sb.rpc('metas_salvar', { p_mes: MT_MES + '-01', p_user: d.dataset.u, p_lucro1: n(d.querySelector('[name=pl]').value), p_lucro2: null, p_vendas: n(d.querySelector('[name=pv]').value), p_qtd: n(d.querySelector('[name=pq]').value) })));
-    const r = await Promise.all(chamadas); const erro = r.find(x => x.error);
+    const r = await Promise.all(chamadas), erros = r.filter(x => x.error);
     $('salvarMeta').disabled = false;
-    if (erro) { $('msgMeta').textContent = limparTec('Não salvou: ' + erro.error.message); return; }
+    // diz o que salvou e o que não (as metas são gravadas em paralelo: uma falha não desfaz as outras)
+    if (erros.length) { $('msgMeta').textContent = limparTec(`${erros.length === r.length ? 'Não salvou' : `Salvou ${r.length - erros.length} de ${r.length} metas; as outras não`}: ` + erros[0].error.message); return; }
     if (MT_MES === mesKey(new Date())) { const mp = await sb.rpc('metas_progresso', { p_mes: MT_MES + '-01' }); if (!mp.error) D.metas = mp.data; }
     aviso('Metas salvas.'); telaMetas(P);
   };
@@ -2278,7 +2395,7 @@ function ligarPropostaIA(P, r) {
 }
 const METODO_INICIAL = `Quem atendemos: pessoas com gasto médio acima de R$ 20 mil por mês no cartão (somando cartões e Pix), que viajam e querem viajar melhor gastando menos.
 O que vendemos: a Gestão de Milhas Concierge da Maktub Go, um clube de concierge de viagens por 12 meses, com a gestão de milhas como benefício central. Implantação no início e acompanhamento mensal.
-O que entregamos: estudo dos cartões e dos programas, cofre de senhas por cliente, painel do cliente com saldos e economia gerada, carta mensal, reunião mensal e emissões com as milhas do cliente.
+O que entregamos: estudo dos cartões e dos programas, organização dos programas de fidelidade de cada cliente (a Maktub gerencia), painel do cliente com saldos e economia gerada, carta mensal, reunião mensal e emissões com as milhas do cliente.
 Tom: consultivo, próximo, sem pressa artificial. Mostrar o dinheiro que hoje o cliente deixa na mesa e o que a Maktub faz por ele mês a mês.
 Estrutura da proposta: 1) o que vimos no diagnóstico, nas palavras do cliente; 2) o plano dos 12 meses; 3) o que muda na vida dele; 4) investimento; 5) próximo passo simples.
 (Edite este texto: é ele que a IA segue em toda proposta.)`;
@@ -2673,7 +2790,7 @@ function telaFormReuniao(P) {
         <div class="sub">No dia do retorno, você recebe um aviso.</div>
       </div>
       ${G ? '</div>' : ''}
-      ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:13px;padding:0;margin-top:10px">+ registrar uma reunião</button>' : ''}
+      ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
       ${G ? '<details class="gsec" style="order:-2"><summary><span>Reuniões<small>Diagnóstico e outras reuniões, na agenda e no TickTick</small></span></summary>' : ''}
       <div id="blReun"><div class="grupo">Reuniões</div>
       ${D.agenda === null ? '<div class="sub">As reuniões são ativadas pelo 11-agenda-reunioes.sql.</div>' : `
@@ -2752,16 +2869,28 @@ function telaFormReuniao(P) {
     // rascunho: serviços, passageiros, anexos e pagamento ficam salvos no card enquanto se preenche (sem precisar tocar em Salvar)
     if (!nova) {
       let tm = null;
-      const gravar = async () => { const IT2 = f._itens ? f._itens() : null; if (!IT2 || !f._fech) return; const { data, error } = await sb.from('atendimentos').update({ itens: IT2, fech: f._fech() }).eq('id', base.id).select().single(); if (error) return; const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = data; const el = $('rascInfo'); if (el) el.textContent = 'Rascunho salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+      // só grava quando algo mudou de verdade (abrir o card de outra pessoa para consultar não regrava nada);
+      // se a gravação falhar, avisa na tela em vez de ficar calado
+      const snap = () => { try { return JSON.stringify({ i: f._itens ? f._itens() : null, f: f._fech ? f._fech() : null }); } catch (_) { return null; } };
+      f._ultRasc = null;
+      const gravar = async () => { const IT2 = f._itens ? f._itens() : null; if (!IT2 || !f._fech) return; const agora = snap(); if (f._ultRasc !== null && agora === f._ultRasc) return; GRAVA_FUNDO++; const { data, error } = await Promise.resolve(sb.from('atendimentos').update({ itens: IT2, fech: f._fech() }).eq('id', base.id).select().single()).finally(() => { GRAVA_FUNDO--; }); if (error) { if ($('msgRe')) $('msgRe').textContent = 'O rascunho dos serviços não salvou (' + limparTec(error.message) + '). Toque em Salvar antes de sair.'; return; } f._ultRasc = agora; const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = data; const el = $('rascInfo'); if (el) el.textContent = 'Rascunho salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
       XV.rascunho = (ja) => { clearTimeout(tm); tm = setTimeout(gravar, ja ? 0 : 1500); };
       ['input', 'change', 'click'].forEach(ev => f.addEventListener(ev, () => XV.rascunho()));
+      // retrato do card assim que termina de desenhar (com os padrões já preenchidos): é a base para saber se mudou
+      setTimeout(() => { f._ultRasc = snap(); }, 0);
     }
     const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); });
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
       const k = IT.findIndex(x => x.produto === b.dataset.p);
-      if (k >= 0) { if (VENDA.enviado(IT[k])) { aviso('Esse serviço já foi para a planilha.'); return; } IT.splice(k, 1); } else IT.push({ produto: b.dataset.p, custo: null, venda: null });
+      if (k >= 0) {
+        if (VENDA.enviado(IT[k])) { aviso('Esse serviço já foi para a planilha.'); return; }
+        // serviço com algo preenchido: pergunta antes de apagar (um toque sem querer apagava custo, localizador e passageiros)
+        const temDado = Object.entries(IT[k]).some(([c, v]) => c !== 'produto' && v !== null && v !== undefined && v !== '' && v !== false && !(Array.isArray(v) && !v.length));
+        if (temDado && !confirm(`Tirar ${b.dataset.p} deste card?\n\nO que foi preenchido nesse serviço (valores, localizador, passageiros, print) será apagado.`)) return;
+        IT.splice(k, 1);
+      } else IT.push({ produto: b.dataset.p, custo: null, venda: null });
       marcar(); EDIT.desenha(); if (f._reunVis) f._reunVis(); if (f._ratear) f._ratear();
     });
     marcar();
@@ -2851,7 +2980,7 @@ function telaFormReuniao(P) {
     $('frasesPerda').onclick = (ev) => { const b = ev.target.closest('[data-frase]'); if (!b) return; f.elements.motivo_frase.value = f.elements.motivo_frase.value === b.dataset.frase ? '' : b.dataset.frase; desenhaFrases(); };
     f.elements.motivo_perda.addEventListener('change', () => { f.elements.motivo_frase.value = ''; desenhaFrases(); }); desenhaFrases();
   }
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => voltarSeguro(GE_FUNIL ? 'gestao' : 'reunioes');
   if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
     const IT = f._itens ? f._itens() : [], Fh = f._fech();
     const pend = VENDA.pendenciasFechamento({ itens: IT, fech: Fh });
@@ -2865,7 +2994,9 @@ function telaFormReuniao(P) {
     $('enviarPlan').disabled = false; $('enviarPlan').textContent = 'Emitido e pago: enviar para a planilha';
     if (!r1.ok) { aviso('Não enviou: ' + r1.erro + (/fila_planilha/.test(r1.erro) ? ' (rode o SQL do processo de cotação)' : '')); return; }
     const tot = IT.reduce((a, x) => a + (+x.venda || 0), 0);
-    const up = await sb.from('atendimentos').update({ itens: IT, fech: Fh, resultado: 'Fechou', etapa: 'Fechou', valor_fechado: base.valor_fechado || tot || null }).eq('id', base.id).select().single();
+    // valor fechado: o que está digitado no campo (antes usava o valor antigo do banco)
+    const vfCampo = f.elements.valor_fechado && f.elements.valor_fechado.value.trim() ? Number(f.elements.valor_fechado.value.trim().replace(',', '.')) : null;
+    const up = await sb.from('atendimentos').update({ itens: IT, fech: Fh, resultado: 'Fechou', etapa: 'Fechou', valor_fechado: vfCampo || base.valor_fechado || tot || null }).eq('id', base.id).select().single();
     if (up.error) {
       const novos = IT.filter((x, k) => x.planilha_id && x.planilha_id !== antes[k]).map(x => x.planilha_id);
       await sb.from('fila_planilha').delete().in('id', novos);
@@ -2873,11 +3004,18 @@ function telaFormReuniao(P) {
       aviso('Não enviou: ' + up.error.message); return;
     }
     const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = up.data;
-    aviso(`${r1.n} ${r1.n === 1 ? 'serviço vai' : 'serviços vão'} para a planilha em até 5 minutos.`); telaFormReuniao(P);
+    aviso(`${r1.n} ${r1.n === 1 ? 'serviço vai' : 'serviços vão'} para a planilha em até 5 minutos.`);
+    // o card é redesenhado com o que foi enviado; anotações e próximos passos digitados e ainda não salvos voltam para os campos
+    const fora = (el) => !el.name || ['etapa', 'resultado', 'valor_fechado', 'pessoa_id'].includes(el.name) || el.closest('#reItens, #reFech, #reProd') || ['checkbox', 'radio', 'file', 'hidden'].includes(el.type);
+    const digitado = [...f.elements].filter(el => !fora(el) && el.value).map(el => [el.name, el.value]);
+    telaFormReuniao(P);
+    const f2 = $('fRe'); if (f2) { let mudou = false; digitado.forEach(([n, v]) => { const el = f2.elements[n]; if (el && !(el instanceof RadioNodeList) && !fora(el) && el.value !== v) { el.value = v; mudou = true; } }); if (mudou) { PREENCHIDO = true; SUJO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f2; if ($('msgRe')) $('msgRe').textContent = 'Os serviços foram enviados. Você ainda tem anotações não salvas neste card: toque em Salvar.'; } }
   };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
+    // o que salvou só em parte (ficha, agenda, reunião): junta tudo e mostra no fim, num aviso que não some sozinho
+    const falhas = [];
     const n2 = (x) => x === '' ? null : Number(x.replace(',', '.'));
     if (!g('cliente')) { $('msgRe').textContent = 'Informe o cliente.'; return; }
     const soIda = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so';
@@ -2904,6 +3042,7 @@ function telaFormReuniao(P) {
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     if (ADMIN) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
+    if (nova && r.solicitacao_id) row.solicitacao_id = r.solicitacao_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     if (G) {
       const q = { gasto: g('q_gasto'), cartoes: g('q_cartoes'), programas: g('q_programas'), viagens: g('q_viagens'), objetivo: g('q_objetivo'), decisor: g('q_decisor'), granola: g('q_granola') };
@@ -2911,7 +3050,7 @@ function telaFormReuniao(P) {
       const etN = g('etapa'), mudou = nova || etN !== etapaDe(base), iG = ETAPAS_G.indexOf(etN);
       if (mudou && (iG >= 2 || etN === 'Fechou')) {
         const falta = (q.granola ? [['gasto', 'gasto mensal']] : [['gasto', 'gasto mensal'], ['cartoes', 'bancos e cartões'], ['objetivo', 'objetivo'], ['decisor', 'quem decide']]).filter(([k]) => !q[k]).map(x => x[1]);
-        if (falta.length) { $('msgRe').textContent = 'Antes de passar para o closer, o SDR precisa preencher: ' + falta.join(', ') + (q.granola ? '.' : ' (ou colar o resumo do Granola).'); const d = f.querySelector('details.obs'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
+        if (falta.length) { $('msgRe').textContent = 'Antes de passar para o closer, o SDR precisa preencher: ' + falta.join(', ') + (q.granola ? '.' : ' (ou colar o resumo do Granola).'); const d = f.querySelector('details.gsec-q'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
       }
       if (etN === 'Diagnóstico agendado' && mudou) {
         if (!g('mg_diag')) { $('msgRe').textContent = 'Informe a data e a hora do diagnóstico.'; return; }
@@ -2938,7 +3077,7 @@ function telaFormReuniao(P) {
       // cliente novo: cria a ficha no CRM antes de salvar o atendimento
       const ct = g('contato'), ehMail = /@/.test(ct);
       const pn = await sb.from('pessoas').insert({ nome: g('cliente').replace(/\s+/g, ' '), celular: !ehMail && ct ? ct : null, email: ehMail ? ct : (g('cn_email') || null), nascimento: g('cn_nasc') || null, papeis: [], interesse: [G ? 'gestao' : 'viagens'], origem: g('origem') || null }).select().single();
-      if (pn.error) aviso('O atendimento será salvo, mas a ficha do cliente não foi criada: ' + pn.error.message);
+      if (pn.error) falhas.push('O atendimento será salvo, mas a ficha do cliente não foi criada: ' + pn.error.message);
       else { (D.pessoas = D.pessoas || []).push(pn.data); row.pessoa_id = pn.data.id; f.elements.pessoa_id.value = pn.data.id; }
     }
     if (nova && G && row.pessoa_id) {
@@ -2958,7 +3097,7 @@ function telaFormReuniao(P) {
           : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Reunião de proposta da Gestão', tipo: 'Comercial · Gestão de Milhas', data: new Date(g('mg_prop')).toISOString(), status: 'Agendada', resumo: g('mg_pauta') ? 'Pauta: ' + g('mg_pauta') : null, participantes: part }).select().single())
         : (ap ? sb.from('agenda_reunioes').update({ status: 'Realizada', resumo: g('mg_resprop') }).eq('id', ap.id).select().single()
           : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Reunião de proposta da Gestão', tipo: 'Comercial · Gestão de Milhas', data: g('mg_em') ? new Date(g('mg_em')).toISOString() : new Date().toISOString(), status: 'Realizada', resumo: g('mg_resprop'), participantes: part }).select().single());
-      const a3 = await q3; if (a3.error) aviso('O card foi salvo, mas a reunião de proposta não entrou na agenda: ' + a3.error.message); else if (ap) Object.assign(ap, a3.data); else D.agenda.unshift(a3.data);
+      const a3 = await q3; if (a3.error) falhas.push('O card foi salvo, mas a reunião de proposta não entrou na agenda: ' + a3.error.message); else if (ap) Object.assign(ap, a3.data); else D.agenda.unshift(a3.data);
     }
     // Gestão: diagnóstico agendado entra na agenda (e no TickTick); diagnóstico feito marca a reunião como realizada
     if (G && D.agenda && (g('mg_diag') || data.etapa === 'Diagnóstico feito')) {
@@ -2967,14 +3106,17 @@ function telaFormReuniao(P) {
         const quando = new Date(g('mg_diag')).toISOString();
         const q2 = ag ? sb.from('agenda_reunioes').update({ data: quando, participantes: part, status: 'Agendada' }).eq('id', ag.id).select().single()
           : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Diagnóstico da Gestão de Milhas', tipo: 'Comercial · Gestão de Milhas', data: quando, status: 'Agendada', resumo: null, participantes: part }).select().single();
-        const a2 = await q2; if (a2.error) aviso('O card foi salvo, mas o diagnóstico não entrou na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
+        const a2 = await q2; if (a2.error) falhas.push('O card foi salvo, mas o diagnóstico não entrou na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
       } else if (data.etapa === 'Diagnóstico feito') {
         const quando = g('mg_em') ? new Date(g('mg_em')).toISOString() : new Date().toISOString(), resumo = g('mg_resumo') || null;
         const q2 = ag ? sb.from('agenda_reunioes').update({ status: 'Realizada', resumo: resumo || ag.resumo || null }).eq('id', ag.id).select().single()
           : sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: 'Diagnóstico da Gestão de Milhas', tipo: 'Comercial · Gestão de Milhas', data: quando, status: 'Realizada', resumo, participantes: part }).select().single();
-        const a2 = await q2; if (a2.error) aviso('O card foi salvo, mas o diagnóstico não foi registrado na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
+        const a2 = await q2; if (a2.error) falhas.push('O card foi salvo, mas o diagnóstico não foi registrado na agenda: ' + a2.error.message); else if (ag) Object.assign(ag, a2.data); else D.agenda.unshift(a2.data);
       }
     }
+    // card criado a partir de um pedido de convite ou de uma indicação: agora sim o pedido sai da fila
+    if (nova && r.solicitacao_id) { const sl = (D.sols || []).find(x => String(x.id) === String(r.solicitacao_id)); if (sl && sl.status === 'nova') { const u = await sb.from('solicitacoes_acesso').update({ status: 'em_analise' }).eq('id', sl.id); if (!u.error) sl.status = 'em_analise'; } }
+    if (nova && r._convite) { const ci = (D.indic || []).find(x => String(x.id) === r._convite); if (ci) { const u = await sb.from('convites').update({ status: 'em_contato' }).eq('id', ci.id); if (!u.error) ci.status = 'em_contato'; } }
     if (nova && data.lead_id) { const ld = (D.leads || []).find(x => x.id === data.lead_id); if (ld && ld.status === 'novo') { const u = await sb.from('leads').update({ status: 'em conversa' }).eq('id', ld.id); if (!u.error) ld.status = 'em conversa'; } }
     // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
     if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
@@ -2983,8 +3125,9 @@ function telaFormReuniao(P) {
       const feita = f.elements.nr_feita.checked;
       const nr = await sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: g('nr_assunto'), tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens', data: new Date(g('nr_data')).toISOString(),
         status: feita ? 'Realizada' : 'Agendada', resumo: feita ? (g('nr_abordado') || null) : null, participantes: [data.responsavel_id || D.meuId] }).select().single();
-      if (nr.error) aviso('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
+      if (nr.error) falhas.push('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
+    if (falhas.length) alert('O card foi salvo, mas:\n\n' + falhas.map(t => '- ' + limparTec(t)).join('\n'));
     aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Lead da Gestão registrado.' : 'Cotação registrada.') : 'Atualizado.');
     RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
@@ -3047,7 +3190,7 @@ function telaFinanceiro(P) {
       <div class="num"><div class="l">Vendas</div><div class="v">${brlC(vendas)}</div><div class="d">${L.length} emissões</div></div>
       <div class="num"><div class="l">Lucro bruto</div><div class="v">${brlC(soma(L, 'lucro_bruto'))}</div><div class="d">custo ${brlC(soma(L, 'custo'))}</div></div>
       <div class="num"><div class="l">Imposto</div><div class="v">${brlC(soma(L, 'imposto'))}</div><div class="d">${pct(D.cfg ? D.cfg.imposto_pct : 6)} sobre o lucro</div></div>
-      <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">geradas no mês, pagas 50/50</div></div>
+      <div class="num"><div class="l">Comissões</div><div class="v">${brlC(soma(L, 'comissao'))}</div><div class="d">geradas ${FIN_MODO === 'ano' ? 'no ano' : 'no mês'}, pagas 50/50</div></div>
       <div class="num"><div class="l">Parceiros</div><div class="v">${brlC(soma(L, 'repasse'))}</div><div class="d">remuneração de indicações</div></div>
     </div>
     ${pode('dre') ? '<div class="pend" style="margin-top:12px"><button data-irdre><span>DRE da empresa: geral e detalhado</span><span class="seta">›</span></button></div>' : ''}
@@ -3125,15 +3268,25 @@ async function telaAcessos(P) {
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
   $('voltar').onclick = () => voltarA('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
-  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (k === 'mkt_aprovar' && c.checked); }); aviso('Só o marketing marcado (a coordenação, se já estava marcada, continua). Salve para valer.'); });
+  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (['mkt_aprovar', 'mkt_delegar'].includes(k) && c.checked); }); aviso('Só o marketing marcado (a coordenação e a distribuição de tarefas, se já estavam marcadas, continuam). Salve para valer.'); });
+  // retrato de cada pessoa como veio do banco: serve para saber o que foi mexido e ainda não salvo
+  const estadoAc = (f) => JSON.stringify([f.elements.papel.value, f.elements.pct.value, f.elements.ativo.checked, f.querySelector('.permbox') ? lerPerms(f, 'p') : null]);
+  P.querySelectorAll('form[data-u]').forEach(f => { f._ini = estadoAc(f); });
   P.querySelectorAll('form[data-u]').forEach(f => {
     f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
     f.onsubmit = async (ev) => {
-      ev.preventDefault(); const u = f.dataset.u;
+      ev.preventDefault(); const u = f.dataset.u, antes = L.find(x => x.user_id === u) || {}, nome = String(antes.nome || '').split(' ')[0];
+      // mudanças de peso pedem confirmação: virar administrador (vê salários, DRE e tudo) e cortar o acesso
+      if (f.elements.papel.value === 'admin' && antes.papel !== 'admin' && !confirm(`Tornar ${nome} administrador? Administrador vê e altera tudo: salários, DRE, financeiro e acessos da equipe.`)) return;
+      if (!f.elements.ativo.checked && antes.ativo && !confirm(`Cortar o acesso de ${nome}? A pessoa não consegue mais entrar no app.`)) return;
       const r1 = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: f.elements.papel.value, p_pct: Number(String(f.elements.pct.value || 0).replace(',', '.')), p_ativo: f.elements.ativo.checked });
       if (r1.error) { aviso('Não salvou: ' + r1.error.message); return; }
       if (f.elements.papel.value !== 'admin') { const r2 = await sb.rpc('equipe_permissoes', { p_user: u, p_perm: lerPerms(f, 'p') }); if (r2.error) { aviso('Perfil salvo, mas os acessos não: ' + r2.error.message); return; } }
-      await carregarEquipe(); aviso('Salvo. Vale na próxima vez que a pessoa abrir o app.'); telaAcessos(P);
+      await carregarEquipe(); aviso('Salvo. Vale na próxima vez que a pessoa abrir o app.');
+      // se outra pessoa tem alterações ainda não salvas, não redesenha a tela (isso apagava o que foi marcado nela)
+      f._ini = estadoAc(f);
+      const outraMexida = [...P.querySelectorAll('form[data-u]')].some(x => x !== f && x._ini !== estadoAc(x));
+      if (!outraMexida) telaAcessos(P);
     };
   });
   P.querySelectorAll('[data-link]').forEach(b => b.onclick = async () => {
@@ -3158,7 +3311,7 @@ async function telaAcessos(P) {
       AC_NOVO = false; await carregarEquipe(); await telaAcessos(P);
       const card = P.querySelector(`[data-link="${CSS.escape(body.email.toLowerCase())}"]`);
       if (card && r.link) { mostrarLinkAcesso(card.nextElementSibling, body.nome, r.link); card.hidden = true; card.closest('form').scrollIntoView({ behavior: 'smooth' }); }
-      aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : body.nome.split(' ')[0] + ' adicionada. Agora mande o link pelo WhatsApp.');
+      aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : 'Acesso de ' + body.nome.split(' ')[0] + ' liberado. Agora mande o link pelo WhatsApp.');
     };
   }
 }
@@ -3322,11 +3475,17 @@ function telaPagar(P) {
       ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
   $('voltar').onclick = () => voltarA('empresa');
   const marcar = async (ids, msg) => {
+    const agora = new Date().toISOString(), feitos = []; let erro = '';
     for (let i = 0; i < ids.length; i += 100) {
-      const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: new Date().toISOString() }).in('id', ids.slice(i, i + 100));
-      if (error) { aviso('Não salvou: ' + error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : '')); return; }
+      const lote = ids.slice(i, i + 100);
+      const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: agora }).in('id', lote);
+      if (error) { erro = error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : ''); break; }
+      feitos.push(...lote);
     }
-    const agora = new Date().toISOString(); D.emissoes.forEach(e => { if (ids.includes(e.id)) { e.pago_fornecedor = true; e.pago_fornecedor_em = agora; } }); aviso(msg); telaPagar(P);
+    D.emissoes.forEach(e => { if (feitos.includes(e.id)) { e.pago_fornecedor = true; e.pago_fornecedor_em = agora; } });
+    // com erro, a tela é redesenhada (o botão volta a funcionar) e o aviso fica até a pessoa fechar
+    if (erro) { telaPagar(P); alert((feitos.length ? `Marcou ${feitos.length} de ${ids.length}. ` : '') + limparTec('Não salvou: ' + erro)); return; }
+    aviso(msg); telaPagar(P);
   };
   P.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { if (PG_CONF !== b.dataset.pg) { PG_CONF = b.dataset.pg; b.textContent = 'Confirmar'; return; } PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
   P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pgall]; if (!confirm(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`)) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
@@ -3348,7 +3507,7 @@ function telaConferir(P) {
   const forma = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix_cartao' ? `Pix + Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
   const L = compParaConferir().sort((a, b) => String(qd(a)).localeCompare(String(qd(b))));
   const R = D.reunioes.filter(r => r.fech && r.fech.comprovante && r.fech.conferido && r.fech.conferido_em && Date.now() - new Date(r.fech.conferido_em) < 30 * 864e5).sort((a, b) => String(b.fech.conferido_em).localeCompare(String(a.fech.conferido_em)));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Início</button><h1 class="titulo" style="margin-top:6px">Comprovantes para <em>conferir</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Voltar</button><h1 class="titulo" style="margin-top:6px">Comprovantes para <em>conferir</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Para conferir</div><div class="v">${brlC(L.reduce((t, r) => t + val(r), 0))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
     </div>
@@ -3361,7 +3520,7 @@ function telaConferir(P) {
         ${nomeTime(r.responsavel_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(r.responsavel_id))}</div>` : ''}</div>
       <div class="botoes4" style="margin-top:10px"><button class="sec" data-cfver="${esc(F.comprovante)}">Ver comprovante</button><button class="zap" data-cfok="${r.id}">Conferido</button></div>
     </div>`; }).join('') : '<div class="vazio">Nenhum comprovante para conferir.</div>'}</div>`;
-  $('voltar').onclick = () => voltarA('inicio');
+  $('voltar').onclick = () => voltarA(ANTERIOR || 'inicio'); // volta para onde a pessoa estava (Início ou Empresa)
   const salvar = async (id, ok) => {
     const r = D.reunioes.find(x => x.id === id); if (!r) return false;
     const fech = Object.assign({}, r.fech, ok ? { conferido: true, conferido_por: D.meuId, conferido_em: new Date().toISOString() } : { conferido: false, conferido_por: null, conferido_em: null });
@@ -3380,7 +3539,7 @@ function telaConferir(P) {
 }
 function telaReceber(P) {
   const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Financeiro</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Voltar</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(soma(L, 'valor_receber'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>
     </div>
@@ -3392,7 +3551,7 @@ function telaReceber(P) {
         ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
       <button class="zap grande" data-ok="${e.id}" style="margin-top:10px;width:100%">Recebido</button>
     </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div>`;
-  $('voltar').onclick = () => voltarA('financeiro');
+  $('voltar').onclick = () => voltarA(ANTERIOR || 'financeiro'); // volta para onde a pessoa estava (Início, Financeiro ou Empresa)
   P.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ok;
     if (RC_CONF !== id) { RC_CONF = id; b.textContent = 'Toque de novo para confirmar'; return; }
@@ -3475,7 +3634,7 @@ function telaEmpresa(P) {
       <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
-    <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}" style="padding:6px 10px">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}" style="padding:6px 10px">Lucro</button></span></h2>
+    <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto;--seg-pad:12px 12px"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}">Lucro</button></span></h2>
       ${top.length ? top.map(([k, x], i) => { const pid = k.startsWith('nome:') ? null : k; return `<button class="lin" ${pid ? `data-pid="${pid}"` : ''} style="font-size:14px"><span>${i + 1}. ${esc(pid ? (pessoaNome(pid) || 'Cliente') : k.slice(5) || 'Sem nome')}</span><span>${brlC(x[EMP_TOP])} · ${x.n}${pid ? '<span class="seta">›</span>' : ''}</span></button>`; }).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
     </section>
     <section class="bloco"><h2>Por fonte de receita</h2>
@@ -3549,6 +3708,9 @@ function telaEquipe(P) {
   P.querySelectorAll('[data-aplicar]').forEach(b => b.onclick = async () => {
     const u = b.dataset.aplicar, c = b.closest('[data-u]'), desde = c.querySelector('[name=desde]').value || '0000-01-01';
     const pessoa = D.equipe.find(x => x.user_id === u), novo = +pessoa.comissao_pct || 0;
+    // o botão aplica o percentual salvo: se o campo foi mudado e não salvo, pede para salvar antes
+    const campoPct = c.querySelector('[name=pct]');
+    if (campoPct && campoPct.value !== '' && Number(String(campoPct.value).replace(',', '.')) !== novo) { alert(`O percentual digitado (${campoPct.value}%) ainda não foi salvo. Toque em Salvar primeiro; o Aplicar usa o percentual salvo (${pct(novo)}).`); return; }
     const minhas = D.emissoes.filter(e => (e.vendedor_app || e.vendedor_id) === u && String(e.data_negociacao) >= desde);
     const fechadas = minhas.filter(e => mesFechado(String(e.data_negociacao).slice(0, 7))).length;
     const daPl = minhas.filter(e => temManual(e.comissao_manual)).length;
@@ -3557,12 +3719,17 @@ function telaEquipe(P) {
     if (!alvo.length) { aviso(fechadas ? `Nada a mudar: as ${fechadas} vendas desse período estão em meses fechados.` : `Todas as vendas desde ${desde.split('-').reverse().join('/')} já estão com ${pct(novo)}.`); return; }
     if (!confirm(`Aplicar ${pct(novo)} de comissão a ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'} de ${pessoa.nome} desde ${desde.split('-').reverse().join('/')}?${fechadas ? ` (${fechadas} em meses fechados ficam como estão.)` : ''}`)) return;
     b.disabled = true; b.textContent = 'Aplicando...';
-    const ids = alvo.map(e => e.id);
+    const ids = alvo.map(e => e.id); let feitas = 0, erro = '';
     for (let k = 0; k < ids.length; k += 100) {
       const { error } = await sb.from('emissoes').update({ comissao_pct_app: novo }).in('id', ids.slice(k, k + 100));
-      if (error) { aviso('Parou no meio: ' + error.message); break; }
+      if (error) { erro = error.message; break; }
+      feitas += Math.min(100, ids.length - k);
     }
-    await carregar(true); aviso('Comissão recalculada.'); if (ABA === 'equipe') telaEquipe(P);
+    await carregar(true);
+    // falha no meio fica num aviso que não some (antes era trocado na hora por "Comissão recalculada")
+    if (erro) alert(`Parou no meio: ${feitas} de ${ids.length} vendas foram atualizadas. ${limparTec(erro)} Toque em Aplicar de novo para terminar.`);
+    else aviso('Comissão recalculada.');
+    if (ABA === 'equipe') telaEquipe(P);
   });
   if ($('irAcessos')) $('irAcessos').onclick = (e) => { e.preventDefault(); ir('acessos'); };
   P.querySelectorAll('[data-parn]').forEach(b => b.onclick = () => {
@@ -3762,7 +3929,7 @@ function listaLeads() {
         <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">Gestão de Milhas</span></div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${[['Cidade', r.cidade], ['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Viagem dos sonhos', r.objetivo], ['Indicado por', r.indicado_por], ['Como conheceu', r.como_conheceu]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
         <div class="acoes">${r.whatsapp ? `<a class="zap" data-zaps="${r.id}" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('solicitacoes_acesso', r.id, r.status, ST_SOL)}</div>
-        <div class="acoes">${cardDaSol(r) ? `<button class="sec" data-abrir-card="${cardDaSol(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' }))}">Registrar diagnóstico</button>`}</div>
+        <div class="acoes">${cardDaSol(r) ? `<button class="sec" data-abrir-card="${cardDaSol(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas', solicitacao_id: String(r.id) }))}">Registrar diagnóstico</button>`}</div>
       </article>`).join('') : '<div class="vazio">Nenhuma solicitação com esse filtro.</div>';
   } else {
     $('filtro').innerHTML = '';
@@ -3847,6 +4014,8 @@ function emissoesGestao() {
 }
 const pedidosSite = () => (D.sols || []).filter(r => r.status === 'nova');
 const indicacoesNovas = () => (D.indic || []).filter(r => r.status === 'enviado');
+// um número só para as pendências da Gestão: a bolinha do menu, o Início e o topo da Gestão contam igual
+const totalGestao = () => pendGestao().reduce((t, x) => t + x[1], 0);
 function pendGestao() {
   return [
     ['Pedidos de reunião dos clientes', reunioesAConfirmar().length],
@@ -3876,7 +4045,7 @@ function telaGestao(P) {
   const leads = D.reunioes.filter(r => ehGestao(r) && r.resultado === 'Em andamento');
   const c = conversao(reunioesDoPeriodo(mesKey(new Date()), 'ano').filter(ehGestao));
   const impl = implantacoesAbertas();
-  const total = ags.length + sols.length + ind.length + ret.length + venc.length + renov.filter(x => diasPara(x.gestao_vencimento) <= 30).length + semc.length + saldosDoDia().length + tarefasParaHoje().length;
+  const total = totalGestao();
   const grupo = (titulo, html) => html ? `<div class="secao">${titulo}</div>${html}` : '';
   P.innerHTML = `
     <h1 class="titulo">Gestão de <em>Milhas</em></h1>
@@ -3981,13 +4150,14 @@ function ligarGestao(P) {
   };
   P.querySelectorAll('[data-funil-sol]').forEach(b => b.onclick = async () => {
     const r = D.sols.find(x => String(x.id) === b.dataset.funilSol); if (!r) return;
-    if (!(await muda('solicitacoes_acesso', r.id, 'em_analise', D.sols))) return;
-    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' });
+    // o pedido já tem card (o Supabase cria um quando o pedido chega): abre esse, sem criar outro
+    const card = cardDaSol(r); if (card) return abrirAtendimento(card.id);
+    // sem card: o status do pedido só muda depois que o card novo for salvo (desistir não some com o pedido)
+    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas', solicitacao_id: String(r.id) });
   });
   P.querySelectorAll('[data-funil-ind]').forEach(b => b.onclick = async () => {
     const r = D.indic.find(x => String(x.id) === b.dataset.funilInd); if (!r) return;
-    if (!(await muda('convites', r.id, 'em_contato', D.indic))) return;
-    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Indicação de cliente', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas' });
+    abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Indicação de cliente', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas', _convite: String(r.id) });
   });
   P.querySelectorAll('[data-recusa-sol],[data-recusa-ind]').forEach(b => b.onclick = async () => {
     const sol = !!b.dataset.recusaSol, id = b.dataset.recusaSol || b.dataset.recusaInd;
@@ -4004,8 +4174,10 @@ function ligarGestao(P) {
   if ($('geNovo')) $('geNovo').onclick = () => abrirAtendimento('nova', { produto: 'Gestão de Milhas' });
   P.querySelectorAll('[data-lancar-em]').forEach(b => b.onclick = () => {
     const e = D.emissoes.find(x => String(x.id) === b.dataset.lancarEm); if (!e) return;
-    FI_PRE = { emissao_id: e.id, data: String(e.data_negociacao).slice(0, 10), quantidade: e.milhas, taxas: e.taxas, descricao: [[e.origem, e.destino].filter(Boolean).join(' > '), e.localizador ? 'loc. ' + e.localizador : '', e.passageiros ? e.passageiros + ' pax' : ''].filter(Boolean).join(', ') };
-    abrirFicha(b.dataset.cli, 'carteira'); FI_FORM = 'uso';
+    abrirFicha(b.dataset.cli, 'carteira');
+    // o voo fica guardado junto com o cliente dele: na carteira de outro cliente, o formulário não vem preenchido
+    FI_PRE = { cliente_id: b.dataset.cli, emissao_id: e.id, data: String(e.data_negociacao).slice(0, 10), quantidade: e.milhas, taxas: e.taxas, descricao: [[e.origem, e.destino].filter(Boolean).join(' > '), e.localizador ? 'loc. ' + e.localizador : '', e.passageiros ? e.passageiros + ' pax' : ''].filter(Boolean).join(', ') };
+    FI_FORM = 'uso';
   });
   P.querySelectorAll('[data-ignorar-em]').forEach(b => b.onclick = async () => {
     if (CONFIRMA !== 'ign' + b.dataset.ignorarEm) { CONFIRMA = 'ign' + b.dataset.ignorarEm; b.textContent = 'Toque de novo'; return; }
@@ -4034,10 +4206,11 @@ function telaCiclo(P) {
       <div style="margin-top:6px">${htmlCiclo(c, x)}</div>
       ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-ficha="${c.id}" data-fa="carteira">Lançar saldos</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
     </article>`).join('') : '<div class="vazio">Nenhum cliente na Gestão.</div>'}</div>`;
-  $('voltarCiclo').onclick = () => history.back();
+  $('voltarCiclo').onclick = () => voltarSeguro('gestao');
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
 }
 function abrirFicha(id, aba) {
+  FI_FORM = null; FI_PRE = null;
   ABA = 'clientes'; CLI = id; FI_ABA = aba || 'resumo'; GE_FUNIL = false; GE_CICLO = false;
   history.pushState(null, '', '#clientes/' + id); marcarNav(); tela(); scrollTo(0, 0);
 }
@@ -4090,7 +4263,7 @@ function telaFicha(P, id) {
     <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}${(() => { const T = tarefasOb(c.id), f = T.filter(t => t.feito).length; return T.length && f < T.length ? ' ' + pilula(false, `Onboarding ${f} de ${T.length}`) : ''; })()}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => voltarSeguro('clientes');
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
   ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
@@ -4166,7 +4339,10 @@ async function fiCarteira(el, c) {
   if (FI_FORM) formCarteira(c);
 }
 async function depoisDaCarteira(c, msg) {
-  try { await CART.syncCarteira(c.id, c._refs); } catch (e) { aviso('Salvou, mas o recálculo falhou: ' + (e.message || e)); }
+  // o painel do cliente guarda saldos, custo médio e economia calculados a partir do extrato, em várias tabelas.
+  // Se o recálculo falhar no meio, os números do painel não batem entre si: tenta de novo e, se continuar, avisa sem sumir.
+  let falhou = '';
+  for (let t = 0; t < 2; t++) { try { await CART.syncCarteira(c.id, c._refs); falhou = ''; break; } catch (e) { falhou = (e && e.message) || String(e); } }
   const agora = new Date().toISOString();
   await sb.from('clientes').update({ ultima_atualizacao: agora }).eq('id', c.id).then(({ error }) => { if (!error) c.ultima_atualizacao = agora; });
   const pr = await sb.from('programas_milhas').select('*').eq('cliente_id', c.id);
@@ -4175,7 +4351,9 @@ async function depoisDaCarteira(c, msg) {
   const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).gte('data', new Date().getFullYear() + '-01-01');
   if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []);
   await gtMarcarChave(c, 'carteira');
-  FI_FORM = null; aviso(msg); telaFicha($('pagina'), c.id);
+  FI_FORM = null;
+  if (falhou && confirm(`O lançamento foi salvo, mas o painel do cliente não terminou de atualizar (${limparTec(falhou)}). O cliente pode ver números desatualizados.\n\nTentar atualizar o painel de novo agora?`)) return depoisDaCarteira(c, msg);
+  if (!falhou) aviso(msg); telaFicha($('pagina'), c.id);
 }
 function formCarteira(c) {
   if (FI_FORM === 'conferencia') return formConferencia(c);
@@ -4217,7 +4395,7 @@ function formCarteira(c) {
     <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" id="salvarCart" style="flex:2">Salvar e atualizar o painel</button><button class="sec" type="button" id="cancCart" style="flex:1">Cancelar</button></div></form>`;
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const f = $('fCart');
-  const pre = tipo === 'uso' ? FI_PRE : null;
+  const pre = tipo === 'uso' && FI_PRE && String(FI_PRE.cliente_id) === String(c.id) ? FI_PRE : null;
   if (pre) { if (pre.data) f.elements.data.value = pre.data; if (pre.quantidade) f.elements.quantidade.value = Math.round(pre.quantidade); if (pre.taxas) f.elements.taxas_brl.value = pre.taxas; if (pre.descricao) f.elements.descricao.value = pre.descricao; $('prevCart').textContent = 'Preenchido a partir da emissão. Confira o programa e informe o valor em dinheiro para calcular a economia.'; }
   $('cancCart').onclick = () => { FI_FORM = null; FI_PRE = null; box.innerHTML = ''; };
   const estado = (nome) => W.programas.find(p => p.key === CART.normProg(nome));
@@ -4275,8 +4453,14 @@ function formCarteira(c) {
     }
     const { error } = await sb.from('extrato_milhas').insert(linhas.map(x => ({ ...x, cliente_id: c.id })));
     if (error) { $('salvarCart').disabled = false; return erro('Não salvou: ' + error.message); }
-    if (pre && pre.emissao_id) { await sb.from('emissoes').update({ carteira_status: 'lancado' }).eq('id', pre.emissao_id); const em = D.emissoes.find(x => x.id === pre.emissao_id); if (em) em.carteira_status = 'lancado'; FI_PRE = null; }
-    await depoisDaCarteira(c, 'Salvo. O painel do cliente já mostra a atualização.');
+    let aviso2 = '';
+    if (pre && pre.emissao_id) {
+      const u = await sb.from('emissoes').update({ carteira_status: 'lancado' }).eq('id', pre.emissao_id);
+      if (u.error) aviso2 = ' Mas a emissão não saiu de "Emissões para lançar": marque como lançada na Gestão.';
+      else { const em = D.emissoes.find(x => x.id === pre.emissao_id); if (em) em.carteira_status = 'lancado'; }
+      FI_PRE = null;
+    }
+    await depoisDaCarteira(c, 'Salvo. O painel do cliente já mostra a atualização.' + aviso2);
   };
 }
 
@@ -4656,9 +4840,11 @@ async function fiDocs(el, c) {
     const d = data.find(x => String(x.id) === b.dataset.rm); if (!d) return;
     if (CONFIRMA !== 'doc' + d.id) { CONFIRMA = 'doc' + d.id; b.textContent = 'confirmar'; return; }
     CONFIRMA = null;
-    await sb.storage.from('documentos').remove([d.arquivo_path]);
+    // primeiro o registro (é ele que aparece no painel do cliente), depois o arquivo: se o registro falhar, nada some
     const { error: er } = await sb.from('documentos').delete().eq('id', d.id);
-    if (er) aviso('Não excluiu: ' + er.message); else { aviso('Documento excluído.'); fiDocs(el, c); }
+    if (er) { aviso('Não excluiu: ' + er.message); return; }
+    const rm = await sb.storage.from('documentos').remove([d.arquivo_path]);
+    aviso(rm.error ? 'Documento tirado do painel. O arquivo ficou guardado no Supabase.' : 'Documento excluído.'); fiDocs(el, c);
   });
 }
 
@@ -4919,14 +5105,16 @@ function ligarContrato(c) {
   });
 }
 async function carregarReunioesCliente(c) {
-  const [r, n] = await Promise.all([
-    sb.from('reunioes').select('*').eq('cliente_id', c.id).order('data_reuniao', { ascending: false }).limit(50),
-    sb.from('reunioes_internas').select('*')
-  ]);
+  const r = await sb.from('reunioes').select('*').eq('cliente_id', c.id).order('data_reuniao', { ascending: false }).limit(50);
+  // anotações internas só das reuniões deste cliente (antes buscava a tabela inteira)
+  const ids = (r.data || []).map(x => String(x.id));
+  const n = ids.length ? await sb.from('reunioes_internas').select('*').in('reuniao_id', ids) : { data: [] };
   const el = $('reuCli'); if (!el || CLI !== c.id) return;
   if (r.error) { el.innerHTML = '<div class="vazio">Não foi possível carregar as reuniões.</div>'; return; }
   const notas = n.error ? null : Object.fromEntries((n.data || []).map(x => [String(x.reuniao_id), x.texto]));
   c._reu = r.data || []; c._notas = notas;
+  // a pessoa já abriu o formulário de reunião enquanto a lista carregava: não apaga o que ela está digitando
+  if ($('fReuCli')) return;
   el.innerHTML = c._reu.length ? c._reu.map(x => `<button class="av" data-reu-cli="${x.id}"><span class="ic">•</span><span><span class="t" style="display:block">${esc(x.titulo || 'Reunião')}</span><span class="q" style="display:block">${x.data_reuniao ? dataBR(x.data_reuniao) : ''} · visível para o cliente</span>${x.resumo ? `<span class="d" style="display:block">${esc(x.resumo)}</span>` : ''}${notas && notas[String(x.id)] ? `<span class="d" style="display:block;margin-top:4px"><b style="font-weight:600">Interno:</b> ${esc(notas[String(x.id)])}</span>` : ''}</span></button>`).join('') : '<div class="vazio">Nenhuma reunião registrada com este cliente.</div>';
   el.querySelectorAll('[data-reu-cli]').forEach(b => b.onclick = () => formReuniaoCliente(c, c._reu.find(x => String(x.id) === b.dataset.reuCli)));
 }
@@ -5301,7 +5489,7 @@ function telaCal(P) {
       <div class="sub">Abre o seu Cal.com (cal.com/${esc(link)}). O convite com o link da reunião vai para o e-mail do convidado, e a reunião entra no app (e no seu TickTick, se estiver conectado).</div>
     </form>
     <div id="calInline" hidden></div>`;
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => voltarSeguro('agenda');
   const f = $('fCal');
   f.elements.atendimento_id.onchange = () => { const r = D.reunioes.find(x => x.id === f.elements.atendimento_id.value); if (r) { if (!f.elements.nome.value) f.elements.nome.value = r.cliente || ''; if (!f.elements.email.value && /@/.test(r.contato || '')) f.elements.email.value = r.contato; f.elements.tipo.value = r.produto === 'Gestão de Milhas' ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens'; } };
   if (f.elements.cliente_id) f.elements.cliente_id.onchange = () => { const c = D.clientes.find(x => x.id === f.elements.cliente_id.value); if (c) { if (!f.elements.nome.value) f.elements.nome.value = c.nome_completo || ''; f.elements.tipo.value = 'Cliente da Gestão'; } };
@@ -5433,7 +5621,7 @@ function telaFormAgenda(P) {
     mostrar();
   };
   mostrar();
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => voltarSeguro('agenda');
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
@@ -5468,11 +5656,15 @@ function telaFormAgenda(P) {
 /* ---------- site ---------- */
 async function carregarSite() {
   if (SITE && SITE.dias === SITE_DIAS) return SITE;
+  // o período fica guardado com a resposta: trocar de 7 para 90 dias no meio da busca não mistura os números
+  const d = SITE_DIAS;
+  let R;
   try {
-    const { data, error } = await sb.functions.invoke('metricas-site', { body: { dias: SITE_DIAS } });
-    SITE = error || !data || !data.ok ? { ok: false, erro: (error && error.message) || (data && data.erro) || '', dias: SITE_DIAS } : { ...data, dias: SITE_DIAS };
-  } catch (e) { SITE = { ok: false, erro: String(e), dias: SITE_DIAS }; }
-  return SITE;
+    const { data, error } = await sb.functions.invoke('metricas-site', { body: { dias: d } });
+    R = error || !data || !data.ok ? { ok: false, erro: (error && error.message) || (data && data.erro) || '', dias: d } : { ...data, dias: d };
+  } catch (e) { R = { ok: false, erro: String(e), dias: d }; }
+  if (d === SITE_DIAS) SITE = R;
+  return R;
 }
 function blocoAvalGoogle() { return ADMIN && D.posViagem ? `<section class="bloco"><h2>Avaliações no Google</h2>
       <div class="sub" style="margin-top:0">Link do Perfil da Empresa usado no pedido pós-viagem. No Perfil da Empresa no Google, toque em "Pedir avaliações" e copie o link.</div>
@@ -5492,7 +5684,7 @@ async function telaSite(P) {
   ligarAvalGoogle(); ligarAvg(P, () => telaSite(P));
   $('sdias').onclick = (e) => { const b = e.target.closest('button'); if (b) { SITE_DIAS = +b.dataset.d; telaSite(P); } };
   const [, cl] = await Promise.all([carregarSite(), sb.from('clarity_dias').select('*').order('dia', { ascending: false }).limit(90)]);
-  const el = $('sconteudo'); if (!el || ABA !== 'site') return;
+  const el = $('sconteudo'); if (!el || ABA !== 'site' || !SITE || SITE.dias !== SITE_DIAS) return;
   const blClarity = htmlClarity(cl.error ? null : cl.data || []);
   if (!SITE.ok) {
     el.innerHTML = `<div class="config" style="margin-top:12px"><b>Ainda não conectado.</b><br>Os números do Google Analytics e do Search Console aparecem aqui depois da configuração da função <b>metricas-site</b> no Supabase, com uma conta de serviço do Google. O passo a passo está no guia de configuração do app.${SITE.erro ? `<div style="margin-top:8px;font-size:12px;color:var(--tinta-3)">Detalhe técnico: ${esc(SITE.erro)}</div>` : ''}</div>

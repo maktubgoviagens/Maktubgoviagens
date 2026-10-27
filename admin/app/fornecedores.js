@@ -35,7 +35,7 @@ export async function tela(P, X) {
   if (VISTA === 'ficha' && FID) return ficha(P, X);
   return telaLista(P, X);
 }
-function ir(X, v, id) { VISTA = v; FID = id || null; history.pushState(null, '', v === 'lista' ? '#fornecedores' : v === 'novo' ? '#fornecedores/novo' : '#fornecedores/' + (id || '')); tela(X.$('pagina'), X); scrollTo(0, 0); }
+function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; VISTA = v; FID = id || null; history.pushState(null, '', v === 'lista' ? '#fornecedores' : v === 'novo' ? '#fornecedores/novo' : '#fornecedores/' + (id || '')); tela(X.$('pagina'), X); scrollTo(0, 0); }
 
 function telaLista(P, X) {
   const { $, esc } = X;
@@ -356,7 +356,7 @@ function form(P, X) {
     $('salvarF').disabled = true;
     const { data, error } = novo ? await X.sb.from('fornecedores').insert(row).select().single() : await X.sb.from('fornecedores').update(row).eq('id', f.id).select().single();
     $('salvarF').disabled = false;
-    if (error) { $('msgF').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgF').textContent = (X.limparTec || String)('Não salvou: ' + error.message); return; }
     const i = LISTA.findIndex(x => x.id === data.id); if (i >= 0) LISTA[i] = data; else LISTA.push(data);
     X.aviso(novo ? 'Fornecedor cadastrado.' : 'Salvo.'); ir(X, 'ficha', data.id);
   };
@@ -395,7 +395,7 @@ function formAvaliar(P, X) {
   let nota = 0, ind = null;
   $('notaA').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; nota = +b.dataset.n; [...$('notaA').children].forEach(x => x.classList.toggle('on', x === b)); };
   $('indA').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; ind = b.dataset.v === '1'; [...$('indA').children].forEach(x => x.classList.toggle('on', x === b)); };
-  $('voltar').onclick = () => history.back();
+  $('voltar').onclick = () => X.voltarSeguro ? X.voltarSeguro('fornecedores') : history.back();
   $('fA').onsubmit = async (ev) => {
     ev.preventDefault();
     const e = ev.target.elements, g = (n) => e[n] ? e[n].value.trim() : '';
@@ -406,7 +406,7 @@ function formAvaliar(P, X) {
       if (igual) fid = igual.id;
       else {
         const r = await X.sb.from('fornecedores').insert({ tipo: g('tipo'), nome: g('fnome'), cidade: g('fcidade') || null }).select().single();
-        if (r.error) { $('msgA').textContent = 'Não criou o fornecedor: ' + r.error.message; return; }
+        if (r.error) { $('msgA').textContent = (X.limparTec || String)('Não criou o fornecedor: ' + r.error.message); return; }
         LISTA.push(r.data); fid = r.data.id;
       }
     }
@@ -416,7 +416,7 @@ function formAvaliar(P, X) {
     const row = { fornecedor_id: fid, pessoa_id: pid || null, data_uso: g('data_uso') || null, nota, indicaria: ind, comentario: g('comentario') || null };
     const { data, error } = g('av_id') ? await X.sb.from('fornecedor_avaliacoes').update(row).eq('id', g('av_id')).select().single() : await X.sb.from('fornecedor_avaliacoes').insert(row).select().single();
     $('salvarA').disabled = false;
-    if (error) { $('msgA').textContent = 'Não salvou: ' + error.message; return; }
+    if (error) { $('msgA').textContent = (X.limparTec || String)('Não salvou: ' + error.message); return; }
     const i = AVS.findIndex(x => x.id === data.id); if (i >= 0) AVS[i] = data; else AVS.unshift(data); PRE = null;
     X.aviso('Avaliação salva.'); ir(X, 'ficha', fid);
   };

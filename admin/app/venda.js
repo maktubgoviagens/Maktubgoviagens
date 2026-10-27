@@ -250,7 +250,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     const avisaMudou = () => el.dispatchEvent(new Event('change', { bubbles: true }));
     el.querySelectorAll('[data-ctsep]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.ctsep.split('|'); separarTrecho(IT, +i, +k); desenha(); avisaMudou(); X.aviso('Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.'); });
     el.querySelectorAll('[data-outraem]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.outraem]; IT.splice(+b.dataset.outraem + 1, 0, { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', pago_em: 'milhas' }); desenha(); avisaMudou(); });
-    el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cttira.split('|'); IT[+i].ct.splice(+k, 1); desenha(); });
+    el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cttira.split('|'), l = IT[+i].ct[+k] || {}; if ((l.o || l.d || l.milhas || l.custo) && !confirm('Tirar este trecho? O que foi preenchido nele será apagado.')) return; IT[+i].ct.splice(+k, 1); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
       const [i, k, campo] = e.dataset.ct.split('|'), x = IT[+i];
       e.oninput = () => { const l = x.ct[+k]; l[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : /^(milhas|milheiro|taxas|custo|pax)$/.test(campo) ? nb(e.value) : e.value; somarTrechos(x);

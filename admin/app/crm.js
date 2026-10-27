@@ -102,7 +102,7 @@ export function telaCRM(P, X) {
   return telaLista(P, X);
 }
 
-function ir(X, v, id) { VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
+function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
 
 function telaLista(P, X) {
   const { D, $, esc, brlC, ADMIN } = X;
@@ -147,7 +147,7 @@ function telaLista(P, X) {
       if (igual) { $('cadMsg').innerHTML = `Já existe a ficha de <b>${esc(igual.nome)}</b>. Abrindo para você gerar o link nela.`; setTimeout(() => ir(X, 'ficha', igual.id), 900); return; }
       $('cadLinkB').disabled = true;
       const { data, error } = await X.sb.from('pessoas').insert({ nome, celular: celular || null, papeis: [] }).select().single();
-      if (error) { $('cadLinkB').disabled = false; $('cadMsg').textContent = 'Não criou a ficha: ' + error.message; return; }
+      if (error) { $('cadLinkB').disabled = false; $('cadMsg').textContent = X.limparTec('Não criou a ficha: ' + error.message); return; }
       D.pessoas.push(data); VISTA = 'ficha'; PID = data.id; history.pushState(null, '', '#crm/' + data.id);
       gerarLink(P, X, data); scrollTo(0, 0);
     };
@@ -289,6 +289,7 @@ function telaFicha(P, X) {
   let tipo = 'familia';
   $('vTipo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; tipo = b.dataset.v; [...$('vTipo').children].forEach(x => x.classList.toggle('on', x === b)); };
   P.querySelectorAll('[data-desv]').forEach(b => b.onclick = async () => {
+    if (!confirm('Desfazer o vínculo entre essas duas fichas? As fichas continuam, só deixam de estar ligadas.')) return;
     const [a, c] = b.dataset.desv.split('|');
     const { error } = await X.sb.from('pessoas_vinculos').delete().eq('pessoa_a', a).eq('pessoa_b', c);
     if (error) return X.aviso('Não removeu: ' + error.message);
@@ -394,6 +395,7 @@ function telaForm(P, X) {
   ['celular', 'email', 'cpf'].forEach(n => { if (f.elements[n]) f.elements[n].onblur = checar; });
   f.onsubmit = async (ev) => {
     ev.preventDefault();
+    const falhas = []; // o que salvou só em parte: aparece no fim, num aviso que não some sozinho
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
     if (!g('nome')) return;
     if (nova && checar()) { $('msgP').textContent = 'Essa pessoa já tem ficha. Abra a ficha existente acima.'; return; }
@@ -404,7 +406,7 @@ function telaForm(P, X) {
     if (indN && !indP) {
       const pc = (D.parc || []).find(x => norm(x.nome) === indN);
       const ins = await X.sb.from('pessoas').insert({ nome: g('indicado').replace(/\s+/g, ' '), papeis: pc ? ['parceiro'] : [], ...(pc ? { parceiro_ref: pc.id } : {}) }).select().single();
-      if (ins.error) { $('msgP').textContent = 'Não criou a ficha de quem indicou: ' + ins.error.message; return; }
+      if (ins.error) { $('msgP').textContent = X.limparTec('Não criou a ficha de quem indicou: ' + ins.error.message); return; }
       indP = ins.data; D.pessoas.push(indP); X.aviso(`Ficha de ${indP.nome} criada${pc ? ' como parceira' : ''}.`);
     }
     const row = { nome: g('nome').replace(/\s+/g, ' '), celular: g('celular') || null, email: g('email') || null, instagram: g('instagram') || null,
@@ -421,7 +423,7 @@ function telaForm(P, X) {
         const prow = { nome: row.nome, whatsapp: row.celular, ativo: true };
         if (g('parc_pct') !== '') prow.pct = Number(String(g('parc_pct')).replace(',', '.')) || 0;
         const r = data.parceiro_ref ? await X.sb.from('parceiros').update(prow).eq('id', data.parceiro_ref) : await X.sb.from('parceiros').insert({ pct: 0, ...prow }).select().single();
-        if (r.error) X.aviso('A ficha foi salva, mas o parceiro não: ' + r.error.message);
+        if (r.error) falhas.push('o cadastro de parceiro não salvou (' + X.limparTec(r.error.message) + ')');
         else if (!data.parceiro_ref && r.data) { const u = await X.sb.from('pessoas').update({ parceiro_ref: r.data.id }).eq('id', data.id).select().single(); if (!u.error) Object.assign(data, u.data); }
       } else if (eraParc && data.parceiro_ref) await X.sb.from('parceiros').update({ ativo: false }).eq('id', data.parceiro_ref);
     }
@@ -432,11 +434,19 @@ function telaForm(P, X) {
       const temAlgo = Object.entries(d).some(([k, v]) => k !== 'pessoa_id' && v);
       if (temAlgo || (D.docs || []).some(x => x.pessoa_id === data.id)) {
         const r2 = await X.sb.from('pessoas_documentos').upsert(d).select().single();
-        if (r2.error) X.aviso('A ficha foi salva, mas os documentos não: ' + r2.error.message);
+        if (r2.error) falhas.push('os documentos (CPF, passaporte, visto) não salvaram (' + X.limparTec(r2.error.message) + ')');
         else { D.docs = (D.docs || []).filter(x => x.pessoa_id !== data.id).concat(r2.data); data.tem_documentos = !!(r2.data.cpf || r2.data.passaporte); }
       }
     }
+    // cliente da Gestão: o nome também mora na carteira (é o que aparece no painel do cliente). Mudou na ficha, muda lá.
+    // O e-mail não é copiado: na carteira ele é o login do cliente no painel.
+    if (!nova && data.cliente_id && X.pode('gestao') && p.nome !== data.nome) {
+      const cg = await X.sb.from('clientes').update({ nome_completo: data.nome }).eq('id', data.cliente_id);
+      if (cg.error) falhas.push('o nome na carteira da Gestão não foi atualizado (' + X.limparTec(cg.error.message) + ')');
+      else { const cl = (D.clientes || []).find(x => x.id === data.cliente_id); if (cl) cl.nome_completo = data.nome; }
+    }
     const i = D.pessoas.findIndex(x => x.id === data.id); if (i >= 0) D.pessoas[i] = data; else D.pessoas.push(data);
+    if (falhas.length) alert('A ficha foi salva, mas ' + falhas.join(' e ') + '. Abra a ficha e tente de novo.');
     X.aviso(nova ? 'Contato cadastrado.' : 'Ficha atualizada.');
     BUSCA = ''; ir(X, 'ficha', data.id);
   };

@@ -67,7 +67,7 @@ export function parcelas(emissoes, uid) {
 
 /* Carrega salários, dias de pagamento, despesas fixas e o que já foi pago. */
 export async function carregar(ctx) {
-  const { sb } = ctx, atual = mk(new Date().toISOString());
+  const { sb } = ctx, atual = mk(hojeLocal());
   const [t, p, f, a] = await Promise.all([
     sb.rpc('compromissos_time', { p_ini: INICIO + '-01', p_fim: mesMais(atual, 4) + '-01' }),
     sb.from('pagamentos_feitos').select('*').order('pago_em', { ascending: false }).limit(500),
@@ -82,7 +82,7 @@ export async function carregar(ctx) {
 
 /* Lista de compromissos (pagos e a pagar) a partir do INICIO até alguns meses à frente. */
 function montar(ctx) {
-  const { D } = ctx, atual = mk(new Date().toISOString()), fim = mesMais(atual, 3);
+  const { D } = ctx, atual = mk(hojeLocal()), fim = mesMais(atual, 3);
   const pago = (tipo, ref, comp) => C.pagos.find(x => x.tipo === tipo && x.ref === ref && mk(x.competencia) === comp) || null;
   const pessoas = {};
   C.time.forEach(r => { (pessoas[r.user_id] = pessoas[r.user_id] || { id: r.user_id, nome: r.nome, dia: r.dia_pagamento || 5, fixo: {} }).fixo[mk(r.mes)] = Number(r.fixo) || 0; });
@@ -135,7 +135,7 @@ export async function tela(P, ctx) {
   await carregar(ctx);
   if (ctx.aba() !== 'compromissos') return;
   if (C.erro) { P.querySelector('.vazio').textContent = 'Rode o compromissos.sql no Supabase para ativar. (' + C.erro + ')'; return; }
-  const { pessoas, L } = montar(ctx), atual = mk(new Date().toISOString());
+  const { pessoas, L } = montar(ctx), atual = mk(hojeLocal());
   const aPagar = L.filter(x => !x.pago && (x.comp <= atual || difDias(x.venc) <= 40));
   const futuro = L.filter(x => !x.pago && x.tipo === 'time' && !aPagar.includes(x));
   const pagos = L.filter(x => x.pago).sort((a, b) => String(b.pago.pago_em).localeCompare(String(a.pago.pago_em))).slice(0, 12);
@@ -180,7 +180,7 @@ export async function tela(P, ctx) {
     const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, data)
       : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: data || undefined });
     // pagou o fechamento do time: o mês fecha sozinho (nada daquele mês muda depois de pago)
-    if (!error && x.tipo === 'time' && ctx.fecharMes && x.comp < mk(new Date().toISOString())) await ctx.fecharMes(x.comp);
+    if (!error && x.tipo === 'time' && ctx.fecharMes && x.comp < mk(hojeLocal())) await ctx.fecharMes(x.comp);
     return error;
   };
   P.querySelectorAll('form[data-pg]').forEach(f => f.onsubmit = async (ev) => {

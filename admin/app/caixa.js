@@ -36,6 +36,8 @@ export async function carregar(sb) {
 export const recarregar = () => { R = E = PG = null; };
 
 /* Parcelas de um empréstimo: mês, vencimento, valor, juro e se já foi paga. */
+// ao entrar pelo menu, abre o painel (e não o formulário ou o detalhe que ficou aberto da última vez)
+export function inicio() { ED = null; VER = null; CONF = null; }
 export function parcelasDe(emp, pagos) {
   const n = +emp.parcelas || 0, princ = (+emp.valor_recebido || 0) / (n || 1), ini = mk(emp.primeira_parcela), L = [];
   for (let i = 1; i <= n; i++) {
