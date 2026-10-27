@@ -513,7 +513,7 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
-import * as MKT from '/admin/app/marketing.js?v=16';
+import * as MKT from '/admin/app/marketing.js?v=17';
 import * as CART from '/admin/app/carteira.js?v=2';
 import * as CARTOES from '/admin/app/cartoes.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
@@ -862,7 +862,7 @@ const PERMS = [
   ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
-  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0]]],
+  ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0], ['mkt_delegar', 'Distribuir tarefas do marketing', 'Escolhe quem faz o roteiro ou a arte, quem grava, quem edita e quem posta cada post. Não aprova posts', 0]]],
   ['Outros', [['acervo', 'Acervo de viagens', 'Mapa de destinos e roteiros e propostas enviados', 0], ['site', 'Números do site', 'Visitas, cliques no WhatsApp e formulários', 0], ['talentos', 'Banco de talentos', 'Candidatos que se cadastraram no site', 0]]]
 ];
 const PERM_LISTA = PERMS.flatMap(g => g[1]);
@@ -875,10 +875,10 @@ const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'in
 const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
-const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'checkin', 'leads', 'talentos'];
+const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
 const soMarketing = () => !ADMIN && pode('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && pode(k));
 const MKT_ABAS = () => ['marketing', ...(pode('leads') || pode('talentos') ? ['leads'] : [])];
-function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
+function ctxMKT() { return { sb, $, esc, aviso, ir, campo, tec, ADMIN, COORD: ADMIN || pode('mkt_aprovar'), DELEGA: ADMIN || pode('mkt_aprovar') || pode('mkt_delegar'), so: soMarketing(), meuId: D.meuId, eu: D.eu, aba: () => ABA, recarregarGravar, sairOk, limpo: () => { PREENCHIDO = false; SUJO = false; }, preenchido: (f) => { SUJO = true; PREENCHIDO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f || null; } }; }
 const VER_LISTA = () => VER_TODAS() || pode('vendas_todas');
 function lerHash() {
   const h = (location.hash.replace('#', '') || 'inicio').split('/');
@@ -3156,7 +3156,7 @@ async function telaAcessos(P) {
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
   $('voltar').onclick = () => voltarA('empresa');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
-  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (k === 'mkt_aprovar' && c.checked); }); aviso('Só o marketing marcado (a coordenação, se já estava marcada, continua). Salve para valer.'); });
+  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (['mkt_aprovar', 'mkt_delegar'].includes(k) && c.checked); }); aviso('Só o marketing marcado (a coordenação e a distribuição de tarefas, se já estavam marcadas, continuam). Salve para valer.'); });
   P.querySelectorAll('form[data-u]').forEach(f => {
     f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
     f.onsubmit = async (ev) => {
