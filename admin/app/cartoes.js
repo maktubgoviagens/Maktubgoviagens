@@ -12,6 +12,8 @@ export async function carregarBase(sb, forcar) {
   return BASE;
 }
 const nomeBase = (b) => `${b.banco} ${b.nome}`.trim();
+// redução parcial da anuidade depende das colunas reducao_gasto_mes e reducao_pct (SQL da redução de anuidade)
+const TEM_REDUCAO = () => (BASE || []).some(b => 'reducao_pct' in b);
 const dec = (x) => Number(x).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 export const salaVip = (b) => !b ? '' : b.salas_vip_ilimitado ? `sala VIP ilimitada${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}`
   : n(b.salas_vip_ano) ? `${b.salas_vip_ano} ${Number(b.salas_vip_ano) === 1 ? 'acesso' : 'acessos'}/ano a sala VIP${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}` : '';
@@ -23,9 +25,12 @@ export function inicio() { ED = null; }
 export function calc(cart, cat, cotacao, refs, normProg) {
   const gasto = n(cart.gasto_medio_mes) || 0, cheia = cat ? n(cat.anuidade_anual) : null, minimo = cat ? n(cat.isencao_gasto_mes) : null;
   const isentaGasto = minimo !== null && minimo > 0 && gasto >= minimo;
+  // redução parcial: gastando a partir de um valor por mês, a anuidade cai uma porcentagem (ex.: 50%)
+  const redGasto = cat ? n(cat.reducao_gasto_mes) : null, redPct = cat ? n(cat.reducao_pct) : null;
+  const reduzida = !isentaGasto && redGasto > 0 && redPct > 0 && gasto >= redGasto;
   const paga = n(cart.anuidade_paga);
   // anuidade negociada vale mais que a regra da base; sem nenhuma das duas, não dá para saber
-  const custo = paga !== null ? paga : cheia === null ? null : isentaGasto ? 0 : cheia;
+  const custo = paga !== null ? paga : cheia === null ? null : isentaGasto ? 0 : reduzida ? Math.round(cheia * (1 - Math.min(100, redPct) / 100) * 100) / 100 : cheia;
   let pontos = null, valor = null, semValor = '';
   const por = cat ? n(cat.pontos_por) : null;
   if (por && gasto > 0) {
@@ -37,13 +42,13 @@ export function calc(cart, cat, cotacao, refs, normProg) {
       if (ref !== undefined) valor = pontos * ref / 1000; else semValor = cat.programa ? `sem valor do milheiro de ${cat.programa}` : 'programa de pontos não informado';
     }
   }
-  return { gasto, cheia, minimo, isentaGasto, paga, custo, pontos, valor, semValor, resultado: valor !== null && custo !== null ? valor - custo : null };
+  return { gasto, cheia, minimo, isentaGasto, reduzida, redPct, paga, custo, pontos, valor, semValor, resultado: valor !== null && custo !== null ? valor - custo : null };
 }
 
 // Texto curto que vai para o painel do cliente (ele não lê a base de cartões)
 function textosPainel(cart, cat, k) {
   const brl = (x) => 'R$ ' + Math.round(x).toLocaleString('pt-BR');
-  const anuidade = k.custo === null ? null : k.custo === 0 ? (k.paga === null && k.cheia === 0 ? 'Sem anuidade' : k.isentaGasto ? 'Isenta pelo gasto' : 'Isenta') : `${brl(k.custo)}/ano`;
+  const anuidade = k.custo === null ? null : k.custo === 0 ? (k.paga === null && k.cheia === 0 ? 'Sem anuidade' : k.isentaGasto ? 'Isenta pelo gasto' : 'Isenta') : `${brl(k.custo)}/ano` + (k.reduzida && k.paga === null ? ` (${dec(k.redPct)}% de desconto pelo gasto)` : '');
   const pont = cat && n(cat.pontos_por) ? (cat.pontos_moeda === 'PCT' ? `${dec(cat.pontos_por)}% de cashback` : `${dec(cat.pontos_por)} ${Number(cat.pontos_por) === 1 ? 'pt' : 'pts'} por ${cat.pontos_moeda === 'USD' ? 'US$' : 'R$'}${cat.programa ? ' · ' + cat.programa : ''}`) : null;
   return { anuidade, pontuacao: pont };
 }
@@ -73,7 +78,7 @@ export async function telaBase(P, X) {
     <label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${SO_ILIM ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>
     <section class="bloco" style="margin-top:10px">${L.length ? L.map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
         <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${!b.ativo ? ' <small>(fora de linha)</small>' : ''}
-          <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
+          <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.reducao_gasto_mes) && n(b.reducao_pct) ? 'cai ' + dec(b.reducao_pct) + '% com ' + brl(b.reducao_gasto_mes) + '/mês' : '', n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
         <span${velho(b.conferido_em) ? ' style="color:var(--alerta)"' : ''}>${b.conferido_em ? 'conferido ' + b.conferido_em.split('-').reverse().join('/') : 'não conferido'}</span></button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
     <div class="sub" style="margin-top:8px">${num(BASE.length)} cartões na base. Em laranja, os conferidos há mais de 6 meses: vale revisar no site do banco.</div>`;
@@ -103,6 +108,7 @@ function formBase(P, X) {
       <div class="duas-col">${campo('banco', 'Banco *', b.banco, 'text', 'required placeholder="Ex.: Santander"')}${campo('nome', 'Cartão *', b.nome, 'text', 'required placeholder="Ex.: Unique Visa Infinite"')}</div>
       <div class="duas-col">${campo('bandeira', 'Bandeira', b.bandeira, 'text', 'placeholder="Visa, Mastercard, Elo"')}${campo('categoria', 'Categoria', b.categoria, 'text', 'placeholder="Gold, Platinum, Black..."')}</div>
       <div class="duas-col">${campo('anuidade_anual', 'Anuidade cheia (R$ por ano)', b.anuidade_anual, 'number')}${campo('isencao_gasto_mes', 'Gasto por mês que isenta (R$)', b.isencao_gasto_mes, 'number', 'placeholder="em branco se não houver"')}</div>
+      ${TEM_REDUCAO() ? `<div class="duas-col">${campo('reducao_gasto_mes', 'Gasto por mês que reduz (R$)', b.reducao_gasto_mes, 'number', 'placeholder="em branco se não houver"')}${campo('reducao_pct', 'Redução da anuidade (%)', b.reducao_pct, 'number', 'placeholder="Ex.: 50"')}</div>` : X.tec('<div class="sub">Para guardar a redução parcial da anuidade (ex.: 50% com um gasto menor), rode no Supabase o SQL da redução de anuidade.</div>')}
       ${campo('isencao', 'Regra de isenção, como o banco descreve', b.isencao, 'text', 'placeholder="Ex.: isenta com R$ 10 mil/mês ou R$ 100 mil investidos"')}
       <div class="duas-col">${campo('pontos_por', 'Pontuação', b.pontos_por, 'number', 'placeholder="Ex.: 2,2"')}${sel('pontos_moeda', 'Por', MOEDAS, b.pontos_moeda)}</div>
       ${campo('programa', 'Programa de pontos', b.programa, 'text', 'placeholder="Ex.: Esfera, Livelo, Átomos, Azul"')}
@@ -121,12 +127,16 @@ function formBase(P, X) {
     const row = { banco: v('banco'), nome: v('nome'), bandeira: v('bandeira') || null, categoria: v('categoria') || null, anuidade_anual: nv('anuidade_anual'), isencao_gasto_mes: nv('isencao_gasto_mes'),
       isencao: v('isencao') || null, pontos_por: nv('pontos_por'), pontos_moeda: v('pontos_moeda'), programa: v('programa') || null, beneficios: v('beneficios') || null,
       fonte: v('fonte') || null, conferido_em: v('conferido_em') || null, ativo: f.elements.ativo.checked, atualizado_em: new Date().toISOString(),
-      salas_vip_programa: v('salas_vip_programa') || null, salas_vip_ano: nv('salas_vip_ano') === null ? null : Math.round(nv('salas_vip_ano')), salas_vip_ilimitado: f.elements.salas_vip_ilimitado.checked };
+      salas_vip_programa: v('salas_vip_programa') || null, salas_vip_ano: nv('salas_vip_ano') === null ? null : Math.round(nv('salas_vip_ano')), salas_vip_ilimitado: f.elements.salas_vip_ilimitado.checked,
+      ...(TEM_REDUCAO() ? { reducao_gasto_mes: nv('reducao_gasto_mes'), reducao_pct: nv('reducao_pct') } : {}) };
+    if (row.reducao_pct !== undefined && row.reducao_pct !== null && !(row.reducao_pct > 0 && row.reducao_pct <= 100)) { aviso('A redução é uma porcentagem entre 1 e 100.'); return; }
     if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
     if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por', 'salas_vip_ano'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
     const r = ED === 'novo' ? await sb.from('cartoes_catalogo').insert(row).select().single() : await sb.from('cartoes_catalogo').update(row).eq('id', ED).select().single();
     if (r.error) { aviso('Não salvou: ' + r.error.message); return; }
     if (ED === 'novo') BASE.push(r.data); else Object.assign(BASE.find(x => x.id === ED), r.data);
+    // quem já tem esse cartão: os textos do painel do cliente (anuidade e pontuação) acompanham a base
+    if (ED !== 'novo' && X.CART) atualizarPaineis(sb, X.CART, X.D, r.data).catch(() => {});
     BASE.sort((a, c) => nomeBase(a).localeCompare(nomeBase(c)));
     aviso('Cartão salvo na base.'); voltar();
   };
@@ -140,6 +150,17 @@ function formBase(P, X) {
 
 /* ---------------- cartões do cliente (ficha > Tarefas) ---------------- */
 // onPrimeiro: chamado quando o primeiro cartão é salvo (marca a tarefa da implantação)
+// refaz o texto do painel de todos os clientes que têm um cartão da base (depois de editar esse cartão na base)
+async function atualizarPaineis(sb, CART, D, cat) {
+  const [r, refs] = await Promise.all([sb.from('cartoes').select('*').eq('catalogo_id', cat.id), CART.valoresRef()]);
+  if (r.error) return;
+  const cot = D && D.cfg ? n(D.cfg.cotacao_dolar) : null;
+  for (const x of r.data || []) {
+    const t = textosPainel(x, cat, calc(x, cat, cot, refs, CART.normProg));
+    if (t.anuidade !== (x.anuidade ?? null) || t.pontuacao !== (x.pontuacao ?? null)) await sb.from('cartoes').update(t).eq('id', x.id);
+  }
+}
+
 /* ---------- colar lista de cartões (nome e limite) ---------- */
 const semAc = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const PALAVRAS_VAZIAS = new Set(['cartao', 'cartoes', 'banco', 'de', 'do', 'da', 'e', 'card', 'credito', 'empresa', 'pj']);
@@ -220,6 +241,8 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   if (r.error) { box.innerHTML = `<div class="vazio">${esc(X.limparTec('Não carregou: ' + r.error.message))}</div>`; return; }
   const C = r.data || [], cot = D.cfg && n(D.cfg.cotacao_dolar), porId = Object.fromEntries(BASE.map(b => [b.id, b]));
   const K = C.map(x => ({ x, cat: porId[x.catalogo_id] || null, k: calc(x, porId[x.catalogo_id] || null, cot, refs, CART.normProg) }));
+  // cartão cadastrado pela lista no SQL ou base corrigida depois: o texto que o cliente vê no painel é refeito aqui
+  K.forEach(({ x, cat, k }) => { const t = textosPainel(x, cat, k); if (t.anuidade !== (x.anuidade ?? null) || t.pontuacao !== (x.pontuacao ?? null)) sb.from('cartoes').update(t).eq('id', x.id).then(({ error }) => { if (!error) Object.assign(x, t); }); });
   const soma = (f) => K.reduce((s, o) => s + (f(o) || 0), 0);
   const tot = { limite: soma(o => n(o.x.limite)), custo: soma(o => o.k.custo), valor: soma(o => o.k.valor), pontos: soma(o => o.k.pontos), semAnu: K.filter(o => o.k.custo === null).length,
     vip: soma(o => o.cat && !o.cat.salas_vip_ilimitado ? n(o.cat.salas_vip_ano) : 0), vipIlim: K.filter(o => o.cat && o.cat.salas_vip_ilimitado).map(o => nomeBase(o.cat)) };
