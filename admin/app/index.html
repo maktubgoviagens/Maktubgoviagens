@@ -4233,7 +4233,7 @@ function telaClientes(P) {
       const g = D.gestores.find(x => x.id === c.gestor_id);
       const dias = c.ultima_atualizacao ? Math.floor((Date.now() - new Date(c.ultima_atualizacao)) / 864e5) : null;
       const dv = diasPara(c.gestao_vencimento);
-      const contrato = c.gestao_vencimento ? `<span style="${dv <= 30 ? 'color:var(--alerta)' : ''}">${dv < 0 ? 'contrato vencido em ' + dataBR(c.gestao_vencimento) : dv <= 90 ? 'renova em ' + plural(dv, 'dia', 'dias') : 'contrato até ' + dataBR(c.gestao_vencimento)}</span> · ` : '<span style="color:var(--alerta)">sem data de entrada</span> · ';
+      const contrato = c.gestao_congelado_em ? `<span style="color:var(--alerta)">congelada até ${dataBR(c.gestao_congelado_ate)}</span> · ` : c.gestao_vencimento ? `<span style="${dv <= 30 ? 'color:var(--alerta)' : ''}">${dv < 0 ? 'contrato vencido em ' + dataBR(c.gestao_vencimento) : dv <= 90 ? 'renova em ' + plural(dv, 'dia', 'dias') : 'contrato até ' + dataBR(c.gestao_vencimento)}</span> · ` : '<span style="color:var(--alerta)">sem data de entrada</span> · ';
       return `<button class="cli" data-c="${c.id}"><div><div class="nome">${esc(c.nome_completo)}</div><div style="margin:4px 0 2px">${htmlCiclo(c, cicloCliente(c))}</div><div class="meta">${contrato}${g ? esc(g.nome) + ' · ' : ''}${dias === null ? 'painel nunca atualizado' : dias === 0 ? 'atualizado hoje' : `atualizado há ${dias} dia${dias === 1 ? '' : 's'}`}${v && difDias(v) <= 60 ? ` · <span style="color:var(--alerta)">vencimento em ${dataCurta(v)}</span>` : ''}</div></div><div class="val"><b>${brlC(pat)}</b><span>${milC(mi)} milhas</span></div></button>`;
     }).join('') : '<div class="vazio">Nenhum cliente encontrado.</div>'}</div>`;
   $('busca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaClientes(P); $('busca').focus(); $('busca').setSelectionRange(pos, pos); };
@@ -5079,13 +5079,30 @@ function htmlContrato(c) {
   return `<div class="lin"><span>Entrada</span><span>${dataBR(c.gestao_inicio)}</span></div>
     <div class="lin"><span>Vencimento</span><span style="${dv <= 30 ? 'color:var(--alerta)' : ''}">${dataBR(c.gestao_vencimento)}</span></div>
     <div class="meta"><div class="top"><span>${dv < 0 ? 'Vencido há ' + plural(-dv, 'dia', 'dias') : dv === 0 ? 'Vence hoje' : 'Faltam ' + plural(dv, 'dia', 'dias')}</span><b>${pct(passados / total * 100)}</b></div><div class="barra2"><i class="${dv <= 90 ? 'ok' : ''}" style="width:${passados / total * 100}%"></i></div><small>${dv <= 90 ? 'Período de renovação: agende a reunião com o cliente.' : 'do ciclo de 12 meses já cumprido'}</small></div>
+    ${htmlCongelamento(c)}
     <div id="ctCiclos"></div>
     <div style="display:flex;gap:8px;margin-top:12px">${dv <= 90 ? '<button class="zap" id="ctRenovar" style="flex:1">Renovar por mais 12 meses</button>' : ''}<button class="sec" id="ctEditar" style="flex:1">Corrigir data de entrada</button></div>
     <div id="ctEdit" hidden>${campo('ct_inicio', 'Data de entrada (assinatura)', c.gestao_inicio, 'date')}<button class="zap" id="ctSalvar" style="margin-top:8px;width:100%">Salvar</button></div>`;
 }
+// congelamento: o cliente congela e volta pelo painel; a equipe vê aqui e pode retomar
+function htmlCongelamento(c) {
+  if (!c.gestao_congelado_em) return '';
+  const dv = diasPara(c.gestao_congelado_ate);
+  return `<div class="config" style="margin-top:10px"><b>Gestão congelada</b> desde ${dataBR(c.gestao_congelado_em)}. Volta sozinha em ${dataBR(c.gestao_congelado_ate)}${dv >= 0 ? ' (faltam ' + plural(dv, 'dia', 'dias') + ')' : ''}.
+    ${c.gestao_congelado_motivo ? `<div class="sub" style="margin-top:6px">Motivo: ${esc(c.gestao_congelado_motivo)}</div>` : ''}
+    <div class="sub" style="margin-top:6px">O vencimento acima ainda não inclui os dias congelados: eles entram quando a gestão voltar.</div>
+    <button class="sec" id="ctDescongelar" style="width:100%;margin-top:10px">Retomar a gestão agora</button></div>`;
+}
 function ligarContrato(c) {
   const B = $('blContrato'); if (!B) return;
   const atualiza = (d) => { Object.assign(c, d); B.innerHTML = htmlContrato(c); ligarContrato(c); };
+  if ($('ctDescongelar')) $('ctDescongelar').onclick = async () => {
+    if (CONFIRMA !== 'desc' + c.id) { CONFIRMA = 'desc' + c.id; $('ctDescongelar').textContent = 'Toque de novo para retomar'; return; }
+    CONFIRMA = null;
+    const { data, error } = await sb.rpc('gestao_descongelar', { p_cliente: c.id });
+    if (error) { aviso(/gestao_descongelar/.test(error.message) ? 'Rode o 60-congelamento-gestao.sql no Supabase.' : 'Não retomou: ' + error.message); return; }
+    atualiza(data); aviso(`Gestão retomada. Contrato até ${dataBR(data.gestao_vencimento)}.`);
+  };
   if ($('ctEditar')) $('ctEditar').onclick = () => { $('ctEdit').hidden = !$('ctEdit').hidden; };
   if ($('ctSalvar')) $('ctSalvar').onclick = async () => {
     const v = B.querySelector('[name=ct_inicio]').value; if (!v) { aviso('Escolha a data de entrada.'); return; }

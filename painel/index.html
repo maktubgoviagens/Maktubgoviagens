@@ -397,6 +397,22 @@
     .req-top .t{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:500}
     .req .d{font-size:12.5px;color:var(--text-muted);font-weight:300}
     .req .btn-line{margin-top:10px;padding:9px 14px}
+    .plano{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+    .plano .lin{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-mid)}
+    .plano .lin b{font-weight:500;color:var(--green);text-align:right}
+    .plano .regras{margin:0 0 22px;padding:0;list-style:none}
+    .plano .regras li{position:relative;padding-left:18px;margin-bottom:10px;font-size:13px;color:var(--text-mid);line-height:1.55;font-weight:300}
+    .plano .regras li::before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border:1px solid var(--gold);transform:rotate(45deg)}
+    .plano .acoes{display:flex;gap:10px;flex-wrap:wrap}
+    .plano .acoes .btn-main{width:auto;flex:1 1 220px}
+    .plano .acoes .btn-line{flex:1 1 160px;background:none;cursor:pointer;font-family:inherit}
+    .pill-cong{display:inline-block;padding:5px 10px;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;background:#e8eef3;color:#2f5470}
+    .alert-cong{display:flex;gap:18px;align-items:center;background:#eef3f6;border:1px solid rgba(47,84,112,.2);border-left:3px solid #2f5470;padding:18px 24px;margin-bottom:24px;cursor:pointer}
+    .alert-cong svg{width:22px;height:22px;stroke:#2f5470;fill:none;stroke-width:1.6;flex-shrink:0}
+    .alert-cong .t{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);line-height:1.25}
+    .alert-cong .d{font-size:12.5px;color:var(--text-mid);font-weight:300}
+    .alert-cong .go{margin-left:auto;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);font-weight:600;white-space:nowrap}
+    @media(max-width:900px){.plano{grid-template-columns:1fr}.alert-cong{flex-wrap:wrap}.alert-cong .go{margin-left:0}}
     .meet-note{margin-top:16px;padding:18px 20px;background:var(--cream-deep);border-left:2px solid var(--gold);font-size:13px;color:var(--text-mid);line-height:1.6}
  
     [hidden]{display:none!important}
@@ -734,6 +750,10 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
         Agendar Reunião
       </a></li>
+      <li><a class="sb-link" href="#plano" data-view="plano">
+        <svg viewBox="0 0 24 24"><path d="M12 2v20M4.9 4.9l14.2 14.2M2 12h20M19.1 4.9 4.9 19.1"/></svg>
+        Meu Plano
+      </a></li>
       <li class="sb-section">Clube Maktub</li>
       <li><a class="sb-link" href="#convites" data-view="convites">
         <svg viewBox="0 0 24 24"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
@@ -786,6 +806,7 @@
  
     <!-- ============= VIEW: PAINEL PRINCIPAL ============= -->
     <div class="view" id="view-inicio">
+    <div id="planoSlot"></div>
     <div id="alertSlot"></div>
     <div id="nextFlightSlot"></div>
     <!-- ============= BLOCO 1: PATRIMÔNIO ============= -->
@@ -1001,6 +1022,11 @@
       </div>
     </div>
  
+    <!-- ============= VIEW: MEU PLANO ============= -->
+    <div class="view" id="view-plano" hidden>
+      <div class="plano" id="planoBox"><div class="empty-cards">Carregando seu plano</div></div>
+    </div>
+
     <!-- ============= VIEW: AGENDAR REUNIÃO ============= -->
     <div class="view" id="view-reuniao" hidden>
       <div class="meet">
@@ -1763,6 +1789,91 @@
     $('gestorCard').hidden = false;
   }
  
+  // ----- Meu plano: vigência e congelamento da gestão -----
+  // O cliente congela por até 6 meses, uma vez por vigência, e volta quando quiser.
+  // Os dias congelados são somados ao fim do contrato; no fim dos 6 meses a gestão volta sozinha.
+  const ICON_GELO = '<svg viewBox="0 0 24 24"><path d="M12 2v20M4.9 4.9l14.2 14.2M2 12h20M19.1 4.9 4.9 19.1"/></svg>';
+  let PLANO = { usado: false, pedindo: false, confirmar: false };
+  async function carregarPlano() {
+    PLANO.usado = false;
+    if (CLIENTE && CLIENTE.gestao_inicio && !CLIENTE.gestao_congelado_em) {
+      try {
+        const { data } = await supabase.from('gestao_congelamentos').select('inicio').eq('cliente_id', CLIENTE.id).gte('inicio', String(CLIENTE.gestao_inicio).slice(0, 10)).limit(1);
+        PLANO.usado = !!(data && data.length);
+      } catch (_) {}
+    }
+    renderPlano();
+  }
+  function renderPlano() {
+    const c = CLIENTE || {}, box = $('planoBox'), slot = $('planoSlot');
+    if (!box) return;
+    const cong = !!c.gestao_congelado_em, faltam = cong ? daysUntil(c.gestao_congelado_ate) : null;
+    const dd = (n) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+    // aviso no painel principal enquanto estiver congelada
+    slot.innerHTML = cong ? `<div class="alert-cong" role="link" tabindex="0" data-goto="plano">${ICON_GELO}
+      <div><div class="t">${faltam <= 30 ? `Sua gestão volta em <strong>${dd(Math.max(faltam, 0))}</strong>` : 'Sua gestão está congelada'}</div>
+      <div class="d">${faltam <= 30 ? `Ela é retomada automaticamente em ${brDate(c.gestao_congelado_ate)}. Se quiser voltar antes, é só tocar aqui.` : `Desde ${brDate(c.gestao_congelado_em)}. Ela volta sozinha em ${brDate(c.gestao_congelado_ate)}, ou antes, quando você quiser.`}</div></div>
+      <div class="go">Ver meu plano →</div></div>` : '';
+    const ir = slot.querySelector('[data-goto]');
+    if (ir) { const go = () => { location.hash = 'plano'; }; ir.onclick = go; ir.onkeydown = (e) => { if (e.key === 'Enter') go(); }; }
+    const link = document.querySelector('.sb-link[data-view="plano"]');
+    if (link) { const b = link.querySelector('.sb-badge'); if (b) b.remove(); if (cong && faltam <= 30) link.insertAdjacentHTML('beforeend', '<span class="sb-badge" title="Gestão voltando">!</span>'); }
+
+    const vig = `<div class="form-card"><h3>Seu <em>plano</em></h3><p>Gestão de Milhas Maktub Go, com 12 meses de acompanhamento.</p>
+      <div class="lin"><span>Situação</span><b>${cong ? '<span class="pill-cong">Congelada</span>' : c.gestao_inicio ? 'Ativa' : 'Em implantação'}</b></div>
+      ${c.gestao_inicio ? `<div class="lin"><span>Início</span><b>${brDate(c.gestao_inicio)}</b></div>` : ''}
+      ${c.gestao_vencimento ? `<div class="lin"><span>Vigência até</span><b>${brDate(c.gestao_vencimento)}${cong ? ' + dias congelados' : ''}</b></div>` : ''}
+      ${cong ? `<div class="lin"><span>Congelada desde</span><b>${brDate(c.gestao_congelado_em)}</b></div><div class="lin"><span>Volta automática</span><b>${brDate(c.gestao_congelado_ate)}</b></div>` : ''}
+      <div class="meet-note">Dúvidas sobre o plano ou a renovação? Fale com seu gestor pelo WhatsApp.</div></div>`;
+
+    let acao;
+    if (!c.gestao_inicio) {
+      acao = `<div class="form-card"><h3>Congelar a <em>gestão</em></h3><p>A opção de congelar fica disponível assim que a sua implantação for concluída.</p></div>`;
+    } else if (cong) {
+      acao = `<div class="form-card"><h3>Voltar com a <em>gestão</em></h3>
+        <p>${faltam <= 30 ? `Faltam ${dd(Math.max(faltam, 0))} para a gestão voltar sozinha.` : 'Quando estiver pronto, é só voltar.'} Ao retomar, os dias em que ela ficou congelada são somados ao fim do seu contrato: você não perde nenhum mês.</p>
+        <div class="acoes"><button type="button" class="btn-main" id="plVoltar">${PLANO.confirmar ? 'Toque de novo para confirmar' : 'Voltar com a minha gestão agora'}</button></div>
+        <div class="form-msg" id="plMsg"></div></div>`;
+    } else if (PLANO.usado) {
+      acao = `<div class="form-card"><h3>Congelar a <em>gestão</em></h3><p>O congelamento já foi usado neste período de vigência. Ele volta a ficar disponível na renovação. Se precisar de ajuda agora, fale com seu gestor.</p></div>`;
+    } else if (PLANO.pedindo) {
+      acao = `<form class="form-card" id="plForm" novalidate><h3>Congelar a <em>gestão</em></h3>
+        <p>Conte em poucas palavras o que aconteceu. Não precisa enviar comprovante.</p>
+        <div class="fld"><label for="plMotivo">Motivo</label><textarea id="plMotivo" maxlength="500" placeholder="Ex.: nascimento do meu filho, recuperação de uma cirurgia"></textarea></div>
+        <ul class="regras"><li>Congela hoje e volta sozinha em até 6 meses, ou antes, quando você quiser.</li><li>Pode ser usado uma vez por vigência.</li><li>Os dias congelados são somados ao fim do contrato.</li><li>Durante a pausa, reuniões, cotações e emissões ficam suspensas. O painel e o aviso de vencimento das suas milhas continuam.</li></ul>
+        <div class="acoes"><button type="submit" class="btn-main" id="plConfirmar">Confirmar congelamento</button><button type="button" class="btn-line" id="plCancelar">Agora não</button></div>
+        <div class="form-msg" id="plMsg"></div></form>`;
+    } else {
+      acao = `<div class="form-card"><h3>Precisa de uma <em>pausa?</em></h3>
+        <p>Se a vida pedir uma pausa nas viagens, como a chegada de um filho, uma cirurgia ou um acidente, você pode congelar a gestão por até 6 meses. O tempo parado não conta: ele é somado ao fim do seu contrato.</p>
+        <div class="acoes"><button type="button" class="btn-line" id="plAbrir">Congelar minha gestão</button></div></div>`;
+    }
+    box.innerHTML = vig + acao;
+
+    const msg = (t, ok) => { const m = $('plMsg'); if (m) { m.className = 'form-msg ' + (ok ? 'ok' : 'err'); m.textContent = t; } };
+    if ($('plAbrir')) $('plAbrir').onclick = () => { PLANO.pedindo = true; renderPlano(); $('plMotivo').focus(); };
+    if ($('plCancelar')) $('plCancelar').onclick = () => { PLANO.pedindo = false; renderPlano(); };
+    if ($('plForm')) $('plForm').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const motivo = $('plMotivo').value.trim();
+      if (!motivo) { msg('Conte o motivo para congelar.'); $('plMotivo').focus(); return; }
+      const b = $('plConfirmar'); b.disabled = true; b.textContent = 'Congelando...';
+      const { data, error } = await supabase.rpc('gestao_congelar', { p_motivo: motivo });
+      if (error) { b.disabled = false; b.textContent = 'Confirmar congelamento'; msg(error.message || 'Não foi possível congelar agora. Tente de novo ou fale com seu gestor.'); return; }
+      Object.assign(CLIENTE, data); PLANO.pedindo = false; renderPlano();
+      toast('Gestão congelada. Ela volta sozinha em ' + brDate(CLIENTE.gestao_congelado_ate) + '.');
+    };
+    if ($('plVoltar')) $('plVoltar').onclick = async () => {
+      if (!PLANO.confirmar) { PLANO.confirmar = true; renderPlano(); return; }
+      const b = $('plVoltar'); b.disabled = true; b.textContent = 'Retomando...';
+      const { data, error } = await supabase.rpc('gestao_descongelar', {});
+      PLANO.confirmar = false;
+      if (error) { b.disabled = false; b.textContent = 'Voltar com a minha gestão agora'; msg(error.message || 'Não foi possível retomar agora. Tente de novo ou fale com seu gestor.'); return; }
+      Object.assign(CLIENTE, data); PLANO.usado = true; renderPlano();
+      toast('Bem-vindo de volta. Sua vigência agora vai até ' + brDate(CLIENTE.gestao_vencimento) + '.');
+    };
+  }
+
   // ----- Vencimento de milhas -----
   function vencimentos(programas) {
     return programas.filter(p => p.vencimento_data && Number(p.vencimento_quantidade || 0) > 0)
@@ -2175,6 +2286,7 @@
     documentos: 'Bilhetes, vouchers, seguros e roteiros guardados em um só lugar.',
     relatorios: 'O resumo de cada mês da sua gestão, pronto para ler ou salvar em PDF.',
     reuniao: 'Sua reunião mensal com o gestor: uma por mês, em horários reservados.',
+    plano: 'A vigência do seu plano e a opção de congelar a gestão quando a vida pedir uma pausa.',
     convites: 'Indique pessoas próximas para o círculo Maktub Go.'
   };
   function route() {
@@ -2326,6 +2438,7 @@
       renderProximoVoo(voos);
       renderTrips(viagens, voos, DOCS);
       renderVencimentos(programas);
+      await carregarPlano();
       renderMilhas(saldos, extrato, programas);
       renderEconomias(economias);
  
