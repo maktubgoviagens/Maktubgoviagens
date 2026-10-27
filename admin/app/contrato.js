@@ -83,7 +83,12 @@ export function camposDoModelo(blocos) {
   (blocos || []).forEach(b => { (b.r || []).forEach(r => ver(r[0])); (b.linhas || []).forEach(l => l.forEach(ver)); [b.titulo, b.subtitulo, b.local].forEach(ver); (b.partes || []).forEach(l => l.forEach(ver)); });
   return [...s];
 }
-const trocar = (t, dados) => String(t || '').replace(CHAVE, (_, k) => (dados[k] !== undefined && dados[k] !== null && String(dados[k]).trim() !== '') ? String(dados[k]) : `[${k}]`);
+const trocar = (t, dados) => marcarImagem(String(t || '').replace(CHAVE, (_, k) => (dados[k] !== undefined && dados[k] !== null && String(dados[k]).trim() !== '') ? String(dados[k]) : `[${k}]`), dados);
+// a opção de uso de imagem é escolhida no app e já sai marcada no PDF
+function marcarImagem(t, dados) {
+  if (!dados || !['sim', 'nao'].includes(dados.uso_imagem)) return t;
+  return t.replace(/\(\s*\)\s*Autorizo\s*\(\s*\)\s*Não autorizo/, dados.uso_imagem === 'sim' ? '( X ) Autorizo   (   ) Não autorizo' : '(   ) Autorizo   ( X ) Não autorizo');
+}
 // número da cláusula (1.1., 10.2.) em destaque, sem mexer no texto
 function comNumero(runs, dados) {
   const out = [];
@@ -94,12 +99,59 @@ function comNumero(runs, dados) {
   });
   return out;
 }
-const rubrica = () => ({ text: [{ text: 'Rubrica do MEMBRO  ', color: COR.cinza }, { text: '_______________________', color: COR.cinza }], fontSize: 7.5, alignment: 'right', margin: [0, 6, 0, 0] });
+// ---------- página de assinaturas e rubricas ----------
+// O contrato termina numa página só de assinaturas, com posições fixas, e a rubrica do membro fica no rodapé de todas as páginas.
+// As posições (em % da página A4) vão para o Autentique, que carimba a assinatura e a rubrica de cada um no lugar certo.
+const A4 = { w: 595.28, h: 841.89 };
+const ASS = { titulo: 92, local: 128, maktub: 186, membro: 356, altura: 86, x: 52, largura: 300 };
+// rodapé: começa a 54pt do fim da página + 18pt de margem; caixa na 3ª coluna, contada da direita (página de 30 + espaço de 8 + caixa de 92)
+const RUB = { x: 413, y: 805.89, w: 92, h: 24 };
+const pct = (v, total) => (Math.round(v / total * 10000) / 100).toFixed(2);
+export const LAYOUT_VERSAO = 1;
+function layoutAssinaturas(paginas) {
+  const caixa = (topo) => ({ x: pct(ASS.x + 12, A4.w), y: pct(topo + 18, A4.h) });
+  return {
+    versao: LAYOUT_VERSAO, paginas,
+    maktub: [{ ...caixa(ASS.maktub), z: paginas, element: 'SIGNATURE' }],
+    membro: [{ ...caixa(ASS.membro), z: paginas, element: 'SIGNATURE' },
+      ...Array.from({ length: paginas - 1 }, (_, i) => ({ x: pct(RUB.x + 8, A4.w), y: pct(RUB.y + 3, A4.h), z: i + 1, element: 'INITIALS' }))]
+  };
+}
+function paginaAssinaturas(linhas, dados, F) {
+  // linhas do bloco "Assinaturas" do modelo: local e data, Maktub e representante, membro
+  const L = linhas.map(t => t.trim()).filter(Boolean);
+  const membroLinha = L.find(t => /^MEMBRO\b/i.test(t)) || ('MEMBRO: ' + (dados.nome_completo || ''));
+  const local = L.find(t => t !== membroLinha && /\d{4}\.?$/.test(t)) || '';
+  const maktub = L.filter(t => t !== membroLinha && t !== local);
+  const abs = (y, x = ASS.x) => ({ x, y });
+  const rotulo = (t, y) => ({ text: t, fontSize: 6.8, bold: true, characterSpacing: 1.6, color: COR.dourado, absolutePosition: abs(y) });
+  const area = (topo) => [
+    { canvas: [{ type: 'rect', x: 0, y: 0, w: ASS.largura, h: ASS.altura, color: COR.creme2 }], absolutePosition: abs(topo) },
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: ASS.largura, y2: 0, lineWidth: 0.8, lineColor: COR.verde }], absolutePosition: abs(topo + ASS.altura) }
+  ];
+  const nomes = (topo, t) => ({ stack: t.map((x, i) => ({ text: x, fontSize: i ? 7.8 : 8.4, bold: !i, color: i ? COR.texto : COR.verde, margin: [0, 0, 0, 2] })), absolutePosition: abs(topo + ASS.altura + 8) });
+  const membroNome = membroLinha.replace(/^MEMBRO\s*:?\s*/i, '');
+  return [
+    { text: '', pageBreak: 'before' },
+    { text: 'Assinaturas', font: F.titulo, fontSize: 22, color: COR.verde, absolutePosition: abs(ASS.titulo) },
+    { text: local, fontSize: 8.6, color: COR.texto, absolutePosition: abs(ASS.local) },
+    rotulo('PELA CONTRATADA', ASS.maktub - 14), ...area(ASS.maktub), nomes(ASS.maktub, maktub.length ? maktub : ['MAKTUB GO AGENCIA DE VIAGENS LTDA']),
+    rotulo('PELO MEMBRO', ASS.membro - 14), ...area(ASS.membro), nomes(ASS.membro, [membroNome, dados.cpf ? 'CPF ' + dados.cpf : ''].filter(Boolean)),
+    { text: 'Documento assinado eletronicamente, com validade jurídica nos termos da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020. As assinaturas e as rubricas são inseridas pela plataforma de assinatura, e a página de autenticação ao final integra este contrato.', fontSize: 7, color: COR.cinza, lineHeight: 1.4, absolutePosition: abs(ASS.membro + ASS.altura + 70) }
+  ];
+}
 export async function gerarPdf(modelo, dados) {
   const pm = await pdfMake(), F = await fontesMarca(pm);
   const [logo, simbolo] = await Promise.all([imagem('/ativos/logo-verde-transparente.png'), imagem('/ativos/simbolo-verde.png')]);
   const content = [];
+  let assin = null, capturando = false;
+  const textoDe = (b) => (b.r || []).map(([t]) => trocar(t, dados)).join('');
   (modelo.blocos || []).forEach((b, i, todos) => {
+    if (capturando) { if (['h1', 'h2', 'tabela', 'quadro', 'capa', 'assinaturas'].includes(b.k)) capturando = false; else { assin.push(textoDe(b)); return; } }
+    if (b.k === 'h2' && textoDe(b).trim() === 'Assinaturas') { assin = []; capturando = true; return; }
+    if (b.k === 'assinaturas') { assin = [trocar(b.local, dados), ...(b.partes || []).flatMap(([nome, papel], j) => j === (b.partes.length - 1) ? ['MEMBRO: ' + trocar(nome, dados)] : [trocar(nome, dados), trocar(papel, dados)])]; return; }
+    // a rubrica do membro agora fica no rodapé de todas as páginas
+    if (!['h1', 'h2'].includes(b.k) && /^Rubrica do MEMBRO/i.test(textoDe(b).trim())) return;
     if (b.k === 'capa') {
       if (logo) content.push({ image: logo, width: 118, alignment: 'center', margin: [0, 0, 0, 14] });
       content.push({ canvas: [{ type: 'line', x1: 207, y1: 0, x2: 288, y2: 0, lineWidth: 0.8, lineColor: COR.dourado }], margin: [0, 0, 0, 12] });
@@ -125,7 +177,7 @@ export async function gerarPdf(modelo, dados) {
     if (b.k === 'destaque') {
       content.push({ unbreakable: true, margin: [0, 4, 0, 10], stack: [
         { table: { widths: ['*'], body: [[{ text: (b.r || []).map(([t, neg]) => ({ text: trocar(t, dados), bold: !!neg })), fontSize: 8.4, color: COR.verde, margin: [10, 8, 10, 8] }]] }, layout: { fillColor: () => COR.creme2, hLineWidth: () => 0, vLineWidth: (c) => c === 0 ? 2.2 : 0, vLineColor: () => COR.dourado } },
-        ...(b.rubrica ? [rubrica()] : [])] });
+        ] });
       return;
     }
     if (b.k === 'assinaturas') {
@@ -143,6 +195,8 @@ export async function gerarPdf(modelo, dados) {
   });
   // título de cláusula nunca fica sozinho no fim da página: vai junto com o primeiro parágrafo
   for (let i = content.length - 2; i >= 0; i--) if (content[i].headlineLevel === 1) { const h = content[i], n = content[i + 1]; delete h.headlineLevel; content.splice(i, 2, { stack: [h, n], unbreakable: true }); }
+  content.push(...paginaAssinaturas(assin || [], dados, F));
+  let paginas = 0;
   const doc = {
     pageSize: 'A4', pageMargins: [52, 62, 52, 54], content,
     info: { title: `Contrato Gestão de Milhas - ${dados.nome_completo || ''}`, author: 'Maktub Go', subject: modelo.versao || '' },
@@ -153,9 +207,21 @@ export async function gerarPdf(modelo, dados) {
     header: (atual) => atual === 1 ? null : { margin: [52, 26, 52, 0], stack: [
       { columns: [simbolo ? { image: simbolo, width: 12 } : { text: '' }, { text: 'CONTRATO DE GESTÃO DE MILHAS', fontSize: 6.2, characterSpacing: 1.4, color: COR.dourado, alignment: 'right', margin: [0, 3, 0, 0] }] },
       { canvas: [{ type: 'line', x1: 0, y1: 6, x2: 491, y2: 6, lineWidth: 0.5, lineColor: COR.creme }] }] },
-    footer: (atual, total) => ({ margin: [52, 18, 52, 0], columns: [{ text: 'Maktub Go · Alfaiataria de Viagens', fontSize: 6.6, color: COR.cinza }, { text: `${atual} / ${total}`, alignment: 'right', fontSize: 6.6, color: COR.cinza }] })
+    footer: (atual, total) => {
+      paginas = total;
+      // rubrica do membro em todas as páginas, menos na de assinaturas (posição fixa, usada no envio ao Autentique)
+      const rub = atual < total;
+      return { margin: [52, 18, 52, 0], columnGap: 8, columns: [
+        { text: 'Maktub Go · Alfaiataria de Viagens', fontSize: 6.6, color: COR.cinza, margin: [0, 8, 0, 0] },
+        { width: 84, text: rub ? 'RUBRICA DO MEMBRO' : '', fontSize: 5.2, bold: true, characterSpacing: 0.8, color: COR.cinza, alignment: 'right', margin: [0, 9, 0, 0] },
+        { width: RUB.w, canvas: rub ? [{ type: 'rect', x: 0, y: 0, w: RUB.w, h: RUB.h, lineWidth: 0.5, lineColor: '#D9CFB4' }] : [] },
+        { width: 30, text: `${atual} / ${total}`, alignment: 'right', fontSize: 6.6, color: COR.cinza, margin: [0, 8, 0, 0] }] };
+    }
   };
-  return await new Promise((ok, erro) => { try { pm.createPdf(doc).getBlob(ok); } catch (e) { erro(e); } });
+  const blob = await new Promise((ok, erro) => { try { pm.createPdf(doc).getBlob(ok); } catch (e) { erro(e); } });
+  // guarda onde cada um assina, para o envio ao Autentique
+  blob.layout = layoutAssinaturas(paginas);
+  return blob;
 }
 
 // ---------- dados do contrato ----------
@@ -173,7 +239,7 @@ export function montarDados({ p, doc, ext, cond }) {
     valor_acompanhamento: total ? dinheiro(acomp) : '', valor_acompanhamento_extenso: total ? extenso(acomp) : '',
     valor_mensal: total ? dinheiro(mensal) : '', valor_mensal_extenso: total ? extenso(mensal) : '',
     forma_pagamento: cartao ? 'Parcelado no cartão de crédito' : 'À vista, via Pix', parcelas: cartao ? `${cond.parcelas}x de R$ ${dinheiro(total / (Number(cond.parcelas) || 1))}` : 'Não se aplica',
-    programas_fidelidade: cond.programas || '', cidade_assinatura: cond.cidade || '', data_assinatura: cond.data ? dataExtensa(cond.data) : ''
+    programas_fidelidade: cond.programas || '', uso_imagem: cond.uso_imagem || '', cidade_assinatura: cond.cidade || '', data_assinatura: cond.data ? dataExtensa(cond.data) : ''
   };
 }
 const ROTULO = { nome_completo: 'Nome completo', nacionalidade: 'Nacionalidade', estado_civil: 'Estado civil', profissao: 'Profissão', cpf: 'CPF', rg: 'RG', rg_orgao_uf: 'Órgão emissor e UF do RG', endereco_completo: 'Endereço completo', cep: 'CEP', email: 'E-mail', telefone: 'Celular', data_nascimento: 'Data de nascimento', valor_total: 'Valor total', forma_pagamento: 'Forma de pagamento', parcelas: 'Parcelas', programas_fidelidade: 'Programas e nº de fidelidade', cidade_assinatura: 'Cidade da assinatura', data_assinatura: 'Data da assinatura' };
@@ -273,6 +339,7 @@ async function formulario(box, c, pf, modelo, X, el) {
     <div class="sub" id="ctrConta" style="margin-top:0"></div>
     <label class="fl"><span>Forma de pagamento</span><select name="forma"><option value="pix">À vista, via Pix</option><option value="cartao">Parcelado no cartão de crédito</option></select></label>
     <div id="ctrParc" hidden>${campo('parcelas', 'Número de parcelas', '', 'number', 'min="2" max="12"')}</div>
+    <label class="fl"><span>Uso de imagem (Cláusula de uso de imagem)</span><select name="uso_imagem" required><option value="">Pergunte ao cliente</option><option value="sim">Autoriza</option><option value="nao">Não autoriza</option></select></label>
     <label class="fl"><span>Programas e nº de fidelidade (Anexo I)</span><textarea name="programas" rows="2" placeholder="Ex.: Smiles 123456, LATAM Pass 987654">${esc(progs.join(', '))}</textarea></label>
     <div class="duas-col">${campo('cidade', 'Cidade da assinatura', lembrar('cidade'), 'text', 'required')}${campo('data', 'Data da assinatura', hojeISO(), 'date', 'required')}</div>
     <label class="fc"><input type="checkbox" name="selfie"><span>Pedir foto do documento e selfie na assinatura (pode consumir créditos do Autentique)</span></label>
@@ -292,11 +359,12 @@ async function formulario(box, c, pf, modelo, X, el) {
   X.$('ctrFechar').onclick = () => { FORM = null; box.innerHTML = ''; };
   const coletar = () => {
     const extNovo = { pessoa_id: pf.id, rg: g('rg') || null, rg_orgao_uf: g('rg_orgao_uf') || null, nacionalidade: g('nacionalidade') || null, estado_civil: g('estado_civil') || null, profissao: g('profissao') || null, endereco_completo: g('endereco_completo') || null, cep: so(g('cep')) || null };
-    const cond = { valor_total: Number(String(g('valor_total')).replace(',', '.')) || 0, forma: g('forma'), parcelas: Number(g('parcelas')) || 0, programas: g('programas'), cidade: g('cidade'), data: g('data') };
+    const cond = { valor_total: Number(String(g('valor_total')).replace(',', '.')) || 0, forma: g('forma'), parcelas: Number(g('parcelas')) || 0, programas: g('programas'), cidade: g('cidade'), data: g('data'), uso_imagem: g('uso_imagem') };
     const dados = montarDados({ p: pf, doc: { cpf: g('cpf'), nacionalidade: g('nacionalidade') }, ext: extNovo, cond });
     const falta = faltando(camposDoModelo(modelo.blocos), dados);
     if (g('cpf') && !cpfOk(g('cpf'))) falta.unshift('CPF válido');
     if (cond.forma === 'cartao' && !(cond.parcelas >= 2 && cond.parcelas <= 12)) falta.push('Número de parcelas (2 a 12)');
+    if (!cond.uso_imagem) falta.push('Uso de imagem (autoriza ou não)');
     if (!pf.email && !pf.celular) falta.push('E-mail ou celular na ficha, para enviar o link');
     X.$('ctrFalta').textContent = falta.length ? 'Falta: ' + falta.join(', ') + '.' : '';
     return { extNovo, cond, dados, falta };
@@ -324,7 +392,7 @@ async function formulario(box, c, pf, modelo, X, el) {
     try {
       await salvarDados(extNovo);
       const blob = await gerarPdf(modelo, dados);
-      const ins = await sb.from('contratos').insert({ cliente_id: c.id, pessoa_id: pf.id, modelo_id: modelo.id, modelo_versao: modelo.versao, dados, valor_total: cond.valor_total, forma_pagamento: cond.forma, parcelas: cond.forma === 'cartao' ? cond.parcelas : null, pedir_selfie: f.elements.selfie.checked, status: 'gerado' }).select().single();
+      const ins = await sb.from('contratos').insert({ cliente_id: c.id, pessoa_id: pf.id, modelo_id: modelo.id, modelo_versao: modelo.versao, dados: { ...dados, _assinaturas: blob.layout }, valor_total: cond.valor_total, forma_pagamento: cond.forma, parcelas: cond.forma === 'cartao' ? cond.parcelas : null, pedir_selfie: f.elements.selfie.checked, status: 'gerado' }).select().single();
       if (ins.error) throw new Error(ins.error.message);
       criado = ins.data;
       const path = `${c.id}/${criado.id}/contrato.pdf`;
