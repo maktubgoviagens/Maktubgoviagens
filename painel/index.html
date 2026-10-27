@@ -178,7 +178,23 @@
     .upg-prog-fill{height:100%;background:var(--gold)}
     .upg-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--text-muted);letter-spacing:.1em}
  
-    .empty-cards{padding:60px 24px;text-align:center;background:var(--white);border:1px solid var(--border);color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:17px}
+    .mc-list{background:var(--white);border:1px solid var(--border)}
+.mc{display:grid;grid-template-columns:1.6fr 1fr 1.3fr;gap:18px;align-items:center;padding:16px 22px;border-top:1px solid var(--border)}
+.mc:first-child{border-top:0}
+.mc-nome b{display:block;font-weight:500;color:var(--green);font-size:15px}
+.mc-nome small,.mc-disp small{display:block;font-size:12px;color:var(--text-light);margin-top:4px}
+.mc .l{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-light);margin-bottom:4px}
+.mc>div{min-width:0}
+.mc-lim .v{font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--green);white-space:nowrap}
+.mc-in{display:flex;align-items:center;border:1px solid var(--border-strong);background:var(--cream)}
+.mc-in span{padding:0 4px 0 10px;color:var(--text-light);font-size:13px}
+.mc-in input{flex:1;min-width:0;border:0;background:transparent;padding:9px 10px 9px 4px;font-family:inherit;font-size:16px;color:var(--text)}
+.mc-in:focus-within{border-color:var(--gold)}
+.mc-nota{font-size:12.5px;color:var(--text-light);margin-top:12px}
+.kpis.k3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1100px){.kpis.k3{grid-template-columns:1fr 1fr}.kpis.k3 .kpi:first-child{grid-column:1/-1}}
+@media(max-width:700px){.mc{grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px}.mc-nome{grid-column:1/-1}}
+.empty-cards{padding:60px 24px;text-align:center;background:var(--white);border:1px solid var(--border);color:var(--text-light);font-style:italic;font-family:'Cormorant Garamond',serif;font-size:17px}
  
     /* === BLOCO 4: VIAGENS === */
     .travels{margin-bottom:48px}
@@ -694,6 +710,10 @@
         <svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
         Minhas Viagens
       </a></li>
+      <li><a class="sb-link" href="#cartoes" data-view="cartoes">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+        Meus Cartões
+      </a></li>
       <li><a class="sb-link" href="#milhas" data-view="milhas">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
         Histórico de Milhas
@@ -827,7 +847,7 @@
  
     <!-- ============= BLOCO 3: CARTÕES ============= -->
     <section class="cards">
-      <div class="blk-title">Cartões Ativos · Otimização Contínua</div>
+      <div class="blk-row"><div class="blk-title">Cartões Ativos · Otimização Contínua</div><a class="link-more" id="cardsMais" href="#cartoes" hidden>Ver todos →</a></div>
       <div id="cardsContainer">
         <div class="empty-cards">Aguardando cadastro de cartões</div>
       </div>
@@ -859,6 +879,13 @@
     </div>
  
     <!-- ============= VIEW: MINHAS VIAGENS ============= -->
+    <div class="view" id="view-cartoes" hidden>
+      <section class="sec">
+        <div class="blk-title">Meus Cartões</div>
+        <div id="meusCartoes"><div class="empty-cards">Carregando cartões</div></div>
+      </section>
+    </div>
+
     <div class="view" id="view-viagens" hidden>
       <section class="sec">
         <div class="blk-title">Próximas Viagens</div>
@@ -1201,7 +1228,11 @@
       return;
     }
     cont.className = 'cards-grid';
-    cont.innerHTML = cartoes.map(c => {
+    // na página principal ficam só os 3 principais (com recomendação primeiro, depois maior limite); a lista completa fica em Meus Cartões
+    const principais = cartoes.slice().sort((a, b) => ((b.upgrade_titulo || b.upgrade_texto) ? 1 : 0) - ((a.upgrade_titulo || a.upgrade_texto) ? 1 : 0) || (Number(b.limite) || 0) - (Number(a.limite) || 0)).slice(0, 3);
+    const mais = $('cardsMais');
+    if (mais) { mais.hidden = cartoes.length <= 3; mais.textContent = `Ver os ${cartoes.length} cartões →`; }
+    cont.innerHTML = principais.map(c => {
       const cor = c.cor_visual || 'green';
       const upgradeBlock = c.upgrade_titulo || c.upgrade_texto ? `
         <div class="c-upgrade">
@@ -1239,6 +1270,43 @@
     }).join('');
   }
  
+  // ----- Meus Cartões: lista completa; o cliente atualiza o disponível de cada cartão -----
+  const brInt = (v) => v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  function renderMeusCartoes(cartoes) {
+    const box = $('meusCartoes');
+    if (!cartoes || !cartoes.length) { box.innerHTML = '<div class="empty-cards">Seus cartões aparecem aqui assim que seu gestor cadastrar.</div>'; return; }
+    const lim = cartoes.reduce((s, c) => s + (Number(c.limite) || 0), 0);
+    const comDisp = cartoes.filter(c => c.disponivel !== null && c.disponivel !== undefined);
+    const disp = comDisp.reduce((s, c) => s + Number(c.disponivel), 0);
+    const quando = (iso) => iso ? `Atualizado em ${brDate(String(iso).slice(0, 10))}` : 'Ainda não informado';
+    box.innerHTML = `<div class="kpis k3" style="margin-bottom:18px">
+        <div class="kpi hl"><div class="l">Cartões</div><div class="v">${fmtNum(cartoes.length)}</div><div class="s">Cadastrados pelo seu gestor</div></div>
+        <div class="kpi"><div class="l">Limite total</div><div class="v">R$ ${fmtMoney(lim)}</div><div class="s">Somando todos os cartões</div></div>
+        <div class="kpi"><div class="l">Disponível</div><div class="v">${comDisp.length ? 'R$ ' + fmtMoney(disp) : '·'}</div><div class="s">${comDisp.length ? `Informado em ${comDisp.length} de ${cartoes.length} cartões` : 'Informe abaixo, cartão a cartão'}</div></div>
+      </div>
+      <div class="mc-list">${cartoes.map(c => `<div class="mc">
+        <div class="mc-nome"><b>${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.final_cartao ? 'Final ' + escapeHtml(c.final_cartao) : '', c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
+        <div class="mc-lim"><span class="l">Limite</span><span class="v">${c.limite !== null && c.limite !== undefined ? 'R$ ' + fmtMoney(c.limite) : 'A confirmar'}</span></div>
+        <div class="mc-disp"><span class="l">Disponível</span><label class="mc-in"><span>R$</span><input type="text" inputmode="decimal" data-disp="${escapeHtml(c.id)}" value="${brInt(c.disponivel)}" placeholder="Informar" aria-label="Disponível em ${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}"></label><small data-dispq="${escapeHtml(c.id)}">${quando(c.disponivel_em)}</small></div>
+      </div>`).join('')}</div>
+      <div class="mc-nota">O disponível ajuda seu gestor a escolher o melhor cartão para cada compra.</div>`;
+    box.querySelectorAll('[data-disp]').forEach(inp => {
+      const salvar = async () => {
+        const c = cartoes.find(x => x.id === inp.dataset.disp); if (!c) return;
+        const txt = inp.value.trim(), v = txt === '' ? null : Number(txt.replace(/\./g, '').replace(',', '.'));
+        if (v !== null && !(v >= 0)) { toast('Digite só o valor, por exemplo 12.500'); inp.value = brInt(c.disponivel); return; }
+        if (v === (c.disponivel === null || c.disponivel === undefined ? null : Number(c.disponivel))) return;
+        const q = box.querySelector(`[data-dispq="${CSS.escape(c.id)}"]`); q.textContent = 'Salvando...';
+        const { data, error } = await supabase.rpc('cliente_atualizar_disponivel', { p_cartao: c.id, p_valor: v });
+        if (error) { q.textContent = quando(c.disponivel_em); inp.value = brInt(c.disponivel); toast('Não conseguimos salvar agora. Tente de novo em instantes.'); return; }
+        c.disponivel = v; c.disponivel_em = data || new Date().toISOString(); inp.value = brInt(v);
+        renderMeusCartoes(cartoes); toast('Disponível atualizado.');
+      };
+      inp.addEventListener('change', salvar);
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+    });
+  }
+
   function renderViagens(viagens) {
     const cont = $('travelsList');
     if (!viagens || viagens.length === 0) {
@@ -2101,6 +2169,7 @@
   const VIEW_SUB = {
     inicio: 'Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.',
     viagens: 'Cada viagem com seus voos, hospedagem e documentos, organizados pelo seu gestor.',
+    cartoes: 'Seus cartões, limites e anuidades. Atualize o disponível sempre que quiser: ajuda seu gestor a planejar as compras.',
     milhas: 'A evolução do seu saldo, os vencimentos monitorados e cada movimentação registrada.',
     economias: 'Tudo o que a gestão já gerou para você: passagens, pontos de cartões e super acúmulos, e cashback.',
     documentos: 'Bilhetes, vouchers, seguros e roteiros guardados em um só lugar.',
@@ -2233,6 +2302,7 @@
  
       renderProgramas(programas);
       renderCartoes(cartoes);
+      renderMeusCartoes(cartoes);
       renderViagens(viagens);
       renderMovimentos(movimentos);
       renderReunioes(reunioes);

@@ -515,6 +515,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=3';
 import * as MKT from '/admin/app/marketing.js?v=14';
 import * as CART from '/admin/app/carteira.js?v=2';
+import * as CARTOES from '/admin/app/cartoes.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=5';
 import * as CRM from '/admin/app/crm.js?v=16';
 import * as CTR from '/admin/app/contrato.js?v=2';
@@ -824,7 +825,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -839,7 +840,7 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 // perfil de marketing (Maju, Jéssica): o que não está salvo fica fechado, então uma permissão nova nunca abre o resto do app sozinha
 const pode = (k) => { if (ADMIN) return true; const P0 = (D.perfil && D.perfil.permissoes) || {}; const v = P0[k]; const mkt = P0.marketing === true || P0.marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { cartoesbase: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
 const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
@@ -889,7 +890,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
+const EMP_ABAS = ['marketing', 'cartoesbase', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -1201,6 +1202,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()) });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
+  if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
@@ -3437,7 +3439,7 @@ let EMP_MODO = 'mes', EMP_TOP = 'fat';
 const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['cartoesbase', 'Base de cartões: anuidade, isenção e pontuação'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
@@ -4801,14 +4803,7 @@ async function fiTarefas(el, c) {
     </section>
 
     <div class="secao" id="gtCartoes">Cartões do cliente</div>
-    <section class="bloco" style="margin-top:0"><div id="gtCartLista"><div class="vazio">Carregando...</div></div>
-      <details style="margin-top:8px" ${L.length && !L.some(t => t.chave === 'cartoes' && t.feito) ? 'open' : ''}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary>
-        ${campo('ca_banco', 'Banco', '', 'text', 'placeholder="Ex.: Itaú"')}
-        ${campo('ca_cartao', 'Cartão (categoria)', '', 'text', 'placeholder="Ex.: Azul Infinite"')}
-        ${campo('ca_limite', 'Limite (R$)', '', 'text', 'inputmode="decimal" placeholder="Ex.: 25000"')}
-        ${campo('ca_obs', 'Observação interna (opcional)', '', 'text', 'placeholder="Ex.: anuidade isenta, titular"')}
-        <div class="sub">O cartão aparece no painel do cliente; o limite e a observação ficam só com a equipe. Não anote número do cartão nem senha.</div>
-        <button class="zap" id="gtCartAdd" style="margin-top:10px;width:100%">Salvar cartão</button></details></section>
+    <section class="bloco" style="margin-top:0" id="gtCartBox"></section>
 
     <div class="secao" id="gtRotina">Rotina mensal</div>
     <section class="bloco" style="margin-top:0">
@@ -4880,37 +4875,10 @@ async function fiTarefas(el, c) {
     aviso(v ? 'Saldos todo dia ' + v + '.' : 'Dia fixo removido.'); de();
   };
 
-  // cartões
-  const desenharCartoes = async () => {
-    const r = await sb.from('cartoes').select('*').eq('cliente_id', c.id).order('ordem');
-    const box = $('gtCartLista'); if (!box || CLI !== c.id) return;
-    if (r.error) { box.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou: ' + r.error.message))}</div>`; return; }
-    c._ncart = (r.data || []).length;
-    const C = r.data || [], tot = C.reduce((s, x) => s + (Number(x.limite) || 0), 0);
-    box.innerHTML = C.length ? C.map(x => `<div class="lin"><span><b style="font-weight:600">${esc(x.banco)}</b>${x.categoria ? ' · ' + esc(x.categoria) : ''}${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span><span>${x.limite !== null && x.limite !== undefined ? brl(x.limite) : 'sem limite'} <button class="mini" data-ca-del="${x.id}">excluir</button></span></div>`).join('')
-      + `<div class="lin" style="font-weight:600"><span>${plural(C.length, 'cartão', 'cartões')}</span><span>${brl(tot)} de limite</span></div>`
-      : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>';
-    box.querySelectorAll('[data-ca-del]').forEach(b => b.onclick = async () => {
-      if (CONFIRMA !== 'ca' + b.dataset.caDel) { CONFIRMA = 'ca' + b.dataset.caDel; b.textContent = 'confirmar'; return; }
-      CONFIRMA = null;
-      const { error } = await sb.from('cartoes').delete().eq('id', b.dataset.caDel);
-      if (error) { aviso('Não excluiu: ' + error.message); return; }
-      desenharCartoes();
-    });
-  };
-  desenharCartoes();
-  $('gtCartAdd').onclick = async () => {
-    const q = (n) => el.querySelector(`[name=${n}]`).value.trim();
-    if (!q('ca_banco')) { aviso('Informe o banco.'); return; }
-    const lim = q('ca_limite') ? Number(q('ca_limite').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')) : null;
-    if (q('ca_limite') && !isFinite(lim)) { aviso('Limite inválido.'); return; }
-    if (/\d{12,}/.test(q('ca_cartao').replace(/\s/g, '') + q('ca_obs').replace(/\s/g, ''))) { aviso('Parece um número de cartão. Não guarde o número aqui.'); return; }
-    const { error } = await sb.from('cartoes').insert({ cliente_id: c.id, banco: q('ca_banco'), categoria: q('ca_cartao') || null, limite: lim, observacao_interna: q('ca_obs') || null, ordem: (c._ncart || 0) + 1 });
-    if (error) { aviso(/limite|observacao_interna/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
-    ['ca_banco', 'ca_cartao', 'ca_limite', 'ca_obs'].forEach(n => { el.querySelector(`[name=${n}]`).value = ''; });
-    aviso('Cartão salvo.');
-    if (L.some(t => t.chave === 'cartoes' && !t.feito)) { await gtMarcarChave(c, 'cartoes'); de(); } else desenharCartoes();
-  };
+  // cartões do cliente: ligados à base de cartões, com as contas de anuidade e pontos
+  CARTOES.secaoCliente($('gtCartBox'), c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec }, async () => {
+    if (L.some(t => t.chave === 'cartoes' && !t.feito)) { await gtMarcarChave(c, 'cartoes'); de(); }
+  });
 }
 let FI_ONB = false;
 
