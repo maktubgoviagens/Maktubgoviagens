@@ -2423,8 +2423,12 @@ function ligarTopoGestao(P) {
     const c = await sb.from('clientes').select('*').eq('id', data.cliente_id).maybeSingle();
     if (c.data && !D.clientes.some(x => x.id === c.data.id)) D.clientes.push(c.data);
     const pf = (D.pessoas || []).find(x => x.id === r.pessoa_id); if (pf) pf.cliente_id = data.cliente_id;
-    if (pf && !pf.email) { pf.email = email; sb.from('pessoas').update({ email }).eq('id', pf.id).then(() => {}); }
-    aviso(nome.split(' ')[0] + ' cadastrado na Gestão.' + (data.login_novo ? ' O painel já está liberado.' : ' O login já existia e foi reaproveitado.'));
+    if (pf && !pf.email) { pf.email = email; await sb.from('pessoas').update({ email }).eq('id', pf.id); }
+    // na mesma hora, o cliente recebe por e-mail o pedido dos dados do contrato e o acesso ao painel
+    b.textContent = 'Enviando o e-mail...';
+    const em = await sb.functions.invoke('email-enviar', { body: { acao: 'cadastro_gestao', pessoa_id: r.pessoa_id } }).catch(() => ({}));
+    const ok = em && em.data && em.data.ok;
+    aviso(nome.split(' ')[0] + ' cadastrado na Gestão.' + (ok ? ` E-mail com o cadastro do contrato enviado para ${em.data.email}.` : ' O e-mail não saiu: use o botão "Pedir os dados do contrato" na ficha.'));
     depois(r);
   });
   P.querySelectorAll('[data-lib-ctrst]').forEach(b => b.onclick = async () => {
