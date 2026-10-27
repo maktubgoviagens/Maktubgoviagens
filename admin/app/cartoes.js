@@ -173,7 +173,7 @@ function valorBR(t) {
   t = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t.replace(/\./g, '');
   const v = Number(t); return v >= 0 ? v : null;
 }
-// cada linha: nome do cartão, depois o limite e, se tiver, o gasto médio por mês (separados por tab ou espaço).
+// cada linha: nome do cartão e o limite no fim (separados por tab ou espaço). O gasto médio quem informa é o cliente.
 // O que estiver entre parênteses vira observação. "pendente" ou "a confirmar" no lugar do limite.
 const VALOR = /^(?:R\$)?[\d.,]*\d[\d.,]*$|^pendente$/i;
 function lerLista(texto) {
@@ -182,9 +182,9 @@ function lerLista(texto) {
     const obs = (l.match(/\(([^)]+)\)/) || [])[1] || '';
     const tk = l.replace(/\([^)]*\)/g, ' ').replace(/r\$\s*/gi, 'R$').replace(/a\s+confirmar/gi, 'pendente').split(/[\t ]+/).filter(Boolean);
     const vals = [];
-    while (vals.length < 2 && tk.length > 1 && VALOR.test(tk[tk.length - 1])) vals.unshift(tk.pop());
-    const limTxt = vals[0] || '', gasTxt = vals[1] || '';
-    return { linha: l, nome: tk.join(' ').trim(), limite: valorBR(limTxt), gasto: valorBR(gasTxt), pendente: !limTxt || /pendente/i.test(limTxt), obs: obs.trim() };
+    while (vals.length < 1 && tk.length > 1 && VALOR.test(tk[tk.length - 1])) vals.unshift(tk.pop());
+    const limTxt = vals[0] || '';
+    return { linha: l, nome: tk.join(' ').trim(), limite: valorBR(limTxt), pendente: !limTxt || /pendente/i.test(limTxt), obs: obs.trim() };
   }).filter(Boolean);
 }
 // cartões da base que combinam com o nome colado (todas as palavras do nome aparecem no cartão da base);
@@ -212,8 +212,7 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
         <div style="font-size:13px;color:var(--tinta-2)">${esc(x.linha)}</div>
         <label class="fl" style="margin-top:6px"><span data-rot${b ? '' : ' style="color:var(--alerta)"'}>${esc(rot)}</span><select name="li_base">${ops(b ? b.id : A.length ? '' : 'outro')}</select></label>
         ${b ? '' : `<button class="mini" type="button" data-nb style="margin-top:6px">+ Cadastrar na base</button><div data-nbf hidden></div>`}
-        <div class="duas-col"><label class="fl"><span>Limite (R$)</span><input name="li_lim" type="number" inputmode="decimal" step="any" value="${x.limite ?? ''}" placeholder="pendente"></label><label class="fl"><span>Gasto médio por mês (R$)</span><input name="li_gasto" type="number" inputmode="decimal" step="any" value="${x.gasto ?? ''}" placeholder="opcional"></label></div>
-        <label class="fl"><span>Observação</span><input name="li_obs" value="${esc(x.obs)}" placeholder="opcional"></label></div>`; }).join('')}
+        <div class="duas-col"><label class="fl"><span>Limite (R$)</span><input name="li_lim" type="number" inputmode="decimal" step="any" value="${x.limite ?? ''}" placeholder="pendente"></label><label class="fl"><span>Observação</span><input name="li_obs" value="${esc(x.obs)}" placeholder="opcional"></label></div></div>`; }).join('')}
       <button class="zap grande" type="button" id="cxSalvarLista" style="width:100%;margin-top:10px">Salvar ${L.length} ${L.length === 1 ? 'cartão' : 'cartões'}</button><div class="sub" id="cxMsgLista"></div>`;
     // cartão que não está na base: cadastra ali mesmo e já liga à linha (e às outras linhas iguais)
     const today = new Date().toISOString().slice(0, 10);
@@ -256,13 +255,13 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
     });
     rev.querySelector('#cxSalvarLista').onclick = async () => {
       const bt = rev.querySelector('#cxSalvarLista'), msg = rev.querySelector('#cxMsgLista');
-      const linhas = [...rev.querySelectorAll('[data-li]')].map(d => ({ x: L[+d.dataset.li], base: d.querySelector('[name=li_base]').value, lim: d.querySelector('[name=li_lim]').value, gasto: d.querySelector('[name=li_gasto]').value, obs: d.querySelector('[name=li_obs]').value.trim() }));
+      const linhas = [...rev.querySelectorAll('[data-li]')].map(d => ({ x: L[+d.dataset.li], base: d.querySelector('[name=li_base]').value, lim: d.querySelector('[name=li_lim]').value, obs: d.querySelector('[name=li_obs]').value.trim() }));
       if (linhas.some(l => !l.base)) { msg.textContent = 'Escolha o cartão (ou "Outro, fora da base") em todas as linhas.'; return; }
       bt.disabled = true; let feitos = 0; const erros = [];
       for (const [k, l] of linhas.entries()) {
-        const cat = (BASE || []).find(b => b.id === l.base) || null, lim = l.lim === '' ? null : Number(l.lim), gas = l.gasto === '' ? null : Number(l.gasto);
+        const cat = (BASE || []).find(b => b.id === l.base) || null, lim = l.lim === '' ? null : Number(l.lim);
         const row = { catalogo_id: cat ? cat.id : null, banco: cat ? cat.banco : l.x.nome, categoria: cat ? cat.nome : null, limite: lim >= 0 ? lim : null, final_cartao: null,
-          gasto_medio_mes: gas >= 0 ? gas : null, anuidade_paga: null, observacao_interna: l.obs || null };
+          gasto_medio_mes: null, anuidade_paga: null, observacao_interna: l.obs || null };
         Object.assign(row, textosPainel(row, cat, calc(row, cat, cot, refs, X.CART.normProg)));
         const r = await sb.from('cartoes').insert({ ...row, cliente_id: c.id, ordem: C.length + k + 1 });
         if (r.error) erros.push(l.x.nome + ': ' + X.limparTec(r.error.message)); else feitos++;
@@ -311,8 +310,8 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       </div>${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
     + `<details style="margin-top:8px" id="cxForm"${C.length ? '' : ' open'}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary><div id="cxCampos"></div></details>`
     + `<details style="margin-top:8px" id="cxLista"><summary class="sub" style="cursor:pointer">+ Colar lista de cartões</summary>
-        <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome, o limite (ou "pendente") e, se souber, o gasto médio por mês. Ex.: Inter Prime 50.000 15.000. O app procura cada um na base e puxa a anuidade, já com a isenção pelo gasto.</div>
-        <label class="fl"><span>Lista</span><textarea name="cx_lista" rows="8" placeholder="Banco BV Gold&#9;75.000&#9;20.000&#10;Inter Prime&#9;50.000&#10;Sicoob&#9;pendente"></textarea></label>
+        <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome e o limite (ou "pendente"). Ex.: Inter Prime 50.000. O app procura cada um na base e puxa a anuidade.</div>
+        <label class="fl"><span>Lista</span><textarea name="cx_lista" rows="8" placeholder="Banco BV Gold&#9;75.000&#10;Inter Prime&#9;50.000&#10;Sicoob&#9;pendente"></textarea></label>
         <button class="sec" type="button" id="cxConferir" style="width:100%">Conferir a lista</button><div id="cxRevisao"></div></details>`;
   const ED_C = { id: null };
   const desenharForm = (x) => {
