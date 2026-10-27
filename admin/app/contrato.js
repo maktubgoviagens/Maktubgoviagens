@@ -259,6 +259,15 @@ export async function bloco(el, c, X) {
   if (ct.error || mod.error) { el.innerHTML = `<div class="vazio">${X.ADMIN ? 'Rode o 50-contratos.sql no Supabase para ativar os contratos.' : 'Contratos ainda não ativados.'}</div>`; return; }
   if (!mod.data) { el.innerHTML = '<div class="vazio">Nenhum modelo de contrato ativo.</div>'; return; }
   const L = ct.data || [];
+  // conferência silenciosa ao abrir a ficha: se algum contrato enviado já foi assinado no Autentique, atualiza sozinho
+  // (o webhook já faz isso; aqui é a garantia caso o aviso tenha se perdido)
+  if (!bloco._conferido) bloco._conferido = new Set();
+  const pend = L.filter(k => k.status === 'enviado' && !bloco._conferido.has(k.id));
+  if (pend.length) {
+    pend.forEach(k => bloco._conferido.add(k.id));
+    Promise.all(pend.map(k => sb.functions.invoke('contrato-autentique', { body: { acao: 'status', contrato_id: k.id } }).then(r => r.data && r.data.status).catch(() => null)))
+      .then(st => { if (st.some(x => x === 'assinado' || x === 'recusado') && el.isConnected) { if (st.includes('assinado')) X.aviso('Contrato assinado. O PDF já está na ficha e no painel do cliente.'); bloco(el, c, X); } });
+  }
   const mes = new Date().toISOString().slice(0, 7);
   el.innerHTML = `
     ${L.length ? L.map(k => { const [rot, cls] = STATUS[k.status] || [k.status, '']; return `<div class="lanc" style="align-items:flex-start"><div style="flex:1"><b>Contrato de ${new Date(k.criado_em).toLocaleDateString('pt-BR')}</b>
