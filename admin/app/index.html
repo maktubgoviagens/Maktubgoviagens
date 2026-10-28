@@ -4375,13 +4375,13 @@ function formCarteira(c) {
       <div class="duas-col">${campo('quantidade', 'Quantidade', '', 'number', 'required min="1"')}<span id="wCusto">${campo('custo_brl', 'Valor pago (R$)', '', 'number')}</span></div>
       ${campo('validade', 'Validade dos pontos (opcional)', '', 'date')}${campo('descricao', 'Descrição', '', 'text', 'placeholder="Ex.: fatura de setembro do Unique"')}`,
     uso: `<h2>Uso de milhas</h2>
-      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('programa', 'Programa', comSaldo, comSaldo[0][0])}</div>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('programa', 'Programa', comSaldo, (comSaldo[0] || [''])[0])}</div>
       <div class="duas-col">${campo('quantidade', 'Milhas usadas', '', 'number', 'required min="1"')}${selG('categoria_uso', 'O que foi emitido', [['passagem', 'Passagem aérea'], ['hospedagem', 'Hospedagem'], ['upgrade', 'Upgrade'], ['produto', 'Produtos ou vale-compras'], ['outro', 'Outro']], 'passagem')}</div>
       <div class="duas-col">${campo('taxas_brl', 'Taxas pagas (R$)', '', 'number')}${campo('valor_pagante_brl', 'Valor em dinheiro (R$)', '', 'number')}</div>
       ${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: GRU > SCL, executiva, 2 passageiros"')}
       <div class="sub" style="margin-top:4px">Com o valor em dinheiro, a economia entra sozinha no painel do cliente.</div>`,
     transf: `<h2>Transferência entre programas</h2>
-      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('de', 'De', comSaldo, comSaldo[0][0])}</div>
+      <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('de', 'De', comSaldo, (comSaldo[0] || [''])[0])}</div>
       ${progIn('para', 'Para')}
       <div class="duas-col">${campo('enviados', 'Pontos enviados', '', 'number', 'required min="1"')}${selG('paridade', 'Paridade', [['1', '1 ponto = 1 milha'], ['2', '2 pontos = 1 milha'], ['3', '3 pontos = 1 milha'], ['0.5', '1 ponto = 2 milhas']], '1')}</div>
       <div class="duas-col">${campo('bonus', 'Bônus da promoção (%)', '0', 'number')}${campo('recebidas', 'Milhas recebidas', '', 'number', 'required min="1"')}</div>
