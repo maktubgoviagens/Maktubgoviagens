@@ -24,7 +24,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Classe executiva com milhas | Maktub Go</title>
-<meta name="description" content="Voe de classe executiva com milhas pela Gestão de Milhas Concierge da Maktub Go. Estratégia para a sua carteira e, se faltar saldo, a gente completa.">
+<meta name="description" content="Voe de classe executiva com milhas pela Gestão de Milhas Maktub Go. Uma equipe cuida da sua carteira o ano inteiro para a poltrona que deita virar plano.">
 <meta name="theme-color" content="#1a3826">
 <link rel="canonical" href="https://www.maktubgo.com.br/classe-executiva-com-milhas/">
 <link rel="icon" href="/ativos/simbolo-verde.png">
@@ -583,6 +583,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -649,7 +650,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
   {
    "@type": "Service",
    "name": "Classe executiva com milhas",
-   "serviceType": "Emissão de classe executiva com milhas para clientes da Gestão de Milhas Concierge",
+   "serviceType": "Emissão de classe executiva com milhas para clientes da Gestão de Milhas Maktub Go",
    "url": "https://www.maktubgo.com.br/classe-executiva-com-milhas/",
    "areaServed": "BR",
    "provider": {
@@ -667,7 +668,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
      "name": "Posso pedir só a emissão de uma executiva?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Concierge, porque o resultado depende do trabalho feito na carteira antes da viagem."
+      "text": "Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Maktub Go, porque o resultado depende do trabalho feito na carteira antes da viagem."
      }
     },
     {
@@ -675,7 +676,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
      "name": "E se eu não tiver milhas suficientes?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Esse é um dos motivos para estar na Gestão. Quando o seu saldo não fecha, a Maktub completa a emissão com milhas próprias, somadas às suas."
+      "text": "Quando o seu saldo não for suficiente, nossa equipe pode apresentar alternativas de emissão com condições diferenciadas para clientes da gestão, conforme disponibilidade e valores informados previamente."
      }
     },
     {
@@ -699,7 +700,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
      "name": "Como começo?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Solicitando o seu convite. O nosso time avalia com cuidado e entra em contato pelo WhatsApp para agendar o diagnóstico."
+      "text": "Pedindo o seu diagnóstico, que é gratuito e feito em uma chamada. Nossa equipe entra em contato pelo WhatsApp para marcar a conversa."
      }
     }
    ]
@@ -771,10 +772,9 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="wrap">
     <span class="olho">Classe executiva com milhas</span>
     <h1 id="t-exec">Executiva com milhas<em>não é sorte. É gestão.</em></h1>
-    <p class="intro">Muita gente acumula pontos por anos e continua viajando apertado no fundo do avião. Na Gestão de Milhas Concierge da Maktub, a sua carteira é trabalhada o ano inteiro para que a poltrona que deita deixe de ser um sonho e vire plano.</p>
+    <p class="intro">Muita gente acumula pontos por anos e continua viajando apertado no fundo do avião. Na Gestão de Milhas Maktub Go, a sua carteira é trabalhada o ano inteiro para que a poltrona que deita deixe de ser um sonho e vire plano.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-cheio" href="/gestao-de-milhas/#convite">Solicitar meu convite</a>
-      <a class="link-texto" href="/gestao-de-milhas/">Conhecer a Gestão de Milhas</a>
+      <a class="btn btn-cheio" href="/gestao-de-milhas/#convite" data-diagnostico="executiva_topo">Quero meu diagnóstico</a>
     </div>
  
     <div class="prateleira" style="margin-top:var(--e5)">
@@ -797,7 +797,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <div class="passo"><span class="passo-n">01</span><h3>Diagnóstico da carteira</h3><p>Olhamos seus programas, seus cartões e seus saldos para entender de onde saem os pontos e para onde eles podem ir.</p></div>
       <div class="passo"><span class="passo-n">02</span><h3>Estratégia para a sua rota</h3><p>Você conta a viagem dos sonhos. A gente desenha o caminho de pontos até ela: onde acumular, quando transferir e o que evitar.</p></div>
       <div class="passo"><span class="passo-n">03</span><h3>Acompanhamento o ano inteiro</h3><p>Painel privado, relatório mensal e uma reunião por mês com o seu gestor. Você sabe exatamente onde está e quanto falta.</p></div>
-      <div class="passo passo-seguro"><span class="passo-n">04</span><h3>Se faltar milha, a gente completa</h3><p>Chegou a hora da viagem e o saldo não fechou? Como cliente da Gestão, a Maktub completa a emissão com milhas próprias, somadas às suas.</p></div>
+      <div class="passo passo-seguro"><span class="passo-n">04</span><h3>Emissões incluídas na gestão</h3><p>O serviço de emissão para você, com as suas milhas, está incluso na anuidade. Passagens, taxas dos programas e custos de terceiros são pagos à parte. Quando o saldo não for suficiente, nossa equipe pode apresentar alternativas de emissão com condições diferenciadas para clientes da gestão, conforme disponibilidade e valores informados previamente.</p></div>
       <div class="passo"><span class="passo-n">05</span><h3>Emissão no momento certo</h3><p>Buscamos a disponibilidade, emitimos e entregamos tudo conferido. Você só escolhe a janela e faz a mala.</p></div>
     </div>
   </div>
@@ -808,7 +808,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   <div class="wrap">
     <span class="olho">A diferença</span>
     <h2 id="t-dif">Tentar sozinho<em>ou ter quem cuide.</em></h2>
-    <p class="intro">Milha parada é dinheiro parado. O que muda o destino dela é ter estratégia antes de precisar.</p>
+    <p class="intro">Pontos sem acompanhamento vencem ou acabam trocados por pouco. O que muda o destino deles é ter estratégia antes de precisar.</p>
  
     <div class="comparativo">
       <div class="coluna">
@@ -828,7 +828,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <li>Emissão planejada para quando a disponibilidade aparece</li>
           <li>Cada transferência pensada para a sua rota</li>
           <li>Painel e relatório mensal mostrando tudo</li>
-          <li>Faltou saldo, a Maktub completa com milhas próprias</li>
+          <li>Faltou saldo, a equipe apresenta alternativas de emissão</li>
         </ul>
       </div>
     </div>
@@ -843,11 +843,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <span class="olho">Perguntas frequentes</span>
     <h2 id="t-faq">Antes de você<em>perguntar.</em></h2>
     <div class="mk-faq">
-      <details><summary>Posso pedir só a emissão de uma executiva?</summary><p>Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Concierge, porque o resultado depende do trabalho feito na carteira antes da viagem.</p></details>
-      <details><summary>E se eu não tiver milhas suficientes?</summary><p>Esse é um dos motivos para estar na Gestão. Quando o seu saldo não fecha, a Maktub completa a emissão com milhas próprias, somadas às suas.</p></details>
+      <details><summary>Posso pedir só a emissão de uma executiva?</summary><p>Não. A emissão de executiva com milhas é um benefício de quem está na Gestão de Milhas Maktub Go, porque o resultado depende do trabalho feito na carteira antes da viagem.</p></details>
+      <details><summary>E se eu não tiver milhas suficientes?</summary><p>Quando o seu saldo não for suficiente, nossa equipe pode apresentar alternativas de emissão com condições diferenciadas para clientes da gestão, conforme disponibilidade e valores informados previamente.</p></details>
       <details><summary>Pontos do cartão de crédito contam?</summary><p>Contam. Parte do trabalho é olhar os seus cartões e decidir para onde e quando transferir esses pontos, de acordo com a rota que você quer.</p></details>
       <details><summary>Qual é o investimento?</summary><p>O investimento da Gestão é apresentado depois do diagnóstico, de acordo com a sua carteira e os seus objetivos. Você só avança se a proposta fizer sentido para você.</p></details>
-      <details><summary>Como começo?</summary><p>Solicitando o seu convite. O nosso time avalia com cuidado e entra em contato pelo WhatsApp para agendar o diagnóstico.</p></details>
+      <details><summary>Como começo?</summary><p>Pedindo o seu diagnóstico, que é gratuito e feito em uma chamada. Nossa equipe entra em contato pelo WhatsApp para marcar a conversa.</p></details>
     </div>
   </div>
 </section>
@@ -855,12 +855,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 <!-- ===================== FECHO ===================== -->
 <section class="secao secao-verde fecho" aria-labelledby="t-fecho">
   <div class="wrap">
-    <span class="olho">Gestão de Milhas Concierge</span>
+    <span class="olho">Gestão de Milhas Maktub Go</span>
     <h2 id="t-fecho">A próxima viagem<em>pode ser deitado.</em></h2>
     <p class="intro">Conte para onde você quer ir. A gente olha a sua carteira e mostra o caminho até lá.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="/gestao-de-milhas/#convite">Solicitar meu convite</a>
-      <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20saber%20como%20voar%20de%20executiva%20com%20milhas%20pela%20Gest%C3%A3o%20da%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
+      <a class="btn btn-ouro" href="/gestao-de-milhas/#convite" data-diagnostico="executiva_fecho">Quero meu diagnóstico</a>
     </div>
   </div>
 </section>

@@ -1,7 +1,7 @@
 {
   "name": "Maktub Go · Painel Privado",
   "short_name": "Maktub Go",
-  "description": "Seu painel privado de Gestão de Milhas Concierge.",
+  "description": "Seu painel privado da Gestão de Milhas Maktub Go.",
   "id": "/painel/",
   "start_url": "/painel/",
   "scope": "/",
