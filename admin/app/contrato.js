@@ -306,9 +306,11 @@ export async function bloco(el, c, X) {
   if (!el) return;
   const { sb, esc } = X;
   const pf = (X.D.pessoas || []).find(x => x.cliente_id === c.id);
-  const [ct, mod] = await Promise.all([
+  const [ct, mod, dx, dd] = await Promise.all([
     sb.from('contratos').select('*').eq('cliente_id', c.id).order('criado_em', { ascending: false }),
-    sb.from('contrato_modelos').select('id,versao,blocos').eq('tipo', 'gestao').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    sb.from('contrato_modelos').select('id,versao,blocos').eq('tipo', 'gestao').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle(),
+    pf ? sb.from('contrato_dados_pessoa').select('*').eq('pessoa_id', pf.id).maybeSingle() : Promise.resolve({}),
+    pf ? sb.from('pessoas_documentos').select('cpf').eq('pessoa_id', pf.id).maybeSingle() : Promise.resolve({})
   ]);
   if (!el.isConnected) return;
   if (ct.error || mod.error) { el.innerHTML = `<div class="vazio">${X.ADMIN ? 'Rode o 50-contratos.sql no Supabase para ativar os contratos.' : 'Contratos ainda não ativados.'}</div>`; return; }
@@ -324,6 +326,14 @@ export async function bloco(el, c, X) {
       .then(st => { if (st.some(x => x === 'assinado' || x === 'recusado') && el.isConnected) { if (st.includes('assinado')) X.aviso('Contrato assinado. O PDF já está na ficha e no painel do cliente.'); bloco(el, c, X); } });
   }
   const mes = new Date().toISOString().slice(0, 7);
+  // dados do contrato que o cliente preencheu pelo link (ou a equipe na ficha): mostra se já chegaram e o que falta
+  const ext = dx.data || null, cpf = dd.data && dd.data.cpf;
+  const faltaDados = [[cpf, 'CPF'], ...['rg', 'rg_orgao_uf', 'nacionalidade', 'estado_civil', 'profissao', 'endereco_completo', 'cep'].map(k => [ext && ext[k], ROTULO[k]])].filter(([v]) => !String(v || '').trim()).map(([, r]) => r);
+  const quando = ext && ext.atualizado_em ? new Date(ext.atualizado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' às') : '';
+  const temAtivo = L.some(k => ['enviado', 'assinado'].includes(k.status));
+  const dadosHtml = !pf || temAtivo || dx.error ? '' : !ext && !cpf ? '<div class="sub" style="margin-top:10px">O cliente ainda não preencheu os dados do contrato.</div>'
+    : !faltaDados.length ? `<div class="sub" style="margin-top:10px;color:var(--verde)"><b style="font-weight:600">Dados do contrato recebidos${quando ? ' em ' + quando : ''}.</b> Toque em Gerar contrato: eles já vêm preenchidos.</div>`
+    : `<div class="sub" style="margin-top:10px;color:var(--alerta)">Dados do contrato incompletos${quando ? ' (atualizados em ' + quando + ')' : ''}. Falta: ${esc(faltaDados.join(', '))}.</div>`;
   el.innerHTML = `
     ${L.length ? L.map(k => { const [rot, cls] = STATUS[k.status] || [k.status, '']; return `<div class="lanc" style="align-items:flex-start"><div style="flex:1"><b>Contrato de ${new Date(k.criado_em).toLocaleDateString('pt-BR')}</b>
       <small style="display:block">${k.dados && k.dados.cortesia ? 'Cortesia · ' : k.valor_total ? 'R$ ' + dinheiro(k.valor_total) + ' · ' : ''}${k.assinado_em ? 'assinado em ' + new Date(k.assinado_em).toLocaleDateString('pt-BR') : k.enviado_em ? 'enviado em ' + new Date(k.enviado_em).toLocaleDateString('pt-BR') : 'ainda não enviado'}</small>
@@ -335,7 +345,8 @@ export async function bloco(el, c, X) {
         <button class="mini" data-k-ver="${k.id}" data-arq="${esc(k.arquivo_assinado || k.arquivo_original || '')}">${k.arquivo_assinado ? 'Ver assinado' : 'Ver PDF'}</button>
         ${['gerado', 'enviado'].includes(k.status) && X.ADMIN ? `<button class="mini" data-k-cancelar="${k.id}">Cancelar</button>` : ''}
       </div></div></div>`; }).join('') : '<div class="vazio" style="margin-top:0">Nenhum contrato gerado ainda.</div>'}
-    ${pf ? `<button class="sec" id="ctrPedir" style="width:100%;margin-top:10px">Pedir os dados do contrato ao cliente por e-mail</button><div id="ctrPedirRes"></div>` : ''}
+    ${dadosHtml}
+    ${pf ? `<button class="sec" id="ctrPedir" style="width:100%;margin-top:10px">${ext && !faltaDados.length ? 'Pedir os dados de novo por e-mail' : 'Pedir os dados do contrato ao cliente por e-mail'}</button><div id="ctrPedirRes"></div>` : ''}
     <button class="zap" id="ctrNovo" style="width:100%;margin-top:10px">Gerar contrato</button>
     <div id="ctrForm"></div>`;
   const acha = (id) => L.find(k => String(k.id) === String(id));
