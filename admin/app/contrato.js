@@ -331,6 +331,18 @@ export async function bloco(el, c, X) {
   const faltaDados = [[cpf, 'CPF'], ...['rg', 'rg_orgao_uf', 'nacionalidade', 'estado_civil', 'profissao', 'endereco_completo', 'cep'].map(k => [ext && ext[k], ROTULO[k]])].filter(([v]) => !String(v || '').trim()).map(([, r]) => r);
   const quando = ext && ext.atualizado_em ? new Date(ext.atualizado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' às') : '';
   const temAtivo = L.some(k => ['enviado', 'assinado'].includes(k.status));
+  // um contrato por ciclo: com um contrato gerado, enviado ou assinado, não sai outro (cada envio gasta um dos envios grátis do Autentique).
+  // Depois de assinado, o próximo só libera na renovação, a partir de 30 dias antes do vencimento da Gestão.
+  const ult = L.find(k => !['cancelado', 'recusado'].includes(k.status));
+  const diasVenc = c.gestao_vencimento ? Math.ceil((new Date(c.gestao_vencimento + 'T12:00:00') - Date.now()) / 864e5) : null;
+  // também libera se a Gestão já foi renovada antes do contrato novo (o assinado é de um ciclo anterior)
+  const cicloAnterior = !!ult && !!ult.assinado_em && !!c.gestao_inicio && new Date(ult.assinado_em) < new Date(new Date(c.gestao_inicio + 'T12:00:00').getTime() - 30 * 864e5);
+  const renovacao = !!ult && ult.status === 'assinado' && ((diasVenc !== null && diasVenc <= 30) || cicloAnterior);
+  const podeNovo = !ult || renovacao;
+  if (!podeNovo) FORM = null;
+  const travaHtml = podeNovo ? '' : ult.status === 'assinado'
+    ? `<div class="sub" style="margin-top:10px">${c.gestao_vencimento ? `Novo contrato só na renovação: libera em ${new Date(new Date(c.gestao_vencimento + 'T12:00:00').getTime() - 30 * 864e5).toLocaleDateString('pt-BR')}, 30 dias antes do vencimento.` : 'Novo contrato só na renovação, 30 dias antes do vencimento. Defina a data de entrada no Contrato da Gestão para contar.'}</div>`
+    : `<div class="sub" style="margin-top:10px">Este contrato ainda está em andamento. Para gerar outro no lugar, ${X.ADMIN ? 'cancele este primeiro' : 'um administrador precisa cancelar este primeiro'}.</div>`;
   const dadosHtml = !pf || temAtivo || dx.error ? '' : !ext && !cpf ? '<div class="sub" style="margin-top:10px">O cliente ainda não preencheu os dados do contrato.</div>'
     : !faltaDados.length ? `<div class="sub" style="margin-top:10px;color:var(--verde)"><b style="font-weight:600">Dados do contrato recebidos${quando ? ' em ' + quando : ''}.</b> Toque em Gerar contrato: eles já vêm preenchidos.</div>`
     : `<div class="sub" style="margin-top:10px;color:var(--alerta)">Dados do contrato incompletos${quando ? ' (atualizados em ' + quando + ')' : ''}. Falta: ${esc(faltaDados.join(', '))}.</div>`;
@@ -346,8 +358,9 @@ export async function bloco(el, c, X) {
         ${['gerado', 'enviado'].includes(k.status) && X.ADMIN ? `<button class="mini" data-k-cancelar="${k.id}">Cancelar</button>` : ''}
       </div></div></div>`; }).join('') : '<div class="vazio" style="margin-top:0">Nenhum contrato gerado ainda.</div>'}
     ${dadosHtml}
-    ${pf ? `<button class="sec" id="ctrPedir" style="width:100%;margin-top:10px">${ext && !faltaDados.length ? 'Pedir os dados de novo por e-mail' : 'Pedir os dados do contrato ao cliente por e-mail'}</button><div id="ctrPedirRes"></div>` : ''}
-    <button class="zap" id="ctrNovo" style="width:100%;margin-top:10px">Gerar contrato</button>
+    ${travaHtml}
+    ${pf && podeNovo ? `<button class="sec" id="ctrPedir" style="width:100%;margin-top:10px">${ext && !faltaDados.length ? 'Pedir os dados de novo por e-mail' : 'Pedir os dados do contrato ao cliente por e-mail'}</button><div id="ctrPedirRes"></div>` : ''}
+    ${podeNovo ? `<button class="zap" id="ctrNovo" style="width:100%;margin-top:10px">${renovacao ? 'Gerar contrato da renovação' : 'Gerar contrato'}</button>` : ''}
     <div id="ctrForm"></div>`;
   const acha = (id) => L.find(k => String(k.id) === String(id));
   el.querySelectorAll('[data-k-ver]').forEach(b => b.onclick = async () => {
@@ -391,7 +404,7 @@ export async function bloco(el, c, X) {
     res.innerHTML = `<div class="config" style="margin-top:8px">${esc(msg)}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">Mandar no WhatsApp</a>` : ''}<button class="mini" id="ctrPedirCopiar">Copiar link</button></div></div>`;
     X.$('ctrPedirCopiar').onclick = async () => { try { await navigator.clipboard.writeText(texto); X.aviso('Mensagem com o link copiada.'); } catch (_) { prompt('Copie o link:', data.link); } };
   };
-  X.$('ctrNovo').onclick = () => { FORM = { mes }; formulario(X.$('ctrForm'), c, pf, mod.data, X, el); };
+  if (X.$('ctrNovo')) X.$('ctrNovo').onclick = () => { FORM = { mes }; formulario(X.$('ctrForm'), c, pf, mod.data, X, el); };
   if (FORM) formulario(X.$('ctrForm'), c, pf, mod.data, X, el);
   void enviadosMes;
 }
