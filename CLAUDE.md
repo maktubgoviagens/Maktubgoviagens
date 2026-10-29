@@ -18,7 +18,7 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 - Nas páginas de venda, nada sobre senha, credenciais ou acesso às contas dos programas de fidelidade. Nunca afirmar que a Maktub acessa as contas, e nunca afirmar que não acessa. Usar "gerencia" ou "gerenciamos".
 - O diferencial de segurança é o cofre digital: as informações confidenciais da gestão ficam em um cofre digital criptografado, com acesso restrito à equipe responsável pela carteira do cliente.
 - Não publicar o preço da gestão de milhas. O valor só é passado pelo closer, depois do diagnóstico.
-- Referência de perfil: gastos mensais a partir de R$ 20 mil, somando cartões e Pix. É uma referência, não um corte.
+- Referência de público: R$ 20 mil por mês, somando cartões e Pix. Texto público: "Ideal para quem movimenta a partir de R$ 20 mil por mês, somando cartões e Pix." Escrever sempre como gasto mensal, nunca dando a entender que o Pix gera pontos. É uma referência, não um corte. O formulário continua com o gasto nos cartões obrigatório e o Pix opcional.
 - Suporte da equipe em horário comercial. Nunca prometer atendimento 24 horas.
 - Quem só precisa de uma passagem é atendido como passagem avulsa, pelo WhatsApp.
 - Condições, sempre com estas palavras, em qualquer página ou no app:
@@ -49,7 +49,7 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 - Títulos em Cormorant Garamond com itálico em dourado. Textos em Jost.
 - Logo: usar sempre os arquivos oficiais da pasta `ativos/`. Nunca recriar a logo em código.
 - O topo (cabeçalho e menu) de todas as páginas deve ser igual ao da página Gestão de Milhas.
-- Fotos: só fotos reais que já estão no site (clientes ou equipe). Nada de banco de imagens.
+- Fotos: só fotos reais (clientes, equipe ou viagens da equipe), nunca banco de imagens. Fotos novas reais podem entrar.
 
 ## Código e publicação
 
