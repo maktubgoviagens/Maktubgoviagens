@@ -278,6 +278,7 @@
     .cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 16px}
     .cf{display:flex;flex-direction:column;gap:6px}
     .cf.full{grid-column:1/-1}
+    .cf-ajuda{font-size:14px;line-height:1.5;color:var(--text-muted)}
     .cf label{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
     .cf input,.cf select,.cf textarea{font-family:inherit;font-size:15px;color:var(--text);background:var(--white);border:1px solid rgba(26,56,38,.18);padding:12px 14px;outline:none;width:100%}
     .cf input:focus,.cf select:focus,.cf textarea:focus{border-color:var(--gold)}
@@ -1123,9 +1124,11 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
           <div class="cf"><label for="fCidade">Cidade</label><input id="fCidade" name="cidade" maxlength="80" autocomplete="address-level2" /></div>
           <div class="cf"><label for="fGasto">Gasto mensal nos cartões</label>
             <select id="fGasto" name="gasto_mensal"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select></div>
+          <div class="cf"><label for="fPix">Movimentação mensal via Pix</label>
+            <select id="fPix" name="movimentacao_pix" aria-describedby="fPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select><p class="cf-ajuda" id="fPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p></div>
           <div class="cf"><label for="fViagens">Viagens por ano</label>
             <select id="fViagens" name="viagens_ano"><option value="">Selecione</option><option>1 a 2</option><option>3 a 5</option><option>6 a 10</option><option>Mais de 10</option></select></div>
-          <div class="cf"><label for="fProg">Programas que usa</label><input id="fProg" name="programas" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo" /></div>
+          <div class="cf full"><label for="fProg">Programas que usa</label><input id="fProg" name="programas" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo" /></div>
           <div class="cf full"><label for="fObj">Qual viagem você sonha fazer?</label><textarea id="fObj" name="objetivo" maxlength="1000" placeholder="Ex.: Japão em executiva com a família no próximo ano"></textarea></div>
           <div class="cf full"><label for="fComo">Como nos conheceu?</label>
             <select id="fComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select></div>
@@ -1229,7 +1232,7 @@ window.addEventListener('scroll',upd,{passive:true});window.addEventListener('re
     if (btn.disabled) return;
     if (f.get('site')) return;
     const row = {};
-    for (const k of ['nome','whatsapp','email','cidade','gasto_mensal','viagens_ano','programas','objetivo','indicado_por','como_conheceu']) { const v = String(f.get(k) || '').trim(); row[k] = v || null; }
+    for (const k of ['nome','whatsapp','email','cidade','gasto_mensal','movimentacao_pix','viagens_ano','programas','objetivo','indicado_por','como_conheceu']) { const v = String(f.get(k) || '').trim(); row[k] = v || null; }
     if (row.como_conheceu !== 'Indicação') row.indicado_por = null;
     msg.hidden = false; msg.className = 'cf-msg err';
     if (!row.nome || row.nome.length < 2) { msg.textContent = 'Informe seu nome.'; return; }

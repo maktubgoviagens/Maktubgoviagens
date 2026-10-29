@@ -756,6 +756,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .painel-topo+.painel-grupo{margin-top:0}
 .painel-linha.painel-texto span:first-child{white-space:normal;font-family:var(--sans);font-size:var(--t-sm);color:rgba(249,246,241,.8)}
 #dCampoInd[hidden]{display:none}
+.secao-verde p.campo-ajuda{font-size:.875rem;line-height:1.5;color:rgba(249,246,241,.8)}
 .painel-aviso{margin-top:12px;font-size:.875rem;color:var(--tinta-suave)}
 #painel .acesso-cliente{color:var(--tinta-suave)}
 #painel .acesso-cliente a{color:var(--dourado-texto);border-bottom-color:rgba(117,85,26,.38)}
@@ -1154,6 +1155,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <select id="dGasto" name="gasto_mensal"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
         </div>
       </div>
+      <div class="campo">
+        <label for="dPix">Movimentação mensal via Pix</label>
+        <select id="dPix" name="movimentacao_pix" aria-describedby="dPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+        <p class="campo-ajuda" id="dPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p>
+      </div>
       <div class="dupla">
         <div class="campo">
           <label for="dViagens">Viagens por ano</label>
@@ -1250,9 +1256,9 @@ if(c&&'IntersectionObserver' in window)new IntersectionObserver(function(e){docu
    FORMULÁRIO DE DIAGNÓSTICO (gestão de milhas)
    Tabelas separadas por porta de entrada:
      solicitacoes_acesso .. esta página e /gestao-de-milhas/
-     leads_corporativo .... /corporativo/
+     leads ................ /corporativo/ (tipo corporativo)
      banco_talentos ....... /trabalheconosco/
-   Colunas: nome, whatsapp, email, cidade, gasto_mensal, viagens_ano,
+   Colunas: nome, whatsapp, email, cidade, gasto_mensal, movimentacao_pix, viagens_ano,
    programas, objetivo, como_conheceu, indicado_por
    ============================================================ */
 const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
@@ -1292,7 +1298,7 @@ form.addEventListener('submit', async function(e){
   const f = new FormData(form);
   if(f.get('site')) return;
   const row = {};
-  ['nome','whatsapp','email','cidade','gasto_mensal','viagens_ano','programas','objetivo','indicado_por','como_conheceu'].forEach(function(k){ const v = String(f.get(k) || '').trim(); row[k] = v || null; });
+  ['nome','whatsapp','email','cidade','gasto_mensal','movimentacao_pix','viagens_ano','programas','objetivo','indicado_por','como_conheceu'].forEach(function(k){ const v = String(f.get(k) || '').trim(); row[k] = v || null; });
   if(row.como_conheceu !== 'Indicação') row.indicado_por = null;
 
   if(!row.nome || row.nome.length < 2){ dizer('Informe seu nome.','erro'); document.getElementById('dNome').focus(); return; }
