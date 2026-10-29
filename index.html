@@ -624,7 +624,7 @@ footer a:hover{color:var(--creme)}
 .hero-vs .vs{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
 .hero-vs .vs-item{display:flex;flex-direction:column;padding:clamp(12px,2vw,22px);background:#fff;border:1px solid rgba(26,56,38,.12)}
 .hero-vs .vs-ganha{background:var(--verde);border-color:var(--verde);outline:2px solid var(--dourado-claro);outline-offset:5px}
-.hero-vs .vs-rot{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:rgba(28,28,28,.6);margin-bottom:14px;line-height:1.4;min-height:2.8em}
+.hero-vs .vs-rot{font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:#5c5c5c;margin-bottom:14px;line-height:1.4;min-height:2.8em}
 .hero-vs .vs-ganha .vs-rot{color:var(--dourado-claro)}
 .hero-vs .vs-foto{position:relative;aspect-ratio:3/2;overflow:hidden;background:#eee}
 .hero-vs .vs-foto img{width:100%;height:100%;object-fit:cover}
@@ -634,7 +634,7 @@ footer a:hover{color:var(--creme)}
 .hero-vs .vs-ok{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;background:#2e7d4f;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
 .hero-vs .vs-nome{margin-top:14px;font-family:var(--serif);font-size:clamp(1.1rem,1.6vw,1.3rem);line-height:1.2;color:var(--verde)}
 .hero-vs .vs-ganha .vs-nome{color:var(--creme)}
-.hero-vs .vs-valor{font-family:var(--serif);font-weight:500;line-height:1;margin-top:10px;font-size:clamp(1.6rem,2.4vw,2.1rem);color:rgba(28,28,28,.45)}
+.hero-vs .vs-valor{font-family:var(--serif);font-weight:500;line-height:1;margin-top:10px;font-size:clamp(1.6rem,2.4vw,2.1rem);color:#6b6b6b}
 .hero-vs .vs-valor s{text-decoration-color:#a8322d;text-decoration-thickness:3px}
 .hero-vs .vs-ganha .vs-valor{color:var(--dourado-claro);font-size:clamp(1.6rem,2.3vw,2.15rem);white-space:nowrap}
 .hero-vs .vs-pts{margin-top:8px;font-size:.85rem;font-weight:500;color:rgba(28,28,28,.62)}
@@ -821,7 +821,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
       <li><a href="/viagens/">Viagens</a></li>
       <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -1017,13 +1017,13 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <p class="beneficio-ressalva">O que está incluso é o serviço de emissão. Passagens, taxas dos programas e custos de terceiros são pagos à parte.</p>
         </div>
         <div class="beneficio">
-          <p class="beneficio-nome">Seu primeiro planejamento de viagem, incluso na contratação da gestão.</p>
+          <p class="beneficio-nome">Primeiro planejamento de viagem incluso, sem limite de dias de roteiro, para uma viagem em que o titular do contrato esteja viajando.</p>
         </div>
       </div>
       <div class="beneficio-col">
         <h3>Condição para clientes da gestão</h3>
         <div class="beneficio">
-          <p>Após o primeiro planejamento incluso, clientes da gestão têm 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros personalizados, conforme condições do contrato.</p>
+          <p>Nos roteiros personalizados seguintes, também em viagens do titular, 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros.</p>
         </div>
       </div>
       <div class="beneficio-col">
@@ -1036,6 +1036,45 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
 
+<!-- ===================== MODELO: CASOS DE CLIENTES DA GESTÃO =====================
+     Este bloco está comentado e não aparece no site. Só publique um caso
+     com autorização por escrito do cliente e com dados que possam ser comprovados.
+
+     Como publicar:
+     1. Copie o trecho entre "COPIAR A PARTIR DAQUI" e "ATÉ AQUI" e cole logo abaixo
+        deste comentário, fora dele.
+     2. Preencha cada campo. Se não houver comparação documentada, apague o bloco
+        "caso-comparacao" inteiro. Não invente números, prazos ou falas.
+     3. Para mais de um caso, repita o <article class="caso-gestao"> dentro da mesma seção.
+     4. Antes de publicar, peça a revisão do estilo visual (o modelo ainda não tem CSS).
+
+     COPIAR A PARTIR DAQUI
+     <section class="secao" id="casos-gestao" aria-labelledby="t-casos">
+       <div class="wrap">
+         <h2 id="t-casos">Clientes da gestão,<em>em casos reais.</em></h2>
+         <p class="intro">Casos publicados com autorização dos clientes.</p>
+         <article class="caso-gestao">
+           <dl>
+             <dt>Necessidade do cliente</dt>
+             <dd>(o que o cliente queria resolver)</dd>
+             <dt>Período acompanhado</dt>
+             <dd>(de mês/ano a mês/ano)</dd>
+             <dt>O que a equipe fez</dt>
+             <dd>(as ações da gestão, em ordem)</dd>
+             <dt>Resultado</dt>
+             <dd>(só o que pode ser comprovado)</dd>
+           </dl>
+           <blockquote>(comentário do cliente, com autorização)</blockquote>
+           <cite>(nome ou iniciais do cliente, cidade)</cite>
+           <div class="caso-comparacao">
+             <p>(opcional: comparação documentada, com data da pesquisa, programa, valores e premissas)</p>
+           </div>
+         </article>
+       </div>
+     </section>
+     ATÉ AQUI
+     ================================================================================ -->
+ 
 <!-- ===================== QUEM JÁ VIAJOU COM A GENTE =====================
      Clientes da alfaiataria de viagens. Não apresentar como resultado da gestão de milhas.
      Para incluir uma família: copie um <article class="caso"> inteiro, troque a foto
@@ -1121,7 +1160,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </div>
       <p class="outras-portas">
         Viaja a trabalho ou emite para uma equipe? <a href="/corporativo/">Maktub Corporativo</a>.<br>
-        Quer planejar uma viagem? <a href="/como-trabalhamos/">Conheça nossas viagens sob medida</a>.<br>
+        Quer planejar uma viagem? <a href="/viagens/#como-funciona">Conheça nossas viagens sob medida</a>.<br>
         Quer trabalhar com a gente? <a href="/trabalheconosco/">Banco de talentos</a>.
       </p>
     </div>
@@ -1175,7 +1214,8 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
 
-<section class="manifesto">
+<section class="manifesto" aria-labelledby="t-maktub">
+  <h2 id="t-maktub" class="oculto">O significado de Maktub</h2>
   <div class="wrap">
     <p>Maktub: estava escrito. Se era para acontecer, que aconteça da melhor forma possível.</p>
     <span>Maktub Go, Alfaiataria de Viagens</span>
@@ -1195,7 +1235,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <h2>Navegar</h2>
         <ul>
           <li><a href="/quem-somos/">Quem somos</a></li>
-          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/como-trabalhamos/">Como funciona a gestão</a></li>
           <li><a href="/viagens/">Viagens</a></li>
           <li><a href="/quem-somos/#time">O time</a></li>
         </ul>
@@ -1206,7 +1246,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
           <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
           <li><a href="/corporativo/">Maktub Corporativo</a></li>
-          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+          <li><a href="/viagens/#contratacao">Viagens sob medida</a></li>
         </ul>
       </div>
       <div>

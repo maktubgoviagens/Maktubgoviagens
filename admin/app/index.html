@@ -2393,10 +2393,10 @@ function ligarPropostaIA(P, r) {
   });
   box.querySelectorAll('[data-pia-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(r.proposta_ia.link); aviso('Link copiado.'); } catch (e) { aviso(r.proposta_ia.link); } });
 }
-const METODO_INICIAL = `Quem atendemos: pessoas com gasto médio acima de R$ 20 mil por mês no cartão (somando cartões e Pix), que viajam e querem viajar melhor gastando menos.
-O que vendemos: a Gestão de Milhas Concierge da Maktub Go, um clube de concierge de viagens por 12 meses, com a gestão de milhas como benefício central. Implantação no início e acompanhamento mensal.
-O que entregamos: estudo dos cartões e dos programas, organização dos programas de fidelidade de cada cliente (a Maktub gerencia), painel do cliente com saldos e economia gerada, carta mensal, reunião mensal e emissões com as milhas do cliente.
-Tom: consultivo, próximo, sem pressa artificial. Mostrar o dinheiro que hoje o cliente deixa na mesa e o que a Maktub faz por ele mês a mês.
+const METODO_INICIAL = `Quem atendemos: pessoas que concentram gastos mensais a partir de R$ 20 mil em cartões (somando cartões e Pix), que viajam e querem aproveitar melhor seus pontos e milhas. Esse valor é uma referência: no diagnóstico também olhamos o saldo acumulado, a frequência de viagens e a vontade de delegar.
+O que vendemos: a Gestão de Milhas Maktub Go, o acompanhamento dos pontos e milhas do cliente por uma equipe durante 12 meses, com implantação no início e acompanhamento mensal. O atendimento de concierge da alfaiataria de viagens entra como benefício na hora de viajar.
+O que entregamos: estudo dos cartões e dos programas, organização dos programas de fidelidade de cada cliente (a Maktub gerencia, e nada é feito sem o ok do cliente), painel do cliente com saldos, vencimentos, movimentações e emissões, relatório e reunião mensal, e emissões ilimitadas para o cliente com as milhas dele (o incluso é o serviço de emissão; passagens, taxas dos programas e custos de terceiros são pagos à parte). Primeiro planejamento de viagem incluso, sem limite de dias de roteiro, para uma viagem em que o titular do contrato esteja viajando. Nos roteiros personalizados seguintes, também em viagens do titular, 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros. Suporte da equipe em horário comercial. Quem só precisa de uma passagem pode emitir avulsa pelo WhatsApp.
+Tom: consultivo, próximo, sem pressa artificial. Economia é um benefício possível, nunca uma promessa; milhas nunca são apresentadas como investimento. Mostrar o que a equipe faz pelo cliente mês a mês.
 Estrutura da proposta: 1) o que vimos no diagnóstico, nas palavras do cliente; 2) o plano dos 12 meses; 3) o que muda na vida dele; 4) investimento; 5) próximo passo simples.
 (Edite este texto: é ele que a IA segue em toda proposta.)`;
 function ligarTopoGestao(P) {
@@ -3845,7 +3845,7 @@ const checkinsEm = () => trechosEm().filter(t => t.pendente);
 const TAL_K = 'mk_tal_visto';
 const talVisto = () => { try { return localStorage.getItem(TAL_K) || ''; } catch (_) { return ''; } };
 const talNovos = () => (D.talErro ? [] : (D.tal || [])).filter(r => String(r.created_at || '') > talVisto());
-const leadsBadge = () => leadsSemResposta().length + (pode('leads') ? convitesNovos().length : 0) + (pode('talentos') ? talNovos().length : 0);
+const leadsBadge = () => leadsSemResposta().length + (pode('talentos') ? talNovos().length : 0);
 let TAL_DESTAQUE = null;
 const noPeriodo = (arr) => DIAS ? arr.filter(r => Date.now() - new Date(r.created_at) <= DIAS * 864e5) : arr;
 const origemDe = (o) => {
@@ -3870,7 +3870,7 @@ const selStatus = (t, id, atual, ops) => `<select data-t="${t}" data-id="${id}" 
 function telaLeads(P) {
   const SUBS = [['leads', pode('leads')], ['convites', pode('leads')], ['talentos', pode('talentos')]].filter(x => x[1]).map(x => x[0]);
   // vindo de um aviso ou do ícone: abre direto onde tem coisa nova
-  if (LSUB === 'auto') LSUB = SUBS.includes('leads') && leadsSemResposta().length ? 'leads' : SUBS.includes('convites') && convitesNovos().length ? 'convites' : SUBS.includes('talentos') && talNovos().length ? 'talentos' : SUBS[0];
+  if (LSUB === 'auto') LSUB = SUBS.includes('leads') && leadsSemResposta().length ? 'leads' : SUBS.includes('talentos') && talNovos().length ? 'talentos' : SUBS[0];
   if (!SUBS.includes(LSUB)) LSUB = SUBS[0] || 'leads';
   const L = noPeriodo(D.leads), cnt = (st) => L.filter(r => r.status === st).length, fech = cnt('fechado');
   const og = {}; L.forEach(r => { const k = origemDe(r.origem); og[k] = (og[k] || 0) + 1; });
@@ -3892,7 +3892,7 @@ function telaLeads(P) {
     <section class="bloco"><h2>O que pedem</h2>${barras(LEAD_INT.map(k => [k, L.filter(r => intDe(r).includes(k)).length + (k === 'Gestão de Milhas' ? noPeriodo(D.sols).length : 0)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]))}<div class="sub">Um lead pode pedir mais de uma coisa. Gestão de Milhas inclui os pedidos da página da Gestão.${(n => n ? ` ${n} ${n === 1 ? 'lead ainda sem etiqueta' : 'leads ainda sem etiqueta'}.` : '')(L.filter(r => !intDe(r).length).length)}</div></section>
     <div class="seg" id="lsub" style="margin-top:20px">
       ${SUBS.includes('leads') ? `<button data-s="leads" class="${LSUB === 'leads' ? 'on' : ''}">Leads ${L.length}</button>` : ''}
-      ${SUBS.includes('convites') ? `<button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão ${noPeriodo(D.sols).length}${convitesNovos().length ? ` · ${convitesNovos().length} ${convitesNovos().length === 1 ? 'novo' : 'novos'}` : ''}</button>` : ''}
+      ${SUBS.includes('convites') ? `<button data-s="convites" class="${LSUB === 'convites' ? 'on' : ''}">Pedidos da Gestão (atalho)</button>` : ''}
       ${SUBS.includes('talentos') ? `<button data-s="talentos" class="${LSUB === 'talentos' ? 'on' : ''}">Talentos ${D.talErro ? '' : noPeriodo(D.tal).length}${talNovos().length ? ` · ${talNovos().length} ${talNovos().length === 1 ? 'novo' : 'novos'}` : ''}</button>` : ''}
     </div>
     <div class="chips" id="filtro"></div>
@@ -3927,14 +3927,10 @@ function listaLeads() {
       </article>`;
     }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
   } else if (LSUB === 'convites') {
-    chips(ST_SOL, listaLeads);
-    const R = noPeriodo(D.sols).filter(r => FILTRO === 'todos' || r.status === FILTRO);
-    el.innerHTML = R.length ? R.map(r => `<article class="card ${r.status === 'nova' ? 'novo' : ''}">
-        <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">Gestão de Milhas</span></div><span class="quando">${quando(r.created_at)}</span></div>
-        <div class="info">${[['Cidade', r.cidade], ['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Viagem dos sonhos', r.objetivo], ['Indicado por', r.indicado_por], ['Como conheceu', r.como_conheceu]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
-        <div class="acoes">${r.whatsapp ? `<a class="zap" data-zaps="${r.id}" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('solicitacoes_acesso', r.id, r.status, ST_SOL)}</div>
-        <div class="acoes">${cardDaSol(r) ? `<button class="sec" data-abrir-card="${cardDaSol(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas', solicitacao_id: String(r.id) }))}">Registrar diagnóstico</button>`}</div>
-      </article>`).join('') : '<div class="vazio">Nenhuma solicitação com esse filtro.</div>';
+    // os pedidos de diagnóstico ficam na aba Gestão (tudo da gestão de milhas fica lá); aqui fica só o atalho
+    $('filtro').innerHTML = '';
+    el.innerHTML = `<div class="vazio">Os pedidos de diagnóstico do site ficam na aba Gestão, com todos os status.${podeAba('gestao') ? `<div style="margin-top:14px"><button class="zap" id="irPedidosGestao">Abrir os pedidos na aba Gestão</button></div>` : ''}</div>`;
+    if ($('irPedidosGestao')) $('irPedidosGestao').onclick = () => ir('gestao', () => { GE_SOL_ABERTO = true; });
   } else {
     $('filtro').innerHTML = '';
     if (D.talErro) { el.innerHTML = '<div class="vazio">A equipe ainda não tem permissão de leitura no banco de talentos.</div>'; return; }
@@ -4017,13 +4013,17 @@ function emissoesGestao() {
     .filter(x => x.c);
 }
 const pedidosSite = () => (D.sols || []).filter(r => r.status === 'nova');
+// pedido de diagnóstico do site: campos novos primeiro; os antigos (cidade, viagens, viagem dos sonhos) só aparecem se vierem preenchidos
+const infoSol = (r) => [['Gasto mensal nos cartões', r.gasto_mensal], ['Movimentação via Pix', r.movimentacao_pix], ['Programas', r.programas], ['Como conheceu', r.como_conheceu], ['Indicado por', r.indicado_por], ['E-mail', r.email], ['Cidade', r.cidade], ['Viagens por ano', r.viagens_ano], ['Viagem dos sonhos', r.objetivo]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('');
+const msgSol = (r) => `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos o seu pedido de diagnóstico da Gestão de Milhas Maktub Go e quero marcar a nossa chamada.`;
+let GE_SOL_FILTRO = 'todos', GE_SOL_ABERTO = false;
 const indicacoesNovas = () => (D.indic || []).filter(r => r.status === 'enviado');
 // um número só para as pendências da Gestão: a bolinha do menu, o Início e o topo da Gestão contam igual
 const totalGestao = () => pendGestao().reduce((t, x) => t + x[1], 0);
 function pendGestao() {
   return [
     ['Pedidos de reunião dos clientes', reunioesAConfirmar().length],
-    ['Pedidos de convite pelo site', pedidosSite().length],
+    ['Pedidos de diagnóstico pelo site', pedidosSite().length],
     ['Indicações de clientes', indicacoesNovas().length],
     ['Leads para retornar hoje', retornosHoje().filter(ehGestao).length],
     ['Emissões para lançar na carteira', emissoesGestao().length],
@@ -4038,6 +4038,23 @@ const pilula = (ok, txt) => `<span class="tag ${ok ? 'ok' : 'alerta'}">${ok ? '�
 function htmlCiclo(c, ciclo) {
   return `${pilula(ciclo.saldos, 'Saldos')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
 }
+// todos os pedidos de diagnóstico do site, com filtro e status (a aba Leads só tem um atalho para cá)
+function htmlPedidosDiagnostico() {
+  const todos = D.sols || [];
+  const R = todos.filter(r => GE_SOL_FILTRO === 'todos' || r.status === GE_SOL_FILTRO);
+  const conta = (v) => todos.filter(r => r.status === v).length;
+  const filtros = [['todos', 'Todos', todos.length], ...ST_SOL.map(([v, l]) => [v, l, conta(v)])].map(([v, l, n]) => `<button class="${GE_SOL_FILTRO === v ? 'on' : ''}" data-gsf="${v}">${l} ${n}</button>`).join('');
+  return `<details class="gsec" id="gePedidos" style="margin-top:14px"${GE_SOL_ABERTO ? ' open' : ''}><summary><span>Pedidos de diagnóstico<small>Todos os pedidos do site, com o status de cada um</small></span><b style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;margin-left:auto">${todos.length}</b></summary>
+    <div class="chips" style="margin:12px 0">${filtros}</div>
+    ${R.length ? R.map(r => `<article class="card ${r.status === 'nova' ? 'novo' : ''}" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">Gestão de Milhas</span></div><span class="quando">${quando(r.created_at)}</span></div>
+      <div class="info">${infoSol(r)}</div>
+      <div class="acoes">${r.whatsapp ? `<a class="zap" href="${zapLink(r.whatsapp, r.nome, msgSol(r))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('solicitacoes_acesso', r.id, r.status, ST_SOL)}</div>
+      <div class="acoes">${cardDaSol(r) ? `<button class="sec" data-abrir-card="${cardDaSol(r).id}">Ver no funil</button>` : `<button class="sec" data-funil-sol="${r.id}">Levar para o funil</button>`}</div>
+    </article>`).join('') : '<div class="vazio">Nenhum pedido com esse filtro.</div>'}
+  </details>`;
+}
+
 function telaGestao(P) {
   if (GE_CICLO) return telaCiclo(P);
   const ags = reunioesAConfirmar(), sols = pedidosSite(), ind = indicacoesNovas();
@@ -4072,15 +4089,15 @@ function telaGestao(P) {
       <div class="info">${[['Preferência', [a.data_preferida ? dataBR(a.data_preferida) : '', a.periodo].filter(Boolean).join(' · ')], ['Formato', a.formato], ['Pauta', a.pauta]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
       <div class="acoes"><button class="zap" data-conf="${a.id}">Confirmar e marcar</button><button class="sec" data-ficha="${a.cliente_id}">Ficha</button></div></article>`).join(''))}
 
-    ${grupo('Pedidos de convite pelo site', sols.map(r => `<article class="card" style="margin-bottom:8px">
-      <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">quer entrar na Gestão</span></div><span class="quando">${quando(r.created_at)}</span></div>
-      <div class="info">${[['Gasto mensal', r.gasto_mensal], ['Viagens por ano', r.viagens_ano], ['Programas', r.programas], ['Objetivo', r.objetivo], ['Indicado por', r.indicado_por], ['Como conheceu', r.como_conheceu]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
-      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. Recebemos a sua solicitação de convite para a Gestão de Milhas Concierge e quero agendar o seu diagnóstico.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-sol="${r.id}">Levar para o funil</button><button class="sec" data-recusa-sol="${r.id}">Recusar</button></div></article>`).join(''))}
+    ${grupo('Pedidos de diagnóstico pelo site', sols.map(r => `<article class="card" style="margin-bottom:8px">
+      <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">quer o diagnóstico</span></div><span class="quando">${quando(r.created_at)}</span></div>
+      <div class="info">${infoSol(r)}</div>
+      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, msgSol(r))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-sol="${r.id}">Levar para o funil</button><button class="sec" data-recusa-sol="${r.id}">Recusar</button></div></article>`).join(''))}
 
     ${grupo('Indicações de clientes', ind.map(r => `<article class="card" style="margin-bottom:8px">
       <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ouro">indicação de ${esc(nomeCli(r.cliente_id))}</span></div><span class="quando">${quando(r.created_at)}</span></div>
       <div class="info">${[['Relação', r.relacao], ['Mensagem', r.mensagem], ['E-mail', r.email]].filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}</div>
-      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. ${String(nomeCli(r.cliente_id)).split(' ')[0]} nos indicou para conversar com você sobre a Gestão de Milhas Concierge.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-ind="${r.id}">Levar para o funil</button><button class="sec" data-recusa-ind="${r.id}">Não seguiu</button></div></article>`).join(''))}
+      <div class="acoes">${r.whatsapp ? `<a class="sec" href="${zapLink(r.whatsapp, r.nome, `Olá, ${String(r.nome || '').split(' ')[0]}! Aqui é da Maktub Go. ${String(nomeCli(r.cliente_id)).split(' ')[0]} nos indicou para conversar com você sobre a Gestão de Milhas Maktub Go.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="zap" data-funil-ind="${r.id}">Levar para o funil</button><button class="sec" data-recusa-ind="${r.id}">Não seguiu</button></div></article>`).join(''))}
 
     ${grupo('Leads para retornar hoje', ret.map(htmlReuniao).join(''))}
 
@@ -4096,6 +4113,8 @@ function telaGestao(P) {
     ${grupo('Renovações em 90 dias', renov.length ? `<div class="pend">${renov.map(x => { const dv = diasPara(x.gestao_vencimento); return `<button data-ficha="${x.id}"><span>${esc(x.nome_completo)}</span><span><span style="${dv <= 30 ? 'color:var(--alerta)' : 'color:var(--tinta-2)'};font-size:13px">${dv < 0 ? 'vencido' : 'vence ' + dataBR(x.gestao_vencimento)}</span><span class="seta">›</span></span></button>`; }).join('')}</div>` : '')}
 
     ${grupo('Clientes sem data de entrada', semc.length ? `<div class="pend">${semc.map(x => `<button data-ficha="${x.id}"><span>${esc(x.nome_completo)}</span><span><span style="color:var(--alerta);font-size:13px">definir</span><span class="seta">›</span></span></button>`).join('')}</div>` : '')}
+
+    ${htmlPedidosDiagnostico()}
 
     <div class="secao">Carteira de clientes</div>
     <div class="numeros" style="margin-top:0">
@@ -4158,6 +4177,16 @@ function ligarGestao(P) {
     const card = cardDaSol(r); if (card) return abrirAtendimento(card.id);
     // sem card: o status do pedido só muda depois que o card novo for salvo (desistir não some com o pedido)
     abrirAtendimento('nova', { cliente: r.nome || '', contato: r.whatsapp || r.email || '', origem: r.indicado_por ? 'Indicação de cliente' : 'Site', produto: 'Gestão de Milhas', tipo: 'Diagnóstico da Gestão de Milhas', solicitacao_id: String(r.id) });
+  });
+  $('gePedidos') && $('gePedidos').addEventListener('toggle', () => { GE_SOL_ABERTO = $('gePedidos').open; });
+  P.querySelectorAll('[data-gsf]').forEach(b => b.onclick = () => { GE_SOL_FILTRO = b.dataset.gsf; GE_SOL_ABERTO = true; telaGestao(P); });
+  P.querySelectorAll('#gePedidos [data-abrir-card]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.abrirCard));
+  P.querySelectorAll('#gePedidos select[data-t="solicitacoes_acesso"]').forEach(sel => sel.onchange = async () => {
+    const { error } = await sb.from('solicitacoes_acesso').update({ status: sel.value }).eq('id', sel.dataset.id);
+    if (error) { aviso('Não salvou: ' + error.message); return; }
+    const r = D.sols.find(x => String(x.id) === String(sel.dataset.id)); if (r) r.status = sel.value;
+    if (sel.value === 'aprovada' && r) { await aprovarGestao(r); return; }
+    GE_SOL_ABERTO = true; aviso('Status atualizado.'); telaGestao(P);
   });
   P.querySelectorAll('[data-funil-ind]').forEach(b => b.onclick = async () => {
     const r = D.indic.find(x => String(x.id) === b.dataset.funilInd); if (!r) return;

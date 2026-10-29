@@ -23,8 +23,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Como trabalhamos | Maktub Go</title>
-<meta name="description" content="Como a Maktub Go monta a sua viagem sob medida: rota, voos, hotelaria, transporte, ingressos, seguro e roteiro, e como funciona a contratação.">
+<title>Como funciona a gestão de milhas | Maktub Go</title>
+<meta name="description" content="Como funciona a Gestão de Milhas Maktub Go: diagnóstico gratuito por chamada, contrato de 12 meses, gestão contínua dos seus pontos, emissões e acompanhamento mensal com a equipe.">
 <meta name="theme-color" content="#1a3826">
 <link rel="canonical" href="https://www.maktubgo.com.br/como-trabalhamos/">
 <link rel="icon" href="/ativos/simbolo-verde.png">
@@ -33,8 +33,8 @@
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Maktub Go">
 <meta property="og:url" content="https://www.maktubgo.com.br/como-trabalhamos/">
-<meta property="og:title" content="Como trabalhamos | Maktub Go">
-<meta property="og:description" content="Como a Maktub Go monta a sua viagem sob medida: rota, voos, hotelaria, transporte, ingressos, seguro e roteiro, e como funciona a contratação.">
+<meta property="og:title" content="Como funciona a gestão de milhas | Maktub Go">
+<meta property="og:description" content="Como funciona a Gestão de Milhas Maktub Go: diagnóstico gratuito por chamada, contrato de 12 meses, gestão contínua dos seus pontos, emissões e acompanhamento mensal com a equipe.">
 <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-como-trabalhamos.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -576,6 +576,18 @@ footer a:hover{color:var(--creme)}
 .fecho .acoes{justify-content:center}
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
+.etapas-gestao{list-style:none;counter-reset:etapa;grid-template-columns:repeat(3,1fr)}
+.etapas-gestao .passo{counter-increment:etapa}
+.etapas-gestao .passo::before{content:counter(etapa);font-family:var(--serif);font-size:1.6rem;line-height:1;color:var(--dourado-claro)}
+@media (max-width:1000px){.etapas-gestao{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.etapas-gestao{grid-template-columns:1fr}}
+.duas-topo{align-items:start}
+.lista-gestao{list-style:none;display:grid;gap:12px;margin-top:var(--e3)}
+.lista-gestao li{position:relative;padding-left:22px}
+.lista-gestao li::before{content:'';position:absolute;left:0;top:.68em;width:8px;height:8px;background:var(--dourado-claro)}
+.bloco-viajar{background:var(--creme-fundo);padding:clamp(24px,4vw,40px)}
+.bloco-viajar h3{font-size:var(--t-lg)}
+.viagens-links{display:flex;flex-wrap:wrap;gap:12px 28px}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -636,7 +648,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38
     {
      "@type": "ListItem",
      "position": 2,
-     "name": "Como trabalhamos",
+     "name": "Como funciona a gestão",
      "item": "https://www.maktubgo.com.br/como-trabalhamos/"
     }
    ]
@@ -685,7 +697,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
       <li><a href="/viagens/">Viagens</a></li>
       <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -694,143 +706,75 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
  
 <main id="conteudo">
  
-<!-- ===================== PRATELEIRA ===================== -->
-<section class="secao primeira secao-creme" id="prateleira" aria-labelledby="t-como">
+<!-- ===================== COMO FUNCIONA A GESTÃO =====================
+     O processo de viagem sob medida que ficava nesta página (etapas, taxa de
+     planejamento, cashback, serviços) agora está em /viagens/. -->
+<section class="secao primeira secao-creme" id="gestao" aria-labelledby="t-como">
   <div class="wrap">
-    <span class="olho">Como trabalhamos</span>
-    <h1 id="t-como">A viagem é montada<em>na ordem certa.</em></h1>
-    <p class="intro">Cada etapa é um serviço próprio e pode ser contratada sozinha. Você entra por onde precisa e para onde quiser.</p>
- 
-    <div class="prateleira">
-      <div class="etapa"><span class="etapa-n">01</span><span class="etapa-nome">Rota</span><p>Onde você entra, por onde passa e como se desloca entre os destinos. Se ainda não sabe para onde ir, apresentamos as opções estratégicas antes de qualquer cotação.</p></div>
-      <div class="etapa"><span class="etapa-n">02</span><span class="etapa-nome">Voos</span><p>Cotação em dinheiro ou em milhas, com escolha de horários, conexões e aeroportos conforme o perfil de quem viaja. Emissão e check-in feitos por nós.</p></div>
-      <div class="etapa"><span class="etapa-n">03</span><span class="etapa-nome">Hotelaria</span><p>Curadoria de hotéis e resorts com negociação de tarifas, upgrades e benefícios. Localização avaliada de verdade, não só a diária.</p></div>
-      <div class="etapa"><span class="etapa-n">04</span><span class="etapa-nome">Transporte no destino</span><p>Carro alugado ou transfer privativo, definidos pelo que faz sentido na cidade em que você vai estar.</p></div>
-      <div class="etapa"><span class="etapa-n">05</span><span class="etapa-nome">Deslocamentos entre destinos</span><p>Trechos aéreos internos, trem e rodoviário organizados para que a rota se sustente sem correria.</p></div>
-      <div class="etapa"><span class="etapa-n">06</span><span class="etapa-nome">Ingressos</span><p>Parques, atrações e experiências comprados, conferidos e entregues no seu documento de viagem, prontos para uso.</p></div>
-      <div class="etapa"><span class="etapa-n">07</span><span class="etapa-nome">Seguro viagem</span><p>Assessoria na escolha da cobertura certa para o destino e o perfil, com os limites e condições explicados antes da contratação.</p></div>
-      <div class="etapa"><span class="etapa-n">08</span><span class="etapa-nome">Roteiro</span><p>No fim da montagem, uma conversa sobre gastronomia, passeios e o que você gosta de fazer. Daí nasce o roteiro dia a dia.</p></div>
-    </div>
- 
+    <span class="olho">Como funciona</span>
+    <h1 id="t-como">Como funciona<em>a gestão.</em></h1>
+    <p class="intro">Do diagnóstico ao acompanhamento de cada mês, este é o caminho da sua carteira com a nossa equipe.</p>
+    <div class="acoes"><a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="como_funciona_topo">Quero meu diagnóstico</a></div>
   </div>
 </section>
  
-<!-- ===================== CONTRATAÇÃO ===================== -->
-<section class="secao secao-verde" id="contratacao" aria-labelledby="t-contratacao">
+<section class="secao secao-verde" id="etapas" aria-labelledby="t-etapas">
   <div class="wrap">
-    <span class="olho">Como funciona a contratação</span>
-    <h2 id="t-contratacao">Do primeiro oi<em>até a sua volta.</em></h2>
-    <p class="intro">Sem letra miúda e sem surpresa no meio do caminho. É assim que a sua viagem sai do papel com a gente.</p>
- 
-    <div class="jornada">
-      <div class="passo"><span class="passo-n">01</span><h3>A conversa</h3><p>Você conta como gosta de viajar, o que não pode faltar e o que prefere evitar. A gente escuta antes de cotar qualquer coisa.</p></div>
-      <div class="passo"><span class="passo-n">02</span><h3>O desenho da rota</h3><p>Montamos a proposta sob medida para o seu perfil. O planejamento tem um investimento próprio, devolvido integralmente em cashback quando a viagem é fechada com a Maktub.</p></div>
-      <div class="passo"><span class="passo-n">03</span><h3>Ajustes até ficar do seu jeito</h3><p>Você revisa, troca o que quiser, e a gente refina até a viagem ter a sua cara.</p></div>
-      <div class="passo passo-seguro"><span class="passo-n">04</span><h3>Contrato e pagamento</h3><p>Com tudo aprovado, você assina o contrato e faz o pagamento sempre direto para a Maktub Go Agência de Viagens Ltda, no Pix ou parcelado, sempre com nota fiscal. As condições de parcelamento são combinadas com você no atendimento.</p></div>
-      <div class="passo"><span class="passo-n">05</span><h3>Seu documento de viagem</h3><p>Reservas, emissões e check-in feitos por nós. Você recebe tudo conferido em um único documento, disponível até sem internet.</p></div>
-      <div class="passo"><span class="passo-n">06</span><h3>Com você até a volta</h3><p>Durante a viagem, o time acompanha cada etapa de perto. Se algo mudar no caminho, quem corre atrás somos nós.</p></div>
-    </div>
+    <span class="olho">As etapas</span>
+    <h2 id="t-etapas">Do diagnóstico<em>ao acompanhamento mensal.</em></h2>
+    <ol class="jornada etapas-gestao">
+      <li class="passo"><h3>Diagnóstico gratuito</h3><p>Uma chamada para conhecer sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta nessa mesma conversa.</p></li>
+      <li class="passo"><h3>Contrato</h3><p>A gestão é contratada por 12 meses. Estratégia de milhas pede tempo: janelas de emissão, transferências bonificadas e evolução de cartões acontecem ao longo do ano.</p></li>
+      <li class="passo"><h3>Início da gestão</h3><p>Com o contrato assinado, mapeamos seus programas, saldos, vencimentos e cartões e liberamos o seu painel, com verificação em duas etapas.</p></li>
+      <li class="passo"><h3>Gestão contínua</h3><p>Acompanhamos promoções, transferências bonificadas, lançamentos de cartões, vencimentos e janelas de emissão. Quando há oportunidade relevante, a gente recomenda e só executa com o seu ok.</p></li>
+      <li class="passo"><h3>Emissões</h3><p>Buscamos as melhores opções com as suas milhas e fazemos a emissão. O serviço de emissão está incluso; passagens, taxas dos programas e custos de terceiros são pagos à parte. Antes de cada emissão, você sabe exatamente quanto vai pagar.</p></li>
+      <li class="passo"><h3>Acompanhamento mensal</h3><p>Uma reunião por mês com a equipe e um relatório mensal no seu painel. Para qualquer demanda da gestão, a equipe atende em horário comercial.</p></li>
+    </ol>
   </div>
 </section>
  
-<!-- ===================== SERVIÇOS ===================== -->
-<section class="secao" id="servicos" aria-labelledby="t-serv">
-  <div class="wrap">
-    <span class="olho">O que fazemos</span>
-    <h2 id="t-serv">Cada viagem,<em>um projeto único.</em></h2>
- 
-    <div class="servicos">
-      <article class="servico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 16l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        <h3>Planejamento completo</h3>
-        <p>Rota, voos, hotéis, transfers e experiências pensados para o seu perfil e o seu ritmo de viagem.</p>
-        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20completa%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre planejamento</a>
-      </article>
- 
-      <article class="servico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg>
-        <h3>Hotelaria</h3>
-        <p>Curadoria com negociação de tarifas, upgrades e benefícios em destinos nacionais e internacionais.</p>
-        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20hotelaria%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre hotelaria</a>
-      </article>
- 
-      <article class="servico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
-        <h3>Suporte humanizado</h3>
-        <p>Um time inteiro com você durante a viagem. Do primeiro contato ao retorno, sempre com uma pessoa real.</p>
-        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20entender%20como%20funciona%20o%20atendimento%20da%20Maktub%20Go." target="_blank" rel="noopener">Entender o atendimento</a>
-      </article>
- 
-      <article class="servico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M5 17h14l-1.5-6.5a2 2 0 0 0-2-1.5h-7a2 2 0 0 0-2 1.5Z"/><circle cx="7.5" cy="17.5" r="1.7"/><circle cx="16.5" cy="17.5" r="1.7"/></svg>
-        <h3>Transfers e traslados</h3>
-        <p>Transfers privativos, locação de veículos e traslados com conforto e pontualidade no destino.</p>
-        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20cotar%20transfer%20ou%20carro%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre transfers</a>
-      </article>
- 
-      <article class="servico servico-destaque">
-        <span class="selo">Serviço exclusivo</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.4 6.2L12 17l-5.6 3 1.4-6.2L3 9.5l6.4-.7Z"/></svg>
-        <h3>Gestão de Milhas Maktub Go</h3>
-        <p>Uma equipe cuidando dos seus pontos e milhas o ano inteiro, com painel privado e reunião mensal.</p>
-        <a class="link-texto" href="/diagnostico/" data-diagnostico="como_trabalhamos_card">Quero meu diagnóstico</a>
-      </article>
- 
-      <article class="servico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6Z"/></svg>
-        <h3>Seguro viagem</h3>
-        <p>Escolha da cobertura certa para cada destino e perfil, com limites e condições explicados com clareza.</p>
-        <a class="link-texto" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20contratar%20seguro%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar sobre seguro</a>
-      </article>
+<section class="secao" id="decide" aria-labelledby="t-decide">
+  <div class="wrap duas duas-topo">
+    <div>
+      <span class="olho">Com você</span>
+      <h2 id="t-decide">Você decide.<em>A equipe executa.</em></h2>
+      <ul class="lista-gestao">
+        <li>Nada é feito sem o seu ok.</li>
+        <li>Antes de cada emissão, você sabe quanto vai pagar.</li>
+        <li>Cada emissão e movimentação fica registrada no seu painel.</li>
+        <li>Atendimento online, para clientes no Brasil e no exterior.</li>
+      </ul>
+    </div>
+    <div class="bloco-viajar">
+      <h3>Na hora de viajar</h3>
+      <ul class="lista-gestao">
+        <li>Emissões ilimitadas para você, com as suas milhas. O que está incluso é o serviço de emissão; passagens, taxas dos programas e custos de terceiros são pagos à parte.</li>
+        <li>Primeiro planejamento de viagem incluso, sem limite de dias de roteiro, para uma viagem em que o titular do contrato esteja viajando.</li>
+        <li>Nos roteiros personalizados seguintes, também em viagens do titular, 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros.</li>
+      </ul>
+      <p class="mais"><a class="link-texto" href="/gestao-de-milhas/#alfaiataria">Ver tudo o que está incluso</a></p>
     </div>
   </div>
 </section>
  
-<!-- ===================== COMPARATIVO ===================== -->
-<section class="secao secao-verde" id="diferenca" aria-labelledby="t-dif">
+<!-- id "contratacao" mantido para os links antigos de /como-trabalhamos/#contratacao -->
+<section class="secao secao-creme" id="contratacao" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho">A diferença</span>
-    <h2 id="t-dif">Por que a Maktub<em>não é a mais barata.</em></h2>
-    <p class="intro">Vender passagem é fácil. O que custa é o que acontece antes e depois dela.</p>
- 
-    <div class="comparativo">
-      <div class="coluna">
-        <h3>Só a reserva</h3>
-        <ul>
-          <li>Responde no horário comercial</li>
-          <li>Manda o pacote que já existe pronto</li>
-          <li>Entrega o localizador e encerra o contato</li>
-          <li>Você descobre o problema no aeroporto</li>
-          <li>Cada mensagem é atendida por uma pessoa diferente</li>
-          <li>O preço é a única conversa</li>
-        </ul>
-      </div>
-      <div class="coluna nossa">
-        <h3>Maktub Go</h3>
-        <ul>
-          <li>Um time inteiro com você durante a viagem</li>
-          <li>Rota desenhada a partir do seu perfil, sem pacote pronto</li>
-          <li>Documento de viagem completo, conferido e disponível sem internet</li>
-          <li>Check-in feito por nós e cartões de embarque entregues prontos</li>
-          <li>As mesmas pessoas do início ao fim do processo</li>
-          <li>A conversa começa no que você quer viver</li>
-        </ul>
-      </div>
-    </div>
- 
-    <p class="objecao">Quem procura o menor preço acha em qualquer lugar. Quem quer chegar e simplesmente viver a viagem precisa de alguém que já pensou em tudo o que pode dar errado.</p>
+    <span class="olho">Viagens sob medida</span>
+    <h2 id="t-viagens">Também planejamos<em>viagens sob medida.</em></h2>
+    <p class="intro">O planejamento de viagens sob medida, com as etapas, a taxa de planejamento e o cashback, está na página de viagens.</p>
+    <p class="mais viagens-links"><a class="link-texto" href="/viagens/#como-funciona">Ver como montamos a sua viagem</a> <a class="link-texto" href="/viagens/#contratacao">Como contratar uma viagem</a></p>
+    <p style="margin-top:var(--e3)">Só precisa de uma passagem agora? <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Preciso%20de%20uma%20passagem%20e%20quero%20emitir%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Fale com a gente no WhatsApp</a>: também emitimos passagens avulsas.</p>
   </div>
 </section>
  
-<!-- ===================== FECHO ===================== -->
 <section class="secao secao-verde fecho" aria-labelledby="t-fecho">
   <div class="wrap">
-    <span class="olho">Fale com a Maktub</span>
-    <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
-    <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
+    <span class="olho">Seu diagnóstico</span>
+    <h2 id="t-fecho">Vamos conversar<em>sobre os seus pontos.</em></h2>
+    <p class="intro">O diagnóstico é gratuito e feito em uma chamada.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
-      <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
+      <a class="btn btn-ouro" href="/diagnostico/" data-diagnostico="como_funciona_fecho">Quero meu diagnóstico</a>
     </div>
   </div>
 </section>
@@ -848,7 +792,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <h2>Navegar</h2>
         <ul>
           <li><a href="/quem-somos/">Quem somos</a></li>
-          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/como-trabalhamos/">Como funciona a gestão</a></li>
           <li><a href="/viagens/">Viagens</a></li>
           <li><a href="/quem-somos/#time">O time</a></li>
         </ul>
@@ -859,7 +803,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
           <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
           <li><a href="/corporativo/">Maktub Corporativo</a></li>
-          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+          <li><a href="/viagens/#contratacao">Viagens sob medida</a></li>
         </ul>
       </div>
       <div>
