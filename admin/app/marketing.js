@@ -416,21 +416,21 @@ export function mover(id, k) {
   mudar(id, { status: k, ...(c.indexOf('gravacao') >= ik ? { gravado_em: null } : {}) }, `Voltou para ${colNome(k)}, com ${donoTxt({ ...p, status: k }) || 'ninguém escalado'}.`);
 }
 // quem posta marca que o post já está no Instagram (abre o post para colar o link)
-const jaPostei = (p) => `<button data-publicar="${p.id}">Já postei</button>`;
+// Postado: qualquer pessoa do marketing (Maju, Jéssica, Isadora ou Matheus) valida, e o card sai do Kanban
+const jaPostei = (p) => `<button data-passar="${p.id}">Postado</button>`;
 const ROT_PROX = (p, n) => ({ producao: ehVideo(p) ? 'Fazer roteiro' : 'Criar arte', gravacao: 'Pronto para gravar', edicao: 'Gravado, mandar para edição', aprovacao: 'Enviar para aprovação', agendado: etapa(p) === 'aprovacao' ? 'Aprovar' : 'Pronto, agendar' }[n] || 'Avançar');
 // botão de próxima etapa: só para o dono da etapa, a coordenação e os sócios (aprovação só os sócios)
 function acao(p) {
   const n = proxima(p); if (!n) return '';
-  if (!possoMexer(p)) return `<span>${etapa(p) === 'aprovacao' ? 'Aguardando os sócios' : donoTxt(p) ? 'Com ' + X.esc(donoTxt(p)) : 'Sem responsável'}</span>`;
   if (n === 'publicado') return jaPostei(p);
+  if (!possoMexer(p)) return `<span>${etapa(p) === 'aprovacao' ? 'Aguardando os sócios' : donoTxt(p) ? 'Com ' + X.esc(donoTxt(p)) : 'Sem responsável'}</span>`;
   return `<button data-passar="${p.id}">${ROT_PROX(p, n)}</button>`;
 }
 /* passar para a próxima etapa: obriga a escolher quem assume (e o prazo, na gravação) */
 function passar(id) {
   const p = LISTA.find(x => x.id === id); if (!p) return;
   const n = proxima(p); if (!n) return;
-  if (n === 'publicado') { abrirPost(id, { status: 'publicado' }); X.aviso('Cole o link do post no Instagram e salve.'); return; }
-  if (!possoMexer(p)) { X.aviso(etapa(p) === 'aprovacao' ? 'Só a Isadora ou o Matheus aprovam.' : `Esse post está com ${donoTxt(p) || 'outra pessoa'}.`); return; }
+  if (n !== 'publicado' && !possoMexer(p)) { X.aviso(etapa(p) === 'aprovacao' ? 'Só a Isadora ou o Matheus aprovam.' : `Esse post está com ${donoTxt(p) || 'outra pessoa'}.`); return; }
   const { esc } = X, pessoas = TIME.filter(t => t.user_id);
   const sel = (nome, atual) => `<select name="${nome}"><option value="">Escolha</option>${pessoas.map(t => `<option value="${t.user_id}" ${atual === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select>`;
   let campos = '';
@@ -439,17 +439,20 @@ function passar(id) {
       <label class="fl"><span>Gravar até (obrigatório)</span><input type="date" name="prazo" value="${esc(p.gravacao_data || '')}"></label>`;
   if (n === 'edicao') campos = `<label class="fl"><span>Quem edita</span>${sel('resp', p.edicao_por)}</label>`;
   if (n === 'aprovacao') campos = '<div class="sub">Vai para a Isadora e o Matheus aprovarem. Se precisar de ajuste, volta com o pedido escrito.</div>';
+  if (n === 'publicado') campos = `<div class="sub">Confirma que o post já está no Instagram? Ele sai do Kanban e fica no Calendário.</div>
+      <label class="fl"><span>Postado em</span><input type="date" name="pub" value="${hoje()}"></label>
+      <label class="fl"><span>Link do post no Instagram (opcional)</span><input type="url" name="link" value="${esc(p.link_post || '')}" placeholder="https://www.instagram.com/..." style="width:100%;padding:11px 10px;border:1px solid var(--linha);font-size:16px"></label>`;
   if (n === 'agendado') campos = `<label class="fl"><span>Quem posta</span>${sel('resp', p.postagem_por)}</label>
       <div class="duas-col"><label class="fl"><span>Data do post</span><input type="date" name="data" value="${esc(p.data_prevista || '')}"></label><label class="fl"><span>Horário</span><input type="time" name="hora" value="${esc(hhmm(p.hora))}"></label></div>`;
   let f = document.getElementById('mkPassar');
   if (!f) { f = document.createElement('div'); f.id = 'mkPassar'; f.className = 'folha'; document.body.appendChild(f); }
   f.innerHTML = `<div class="folha-fundo" data-pasx></div><form class="folha-caixa mk-pas" novalidate>
-    <div class="folha-tit">${etapa(p) === 'aprovacao' ? 'Aprovar' : 'Passar para ' + colNome(n)}</div>
+    <div class="folha-tit">${n === 'publicado' ? 'Marcar como postado' : etapa(p) === 'aprovacao' ? 'Aprovar' : 'Passar para ' + colNome(n)}</div>
     <div class="nome" style="font-size:17px">${esc(p.titulo)}</div>
-    <div class="sub" style="margin-top:4px">${esc(colNome(etapa(p) === 'ideia' ? 'ideia' : etapa(p)))} › ${esc(colNome(n))}</div>
+    ${n === 'publicado' ? '' : `<div class="sub" style="margin-top:4px">${esc(colNome(etapa(p)))} › ${esc(colNome(n))}</div>`}
     ${campos}
     <div class="mk-msg erro" id="mkPasMsg" hidden></div>
-    <div class="mk-btns"><button type="button" class="sec" data-pasx>Cancelar</button><button type="submit" class="zap">${n === 'agendado' && etapa(p) === 'aprovacao' ? 'Aprovar' : 'Confirmar'}</button></div></form>`;
+    <div class="mk-btns"><button type="button" class="sec" data-pasx>Cancelar</button><button type="submit" class="zap">${n === 'publicado' ? 'Postado' : n === 'agendado' && etapa(p) === 'aprovacao' ? 'Aprovar' : 'Confirmar'}</button></div></form>`;
   f.hidden = false;
   const fecha = () => { f.hidden = true; };
   f.querySelectorAll('[data-pasx]').forEach(b => b.onclick = fecha);
@@ -467,6 +470,12 @@ function passar(id) {
     }
     if (n === 'edicao') { if (!el.resp.value) return erro('Escolha quem edita.'); reg.edicao_por = el.resp.value; if (!p.gravado_em) reg.gravado_em = new Date().toISOString(); }
     if (n === 'aprovacao') reg.ajuste = null;
+    if (n === 'publicado') {
+      const lk = (el.link.value || '').trim(), u = lk ? urlOk(lk) : null;
+      if (lk && !pareceLink(u)) return erro('Esse link não abre. No Instagram, toque em Copiar link e cole aqui, ou deixe em branco.');
+      Object.assign(reg, { publicado_em: el.pub.value || hoje(), ...(u ? { link_post: u } : {}) });
+      fecha(); mudar(id, reg, 'Postado. O post saiu do Kanban e está no Calendário.'); return;
+    }
     if (n === 'agendado') {
       if (!el.resp.value) return erro('Escolha quem posta.');
       if (!el.data.value) return erro('Escolha a data do post. É nela que a pessoa posta.');
