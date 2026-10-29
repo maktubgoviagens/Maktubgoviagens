@@ -585,6 +585,22 @@ footer a:hover{color:var(--creme)}
   .inicio-foto img{width:100%;aspect-ratio:4/5;max-height:calc(100svh - 190px);object-fit:cover}
   .inicio-foto figcaption{margin-top:10px;font-size:13px;color:var(--tinta-suave)}
 }
+/* /viagens/ no celular: histórias, depoimentos e fotos da equipe em carrossel deslizante */
+.carrossel-pontos{display:none}
+@media (max-width:760px){
+ .casos,.depoimentos,.vividos-trilho{display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:clamp(22px,5vw,36px);gap:14px;margin-inline:calc(-1*clamp(22px,5vw,36px));padding:0 clamp(22px,5vw,36px) 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .casos::-webkit-scrollbar,.depoimentos::-webkit-scrollbar,.vividos-trilho::-webkit-scrollbar{display:none}
+ .casos>.caso,.depoimentos>.depo{flex:0 0 84%;scroll-snap-align:start}
+ .depoimentos{background:none!important;border:0!important}
+ .vividos-trilho{margin-inline:0;padding:0 clamp(22px,5vw,36px) 4px}
+ .vividos-trilho>.wrap{flex:0 0 86%;scroll-snap-align:start;margin-top:0!important;display:grid;grid-template-columns:1fr;align-content:start;padding:0!important}
+ #vividos .figura{order:-1;max-height:none!important;aspect-ratio:4/3!important}
+ .carrossel-pontos{display:flex;justify-content:center;gap:2px;margin-top:16px}
+ .carrossel-pontos button{width:28px;height:28px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
+ .carrossel-pontos button::before{content:'';width:8px;height:8px;border-radius:4px;background:rgba(25,56,38,.28);transition:width .3s,background .3s}
+ .carrossel-pontos button[aria-current="true"]::before{width:20px;background:var(--dourado-texto)}
+ .carrossel-pontos button:focus-visible{outline:2px solid var(--dourado-texto);outline-offset:2px}
+}
 /* viagens sob medida */
 .sub-depo{font-size:var(--t-xl)}
 .sub-depo em{font-style:italic;display:block;color:var(--dourado-texto)}
@@ -903,6 +919,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
  
 <!-- ===================== A GENTE VAI ANTES ===================== -->
 <section class="secao secao-creme" id="vividos" aria-labelledby="t-vividos">
+<div class="vividos-trilho">
   <div class="wrap duas">
     <div class="figura figura-retrato" style="background-image:url('/ativos/destino-santarem.webp')" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
     <div>
@@ -935,6 +952,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       <p style="margin-top:var(--e2)">No caminho para Gramado, uma placa de templo budista virou três horas no Chagdud Gonpa Khadro Ling, em Três Coroas. Depois, rodízio gaúcho, a Igreja São Pedro, em Gramado, e a Catedral de Pedra, em Canela. Hoje, quando o cliente tem esse perfil, o templo já entra no roteiro.</p>
     </div>
   </div>
+</div>
 </section>
  
 <!-- ===================== COMO CONTRATAR ===================== -->
@@ -1098,6 +1116,8 @@ addEventListener('scroll', function(){
 (function(){
   var reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   /* fotos que começam escondidas só carregam quando a galeria chega perto da tela */
+  var celular = window.matchMedia ? matchMedia('(max-width:760px)') : { matches:false };
+  var noCarrossel = function(f){ return celular.matches && !!f.closest('.casos, .vividos-trilho'); };
   var carrega = function(c){ if(c.dataset.fundo){ c.style.backgroundImage = "url('" + c.dataset.fundo + "')"; delete c.dataset.fundo; } };
   var figs = document.querySelectorAll('.figura-alterna, .caso-alterna');
   Array.prototype.forEach.call(figs, function(fig, idx){
@@ -1126,11 +1146,29 @@ addEventListener('scroll', function(){
     function reinicia(){ para(); if(!reduz) timer = setInterval(function(){ ir(i+1); }, 6000); }
     var x0 = null;
     fig.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
-    fig.addEventListener('touchend', function(e){ if(x0 === null) return; var dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx) > 40){ ir(i + (dx < 0 ? 1 : -1)); reinicia(); } x0 = null; });
+    fig.addEventListener('touchend', function(e){ if(x0 === null) return; if(noCarrossel(fig)){ x0 = null; return; } var dx = e.changedTouches[0].clientX - x0; if(Math.abs(dx) > 40){ ir(i + (dx < 0 ? 1 : -1)); reinicia(); } x0 = null; });
     fig.addEventListener('mouseenter', para);
     fig.addEventListener('mouseleave', reinicia);
     ir(0);
     setTimeout(reinicia, idx * 1500);
+  });
+})();
+</script>
+<script>
+/* carrossel do celular: pontinhos de posição, que também levam à história */
+(function(){
+  var celular = window.matchMedia ? matchMedia('(max-width:760px)') : { matches:false };
+  [['.casos','História'],['.depoimentos','Depoimento'],['.vividos-trilho','Destino']].forEach(function(cfg){
+    var trilho = document.querySelector(cfg[0]); if(!trilho) return;
+    var itens = Array.prototype.filter.call(trilho.children, function(e){ return e.nodeType === 1 && !e.classList.contains('so-rascunho'); });
+    if(itens.length < 2) return;
+    var pontos = document.createElement('div'); pontos.className = 'carrossel-pontos';
+    var bts = itens.map(function(it, k){ var b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', cfg[1] + ' ' + (k+1) + ' de ' + itens.length);
+      b.addEventListener('click', function(){ trilho.scrollTo({ left: it.offsetLeft - trilho.offsetLeft - parseFloat(getComputedStyle(trilho).paddingLeft), behavior:'smooth' }); }); pontos.appendChild(b); return b; });
+    trilho.parentNode.insertBefore(pontos, trilho.nextSibling);
+    var marca = function(){ if(!celular.matches) return; var x = trilho.scrollLeft, melhor = 0, dist = 1e9; itens.forEach(function(it, k){ var d = Math.abs(it.offsetLeft - trilho.offsetLeft - parseFloat(getComputedStyle(trilho).paddingLeft) - x); if(d < dist){ dist = d; melhor = k; } }); bts.forEach(function(b, k){ b.setAttribute('aria-current', k === melhor ? 'true' : 'false'); }); };
+    trilho.addEventListener('scroll', function(){ window.requestAnimationFrame(marca); }, { passive:true });
+    marca();
   });
 })();
 </script>
