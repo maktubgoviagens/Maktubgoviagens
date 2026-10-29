@@ -146,6 +146,7 @@
     .sav-cell .p span{color:var(--gold-warm)}
     .sav-nota{font-size:11px;line-height:1.45;color:rgba(249,246,241,.72);margin-top:8px;font-weight:300}
     .sav-nota[hidden]{display:none}
+    .kpi .sav-nota{display:block}
     .sav-cell .p{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(249,246,241,.5);margin-bottom:10px;font-weight:600}
     .sav-cell .a{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold-warm);font-weight:400;line-height:1;letter-spacing:-.01em}
     .sav-cell .a .c{font-size:14px;color:rgba(249,246,241,.55);font-style:italic;margin-right:3px;font-weight:300}
@@ -1647,7 +1648,7 @@
     ECO_TOTAL = total;
     const plural = (n, s, p) => `${fmtNum(n)} ${n === 1 ? s : p}`;
     $('ecoKpis').innerHTML = [
-      ['Economia total', total, `${plural(rows.length, 'ganho registrado', 'ganhos registrados')} desde o início`, true, ''],
+      ['Economia total', total, `${plural(rows.length, 'ganho registrado', 'ganhos registrados')} desde o início${tot.acumulo > 0 ? '<span class="sav-nota" data-nota-pontos>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</span>' : ''}`, true, ''],
       ['Passagens', tot.emissao, plural(qtd.emissao, 'emissão com milhas', 'emissões com milhas'), false, 'emissao'],
       ['Cartões e super acúmulo', pontos, tot.acumulo ? `Equivale a ${money2(tot.acumulo)} pelo valor do milheiro<span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>` : plural(qtd.acumulo, 'acúmulo registrado', 'acúmulos registrados'), false, 'acumulo', 'pts'],
       ['Cashback', tot.cashback, plural(qtd.cashback, 'cashback recebido', 'cashbacks recebidos'), false, 'cashback']
