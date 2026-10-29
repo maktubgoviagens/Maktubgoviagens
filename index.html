@@ -657,7 +657,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
-document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -736,6 +736,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .hero-vs .link-texto{margin-top:12px}
 @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero-vs{margin-top:var(--e2)}}
 </style>
+<link rel="stylesheet" href="/diagnostico/formulario.css">
 <style id="mk-gestao-css">
 /* ===================== HOME DA GESTÃO DE MILHAS ===================== */
 .hero p.hero-gratis{margin-top:var(--e2);font-family:var(--sans);font-size:.9375rem;font-weight:400;line-height:1.5;color:var(--verde)}
@@ -755,8 +756,6 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .painel-grupo{margin:var(--e3) 0 2px;font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dourado-claro)}
 .painel-topo+.painel-grupo{margin-top:0}
 .painel-linha.painel-texto span:first-child{white-space:normal;font-family:var(--sans);font-size:var(--t-sm);color:rgba(249,246,241,.8)}
-#dCampoInd[hidden]{display:none}
-.secao-verde p.campo-ajuda{font-size:.875rem;line-height:1.5;color:rgba(249,246,241,.8)}
 .painel-aviso{margin-top:12px;font-size:.875rem;color:var(--tinta-suave)}
 #painel .acesso-cliente{color:var(--tinta-suave)}
 #painel .acesso-cliente a{color:var(--dourado-texto);border-bottom-color:rgba(117,85,26,.38)}
@@ -788,9 +787,6 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 .diag-passos{margin-top:var(--e4);padding-left:1.3em;display:grid;gap:8px;font-size:var(--t-sm)}
 .secao-verde .diag-passos li{color:rgba(249,246,241,.84)}
 #diagnostico{background:var(--verde-fundo);border-top:1px solid rgba(201,169,110,.22)}
-#formDiag textarea{resize:vertical;min-height:72px}
-#formDiag .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-#formDiag button:disabled{opacity:.6;cursor:default}
 .aviso-form a{color:var(--dourado-claro)}
 @media (max-width:1000px){
   .hero-foto img{aspect-ratio:3/2;max-height:46vh}
@@ -843,7 +839,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <h1 id="t-hero">Seus pontos viram viagens.<em>A gente cuida do caminho.</em></h1>
       <p>Uma equipe cuida dos seus pontos e milhas o ano inteiro. Você ganha tempo, mantém tudo organizado e viaja com mais tranquilidade.</p>
       <div class="acoes">
-        <a class="btn btn-cheio" href="#diagnostico" data-diagnostico="home_hero">Quero meu diagnóstico</a>
+        <a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="home_hero">Quero meu diagnóstico</a>
       </div>
       <p class="hero-gratis">Diagnóstico gratuito por chamada</p>
       <p class="hero-publico">Ideal para quem concentra gastos mensais a partir de R$ 20 mil em cartões e quer aproveitar melhor seus pontos e milhas.</p>
@@ -907,7 +903,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <li class="passo"><h3>Acompanhamento durante os 12 meses</h3><p>A equipe gerencia seus pontos e fica disponível em horário comercial para tudo o que envolver a sua gestão.</p></li>
       <li class="passo"><h3>Emissões</h3><p>Quando você quiser viajar, buscamos as melhores opções com as suas milhas e fazemos a emissão. Antes de cada uma, você sabe exatamente quanto vai pagar.</p></li>
     </ol>
-    <div class="acoes"><a class="btn btn-ouro" href="#diagnostico" data-diagnostico="home_como_funciona">Quero meu diagnóstico</a></div>
+    <div class="acoes"><a class="btn btn-ouro" href="/diagnostico/" data-diagnostico="home_como_funciona">Quero meu diagnóstico</a></div>
   </div>
 </section>
 
@@ -1100,7 +1096,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </figure>
     </div>
     <p class="mais viagens-links"><a class="link-texto" href="/viagens/">Ver todas as viagens</a> <a class="link-texto" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">Ver todas as avaliações no Google</a></p>
-    <div class="acoes"><a class="btn btn-cheio" href="#diagnostico" data-diagnostico="home_quem_ja_viajou">Quero meu diagnóstico</a></div>
+    <div class="acoes"><a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="home_quem_ja_viajou">Quero meu diagnóstico</a></div>
   </div>
 </section>
 
@@ -1130,63 +1126,51 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </p>
     </div>
 
-    <form id="formDiag" novalidate>
-      <div class="campo">
-        <label for="dNome">Nome completo</label>
-        <input id="dNome" name="nome" type="text" maxlength="120" autocomplete="name" required>
+    <!-- Formulário de diagnóstico: o mesmo em /diagnostico/, na home e na gestão (script e estilo em /diagnostico/). -->
+    <form class="fd fd--escuro" id="formDiagnostico" novalidate>
+      <div class="fd-campo">
+        <label for="fdNome">Nome</label>
+        <input id="fdNome" name="nome" type="text" maxlength="120" autocomplete="name" required>
       </div>
-      <div class="dupla">
-        <div class="campo">
-          <label for="dWhats">WhatsApp</label>
-          <input id="dWhats" name="whatsapp" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="(21) 99999-9999" required>
+      <div class="fd-campo">
+        <label for="fdWhats">WhatsApp</label>
+        <input id="fdWhats" name="whatsapp" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="(21) 99999-9999" required>
+      </div>
+      <div class="fd-campo">
+        <label for="fdGasto">Gasto mensal nos cartões</label>
+        <select id="fdGasto" name="gasto_mensal" required><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+      </div>
+      <details class="fd-opcionais" id="fdOpcionais">
+        <summary>Quer adiantar mais informações? (opcional)</summary>
+        <div class="fd-opcionais-corpo">
+          <div class="fd-campo">
+            <label for="fdEmail">E-mail</label>
+            <input id="fdEmail" name="email" type="email" inputmode="email" maxlength="160" autocomplete="email" spellcheck="false">
+          </div>
+          <div class="fd-campo">
+            <label for="fdPix">Movimentação mensal via Pix</label>
+            <select id="fdPix" name="movimentacao_pix" aria-describedby="fdPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+            <p class="fd-ajuda" id="fdPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p>
+          </div>
+          <div class="fd-campo">
+            <label for="fdProg">Programas que usa</label>
+            <input id="fdProg" name="programas" type="text" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo">
+          </div>
+          <div class="fd-campo">
+            <label for="fdComo">Como nos conheceu?</label>
+            <select id="fdComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select>
+          </div>
+          <div class="fd-campo" id="fdCampoInd" hidden>
+            <label for="fdInd">Quem indicou?</label>
+            <input id="fdInd" name="indicado_por" type="text" maxlength="120">
+          </div>
         </div>
-        <div class="campo">
-          <label for="dEmail">E-mail</label>
-          <input id="dEmail" name="email" type="email" inputmode="email" maxlength="160" autocomplete="email" spellcheck="false">
-        </div>
-      </div>
-      <div class="dupla">
-        <div class="campo">
-          <label for="dCidade">Cidade</label>
-          <input id="dCidade" name="cidade" type="text" maxlength="80" autocomplete="address-level2">
-        </div>
-        <div class="campo">
-          <label for="dGasto">Gasto mensal nos cartões</label>
-          <select id="dGasto" name="gasto_mensal"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
-        </div>
-      </div>
-      <div class="campo">
-        <label for="dPix">Movimentação mensal via Pix</label>
-        <select id="dPix" name="movimentacao_pix" aria-describedby="dPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
-        <p class="campo-ajuda" id="dPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p>
-      </div>
-      <div class="dupla">
-        <div class="campo">
-          <label for="dViagens">Viagens por ano</label>
-          <select id="dViagens" name="viagens_ano"><option value="">Selecione</option><option>1 a 2</option><option>3 a 5</option><option>6 a 10</option><option>Mais de 10</option></select>
-        </div>
-        <div class="campo">
-          <label for="dProg">Programas que usa</label>
-          <input id="dProg" name="programas" type="text" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo">
-        </div>
-      </div>
-      <div class="campo">
-        <label for="dObj">Qual viagem você sonha fazer?</label>
-        <textarea id="dObj" name="objetivo" maxlength="1000" rows="2" placeholder="Ex.: Japão em executiva com a família no próximo ano"></textarea>
-      </div>
-      <div class="campo">
-        <label for="dComo">Como nos conheceu?</label>
-        <select id="dComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select>
-      </div>
-      <div class="campo" id="dCampoInd" hidden>
-        <label for="dInd">Quem indicou? (opcional)</label>
-        <input id="dInd" name="indicado_por" type="text" maxlength="120">
-      </div>
-      <div class="hp" aria-hidden="true"><label for="dSite">Site</label><input id="dSite" name="site" tabindex="-1" autocomplete="off"></div>
-      <button class="btn btn-ouro" type="submit" id="dBtn">Quero meu diagnóstico</button>
-      <p class="aviso-form">Sem compromisso. Você só avança se a proposta fizer sentido para você.</p>
-      <p class="aviso-form" id="avisoForm" role="status" aria-live="polite"></p>
-      <p class="aviso-form" style="margin-top:6px;opacity:.75">Ao enviar, você concorda com a nossa <a href="/privacidade/" style="color:inherit;text-decoration:underline">Política de Privacidade</a>.</p>
+      </details>
+      <div class="fd-hp" aria-hidden="true"><label for="fdSite">Site</label><input id="fdSite" name="site" tabindex="-1" autocomplete="off"></div>
+      <button type="submit" class="fd-botao" id="fdBotao">Quero meu diagnóstico</button>
+      <p class="fd-nota">Sem compromisso. Você só avança se a proposta fizer sentido para você.</p>
+      <div class="fd-msg" id="fdMsg" role="status" aria-live="polite"></div>
+      <p class="fd-lgpd">Ao enviar, você concorda com a nossa <a href="/privacidade/">Política de Privacidade</a>.</p>
     </form>
   </div>
 </section>
@@ -1252,77 +1236,6 @@ if(c&&'IntersectionObserver' in window)new IntersectionObserver(function(e){docu
  
  
 <script>
-/* ============================================================
-   FORMULÁRIO DE DIAGNÓSTICO (gestão de milhas)
-   Tabelas separadas por porta de entrada:
-     solicitacoes_acesso .. esta página e /gestao-de-milhas/
-     leads ................ /corporativo/ (tipo corporativo)
-     banco_talentos ....... /trabalheconosco/
-   Colunas: nome, whatsapp, email, cidade, gasto_mensal, movimentacao_pix, viagens_ano,
-   programas, objetivo, como_conheceu, indicado_por
-   ============================================================ */
-const SUPABASE_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
-const TABELA = 'solicitacoes_acesso';
-const ZAP = 'https://wa.me/5521976275225?text=';
-
-const form = document.getElementById('formDiag');
-const aviso = document.getElementById('avisoForm');
-const botao = document.getElementById('dBtn');
-const como = document.getElementById('dComo');
-const campoInd = document.getElementById('dCampoInd');
-const mostraInd = function(){ campoInd.hidden = como.value !== 'Indicação'; };
-como.addEventListener('change', mostraInd);
-const convite = new URLSearchParams(location.search).get('convite');
-if(convite){ como.value = 'Indicação'; document.getElementById('dInd').value = convite.slice(0,120); mostraInd(); }
-
-function dizer(html, estado){
-  aviso.innerHTML = html;
-  if(estado){ aviso.dataset.estado = estado; } else { delete aviso.dataset.estado; }
-}
-const esc = function(s){ return String(s || '').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]; }); };
-
-async function grava(row){
-  const r = await fetch(SUPABASE_URL + '/rest/v1/' + TABELA, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer ' + SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-    body:JSON.stringify(row)
-  });
-  if(r.ok) return null;
-  return await r.text().catch(function(){ return 'erro ' + r.status; }) || ('erro ' + r.status);
-}
-
-form.addEventListener('submit', async function(e){
-  e.preventDefault();
-  if(botao.disabled) return;
-  const f = new FormData(form);
-  if(f.get('site')) return;
-  const row = {};
-  ['nome','whatsapp','email','cidade','gasto_mensal','movimentacao_pix','viagens_ano','programas','objetivo','indicado_por','como_conheceu'].forEach(function(k){ const v = String(f.get(k) || '').trim(); row[k] = v || null; });
-  if(row.como_conheceu !== 'Indicação') row.indicado_por = null;
-
-  if(!row.nome || row.nome.length < 2){ dizer('Informe seu nome.','erro'); document.getElementById('dNome').focus(); return; }
-  if(String(row.whatsapp || '').replace(/\D/g,'').length < 10){ dizer('Informe um WhatsApp com DDD.','erro'); document.getElementById('dWhats').focus(); return; }
-  if(row.email && !/^\S+@\S+\.\S+$/.test(row.email)){ dizer('Confira o e-mail informado.','erro'); document.getElementById('dEmail').focus(); return; }
-
-  botao.disabled = true; botao.textContent = 'Enviando…'; dizer('');
-  const wa = ZAP + encodeURIComponent('Olá! Sou ' + row.nome + ' e acabei de pedir meu diagnóstico de Gestão de Milhas Maktub Go.' + (row.objetivo ? ' Viagem dos sonhos: ' + row.objetivo : ''));
-  let erro = null;
-  try{
-    erro = await grava(row);
-    if(erro && /como_conheceu/.test(erro)){ const semComo = Object.assign({}, row); delete semComo.como_conheceu; erro = await grava(semComo); }
-  }catch(err){ erro = err; }
-  botao.disabled = false; botao.textContent = 'Quero meu diagnóstico';
-  if(erro){
-    console.error(erro);
-    dizer('Não conseguimos registrar agora. Envie sua solicitação pelo WhatsApp e nossa equipe dá sequência.<br><a href="' + wa + '" target="_blank" rel="noopener">Enviar pelo WhatsApp →</a>','erro');
-    return;
-  }
-  if(window.gtag) gtag('event','generate_lead',{tipo:'diagnostico_gestao',pagina:location.pathname});
-  form.querySelectorAll('input,select,textarea,button').forEach(function(el){ el.disabled = true; });
-  dizer('<strong>Solicitação recebida, ' + esc(row.nome.split(' ')[0]) + '.</strong> Nossa equipe vai entrar em contato pelo WhatsApp para marcar a chamada do seu diagnóstico.<br><a href="' + wa + '" target="_blank" rel="noopener">Se preferir, fale agora com a Maktub Go →</a>','ok');
-});
- 
 /* menu em telas menores */
 const btn = document.getElementById('menuBtn');
 const menu = document.getElementById('menu');
@@ -1400,5 +1313,6 @@ addEventListener('scroll', function(){
   }catch(e){}
 })();
 </script>
+<script src="/diagnostico/formulario.js" defer></script>
 </body>
 </html>

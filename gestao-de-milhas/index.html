@@ -552,13 +552,14 @@
     @media(max-width:900px){.beneficios-gestao{grid-template-columns:1fr}.equipe-grid{grid-template-columns:1fr 1fr}}
     @media(max-width:520px){.equipe-grid{grid-template-columns:1fr}}
 </style>
+<link rel="stylesheet" href="/diagnostico/formulario.css">
 <!-- Google Analytics 4: visitas, cliques no WhatsApp, cliques nos botões de diagnóstico e diagnósticos enviados -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
-document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -757,7 +758,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
 <section class="hero hero-prova hero-venda">
   <span class="prova-selo reveal d1">Exemplo real &middot; 24/10/2026</span>
   <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
-  <div class="venda-cta-cedo"><a href="#convite" class="btn-gold btn-grande" data-diagnostico="gestao_hero_celular">Quero meu diagnóstico</a><p class="venda-gratis">Diagnóstico gratuito por chamada</p></div>
+  <div class="venda-cta-cedo"><a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero_celular">Quero meu diagnóstico</a><p class="venda-gratis">Diagnóstico gratuito por chamada</p></div>
   <div class="vs-grid reveal d3">
     <div class="vs-card vs-ruim">
       <span class="vs-tag">O que você leva no catálogo</span>
@@ -788,7 +789,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
     </div>
     <div class="venda-ctas prova-ctas">
-      <a href="#convite" class="btn-gold btn-grande" data-diagnostico="gestao_hero">Quero meu diagnóstico</a>
+      <a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero">Quero meu diagnóstico</a>
     </div>
     <p class="venda-gratis">Diagnóstico gratuito por chamada</p>
     <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
@@ -1114,32 +1115,54 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
           <li>Com o contrato assinado, seu painel é liberado</li>
         </ol>
       </div>
-      <form class="conv-form reveal d3" id="convForm" novalidate>
-        <h3>Quero meu diagnóstico</h3>
-        <p class="sub">Leva menos de 2 minutos. Seus dados são tratados com total confidencialidade.</p>
-        <div class="cf-grid">
-          <div class="cf full"><label for="fNome">Nome completo</label><input id="fNome" name="nome" maxlength="120" autocomplete="name" required /></div>
-          <div class="cf"><label for="fWhats">WhatsApp</label><input id="fWhats" name="whatsapp" type="tel" maxlength="30" autocomplete="tel" placeholder="(21) 99999-9999" required /></div>
-          <div class="cf"><label for="fEmail">E-mail</label><input id="fEmail" name="email" type="email" maxlength="160" autocomplete="email" /></div>
-          <div class="cf"><label for="fCidade">Cidade</label><input id="fCidade" name="cidade" maxlength="80" autocomplete="address-level2" /></div>
-          <div class="cf"><label for="fGasto">Gasto mensal nos cartões</label>
-            <select id="fGasto" name="gasto_mensal"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select></div>
-          <div class="cf"><label for="fPix">Movimentação mensal via Pix</label>
-            <select id="fPix" name="movimentacao_pix" aria-describedby="fPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select><p class="cf-ajuda" id="fPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p></div>
-          <div class="cf"><label for="fViagens">Viagens por ano</label>
-            <select id="fViagens" name="viagens_ano"><option value="">Selecione</option><option>1 a 2</option><option>3 a 5</option><option>6 a 10</option><option>Mais de 10</option></select></div>
-          <div class="cf full"><label for="fProg">Programas que usa</label><input id="fProg" name="programas" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo" /></div>
-          <div class="cf full"><label for="fObj">Qual viagem você sonha fazer?</label><textarea id="fObj" name="objetivo" maxlength="1000" placeholder="Ex.: Japão em executiva com a família no próximo ano"></textarea></div>
-          <div class="cf full"><label for="fComo">Como nos conheceu?</label>
-            <select id="fComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select></div>
-          <div class="cf full" id="cfInd" hidden><label for="fInd">Quem indicou? (opcional)</label><input id="fInd" name="indicado_por" maxlength="120" /></div>
-          <div class="hp" aria-hidden="true"><label for="fSite">Site</label><input id="fSite" name="site" tabindex="-1" autocomplete="off" /></div>
+      <div class="reveal d3">
+      <!-- Formulário de diagnóstico: o mesmo em /diagnostico/, na home e na gestão (script e estilo em /diagnostico/). -->
+      <form class="fd fd--claro" id="formDiagnostico" novalidate>
+        <div class="fd-campo">
+          <label for="fdNome">Nome</label>
+          <input id="fdNome" name="nome" type="text" maxlength="120" autocomplete="name" required>
         </div>
-        <button type="submit" class="btn-gold cf-submit" id="convBtn">Quero meu diagnóstico</button>
-        <div class="cf-note"><span>✦</span><span>Sem compromisso. Você só avança se a proposta fizer sentido para você.</span></div>
-        <div class="cf-msg" id="convMsg" hidden role="status"></div>
-        <p class="mk-lgpd" style="margin-top:10px;font-size:12px;line-height:1.6;opacity:.75;color:inherit">Ao enviar, você concorda com a nossa <a href="/privacidade/" style="color:inherit;text-decoration:underline">Política de Privacidade</a>.</p>
+        <div class="fd-campo">
+          <label for="fdWhats">WhatsApp</label>
+          <input id="fdWhats" name="whatsapp" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="(21) 99999-9999" required>
+        </div>
+        <div class="fd-campo">
+          <label for="fdGasto">Gasto mensal nos cartões</label>
+          <select id="fdGasto" name="gasto_mensal" required><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+        </div>
+        <details class="fd-opcionais" id="fdOpcionais">
+          <summary>Quer adiantar mais informações? (opcional)</summary>
+          <div class="fd-opcionais-corpo">
+            <div class="fd-campo">
+              <label for="fdEmail">E-mail</label>
+              <input id="fdEmail" name="email" type="email" inputmode="email" maxlength="160" autocomplete="email" spellcheck="false">
+            </div>
+            <div class="fd-campo">
+              <label for="fdPix">Movimentação mensal via Pix</label>
+              <select id="fdPix" name="movimentacao_pix" aria-describedby="fdPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+              <p class="fd-ajuda" id="fdPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p>
+            </div>
+            <div class="fd-campo">
+              <label for="fdProg">Programas que usa</label>
+              <input id="fdProg" name="programas" type="text" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo">
+            </div>
+            <div class="fd-campo">
+              <label for="fdComo">Como nos conheceu?</label>
+              <select id="fdComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select>
+            </div>
+            <div class="fd-campo" id="fdCampoInd" hidden>
+              <label for="fdInd">Quem indicou?</label>
+              <input id="fdInd" name="indicado_por" type="text" maxlength="120">
+            </div>
+          </div>
+        </details>
+        <div class="fd-hp" aria-hidden="true"><label for="fdSite">Site</label><input id="fdSite" name="site" tabindex="-1" autocomplete="off"></div>
+        <button type="submit" class="fd-botao" id="fdBotao">Quero meu diagnóstico</button>
+        <p class="fd-nota">Sem compromisso. Você só avança se a proposta fizer sentido para você.</p>
+        <div class="fd-msg" id="fdMsg" role="status" aria-live="polite"></div>
+        <p class="fd-lgpd">Ao enviar, você concorda com a nossa <a href="/privacidade/">Política de Privacidade</a>.</p>
       </form>
+      </div>
     </div>
   </div>
 </section>
@@ -1188,7 +1211,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   </div>
 </footer>
  
-<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Vi%20no%20site%20o%20exemplo%20dos%2020%20mil%20pontos%20e%20quero%20meu%20diagn%C3%B3stico%20de%20Gest%C3%A3o%20de%20Milhas%20com%20a%20Maktub%20Go." target="_blank" rel="noopener" class="btn-gold btn-grande" tabindex="-1" data-diagnostico="gestao_barra_fixa">Quero meu diagnóstico</a></div></div>
+<div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="/diagnostico/" class="btn-gold btn-grande" tabindex="-1" data-diagnostico="gestao_barra_fixa">Quero meu diagnóstico</a></div></div>
 <script>
 (function(){var bar=document.getElementById('ctaFixa');
 var first=document.querySelector('.prova-ctas'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
@@ -1217,46 +1240,6 @@ window.addEventListener('scroll',upd,{passive:true});window.addEventListener('re
   if(comparativo&&'IntersectionObserver' in window)new IntersectionObserver(([e])=>document.body.classList.toggle('comparativo-na-tela',e.isIntersecting)).observe(comparativo);
 </script>
  
-<script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-  const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: false } });
-  const $ = (id) => document.getElementById(id);
-  const conv = new URLSearchParams(location.search).get('convite');
-  const mostraInd = () => { $('cfInd').hidden = $('fComo').value !== 'Indicação'; };
-  $('fComo').addEventListener('change', mostraInd);
-  if (conv) { $('fComo').value = 'Indicação'; $('fInd').value = conv.slice(0, 120); mostraInd(); }
-  const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[c]);
-  $('convForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target), msg = $('convMsg'), btn = $('convBtn');
-    if (btn.disabled) return;
-    if (f.get('site')) return;
-    const row = {};
-    for (const k of ['nome','whatsapp','email','cidade','gasto_mensal','movimentacao_pix','viagens_ano','programas','objetivo','indicado_por','como_conheceu']) { const v = String(f.get(k) || '').trim(); row[k] = v || null; }
-    if (row.como_conheceu !== 'Indicação') row.indicado_por = null;
-    msg.hidden = false; msg.className = 'cf-msg err';
-    if (!row.nome || row.nome.length < 2) { msg.textContent = 'Informe seu nome.'; return; }
-    if (String(row.whatsapp || '').replace(/\D/g, '').length < 10) { msg.textContent = 'Informe um WhatsApp com DDD.'; return; }
-    if (row.email && !/^\S+@\S+\.\S+$/.test(row.email)) { msg.textContent = 'Confira o e-mail informado.'; return; }
-    btn.disabled = true; btn.textContent = 'Enviando…';
-    const texto = `Olá! Sou ${row.nome} e acabei de pedir meu diagnóstico de Gestão de Milhas Maktub Go.` + (row.objetivo ? ` Viagem dos sonhos: ${row.objetivo}` : '');
-    const wa = 'https://wa.me/5521976275225?text=' + encodeURIComponent(texto);
-    let error = null;
-    try {
-      ({ error } = await sb.from('solicitacoes_acesso').insert(row));
-      if (error && /como_conheceu/.test(String(error.message || ''))) { const { como_conheceu, ...semComo } = row; ({ error } = await sb.from('solicitacoes_acesso').insert(semComo)); }
-    } catch (err) { error = err; }
-    btn.disabled = false; btn.textContent = 'Quero meu diagnóstico';
-    if (error) {
-      console.error(error);
-      msg.innerHTML = `Não conseguimos registrar agora. Envie sua solicitação pelo WhatsApp e nossa equipe dá sequência.<br><a href="${wa}" target="_blank" rel="noopener">Enviar pelo WhatsApp →</a>`;
-      return;
-    }
-    if(window.gtag)gtag('event','generate_lead',{tipo:'diagnostico_gestao',pagina:location.pathname,como_conheceu:row.como_conheceu||'nao_informado'});
-    e.target.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = true);
-    msg.className = 'cf-msg ok';
-    msg.innerHTML = `<strong>Solicitação recebida, ${esc(row.nome.split(' ')[0])}.</strong> Nossa equipe vai entrar em contato pelo WhatsApp para marcar a chamada do seu diagnóstico.<br><a href="${wa}" target="_blank" rel="noopener">Se preferir, fale agora com a Maktub Go →</a>`;
-  });
-</script>
+<script src="/diagnostico/formulario.js" defer></script>
 </body>
 </html>

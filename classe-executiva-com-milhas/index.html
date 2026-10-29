@@ -583,7 +583,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
-document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -774,7 +774,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <h1 id="t-exec">Executiva com milhas<em>não é sorte. É gestão.</em></h1>
     <p class="intro">Muita gente acumula pontos por anos e continua viajando apertado no fundo do avião. Na Gestão de Milhas Maktub Go, a sua carteira é trabalhada o ano inteiro para que a poltrona que deita deixe de ser um sonho e vire plano.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-cheio" href="/gestao-de-milhas/#convite" data-diagnostico="executiva_topo">Quero meu diagnóstico</a>
+      <a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="executiva_topo">Quero meu diagnóstico</a>
     </div>
  
     <div class="prateleira" style="margin-top:var(--e5)">
@@ -859,7 +859,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <h2 id="t-fecho">A próxima viagem<em>pode ser deitado.</em></h2>
     <p class="intro">Conte para onde você quer ir. A gente olha a sua carteira e mostra o caminho até lá.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="/gestao-de-milhas/#convite" data-diagnostico="executiva_fecho">Quero meu diagnóstico</a>
+      <a class="btn btn-ouro" href="/diagnostico/" data-diagnostico="executiva_fecho">Quero meu diagnóstico</a>
     </div>
   </div>
 </section>
