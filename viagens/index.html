@@ -577,6 +577,14 @@ footer a:hover{color:var(--creme)}
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
 .sub-depo{margin-top:var(--e6)}
+/* primeira tela: foto real de cliente ao lado do texto, só no computador */
+.inicio-foto{display:none}
+@media (min-width:1001px){
+  .inicio-grid{display:grid;grid-template-columns:1.1fr .75fr;gap:clamp(40px,6vw,86px);align-items:center}
+  .inicio-foto{display:block;margin:0}
+  .inicio-foto img{width:100%;aspect-ratio:4/5;max-height:calc(100svh - 190px);object-fit:cover}
+  .inicio-foto figcaption{margin-top:10px;font-size:.875rem;color:var(--tinta-suave)}
+}
 /* viagens sob medida */
 .sub-depo{font-size:var(--t-xl)}
 .sub-depo em{font-style:italic;display:block;color:var(--dourado-texto)}
@@ -722,7 +730,8 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
  
 <!-- ===================== APRESENTAÇÃO ===================== -->
 <section class="secao primeira" id="inicio" aria-labelledby="t-inicio">
-  <div class="wrap">
+  <div class="wrap inicio-grid">
+   <div class="inicio-texto">
     <span class="olho">Viagens sob medida</span>
     <h1 id="t-inicio">Viagens sob medida,<em>pensadas para você.</em></h1>
     <p class="intro">A Maktub Go nasceu como alfaiataria de viagens, e ela continua aqui. Desenhamos a rota, emitimos as passagens, escolhemos os hotéis e acompanhamos a viagem até a volta. Você contrata a viagem inteira ou só a etapa que precisa.</p>
@@ -730,6 +739,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
     </div>
     <p class="hero-nota">É cliente da Gestão de Milhas Maktub Go? Veja as condições em <a href="#contratacao">Como contratar</a>.</p>
+   </div>
+   <figure class="inicio-foto">
+    <img src="/ativos/caso-maju-adriano-machu-picchu.jpg" alt="Maju e Adriano, clientes da Maktub Go, em Machu Picchu, com uma lhama ao fundo" width="960" height="1200" style="object-position:center 30%" fetchpriority="high">
+    <figcaption>Maju e Adriano em Machu Picchu, viagem planejada pela Maktub Go.</figcaption>
+   </figure>
   </div>
 </section>
  
