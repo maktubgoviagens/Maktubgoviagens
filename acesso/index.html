@@ -266,7 +266,7 @@
   const nextParam = new URLSearchParams(location.search).get('next') || '';
   const destino = /^\/(painel|admin)\/?[\w\-\/.#]*$/.test(nextParam) ? nextParam : '/painel/';
  
-  if (!EXIGIR_CODIGO) $('secureText').textContent = 'Conexão protegida. Seus dados ficam visíveis apenas para você e seu gestor.';
+  if (!EXIGIR_CODIGO) $('secureText').textContent = 'Conexão protegida. Seus dados ficam visíveis apenas para você e a equipe responsável pela sua carteira.';
  
   const jwtAmr = (token) => {
     try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.amr || []).map(a => a.method); }
@@ -286,10 +286,10 @@
   function translateError(message) {
     const m = (message || '').toLowerCase();
     if (m.includes('invalid login') || m.includes('invalid credentials')) return 'E-mail ou senha incorretos. Verifique e tente novamente.';
-    if (m.includes('email not confirmed')) return 'Seu e-mail ainda não foi confirmado. Fale com seu gestor Maktub Go.';
+    if (m.includes('email not confirmed')) return 'Seu e-mail ainda não foi confirmado. Fale com a equipe Maktub Go.';
     if (m.includes('expired') || m.includes('invalid') && m.includes('token')) return 'Código inválido ou expirado. Peça um novo código.';
     if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) return 'Muitas tentativas seguidas. Aguarde um minuto e tente novamente.';
-    if (m.includes('signups not allowed') || m.includes('user not found')) return 'Não encontramos um acesso com este e-mail. Fale com seu gestor Maktub Go.';
+    if (m.includes('signups not allowed') || m.includes('user not found')) return 'Não encontramos um acesso com este e-mail. Fale com a equipe Maktub Go.';
     if (m.includes('should be different')) return 'A nova senha precisa ser diferente da anterior.';
     if (m.includes('network') || m.includes('fetch')) return 'Falha de conexão. Verifique sua internet e tente novamente.';
     return 'Não foi possível concluir agora. Tente novamente em instantes.';
@@ -409,7 +409,7 @@
     try {
       const { data: existe, error: rpcError } = await supabase.rpc('email_tem_acesso', { p_email: email });
       if (!rpcError && existe === false) {
-        return showError('Este e-mail não está cadastrado no painel. Confira o endereço digitado ou fale com seu gestor Maktub Go.');
+        return showError('Este e-mail não está cadastrado no painel. Confira o endereço digitado ou fale com a equipe Maktub Go.');
       }
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/acesso/?redefinir=1' });
       if (error) throw error;

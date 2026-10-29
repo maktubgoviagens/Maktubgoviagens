@@ -232,6 +232,7 @@ header nav a.destaque:hover{background:var(--verde);color:var(--creme)}
 }
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
+.oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -374,8 +375,9 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
  
-<section class="prova">
+<section class="prova" aria-labelledby="t-prova">
   <div class="wrap">
+    <h2 id="t-prova" class="oculto" style="color:inherit">A Maktub Corporativo em números</h2>
     <div class="prova-grid">
       <div class="prova-item">
         <span class="prova-num">+1.000</span>

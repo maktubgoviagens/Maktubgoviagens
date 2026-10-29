@@ -23,8 +23,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Viagens sob medida já entregues | Maktub Go</title>
-<meta name="description" content="Histórias reais de viagens sob medida da Maktub Go: Gramado, Europa, Orlando, Alpes Franceses, Peru, Cazaquistão e Rússia.">
+<title>Viagens sob medida | Maktub Go</title>
+<meta name="description" content="Viagens sob medida da Maktub Go: histórias reais de clientes e como montamos a sua viagem, da rota ao roteiro, com a taxa de planejamento devolvida em cashback quando a viagem é fechada com a gente.">
 <meta name="theme-color" content="#1a3826">
 <link rel="canonical" href="https://www.maktubgo.com.br/viagens/">
 <link rel="icon" href="/ativos/simbolo-verde.png">
@@ -33,8 +33,8 @@
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Maktub Go">
 <meta property="og:url" content="https://www.maktubgo.com.br/viagens/">
-<meta property="og:title" content="Viagens sob medida já entregues | Maktub Go">
-<meta property="og:description" content="Histórias reais de viagens sob medida da Maktub Go: Gramado, Europa, Orlando, Alpes Franceses, Peru, Cazaquistão e Rússia.">
+<meta property="og:title" content="Viagens sob medida | Maktub Go">
+<meta property="og:description" content="Viagens sob medida da Maktub Go: histórias reais de clientes e como montamos a sua viagem, da rota ao roteiro, com a taxa de planejamento devolvida em cashback quando a viagem é fechada com a gente.">
 <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-viagens.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -577,6 +577,31 @@ footer a:hover{color:var(--creme)}
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
 .sub-depo{margin-top:var(--e6)}
+/* viagens sob medida */
+.sub-depo{font-size:var(--t-xl)}
+.sub-depo em{font-style:italic;display:block;color:var(--dourado-texto)}
+.hero-nota a{color:var(--dourado-texto)}
+ol.prateleira,ol.jornada,ul.servicos{list-style:none}
+.cond-gestao{margin-top:var(--e5);border:1px solid rgba(201,169,110,.45);padding:30px 32px;max-width:820px}
+.cond-gestao h3{font-size:var(--t-lg);color:var(--dourado-claro)}
+.cond-gestao ul{list-style:none;display:grid;gap:14px;margin-top:var(--e2)}
+.cond-gestao li{position:relative;padding-left:24px;font-size:var(--t-sm);max-width:70ch}
+.cond-gestao li::before{content:'✦';position:absolute;left:2px;top:3px;font-size:.66rem;color:var(--dourado-claro)}
+.cond-gestao strong{font-weight:400;color:var(--creme)}
+.por-tras{margin-top:var(--e5)}
+.por-tras-titulo{font-size:var(--t-xl)}
+.por-tras-titulo em{font-style:italic;display:block;color:var(--dourado-claro)}
+.por-tras ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:0 var(--e4);margin-top:var(--e3)}
+.por-tras li{position:relative;padding:14px 0 14px 26px;font-size:var(--t-sm);border-bottom:1px solid rgba(249,246,241,.1)}
+.por-tras li::before{content:'✦';position:absolute;left:4px;top:17px;font-size:.66rem;color:var(--dourado-claro)}
+.servicos-titulo{margin-top:var(--e5);font-size:var(--t-lg)}
+.servicos{margin-top:var(--e3)}
+.servico h4{font-family:var(--serif);font-weight:300;font-size:var(--t-lg);line-height:1.1;color:var(--verde)}
+.servico-destaque h4{color:var(--creme)}
+@media (min-width:1001px){#servicos .servicos{grid-template-columns:repeat(6,1fr)}#servicos .servico{grid-column:span 2}#servicos .servico:nth-child(n+4){grid-column:span 3}}
+@media (min-width:640px) and (max-width:1000px){#servicos .servicos{grid-template-columns:1fr 1fr}#servicos .servico:last-child{grid-column:1/-1}}
+@media (max-width:639px){#servicos .servicos{grid-template-columns:1fr}}
+@media (max-width:760px){.por-tras ul{grid-template-columns:1fr}.cond-gestao{padding:24px 22px}}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -584,6 +609,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -694,17 +720,31 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
  
 <main id="conteudo">
  
-<!-- ===================== VIAGENS =====================
+<!-- ===================== APRESENTAÇÃO ===================== -->
+<section class="secao primeira" id="inicio" aria-labelledby="t-inicio">
+  <div class="wrap">
+    <span class="olho">Viagens sob medida</span>
+    <h1 id="t-inicio">Viagens sob medida,<em>pensadas para você.</em></h1>
+    <p class="intro">A Maktub Go nasceu como alfaiataria de viagens, e ela continua aqui. Desenhamos a rota, emitimos as passagens, escolhemos os hotéis e acompanhamos a viagem até a volta. Você contrata a viagem inteira ou só a etapa que precisa.</p>
+    <div class="acoes">
+      <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
+    </div>
+    <p class="hero-nota">É cliente da Gestão de Milhas Maktub Go? Veja as condições em <a href="#contratacao">Como contratar</a>.</p>
+  </div>
+</section>
+ 
+<!-- ===================== HISTÓRIAS =====================
      Clientes da alfaiataria de viagens da Maktub Go.
      Para incluir uma família: copie um <article class="caso"> inteiro e troque
      a foto (arquivo em /ativos/), o lugar, o título e o texto. Para várias fotos
      se alternando no mesmo quadro, use o modelo de Gramado (classe figura-alterna).
      A mesma história pode ir também para a seção "Quem já viajou com a gente" da home.
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
-<section class="secao primeira" id="viagens" aria-labelledby="t-viagens">
+<section class="secao secao-creme" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho">Viagens que já entregamos</span>
-    <h1 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h1>
+    <span class="olho">Experiências de viagens sob medida</span>
+    <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
+    <p class="intro">Clientes da nossa alfaiataria de viagens, com as fotos e as palavras deles.</p>
  
     <div class="casos">
       <article class="caso">
@@ -780,7 +820,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     </div>
  
     <!-- Depoimentos de clientes da alfaiataria. Para incluir um, copie um <figure class="depo">. -->
-    <h2 class="sub-depo" id="t-depo">O que dizem<em>depois do retorno.</em></h2>
+    <h3 class="sub-depo" id="t-depo">O que dizem<em>depois do retorno.</em></h3>
     <div class="depoimentos">
       <figure class="depo">
         <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
@@ -803,22 +843,42 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
   </div>
 </section>
  
-<!-- ===================== DESTINOS VIVIDOS ===================== -->
+<!-- ===================== COMO FUNCIONA ===================== -->
+<section class="secao" id="como-funciona" aria-labelledby="t-como">
+  <div class="wrap">
+    <span class="olho">Como a viagem é organizada</span>
+    <h2 id="t-como">A viagem é montada<em>na ordem certa.</em></h2>
+    <p class="intro">São 8 etapas. Cada uma é um serviço próprio e pode ser contratada sozinha.</p>
+ 
+    <ol class="prateleira">
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">01</span><span class="etapa-nome">Rota</span><p>Por onde você entra, por onde passa e como se desloca. Se ainda não sabe o destino, apresentamos as opções antes de cotar.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">02</span><span class="etapa-nome">Voos</span><p>Cotação em dinheiro ou em milhas, com horários, conexões e aeroportos escolhidos para o seu perfil. Emissão e check-in feitos por nós.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">03</span><span class="etapa-nome">Hotelaria</span><p>Curadoria com negociação de tarifas, upgrades e benefícios, e localização avaliada de verdade, não só a diária.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">04</span><span class="etapa-nome">Transporte no destino</span><p>Carro alugado ou transfer privativo, conforme a cidade.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">05</span><span class="etapa-nome">Deslocamentos entre destinos</span><p>Trechos aéreos internos, trem e rodoviário, para a rota se sustentar sem correria.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">06</span><span class="etapa-nome">Ingressos</span><p>Parques, atrações e experiências comprados, conferidos e entregues no seu documento de viagem.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">07</span><span class="etapa-nome">Seguro viagem</span><p>A cobertura certa para o destino e o perfil, com limites e condições explicados antes.</p></li>
+      <li class="etapa"><span class="etapa-n" aria-hidden="true">08</span><span class="etapa-nome">Roteiro</span><p>Uma conversa sobre gastronomia, passeios e o que você gosta de fazer vira o roteiro dia a dia.</p></li>
+    </ol>
+  </div>
+</section>
+ 
+<!-- ===================== A GENTE VAI ANTES ===================== -->
 <section class="secao secao-creme" id="vividos" aria-labelledby="t-vividos">
   <div class="wrap duas">
     <div class="figura figura-retrato" style="background-image:url('/ativos/destino-santarem.jpg')" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
     <div>
       <span class="olho">A gente vai antes</span>
       <h2 id="t-vividos">Não indicamos<em>por catálogo.</em></h2>
-      <p class="intro">Esse é o Matheus, um dos nossos sócios, caindo da prancha em Santarém. Ele foi pra isso: ver com o próprio corpo o que vale a pena antes de colocar no roteiro de alguém.</p>
-      <p style="margin-top:var(--e2)">Sempre que possível, alguém daqui vive o destino antes de ele entrar na nossa prateleira. O passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
+      <p class="intro">Sempre que possível, alguém da equipe vive o destino antes de ele entrar no roteiro de alguém: o passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
+      <p style="margin-top:var(--e2)">O Matheus, um dos nossos sócios, caindo da prancha em Santarém. Ele foi para isso: ver com o próprio corpo o que vale a pena antes de colocar no roteiro de alguém.</p>
     </div>
   </div>
   <div class="wrap duas duas-inv">
     <div>
       <span class="olho">Do Tapajós à Sierra Nevada</span>
-      <p class="intro">E essa é a Nayara na Sierra Nevada, na Andaluzia, aproveitando um feriado. Neve no alto da montanha e céu aberto no mesmo dia.</p>
-      <p style="margin-top:var(--e2)">A Europa ela conhece de andar, não de mapa. O feriado dela vira dica para o seu roteiro: o que levar na mala, quando vale subir e como chegar sem perder o dia na estrada.</p>
+      <p class="intro">A Nayara na Sierra Nevada, na Andaluzia, num feriado: neve no alto da montanha e céu aberto no mesmo dia.</p>
+      <p style="margin-top:var(--e2)">O feriado dela vira dica para o seu roteiro: o que levar na mala, quando vale subir e como chegar sem perder o dia na estrada.</p>
     </div>
     <div class="figura figura-retrato figura-alterna" style="background-image:url('/ativos/destino-serra-nevada.jpg')" role="img" aria-label="Nayara na Sierra Nevada, Andaluzia">
       <div class="camada" style="background-image:url('/ativos/destino-serra-nevada.jpg')"></div>
@@ -833,27 +893,98 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     </div>
     <div>
       <span class="olho">Serra Gaúcha</span>
-      <p class="intro">Isadora e Matheus decidiram fazer uma trip pela Serra Gaúcha. Voo cedinho do Rio para Porto Alegre, com o nascer do sol do Sul pela janela. No aeroporto, o carro já estava esperando, com a reserva feita e paga. Era só pegar a chave e começar.</p>
-      <p style="margin-top:var(--e2)">Gramado fica a cerca de 120 km do aeroporto, umas duas horas de carro, e a estrada também fez parte da viagem. No meio do caminho, uma placa: templo budista. Não estava nos planos, mas a Isadora queria muito conhecer um, e o Matheus nem pensou duas vezes. Foram três horas no Chagdud Gonpa Khadro Ling, em Três Coroas, conhecendo o espaço e a cultura e renovando as energias. Depois, almoço num rodízio gaúcho e direto para Gramado. Hoje, quando o cliente tem esse perfil, o templo já entra no roteiro.</p>
-      <p style="margin-top:var(--e2)">Na serra, a Igreja São Pedro, em Gramado, e a Catedral de Pedra, em Canela. Foi incrível. É isso que um roteiro da Maktub proporciona: você só vive a viagem, porque o resto já está resolvido.</p>
+      <p class="intro">Isadora e Matheus na Serra Gaúcha: voo cedo do Rio para Porto Alegre e o carro reservado e pago esperando no aeroporto.</p>
+      <p style="margin-top:var(--e2)">No caminho para Gramado, uma placa de templo budista virou três horas no Chagdud Gonpa Khadro Ling, em Três Coroas. Depois, rodízio gaúcho, a Igreja São Pedro, em Gramado, e a Catedral de Pedra, em Canela. Hoje, quando o cliente tem esse perfil, o templo já entra no roteiro.</p>
     </div>
   </div>
 </section>
  
-<!-- ===================== FECHO ===================== -->
-<section class="secao secao-verde fecho" aria-labelledby="t-fecho">
+<!-- ===================== COMO CONTRATAR ===================== -->
+<section class="secao secao-verde" id="contratacao" aria-labelledby="t-contratacao">
+  <div class="wrap">
+    <span class="olho">Como contratar</span>
+    <h2 id="t-contratacao">Do primeiro oi<em>até a sua volta.</em></h2>
+    <p class="intro">Sem letra miúda e sem surpresa no meio do caminho.</p>
+ 
+    <ol class="jornada">
+      <li class="passo"><span class="passo-n" aria-hidden="true">01</span><h3>A conversa</h3><p>Você conta como gosta de viajar, o que não pode faltar e o que prefere evitar. A gente escuta antes de cotar.</p></li>
+      <li class="passo"><span class="passo-n" aria-hidden="true">02</span><h3>O desenho da rota</h3><p>Montamos a proposta sob medida. Algumas viagens têm taxa de planejamento, que depende da complexidade e em geral existe em viagens internacionais e com vários destinos. Quando houver, ela é informada antes e devolvida integralmente em cashback quando a viagem é fechada com a Maktub. O roteiro dia a dia tem um investimento por dia, a diária do roteiro.</p></li>
+      <li class="passo"><span class="passo-n" aria-hidden="true">03</span><h3>Ajustes</h3><p>Você revisa e troca o que quiser, até a viagem ter a sua cara.</p></li>
+      <li class="passo passo-seguro"><span class="passo-n" aria-hidden="true">04</span><h3>Contrato e pagamento</h3><p>Contrato assinado e pagamento sempre direto para a Maktub Go Agência de Viagens Ltda, no Pix ou parcelado, com as condições combinadas no atendimento e sempre com nota fiscal.</p></li>
+      <li class="passo"><span class="passo-n" aria-hidden="true">05</span><h3>Viagem pronta</h3><p>Reservas, emissões e check-in por nossa conta, e o documento de viagem entregue a você.</p></li>
+      <li class="passo"><span class="passo-n" aria-hidden="true">06</span><h3>Com você até a volta</h3><p>Se algo mudar no caminho, quem corre atrás somos nós.</p></li>
+    </ol>
+ 
+    <div class="cond-gestao">
+      <h3 id="t-cond-gestao">Para clientes da Gestão de Milhas Maktub Go</h3>
+      <ul aria-labelledby="t-cond-gestao">
+        <li><strong>Na primeira viagem em que o titular do contrato esteja viajando,</strong> o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias.</li>
+        <li><strong>Nas viagens seguintes do titular,</strong> a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária.</li>
+      </ul>
+    </div>
+ 
+    <div class="por-tras">
+      <h3 class="por-tras-titulo" id="t-por-tras">O que está por trás<em>de uma viagem bem cuidada.</em></h3>
+      <ul aria-labelledby="t-por-tras">
+        <li>Rota desenhada a partir do seu perfil, sem pacote pronto.</li>
+        <li>Reservas conferidas antes de você embarcar.</li>
+        <li>Documento de viagem completo, conferido e disponível até sem internet.</li>
+        <li>Check-in feito por nós e cartões de embarque entregues prontos.</li>
+        <li>A equipe acompanhando cada etapa enquanto a viagem acontece, sempre com uma pessoa real.</li>
+        <li>As mesmas pessoas do início ao fim, e a conversa começa no que você quer viver.</li>
+      </ul>
+    </div>
+    <p class="objecao">Uma viagem bem cuidada é aquela em que alguém já pensou no que pode dar errado antes de você embarcar.</p>
+  </div>
+</section>
+ 
+<!-- ===================== SERVIÇOS E CONTATO ===================== -->
+<section class="secao" id="servicos" aria-labelledby="t-fecho">
   <div class="wrap">
     <span class="olho">Fale com a Maktub</span>
     <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
     <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
-    <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
-      <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
+ 
+    <h3 class="servicos-titulo" id="t-serv">O que você pode contratar</h3>
+    <ul class="servicos" aria-labelledby="t-serv">
+      <li class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 16l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h4>Planejamento completo</h4>
+        <p>Rota, voos, hotéis, transfers e experiências pensados para o seu perfil e o seu ritmo.</p>
+      </li>
+      <li class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <h4>Etapas avulsas</h4>
+        <p>Rota, voos, hotelaria, transporte no destino, deslocamentos entre destinos, ingressos, seguro viagem ou roteiro, cada uma sozinha.</p>
+      </li>
+      <li class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="M2.5 19h19"/><path d="M3 13.5 21 8l-1.2-2.6a2 2 0 0 0-2.4-1L14 5.6 8.4 3 6.6 3.6l3.6 3.3-3.5 1.1L4.4 6.6 3 7l1.6 3.7Z"/></svg>
+        <h4>Passagens avulsas</h4>
+        <p>Em dinheiro ou em milhas.</p>
+      </li>
+      <li class="servico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        <h4>Maktub Corporativo</h4>
+        <p>Passagens para empresas e equipes.</p>
+        <a class="link-texto" href="/corporativo/">Conhecer o Corporativo</a>
+      </li>
+      <li class="servico servico-destaque">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.4 6.2L12 17l-5.6 3 1.4-6.2L3 9.5l6.4-.7Z"/></svg>
+        <h4>Gestão de Milhas Maktub Go</h4>
+        <p>Uma equipe cuidando dos seus pontos e milhas o ano inteiro.</p>
+        <a class="link-texto" href="/diagnostico/" data-diagnostico="viagens_servicos">Quero meu diagnóstico</a>
+      </li>
+    </ul>
+ 
+    <div class="acoes">
+      <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
+      <a class="btn" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
     </div>
   </div>
 </section>
  
 </main>
+
  
 <footer class="mk-rodape">
   <div class="mk-wrap">

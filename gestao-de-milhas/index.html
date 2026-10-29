@@ -247,8 +247,8 @@
     .perfil-col h3{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--green);margin-bottom:18px}
     .perfil-col h3 em{color:var(--gold)}
     .perfil-col ul{list-style:none;display:grid;gap:14px}
-    .perfil-col li{display:grid;grid-template-columns:22px 1fr;font-size:16px;color:var(--text-mid);line-height:1.6}
-    .perfil-col li::before{content:'✦';color:var(--gold);font-size:12px;margin-top:4px}
+    .perfil-col li{position:relative;padding-left:22px;font-size:16px;color:var(--text-mid);line-height:1.6}
+    .perfil-col li::before{content:'✦';position:absolute;left:0;top:4px;line-height:1.6;color:var(--gold);font-size:12px}
     .perfil-col.inv{background:var(--cream)}
     .perfil-col .big{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green);line-height:1.5;font-style:italic}
  
@@ -892,8 +892,8 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <div class="assume-col reveal d5">
         <h4>Na hora de viajar</h4>
         <ul>
-          <li>Primeiro planejamento de viagem incluso, sem limite de dias de roteiro, para uma viagem em que o titular do contrato esteja viajando.</li>
-          <li>Nos roteiros personalizados seguintes, também em viagens do titular, 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros.</li>
+          <li>Na primeira viagem em que o titular do contrato esteja viajando, o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias.</li>
+          <li>Nas viagens seguintes do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária.</li>
         </ul>
       </div>
     </div>
@@ -958,12 +958,12 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
           <p class="bg-ressalva">O que está incluso é o serviço de emissão. Passagens, taxas dos programas e custos de terceiros são pagos à parte.</p>
         </div>
         <div class="bg-item">
-          <p class="bg-nome">Primeiro planejamento de viagem incluso, sem limite de dias de roteiro, para uma viagem em que o titular do contrato esteja viajando.</p>
+          <p class="bg-nome">Na primeira viagem em que o titular do contrato esteja viajando, o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias.</p>
         </div>
       </div>
       <div class="bg-col">
         <h3>Condição para clientes da gestão</h3>
-        <p>Nos roteiros personalizados seguintes, também em viagens do titular, 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros.</p>
+        <p>Nas viagens seguintes do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária.</p>
       </div>
       <div class="bg-col">
         <h3>Quando o saldo não for suficiente</h3>
@@ -978,7 +978,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <div class="alf-card reveal d5"><div class="n">v.</div><h3>Seguro viagem</h3><p>Assessoria na escolha do seguro ideal para cada destino e perfil, para você viajar com tranquilidade.</p></div>
       <div class="alf-card reveal d6"><div class="n">vi.</div><h3>Suporte humanizado</h3><p>Uma pessoa real, que ouve, pensa e resolve. Do primeiro contato ao seu retorno, alguém cuida de tudo por você.</p></div>
     </div>
-    <p class="alf-servicos reveal d4">Depois do primeiro planejamento incluso, esses serviços são contratados à parte, com o atendimento de concierge da Maktub.</p>
+    <p class="alf-servicos reveal d4">Depois da primeira viagem do titular, com o planejamento incluso, esses serviços são contratados à parte com o atendimento de concierge da Maktub, e o roteiro tem 40% de desconto sobre a diária.</p>
     <p class="alf-note reveal d4">Milhas bem geridas são o começo. <em>A viagem bem feita é o destino.</em></p>
     <p class="reveal d4" style="text-align:center;margin-top:28px;font-size:15px">Quer trocar a econômica pela poltrona que deita? <a href="/classe-executiva-com-milhas/" style="color:var(--gold);border-bottom:1px solid var(--gold);padding-bottom:2px">Veja como a Gestão leva você para a executiva</a></p>
   </div>
