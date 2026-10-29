@@ -138,7 +138,7 @@
     .mock-card-num{font-family:'Cormorant Garamond',serif;font-size:42px;color:var(--green);font-weight:400;line-height:1.1}
     .mock-card-num .small{font-size:18px;color:var(--text-muted);font-style:italic;margin-left:4px}
     .mock-card-trend{font-size:11px;color:var(--green);margin-top:8px;letter-spacing:.05em}
-    .mock-card-trend strong{color:#5a8c5e}
+    .mock-card-trend strong{color:#8a6520}
     .mock-grid-4{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
     .mock-note{margin-top:18px;font-size:12px;letter-spacing:.08em;color:var(--text-muted);font-style:italic}
     .mock-mini{background:var(--white);padding:16px;text-align:center;border:1px solid var(--border)}
@@ -247,8 +247,8 @@
     .perfil-col h3{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--green);margin-bottom:18px}
     .perfil-col h3 em{color:var(--gold)}
     .perfil-col ul{list-style:none;display:grid;gap:14px}
-    .perfil-col li{display:grid;grid-template-columns:22px 1fr;font-size:16px;color:var(--text-mid);line-height:1.6}
-    .perfil-col li::before{content:'✦';color:var(--gold);font-size:12px;margin-top:4px}
+    .perfil-col li{position:relative;padding-left:22px;font-size:16px;color:var(--text-mid);line-height:1.6}
+    .perfil-col li::before{content:'✦';position:absolute;left:0;top:4px;line-height:1.6;color:var(--gold);font-size:12px}
     .perfil-col.inv{background:var(--cream)}
     .perfil-col .big{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green);line-height:1.5;font-style:italic}
  
@@ -551,6 +551,62 @@
     .membro p{font-size:15.5px}
     @media(max-width:900px){.beneficios-gestao{grid-template-columns:1fr}.equipe-grid{grid-template-columns:1fr 1fr}}
     @media(max-width:520px){.equipe-grid{grid-template-columns:1fr}}
+    /* abertura compacta: botão na primeira tela também no computador */
+    .hero-compacta{padding:104px 36px 64px;align-items:stretch}
+    .vh-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px 56px;align-items:center;max-width:1180px;width:100%;margin:0 auto;text-align:left}
+    .vh-etiqueta{display:block;font-size:12.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-warm);margin-bottom:16px}
+    .hero-compacta .venda-h1{text-align:left!important;margin:0!important;max-width:none!important;font-size:clamp(40px,4.6vw,66px)!important}
+    .hero-compacta .venda-h1 .italic-gold{display:inline;white-space:normal}
+    .vh-linha{margin-top:14px;font-size:19px;line-height:1.5;color:var(--cream)}
+    .hero-compacta .venda-ctas{margin-top:26px;max-width:440px}
+    .hero-compacta .venda-gratis{text-align:left;margin-top:10px}
+    .hero-compacta .venda-cuidar{margin-top:18px;max-width:46ch;font-size:15.5px}
+    .hero-compacta .venda-cuidar strong{font-size:21px}
+    .vh-exemplo{margin:0}
+    .vh-exemplo .prova-selo{margin-bottom:16px;font-size:11.5px}
+    .hero-compacta .vs-grid{margin:0;gap:16px;grid-template-columns:1fr auto 1fr}
+    .hero-compacta .vs-card{padding:12px 12px 16px}
+    .hero-compacta .vs-bom{transform:none;outline-offset:4px}
+    .hero-compacta .vs-foto{aspect-ratio:16/10}
+    .hero-compacta .vs-tag{font-size:10.5px;letter-spacing:.14em;margin:2px 0 10px;min-height:2.6em;line-height:1.3}
+    .hero-compacta .vs-titulo{font-size:19px;margin-top:10px}
+    .hero-compacta .vs-valor-ruim{font-size:26px}
+    .hero-compacta .vs-valor-bom{font-size:32px}
+    .hero-compacta .vs-pontos{font-size:12.5px}
+    .hero-compacta .vs-check{width:38px;height:38px;font-size:20px;right:8px;bottom:8px;border-width:2px}
+    .hero-compacta .vs-ou{font-size:24px}
+    .vh-perda{margin-top:18px;font-family:'Cormorant Garamond',serif;font-size:23px;line-height:1.3;color:var(--cream)}
+    .vh-perda strong{color:var(--gold-warm);font-weight:600;white-space:nowrap}
+    .vh-condicoes{margin-top:8px;font-size:14px;line-height:1.55;color:rgba(249,246,241,.82)}
+    .hero-compacta .prova-como{margin-top:44px;max-width:1180px}
+    @media(max-width:900px){
+      .hero-compacta{padding:92px 18px 52px}
+      .vh-grid{grid-template-columns:1fr;gap:30px}
+      .hero-compacta .venda-ctas{max-width:none}
+      .hero-compacta .vs-grid{grid-template-columns:1fr 1fr;gap:12px}
+      .hero-compacta .vs-ou{display:none}
+      .hero-compacta .vs-foto{aspect-ratio:1/1}
+      .vh-linha{font-size:17px}
+    }
+    /* o que a equipe assume */
+    .assume-titulo{margin-top:48px;font-size:clamp(28px,3.4vw,38px);text-align:center}
+    .assume-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:1px;margin-top:28px;background:var(--border);border:1px solid var(--border);text-align:left}
+    .assume-col{background:var(--white);padding:30px 32px}
+    .assume-col:last-child{background:var(--cream)}
+    .assume-col h4{font-family:'Jost',sans-serif;font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+    .assume-col ul{list-style:none;display:grid;gap:12px}
+    .assume-col li{position:relative;padding-left:22px;font-size:16px;line-height:1.6;color:var(--text-mid)}
+    .assume-col li::before{content:'';position:absolute;left:0;top:.62em;width:8px;height:8px;background:var(--gold)}
+    .assume-fecho{margin-top:22px;text-align:center;font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--green)}
+    @media(max-width:900px){.assume-grid{grid-template-columns:1fr}.assume-col{padding:24px 20px}}
+    /* para quem é e para quem não é */
+    @media(min-width:901px){.perfil-col.inv{grid-column:1/-1}}
+    .perfil-col.nao{background:var(--cream)}
+    .perfil-col.nao a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+    /* barra fixa: some na hora, aparece com transição */
+    .cta-fixa:not(.on){transition:none!important}
+    /* perguntas e diagnóstico aparecem prontos, sem esperar animação */
+    .anima .faq .reveal,.anima .convite .reveal{opacity:1}
 </style>
 <link rel="stylesheet" href="/diagnostico/formulario.css">
 <!-- Google Analytics 4: visitas, cliques no WhatsApp, cliques nos botões de diagnóstico e diagnósticos enviados -->
@@ -650,7 +706,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
      "name": "Qual é o perfil ideal para a gestão?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "É ideal para quem concentra gastos mensais a partir de R$ 20 mil em cartões e quer aproveitar melhor seus pontos e milhas, com acompanhamento contínuo."
+      "text": "É ideal para quem concentra gastos mensais a partir de R$ 20 mil, somando cartões e Pix, e quer aproveitar melhor seus pontos e milhas, com acompanhamento contínuo."
      }
     },
     {
@@ -746,7 +802,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <li><a href="/gestao-de-milhas/" style="color:var(--gold)">Gestão de Milhas</a></li>
       <li><a href="/viagens/">Viagens</a></li>
       <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="nav-cta">Acesso Cliente</a></li>
     </ul>
     <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -755,44 +811,49 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
  
 <main id="conteudo">
  
-<section class="hero hero-prova hero-venda">
-  <span class="prova-selo reveal d1">Exemplo real &middot; 24/10/2026</span>
-  <h1 class="venda-h1 reveal d2">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
-  <div class="venda-cta-cedo"><a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero_celular">Quero meu diagnóstico</a><p class="venda-gratis">Diagnóstico gratuito por chamada</p></div>
-  <div class="vs-grid reveal d3">
-    <div class="vs-card vs-ruim">
-      <span class="vs-tag">O que você leva no catálogo</span>
-      <div class="vs-foto">
-        <img src="/ativos/panelas.jpg" alt="Jogo de panelas antiaderentes" width="1200" height="800" />
-        <span class="venda-risco" aria-hidden="true"></span>
+<section class="hero hero-prova hero-venda hero-compacta">
+  <div class="vh-grid">
+    <div class="vh-texto reveal d1">
+      <span class="vh-etiqueta">Gestão de Milhas Maktub Go</span>
+      <h1 class="venda-h1">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
+      <p class="vh-linha">Uma equipe acompanha seus pontos e milhas durante 12 meses.</p>
+      <div class="venda-ctas prova-ctas">
+        <a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero">Quero meu diagnóstico</a>
       </div>
-      <p class="vs-titulo">Um jogo de panelas</p>
-      <p class="vs-valor vs-valor-ruim"><s>R$ 337,79</s></p>
-      <p class="vs-pontos">20.472 pontos Livelo</p>
+      <p class="venda-gratis">Diagnóstico gratuito por chamada</p>
+      <p class="venda-cuidar">Nossa equipe analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
     </div>
-    <div class="vs-ou" aria-hidden="true">ou</div>
-    <div class="vs-card vs-bom">
-      <span class="vs-tag vs-tag-bom">O que esses mesmos pontos compram</span>
-      <div class="vs-foto">
-        <img src="/ativos/janela-aviao.jpg" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" />
-        <span class="vs-check" aria-hidden="true">&#10003;</span>
+    <!-- Exemplo real panela x viagem. Atualizar valores e data a cada 3 meses, junto com a home. -->
+    <figure class="vh-exemplo reveal d2">
+      <span class="prova-selo">Exemplo real &middot; 24/10/2026</span>
+    <div class="vs-grid">
+        <div class="vs-card vs-ruim">
+          <span class="vs-tag">O que você leva no catálogo</span>
+          <div class="vs-foto">
+            <img src="/ativos/panelas.jpg" alt="Jogo de panelas antiaderentes" width="1200" height="800" />
+            <span class="venda-risco" aria-hidden="true"></span>
+          </div>
+          <p class="vs-titulo">Um jogo de panelas</p>
+          <p class="vs-valor vs-valor-ruim"><s>R$ 337,79</s></p>
+          <p class="vs-pontos">20.472 pontos Livelo</p>
+        </div>
+        <div class="vs-ou" aria-hidden="true">ou</div>
+        <div class="vs-card vs-bom">
+          <span class="vs-tag vs-tag-bom">O que esses mesmos pontos compram</span>
+          <div class="vs-foto">
+            <img src="/ativos/janela-aviao.jpg" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" />
+            <span class="vs-check" aria-hidden="true">&#10003;</span>
+          </div>
+          <p class="vs-titulo">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
+          <p class="vs-valor vs-valor-bom">R$ 1.472,68</p>
+          <p class="vs-pontos">Os mesmos 20.472 pontos Livelo</p>
+        </div>
       </div>
-      <p class="vs-titulo">Ida e volta Rio x Curitiba <strong>para 2 pessoas</strong></p>
-      <p class="vs-valor vs-valor-bom">R$ 1.472,68</p>
-      <p class="vs-pontos">Os mesmos 20.472 pontos Livelo</p>
-    </div>
-  </div>
-  <div class="venda-fecho reveal d4">
-    <div class="venda-perda">
-      <span class="venda-perda-label">Você está perdendo</span>
-      <span class="venda-perda-valor">R$ 1.134,89</span>
-      <span class="venda-perda-sub">a cada resgate como esse no catálogo.</span>
-    </div>
-    <div class="venda-ctas prova-ctas">
-      <a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero">Quero meu diagnóstico</a>
-    </div>
-    <p class="venda-gratis">Diagnóstico gratuito por chamada</p>
-    <p class="venda-cuidar">Nosso time de especialistas analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
+      <figcaption>
+        <p class="vh-perda">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate como esse no catálogo.</p>
+        <p class="vh-condicoes">Condições do exemplo: pesquisa feita pela nossa equipe em 24/10/2026. Jogo de panelas por 20.472 pontos no catálogo Livelo, contra ida e volta Rio x Curitiba para 2 pessoas (15 a 30/03/2027), emitida com os mesmos pontos transferidos para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
+      </figcaption>
+    </figure>
   </div>
   <div class="prova-como reveal d5">
     <span class="prova-como-label">Como a gestão chega lá</span>
@@ -803,7 +864,6 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
     </ol>
   </div>
   <a href="#como-funciona" class="prova-metodo reveal d6">Entenda o método</a>
-  <p class="prova-nota reveal d6">Pesquisa real feita pela nossa equipe em 24/10/2026: jogo de panelas por 20.472 pontos no catálogo Livelo, contra ida e volta Rio x Curitiba para 2 pessoas (15 a 30/03/2027), emitida com os mesmos pontos transferidos para o programa da companhia aérea com 100% de bônus. Valores sem taxas de embarque, pagas em qualquer modalidade. Tarifas e disponibilidade variam.</p>
   <p class="hero-client reveal d6">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
 </section>
 <div class="prova-ponte-wrap"><p class="prova-ponte">Suas milhas merecem <span class="italic-gold">uma equipe.</span></p></div>
@@ -814,31 +874,30 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
     <div class="divider reveal d1" style="margin-left:auto;margin-right:auto"></div>
     <h2 class="reveal d2">Milhas não são cupom.<br><span class="italic-gold">Pedem estratégia.</span></h2>
     <p class="lead reveal d3">A maioria das pessoas só lembra das milhas quando precisa viajar. Nós cuidamos delas o ano inteiro, com o mesmo cuidado e a mesma organização de quem acompanha uma carteira de investimentos.</p>
-    <div class="diferenca-grid">
-      <div class="diferenca-col before reveal d4">
-        <h3>Gestão Comum</h3>
+    <!-- Antes: quadro "Gestão comum x Gestão Maktub Go". Os itens viraram esta lista. -->
+    <h3 class="assume-titulo reveal d3">O que a nossa equipe <span class="italic-gold">assume por você</span></h3>
+    <div class="assume-grid">
+      <div class="assume-col reveal d4">
+        <h4>Durante a gestão</h4>
         <ul>
-          <li>Pensa só na próxima viagem</li>
-          <li>Procura passagem quando precisa</li>
-          <li>Acumula milhas sem estratégia</li>
-          <li>Aceita o cartão que o banco oferece</li>
-          <li>Descobre que os pontos venceram</li>
-          <li>Entrega só a passagem</li>
+          <li>Acompanhar o vencimento dos pontos em cada programa e avisar antes de qualquer prazo.</li>
+          <li>Ficar de olho nas promoções de transferência bonificada e dizer quando vale a pena transferir.</li>
+          <li>Olhar os seus cartões e orientar onde concentrar os gastos para acumular melhor.</li>
+          <li>Planejar o ano de viagens e antecipar as emissões nas melhores janelas.</li>
+          <li>Procurar o voo que rende mais por ponto e fazer a emissão, com o valor combinado antes. O serviço de emissão está incluso; passagens, taxas dos programas e custos de terceiros são pagos à parte.</li>
+          <li>Manter saldos, viagens e documentos organizados no seu painel.</li>
+          <li>Preparar o relatório do mês e revisar tudo com você na reunião mensal.</li>
         </ul>
       </div>
-      <div class="diferenca-divider"></div>
-      <div class="diferenca-col after reveal d5">
-        <h3>Gestão Maktub Go</h3>
+      <div class="assume-col reveal d5">
+        <h4>Na hora de viajar</h4>
         <ul>
-          <li>Planeja o ano inteiro de viagens</li>
-          <li>Antecipa emissões em janelas ideais</li>
-          <li>Direciona gastos para máximo acúmulo</li>
-          <li>Otimiza setup de cartões mês a mês</li>
-          <li>Monitora cada vencimento com antecedência</li>
-          <li>Entrega a viagem inteira, sob medida</li>
+          <li>Na primeira viagem em que o titular do contrato esteja viajando, o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias.</li>
+          <li>Nas viagens seguintes do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária.</li>
         </ul>
       </div>
     </div>
+    <p class="assume-fecho reveal d5">Você continua decidindo: nada é feito sem o seu ok.</p>
   </div>
 </section>
  
@@ -859,7 +918,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
         <div class="passo-num">02</div>
         <div class="passo-content">
           <h3>Painel privado</h3>
-          <p>Você recebe acesso a uma área exclusiva, protegida em duas etapas, com seus saldos por programa, vencimentos, movimentações, viagens e documentos, sempre atualizada pela nossa equipe.</p>
+          <p>Você recebe acesso a uma área privada, protegida em duas etapas, com seus saldos por programa, vencimentos, movimentações, viagens e documentos, sempre atualizada pela nossa equipe.</p>
         </div>
       </div>
       <div class="passo reveal d5">
@@ -884,7 +943,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   <div class="container--wide">
     <div class="alf-head">
       <div>
-        <span class="label reveal d1">Vantagens exclusivas da alfaiataria</span>
+        <span class="label reveal d1">Benefícios da alfaiataria</span>
         <div class="divider reveal d1"></div>
         <h2 class="reveal d2">Não paramos<br><span class="italic-gold">na passagem.</span></h2>
       </div>
@@ -899,12 +958,12 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
           <p class="bg-ressalva">O que está incluso é o serviço de emissão. Passagens, taxas dos programas e custos de terceiros são pagos à parte.</p>
         </div>
         <div class="bg-item">
-          <p class="bg-nome">Seu primeiro planejamento de viagem, incluso na contratação da gestão.</p>
+          <p class="bg-nome">Na primeira viagem em que o titular do contrato esteja viajando, o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias.</p>
         </div>
       </div>
       <div class="bg-col">
         <h3>Condição para clientes da gestão</h3>
-        <p>Após o primeiro planejamento incluso, clientes da gestão têm 40% de desconto sobre o valor da diária do serviço de elaboração de roteiros personalizados, conforme condições do contrato.</p>
+        <p>Nas viagens seguintes do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária.</p>
       </div>
       <div class="bg-col">
         <h3>Quando o saldo não for suficiente</h3>
@@ -913,13 +972,13 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
     </div>
     <div class="alf-grid">
       <div class="alf-card reveal d1"><div class="n">i.</div><h3>Roteiro sob medida</h3><p>Roteiros personalizados do início ao fim, pensados para o seu perfil e estilo de vida, entregues organizados no seu painel.</p></div>
-      <div class="alf-card reveal d2"><div class="n">ii.</div><h3>Hospedagem premium</h3><p>Curadoria de hotéis e resorts, com negociação de tarifas, upgrades e benefícios exclusivos em destinos nacionais e internacionais.</p></div>
-      <div class="alf-card reveal d3"><div class="n">iii.</div><h3>Experiências e restaurantes</h3><p>Experiências exclusivas e restaurantes escolhidos a dedo para cada destino, como parte do planejamento completo.</p></div>
+      <div class="alf-card reveal d2"><div class="n">ii.</div><h3>Hospedagem premium</h3><p>Curadoria de hotéis e resorts, com negociação de tarifas, upgrades e benefícios em destinos nacionais e internacionais.</p></div>
+      <div class="alf-card reveal d3"><div class="n">iii.</div><h3>Experiências e restaurantes</h3><p>Experiências e restaurantes escolhidos a dedo para cada destino, como parte do planejamento completo.</p></div>
       <div class="alf-card reveal d4"><div class="n">iv.</div><h3>Transfers e traslados</h3><p>Transfers privados, locação de veículos e traslados VIP, com conforto e pontualidade.</p></div>
       <div class="alf-card reveal d5"><div class="n">v.</div><h3>Seguro viagem</h3><p>Assessoria na escolha do seguro ideal para cada destino e perfil, para você viajar com tranquilidade.</p></div>
       <div class="alf-card reveal d6"><div class="n">vi.</div><h3>Suporte humanizado</h3><p>Uma pessoa real, que ouve, pensa e resolve. Do primeiro contato ao seu retorno, alguém cuida de tudo por você.</p></div>
     </div>
-    <p class="alf-servicos reveal d4">Depois do primeiro planejamento incluso, esses serviços são contratados à parte, com o atendimento de concierge da Maktub.</p>
+    <p class="alf-servicos reveal d4">Depois da primeira viagem do titular, com o planejamento incluso, esses serviços são contratados à parte com o atendimento de concierge da Maktub, e o roteiro tem 40% de desconto sobre a diária.</p>
     <p class="alf-note reveal d4">Milhas bem geridas são o começo. <em>A viagem bem feita é o destino.</em></p>
     <p class="reveal d4" style="text-align:center;margin-top:28px;font-size:15px">Quer trocar a econômica pela poltrona que deita? <a href="/classe-executiva-com-milhas/" style="color:var(--gold);border-bottom:1px solid var(--gold);padding-bottom:2px">Veja como a Gestão leva você para a executiva</a></p>
   </div>
@@ -929,7 +988,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   <div class="container--wide">
     <span class="label reveal d1">No seu painel privado</span>
     <h2 class="reveal d2">Tudo o que importa,<br><span class="italic-gold">em um só lugar.</span></h2>
-    <p class="lead reveal d3">Um painel exclusivo, atualizado pela sua equipe. Pense no relatório que um assessor de investimentos entrega ao cliente: aqui, o assunto são as suas milhas.</p>
+    <p class="lead reveal d3">Um painel só seu, atualizado pela sua equipe. Pense no relatório que um assessor de investimentos entrega ao cliente: aqui, o assunto são as suas milhas.</p>
     <div class="preview-grid">
       <div class="preview-card reveal d1"><div class="preview-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div><h3>Saldo consolidado</h3><p>Saldo total em milhas, distribuição por programa e evolução mês a mês.</p></div>
       <div class="preview-card reveal d2"><div class="preview-icon"><svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><h3>Alerta de vencimento</h3><p>Pontos perto de vencer aparecem em destaque, com antecedência, para nada se perder.</p></div>
@@ -1041,22 +1100,70 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   </div>
 </section>
  
+<!-- ===================== MODELO: CASOS DE CLIENTES DA GESTÃO =====================
+     Este bloco está comentado e não aparece no site. Só publique um caso
+     com autorização por escrito do cliente e com dados que possam ser comprovados.
+
+     Como publicar:
+     1. Copie o trecho entre "COPIAR A PARTIR DAQUI" e "ATÉ AQUI" e cole logo abaixo
+        deste comentário, fora dele.
+     2. Preencha cada campo. Se não houver comparação documentada, apague o bloco
+        "caso-comparacao" inteiro. Não invente números, prazos ou falas.
+     3. Para mais de um caso, repita o <article class="caso-gestao"> dentro da mesma seção.
+     4. Antes de publicar, peça a revisão do estilo visual (o modelo ainda não tem CSS).
+
+     COPIAR A PARTIR DAQUI
+     <section class="casos-gestao" id="casos-gestao" aria-labelledby="t-casos">
+       <div class="container--wide">
+         <h2 id="t-casos">Clientes da gestão,<em>em casos reais.</em></h2>
+         <p class="intro">Casos publicados com autorização dos clientes.</p>
+         <article class="caso-gestao">
+           <dl>
+             <dt>Necessidade do cliente</dt>
+             <dd>(o que o cliente queria resolver)</dd>
+             <dt>Período acompanhado</dt>
+             <dd>(de mês/ano a mês/ano)</dd>
+             <dt>O que a equipe fez</dt>
+             <dd>(as ações da gestão, em ordem)</dd>
+             <dt>Resultado</dt>
+             <dd>(só o que pode ser comprovado)</dd>
+           </dl>
+           <blockquote>(comentário do cliente, com autorização)</blockquote>
+           <cite>(nome ou iniciais do cliente, cidade)</cite>
+           <div class="caso-comparacao">
+             <p>(opcional: comparação documentada, com data da pesquisa, programa, valores e premissas)</p>
+           </div>
+         </article>
+       </div>
+     </section>
+     ATÉ AQUI
+     ================================================================================ -->
+ 
 <section class="perfil" id="perfil">
   <div class="container--wide">
-    <span class="label reveal d1">Para quem é</span>
+    <span class="label reveal d1">Para quem é e para quem não é</span>
     <div class="divider reveal d1"></div>
     <h2 class="reveal d2" style="font-size:clamp(36px,5vw,54px)">Um serviço desenhado<br><span class="italic-gold">para poucos.</span></h2>
     <div class="perfil-wrap">
       <div class="perfil-col reveal d3">
-        <h3>Perfil <em>ideal</em></h3>
+        <h3>Para quem <em>é</em></h3>
         <ul>
-          <li>Ideal para quem concentra gastos mensais a partir de R$ 20 mil em cartões e quer aproveitar melhor seus pontos e milhas</li>
-          <li>Quer transformar esse consumo em viagens com mais conforto</li>
-          <li>Prefere delegar a estratégia a um especialista, sem precisar estudar o assunto</li>
-          <li>Valoriza acompanhamento contínuo, discrição e atendimento pessoal</li>
+          <li>Quem concentra gastos mensais a partir de R$ 20 mil, somando cartões e Pix, e quer aproveitar melhor seus pontos e milhas. Esse valor é uma referência: no diagnóstico, também olhamos o saldo acumulado, a frequência de viagens e a vontade de delegar.</li>
+          <li>Quem quer transformar esse consumo em viagens com mais conforto.</li>
+          <li>Quem prefere delegar a estratégia a uma equipe, sem precisar estudar o assunto.</li>
+          <li>Quem valoriza acompanhamento contínuo, discrição e atendimento pessoal.</li>
+          <li>Quem mora no Brasil ou fora: o atendimento é online.</li>
         </ul>
       </div>
-      <div class="perfil-col inv reveal d4">
+      <div class="perfil-col nao reveal d4">
+        <h3>Para quem <em>não é</em></h3>
+        <ul>
+          <li>Quem só precisa de uma passagem agora. Nesse caso, <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Preciso%20de%20uma%20passagem%20e%20quero%20emitir%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">fale com a gente no WhatsApp</a>: também emitimos passagens avulsas.</li>
+          <li>Quem quer garantia de economia. Ela é um benefício possível, nunca uma promessa.</li>
+          <li>Quem concentra menos de R$ 20 mil por mês, somando cartões e Pix. Nesse caso, vale conversar no diagnóstico: a gente diz com franqueza se faz sentido.</li>
+        </ul>
+      </div>
+      <div class="perfil-col inv reveal d5">
         <h3>Seu <em>investimento</em></h3>
         <p class="big">Cada proposta é desenhada depois do diagnóstico, de acordo com o seu perfil, seus cartões e seus objetivos de viagem.</p>
         <ul style="margin-top:22px">
@@ -1071,10 +1178,10 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
  
 <section class="faq" id="faq">
   <div class="container">
-    <span class="label reveal d1">Perguntas frequentes</span>
-    <div class="divider reveal d1"></div>
-    <h2 class="reveal d2">Antes de <span class="italic-gold">começar.</span></h2>
-    <div class="faq-list reveal d3">
+    <span class="label">Perguntas frequentes</span>
+    <div class="divider"></div>
+    <h2>Antes de <span class="italic-gold">começar.</span></h2>
+    <div class="faq-list">
       <details><summary>Por que contratar uma empresa e não uma pessoa física?</summary>
         <p>Porque a gestão das suas milhas envolve seus dados e suas viagens, e isso pede estrutura. A Maktub Go é uma empresa de gestão de milhas com CNPJ e Cadastur, do Ministério do Turismo. A gestão é feita com contrato, painel privado protegido em duas etapas, tratamento de dados conforme a LGPD e uma equipe inteira cuidando da sua carteira. Você não depende da disponibilidade de uma única pessoa.</p></details>
       <details><summary>O que é gestão de milhas?</summary>
@@ -1086,7 +1193,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <details><summary>Quem paga as taxas de cada emissão?</summary>
         <p>As taxas de embarque e os demais custos de cada emissão são pagos por você, à parte do investimento na gestão. Antes de cada emissão, você sabe exatamente quanto vai pagar e quanto está economizando em relação ao valor de mercado.</p></details>
       <details><summary>Qual é o perfil ideal para a gestão?</summary>
-        <p>É ideal para quem concentra gastos mensais a partir de R$ 20 mil em cartões e quer aproveitar melhor seus pontos e milhas, com acompanhamento contínuo.</p></details>
+        <p>É ideal para quem concentra gastos mensais a partir de R$ 20 mil, somando cartões e Pix, e quer aproveitar melhor seus pontos e milhas, com acompanhamento contínuo.</p></details>
       <details><summary>Quanto custa?</summary>
         <p>O investimento é definido em uma proposta sob medida, apresentada depois do diagnóstico, de acordo com o seu perfil, seus cartões e seus objetivos de viagem.</p></details>
       <details><summary>Já tenho milhas acumuladas. A gestão faz sentido para mim?</summary>
@@ -1105,17 +1212,17 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   <div class="container--wide">
     <div class="conv-wrap">
       <div>
-        <span class="label reveal d1">Seu diagnóstico</span>
-        <h2 class="reveal d2">Sua próxima viagem<br><span class="italic-gold">já começou.</span></h2>
-        <p class="lead reveal d3">O diagnóstico é gratuito e feito em uma chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta ali mesmo.</p>
-        <ol class="conv-steps reveal d4">
+        <span class="label">Seu diagnóstico</span>
+        <h2>Sua próxima viagem<br><span class="italic-gold">já começou.</span></h2>
+        <p class="lead">O diagnóstico é gratuito e feito em uma chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta ali mesmo.</p>
+        <ol class="conv-steps">
           <li>Você envia a solicitação</li>
           <li>Nossa equipe marca a chamada de diagnóstico</li>
           <li>Na chamada, apresentamos a proposta</li>
           <li>Com o contrato assinado, seu painel é liberado</li>
         </ol>
       </div>
-      <div class="reveal d3">
+      <div>
       <!-- Formulário de diagnóstico: o mesmo em /diagnostico/, na home e na gestão (script e estilo em /diagnostico/). -->
       <form class="fd fd--claro" id="formDiagnostico" novalidate>
         <div class="fd-campo">
@@ -1180,7 +1287,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
         <h2>Navegar</h2>
         <ul>
           <li><a href="/quem-somos/">Quem somos</a></li>
-          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/como-trabalhamos/">Como funciona a gestão</a></li>
           <li><a href="/viagens/">Viagens</a></li>
           <li><a href="/quem-somos/#time">O time</a></li>
         </ul>
@@ -1191,7 +1298,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
           <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
           <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
           <li><a href="/corporativo/">Maktub Corporativo</a></li>
-          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+          <li><a href="/viagens/#contratacao">Viagens sob medida</a></li>
         </ul>
       </div>
       <div>
@@ -1213,13 +1320,23 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
  
 <div class="cta-fixa" id="ctaFixa" aria-hidden="true"><div class="cta-fixa-in"><p class="cta-fixa-txt">Você está perdendo <strong>R$ 1.134,89</strong> a cada resgate no catálogo.</p><a href="/diagnostico/" class="btn-gold btn-grande" tabindex="-1" data-diagnostico="gestao_barra_fixa">Quero meu diagnóstico</a></div></div>
 <script>
-(function(){var bar=document.getElementById('ctaFixa');
-var first=document.querySelector('.prova-ctas'),last=document.querySelector('.prova-cta-final'),stop=document.getElementById('convite'),foot=document.querySelector('footer');
+/* Barra fixa de diagnóstico: nunca fica por cima de conteúdo.
+   Some assim que a página rola e só volta quando a rolagem para, se a faixa
+   do rodapé da tela estiver vazia (sem texto, imagem, botão ou campo por baixo). */
+(function(){var bar=document.getElementById('ctaFixa');if(!bar)return;
+var first=document.querySelector('.prova-ctas'),stop=document.getElementById('convite'),foot=document.querySelector('footer'),timer=null;
 function vis(el){if(!el)return false;var r=el.getBoundingClientRect();return r.bottom>0&&r.top<window.innerHeight;}
-function set(el,on){if(!el)return;el.classList.toggle('on',on);el.setAttribute('aria-hidden',on?'false':'true');var a=el.tagName==='A'?el:el.querySelector('a');if(a)a.tabIndex=on?0:-1;}
-function upd(){var show=false;if(first){show=first.getBoundingClientRect().bottom<0&&!vis(last)&&!vis(stop)&&!vis(foot);}
-set(bar,show);document.body.classList.toggle('cta-fixa-on',show);}
-window.addEventListener('scroll',upd,{passive:true});window.addEventListener('resize',upd);upd();})();
+function set(on){bar.classList.toggle('on',on);bar.setAttribute('aria-hidden',on?'false':'true');var a=bar.querySelector('a');if(a)a.tabIndex=on?0:-1;document.body.classList.toggle('cta-fixa-on',on);}
+var TAGS=/^(H[1-6]|P|LI|A|BUTTON|IMG|SVG|PATH|CIRCLE|RECT|INPUT|SELECT|TEXTAREA|LABEL|BLOCKQUOTE|FIGCAPTION|SUMMARY|TD|TH|DT|DD|SPAN|STRONG|EM|S|SMALL|CITE|VIDEO|IFRAME)$/;
+function conteudo(el){return TAGS.test(el.tagName)||[].some.call(el.childNodes,function(n){return n.nodeType===3&&n.textContent.trim();});}
+function faixaLivre(){var h=bar.offsetHeight||72,W=window.innerWidth,H=window.innerHeight;
+  for(var y=H-h;y<=H-2;y+=Math.max(6,Math.floor(h/4))){for(var i=0;i<=10;i++){var x=Math.min(W-2,Math.max(2,Math.round(W*i/10)));
+    var pilha=document.elementsFromPoint(x,y);for(var k=0;k<pilha.length;k++){var el=pilha[k];if(bar.contains(el)||el.closest('.wa-float'))continue;if(conteudo(el))return false;break;}}}
+  return true;}
+function avalia(){var pode=first&&first.getBoundingClientRect().bottom<0&&!vis(stop)&&!vis(foot);set(!!pode&&faixaLivre());}
+window.addEventListener('scroll',function(){if(bar.classList.contains('on'))set(false);clearTimeout(timer);timer=setTimeout(avalia,180);},{passive:true});
+window.addEventListener('resize',function(){set(false);clearTimeout(timer);timer=setTimeout(avalia,180);});
+avalia();})();
 </script>
 <a class="wa-float" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20a%20Gest%C3%A3o%20de%20Milhas%20Maktub%20Go." target="_blank" rel="noopener" aria-label="Falar com a Maktub Go">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.103 1.51 5.836L0 24l6.335-1.652A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.855 0-3.596-.5-5.1-1.37l-.366-.217-3.769.983.999-3.671-.237-.386A9.937 9.937 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z"/></svg>
@@ -1232,7 +1349,7 @@ window.addEventListener('scroll',upd,{passive:true});window.addEventListener('re
   burger.addEventListener('click',()=>navLinks.classList.toggle('open'));
   navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navLinks.classList.remove('open')));
   if(document.documentElement.classList.contains('anima')){
-    const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:.10});
+    const obs=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}}),{threshold:0,rootMargin:'0px 0px 20% 0px'});
     document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
     window.revealPronto=true;
   }

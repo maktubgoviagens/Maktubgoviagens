@@ -24,7 +24,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quem somos | Maktub Go</title>
-<meta name="description" content="Conheça a Maktub Go, alfaiataria de viagens, e o time que cuida da sua viagem do primeiro contato ao retorno.">
+<meta name="description" content="Conheça a Maktub Go, empresa de gestão de milhas com origem na alfaiataria de viagens, e a equipe que cuida dos seus pontos e das suas viagens.">
 <meta name="theme-color" content="#1a3826">
 <link rel="canonical" href="https://www.maktubgo.com.br/quem-somos/">
 <link rel="icon" href="/ativos/simbolo-verde.png">
@@ -34,7 +34,7 @@
 <meta property="og:site_name" content="Maktub Go">
 <meta property="og:url" content="https://www.maktubgo.com.br/quem-somos/">
 <meta property="og:title" content="Quem somos | Maktub Go">
-<meta property="og:description" content="Conheça a Maktub Go, alfaiataria de viagens, e o time que cuida da sua viagem do primeiro contato ao retorno.">
+<meta property="og:description" content="Conheça a Maktub Go, empresa de gestão de milhas com origem na alfaiataria de viagens, e a equipe que cuida dos seus pontos e das suas viagens.">
 <meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-quem-somos.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -576,6 +576,8 @@ footer a:hover{color:var(--creme)}
 .fecho .acoes{justify-content:center}
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
+.pessoa p.na-gestao{color:var(--tinta);margin-bottom:10px}
+.pessoa p.na-gestao strong{font-weight:500;color:var(--verde)}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -583,6 +585,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -684,7 +687,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
       <li><a href="/viagens/">Viagens</a></li>
       <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -693,60 +696,75 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
  
 <main id="conteudo">
  
-<!-- ===================== ALFAIATARIA ===================== -->
-<section class="secao primeira" id="alfaiataria" aria-labelledby="t-quem">
+<!-- ===================== QUEM SOMOS ===================== -->
+<section class="secao primeira" id="quem" aria-labelledby="t-quem">
   <div class="wrap duas">
     <div>
       <span class="olho">Quem somos</span>
-      <h1 id="t-quem">Não vendemos destinos.<em>Criamos memórias.</em></h1>
-      <p class="intro">A Maktub Go é uma alfaiataria de viagens premium. Cada experiência é construída sob medida, porque cada família viaja de um jeito. Escutamos antes de cotar, desenhamos a rota antes de vender e acompanhamos a viagem depois que ela começa.</p>
+      <h1 id="t-quem">Uma equipe que cuida<em>dos seus pontos.</em></h1>
+      <p class="intro">A Maktub Go é uma empresa de gestão de milhas. Nossa equipe acompanha os pontos e milhas de cada cliente o ano inteiro, com processo, contrato e registro no Cadastur, do Ministério do Turismo, e transforma esse cuidado em viagens bem feitas.</p>
       <p style="margin-top:var(--e2)">Somos uma equipe presente. Você fala com gente que conhece o seu processo, não com um atendimento que recomeça a cada mensagem.</p>
-      <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
+      <div class="acoes"><a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="quem_somos_topo">Quero meu diagnóstico</a></div>
     </div>
-    <!-- Quando a foto existir, troque para style="background-image:url('/ativos/quem-somos.jpg')" -->
     <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.jpg')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
   </div>
 </section>
  
-<!-- ===================== TIME ===================== -->
+<!-- ===================== EQUIPE ===================== -->
 <section class="secao secao-creme" id="time" aria-labelledby="t-time">
   <div class="wrap">
-    <span class="olho">O time</span>
-    <h2 id="t-time">Quem vai cuidar<em>da sua viagem.</em></h2>
- 
+    <span class="olho">Sua equipe de gestão</span>
+    <h2 id="t-time">Quem cuida<em>da sua carteira.</em></h2>
     <div class="time">
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-isadora.jpg')" role="img" aria-label="Isadora Lombardi"></div>
         <h3>Isadora Lombardi</h3>
         <span class="pessoa-cargo">Co-fundadora, operações e experiência</span>
+        <p class="na-gestao"><strong>Na gestão:</strong> cuida da operação e da experiência de cada cliente, do primeiro contato ao dia a dia da carteira.</p>
         <p>São sete anos de turismo, dentro das maiores operações de milhas do país, antes da Maktub existir. A Isadora é quem escuta primeiro. Ela quer saber como a sua família viaja antes de qualquer cotação sair do papel.</p>
       </article>
- 
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-matheus.jpg')" role="img" aria-label="Matheus Braga"></div>
         <h3>Matheus Braga</h3>
         <span class="pessoa-cargo">Co-fundador, estratégia e gestão de milhas</span>
-        <p>Veio do mercado financeiro e trouxe de lá um jeito de olhar: pontos e milhas pedem cuidado o ano inteiro, com organização e critério. Ele lidera a estratégia da Gestão de Milhas Maktub Go, junto com a equipe. E é ele quem vai antes, conhecer o destino que a gente vende.</p>
+        <p class="na-gestao"><strong>Na gestão:</strong> lidera a estratégia de cada carteira: cartões, transferências e janelas de emissão.</p>
+        <p>Veio do mercado financeiro e trouxe de lá um jeito de olhar: pontos e milhas pedem cuidado o ano inteiro, com organização e critério. E é ele quem vai antes, conhecer o destino que a gente vende.</p>
       </article>
- 
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-nayara.jpg')" role="img" aria-label="Nayara"></div>
         <h3>Nayara</h3>
         <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
+        <p class="na-gestao"><strong>Na gestão:</strong> quando os pontos viram viagem, traça as rotas internacionais, monta o roteiro e busca a hospedagem.</p>
         <p>A Nayara mora há mais de cinco anos na Europa. Ela é a responsável pela sua experiência: vai traçar rotas, construir seu roteiro, buscar as melhores tarifas de passagem e encontrar onde você vai se hospedar.</p>
       </article>
- 
       <article class="pessoa">
         <div class="figura figura-pessoa" style="background-image:url('/ativos/time-breno.jpg')" role="img" aria-label="Breno"></div>
         <h3>Breno</h3>
         <span class="pessoa-cargo">Responsável pelas emissões aéreas e atendimento corporativo</span>
+        <p class="na-gestao"><strong>Na gestão:</strong> cuida das emissões aéreas, confere cada detalhe e resolve antes de virar problema.</p>
         <p>Se você precisa colocar uma equipe inteira no ar, o Breno é quem tira esse peso das suas costas. Ele confere os detalhes e resolve antes de virar um problema. Afinal, a Maktub é a sua solução em viagens.</p>
       </article>
     </div>
   </div>
 </section>
  
-<section class="manifesto">
+<!-- ===================== NOSSA HISTÓRIA ===================== -->
+<section class="secao" id="alfaiataria" aria-labelledby="t-historia">
+  <div class="wrap duas">
+    <div class="figura figura-retrato" style="background-image:url('/ativos/destino-templo-budista.jpg')" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas"></div>
+    <div>
+      <span class="olho">Nossa história</span>
+      <h2 id="t-historia">Não vendemos destinos.<em>Criamos memórias.</em></h2>
+      <p class="intro">A Maktub Go nasceu como uma alfaiataria de viagens premium. Cada experiência é construída sob medida, porque cada família viaja de um jeito. Escutamos antes de cotar, desenhamos a rota antes de vender e acompanhamos a viagem depois que ela começa.</p>
+      <p style="margin-top:var(--e2)">Hoje a gestão de milhas é o centro do que fazemos, e a alfaiataria continua aqui: quando os pontos viram viagem, a mesma equipe cuida dos detalhes.</p>
+      <p class="citacao">Viajar bem começa com ser bem cuidado.</p>
+      <p class="mais"><a class="link-texto" href="/viagens/">Ver viagens que já entregamos</a></p>
+    </div>
+  </div>
+</section>
+ 
+<section class="manifesto" aria-labelledby="t-maktub">
+  <h2 id="t-maktub" class="oculto">O significado de Maktub</h2>
   <div class="wrap">
     <p>Maktub: estava escrito. Se era para acontecer, que aconteça da melhor forma possível.</p>
     <span>Maktub Go, Alfaiataria de Viagens</span>
@@ -756,13 +774,18 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 <!-- ===================== FECHO ===================== -->
 <section class="secao secao-verde fecho" aria-labelledby="t-fecho">
   <div class="wrap">
-    <span class="olho">Fale com a Maktub</span>
-    <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
-    <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
+    <span class="olho">Seu diagnóstico</span>
+    <h2 id="t-fecho">Vamos conversar<em>sobre os seus pontos.</em></h2>
+    <p class="intro">O diagnóstico é gratuito e feito em uma chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
-      <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
+      <a class="btn btn-ouro" href="/diagnostico/" data-diagnostico="quem_somos_fecho">Quero meu diagnóstico</a>
     </div>
+    <div class="selo-cadastur" style="margin-inline:auto;text-align:left">
+      <span class="selo-rotulo">Empresa regularizada</span>
+      <p><strong>Maktub Go Agência de Viagens Ltda</strong><br>CNPJ 64.284.471/0001-51<br>Cadastur, Ministério do Turismo, válido até 07/01/2028</p>
+      <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener">Ver certificado oficial</a>
+    </div>
+    <p class="outras-portas" style="text-align:center;border-top:0">Quer só planejar uma viagem? <a href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Fale com a gente no WhatsApp</a>.</p>
   </div>
 </section>
  
@@ -779,7 +802,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
         <h2>Navegar</h2>
         <ul>
           <li><a href="/quem-somos/">Quem somos</a></li>
-          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/como-trabalhamos/">Como funciona a gestão</a></li>
           <li><a href="/viagens/">Viagens</a></li>
           <li><a href="/quem-somos/#time">O time</a></li>
         </ul>
@@ -790,7 +813,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
           <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
           <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
           <li><a href="/corporativo/">Maktub Corporativo</a></li>
-          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+          <li><a href="/viagens/#contratacao">Viagens sob medida</a></li>
         </ul>
       </div>
       <div>
