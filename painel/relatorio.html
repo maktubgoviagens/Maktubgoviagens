@@ -242,7 +242,7 @@
             <div class="kpi hl"><div class="l">Economia no mês</div><div class="v"><small>R$</small>${brl(sum(ecoMes))}</div><div class="s">${ecoMes.length} ${ecoMes.length === 1 ? 'ganho registrado' : 'ganhos registrados'}</div></div>
             <div class="kpi"><div class="l">Economia no ano</div><div class="v"><small>R$</small>${brl(sum(ecoAno))}</div><div class="s">Acumulado em ${mes.slice(0, 4)}</div></div>
             <div class="kpi"><div class="l">Desde o início</div><div class="v"><small>R$</small>${brl(sum(economias))}</div><div class="s">Economia total da gestão</div></div>
-            <div class="kpi"><div class="l">Patrimônio em milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${temRef ? 'Equivale a ' + brl2(patrMes) : fonteSaldo}</div></div>
+            <div class="kpi"><div class="l">Carteira de milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${temRef ? 'Equivale a ' + brl2(patrMes) : fonteSaldo}</div></div>
             <div class="kpi"><div class="l">Variação no mês</div><div class="v ${variacao > 0 ? 'up' : variacao < 0 ? 'down' : ''}">${variacao === null ? '·' : (variacao > 0 ? '+' : variacao < 0 ? '−' : '') + compact(Math.abs(variacao))}</div><div class="s">${variacao === null ? 'Sem fechamento do mês anterior' : 'Em relação a ' + MESES[Number(prevKey.slice(5)) - 1]}</div></div>
             <div class="kpi"><div class="l">Entradas / usadas</div><div class="v">${compact(entradas)} <small>/ ${compact(usadas)}</small></div><div class="s">Pontos que entraram e milhas usadas</div></div>
           </div>
@@ -260,7 +260,7 @@
         </section>` : ''}
  
         <section>
-          <h2>Patrimônio em milhas</h2>
+          <h2>Carteira de milhas</h2>
           ${chart}
           ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th>${temRef ? '<th class="r">Em reais</th>' : ''}</tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
         </section>

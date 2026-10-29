@@ -796,7 +796,7 @@
       <div class="head-greet">
         <span class="label" id="labelDate">Painel Privado</span>
         <h1 id="greeting">Bem-vindo, <em>cliente</em>.</h1>
-        <p id="greetingSub">Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.</p>
+        <p id="greetingSub">Confira a evolução da sua carteira de milhas e os movimentos estratégicos do mês.</p>
       </div>
       <div class="head-meta">
         <div class="l">Próxima Reunião</div>
@@ -812,7 +812,7 @@
     <!-- ============= BLOCO 1: PATRIMÔNIO ============= -->
     <section class="heritage">
       <div class="heritage-total">
-        <div class="blk-title">Patrimônio Consolidado</div>
+        <div class="blk-title">Carteira consolidada</div>
         <div class="h-amount num" id="patrimonioTotal">0<span class="u">milhas</span></div>
         <div class="h-equiv" id="patrimonioEquiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro</div>
         <div class="h-trend">
@@ -979,7 +979,7 @@
     <div class="view" id="view-relatorios" hidden>
       <div class="rep-intro">
         <div><h3>Seu relatório <em>mensal</em></h3>
-          <p>Patrimônio, economias, viagens e os próximos movimentos do mês em um documento pronto para ler, imprimir ou salvar em PDF.</p></div>
+          <p>Carteira, economias, viagens e os próximos movimentos do mês em um documento pronto para ler, imprimir ou salvar em PDF.</p></div>
         <div class="row"><select id="repSelect" aria-label="Mês do relatório"></select><button type="button" class="btn-gold" id="repGo">Gerar</button></div>
       </div>
       <section class="sec">
@@ -1105,14 +1105,14 @@
     <div class="wel-step">
       <div class="k">Bem-vindo à Maktub Go</div>
       <h2>É um prazer ter você, <em id="welNome"></em>.</h2>
-      <p>A partir de agora, suas milhas são tratadas como patrimônio: acompanhadas o ano inteiro, com estratégia e cuidado em cada detalhe.</p>
+      <p>A partir de agora, suas milhas têm uma equipe cuidando delas: acompanhadas o ano inteiro, com estratégia e cuidado em cada detalhe.</p>
       <div class="wel-gestor" id="welGestor" hidden></div>
     </div>
     <div class="wel-step" hidden>
       <div class="k">Seu painel privado</div>
       <h2>Tudo em <em>um só lugar.</em></h2>
       <ul class="wel-list">
-        <li>Patrimônio de milhas, com alerta de pontos perto de vencer</li>
+        <li>Carteira de milhas, com alerta de pontos perto de vencer</li>
         <li>Suas viagens com voos, hotel e documentos organizados</li>
         <li>Cada real economizado, detalhado item a item</li>
         <li>Relatório mensal pronto para ler ou salvar em PDF</li>
@@ -1566,7 +1566,7 @@
     const brl = (v) => v === null || v === undefined ? '' : money2(v);
     const tot = (k) => list.reduce((s, p) => s + Number(p[k] || 0), 0);
     const saldo = tot('saldo'), custo = tot('custo_total_brl'), temPat = list.some(p => p.patrimonio_brl !== null && p.patrimonio_brl !== undefined);
-    $('compWrap').innerHTML = `<table class="tbl"><thead><tr><th>Programa</th><th class="r">Saldo</th><th class="r">Anterior à gestão</th><th class="r">Orgânico</th><th class="r">Comprado</th><th class="r">Custo médio</th>${temPat ? '<th class="r">Patrimônio</th>' : ''}</tr></thead><tbody>
+    $('compWrap').innerHTML = `<table class="tbl"><thead><tr><th>Programa</th><th class="r">Saldo</th><th class="r">Anterior à gestão</th><th class="r">Orgânico</th><th class="r">Comprado</th><th class="r">Custo médio</th>${temPat ? '<th class="r">Equivalente estimado</th>' : ''}</tr></thead><tbody>
       ${list.map(p => `<tr><td>${escapeHtml(p.programa)}</td><td class="r"><strong>${n(p.saldo)}</strong></td><td class="r">${n(p.qtd_herdado)}</td><td class="r">${n(p.qtd_organico)}</td><td class="r">${n(p.qtd_pago)}</td>
         <td class="r">${Number(p.custo_medio_milheiro) === 0 ? '100% orgânico' : brl(p.custo_medio_milheiro)}</td>${temPat ? `<td class="r">${brl(p.patrimonio_brl)}</td>` : ''}</tr>`).join('')}
       <tr><td><strong>Total</strong></td><td class="r"><strong>${n(saldo)}</strong></td><td class="r">${n(tot('qtd_herdado'))}</td><td class="r">${n(tot('qtd_organico'))}</td><td class="r">${n(tot('qtd_pago'))}</td>
@@ -2278,7 +2278,7 @@
  
   // ===== Navegação entre áreas =====
   const VIEW_SUB = {
-    inicio: 'Confira a evolução do seu patrimônio de milhas e os movimentos estratégicos do mês.',
+    inicio: 'Confira a evolução da sua carteira de milhas e os movimentos estratégicos do mês.',
     viagens: 'Cada viagem com seus voos, hospedagem e documentos, organizados pela sua equipe.',
     cartoes: 'Seus cartões, limites e anuidades. Atualize o disponível sempre que quiser: ajuda a equipe a planejar as compras.',
     milhas: 'A evolução do seu saldo, os vencimentos monitorados e cada movimentação registrada.',
