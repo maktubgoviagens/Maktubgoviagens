@@ -29,7 +29,7 @@
 </script>
 <link rel="stylesheet" href="/diagnostico/formulario.css">
 <style>
-:root{--verde:#1a3826;--dourado:#8a6520;--dourado-texto:#75551a;--dourado-claro:#c9a96e;--creme:#f9f6f1;--creme-fundo:#f2ece1;--tinta:#2b2b26;--tinta-suave:rgba(43,43,38,.82)}
+:root{--verde:#193826;--dourado:#715E32;--dourado-texto:#715E32;--dourado-claro:#B49755;--creme:#F7F3EA;--creme-fundo:#EBE0C4;--tinta:#2b2b26;--tinta-suave:#2B2B26}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--creme-fundo);color:var(--tinta);font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-weight:300;font-size:1rem;line-height:1.7;-webkit-font-smoothing:antialiased}
 .pular{position:absolute;left:-9999px;top:0;z-index:2000;background:var(--verde);color:var(--creme);padding:14px 22px}
@@ -39,14 +39,14 @@ body{background:var(--creme-fundo);color:var(--tinta);font-family:'Jost','Helvet
 .diag-texto{grid-area:texto}
 .diag-form{grid-area:form}
 .diag-seg{grid-area:seg}
-h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:300;font-size:clamp(2.4rem,5.4vw,3.8rem);line-height:1.06;color:var(--verde);text-wrap:balance}
+h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:300;font-size:clamp(36px,5.4vw,64px);line-height:1.06;color:var(--verde);text-wrap:balance}
 h1 em{display:block;font-style:italic;color:var(--dourado-texto)}
-.diag-gratis{margin-top:18px;font-size:1.0625rem;font-weight:500;color:var(--verde)}
-.diag-depois{margin-top:12px;font-size:1.0625rem;color:var(--tinta-suave);max-width:46ch}
-.diag-seg{background:var(--verde);color:rgba(249,246,241,.86);padding:26px 28px}
-.diag-seg h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;font-size:1.6rem;line-height:1.2;color:var(--creme)}
+.diag-gratis{margin-top:18px;font-size:16px;font-weight:500;color:var(--verde)}
+.diag-depois{margin-top:12px;font-size:16px;color:var(--tinta-suave);max-width:46ch}
+.diag-seg{background:var(--verde);color:rgba(235,224,196,0.86);padding:26px 28px}
+.diag-seg h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;font-size:28px;line-height:1.2;color:var(--creme)}
 .diag-seg h2 em{font-style:italic;color:var(--dourado-claro)}
-.diag-seg ul{list-style:none;display:grid;gap:10px;margin-top:14px;font-size:.9375rem;line-height:1.55}
+.diag-seg ul{list-style:none;display:grid;gap:10px;margin-top:14px;font-size:16px;line-height:1.55}
 .diag-seg li{padding-left:18px;position:relative}
 .diag-seg li::before{content:'';position:absolute;left:0;top:.62em;width:6px;height:6px;background:var(--dourado-claro)}
 .diag-seg a{color:var(--dourado-claro)}
@@ -73,53 +73,57 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 </script>
 <style id="mk-topo-css">
 /* TOPO padrão (igual à página Gestão de Milhas) */
-header.mk-topo{position:fixed;top:0;left:0;right:0;bottom:auto;z-index:1000;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(26,56,38,.09);transition:box-shadow .3s;font-family:'Jost',sans-serif;line-height:1.8}
-header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07);border-bottom-color:rgba(26,56,38,.09)}
+header.mk-topo{position:fixed;top:0;left:0;right:0;bottom:auto;z-index:1000;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(25,56,38,0.09);transition:box-shadow .3s;font-family:'Jost',sans-serif;line-height:1.8}
+header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(25,56,38,0.07);border-bottom-color:rgba(25,56,38,0.09)}
 .mk-topo *{box-sizing:border-box;margin:0;padding:0}
 .mk-topo a{color:inherit;text-decoration:none}
 .mk-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1320px;margin:0 auto;padding:0 32px}
 .mk-logo{display:flex;align-items:center;gap:12px;margin-right:48px;flex-shrink:0}
 .mk-logo-img{width:42px;height:32px;object-fit:contain;display:block}
 .mk-logo-text{display:flex;flex-direction:column;line-height:1.2}
-.mk-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#1a3826}
+.mk-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#193826}
 .mk-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#5c5c5c}
 .mk-links{display:flex;align-items:center;gap:32px;list-style:none}
-.mk-links a{white-space:nowrap;font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
-.mk-links a:hover{color:#1a3826}
-.mk-links a.mk-ouro{color:#8a6520}
-.mk-links a.mk-cta{border:1px solid rgba(138,101,32,.45);padding:9px 20px;color:#1a3826;font-weight:500;transition:background .25s,border-color .25s}
-.mk-links a.mk-cta:hover{background:rgba(138,101,32,.10);border-color:#8a6520}
+.mk-links a{white-space:nowrap;font-size:13px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
+.mk-links a:hover{color:#193826}
+.mk-links a.mk-ouro{color:#715E32}
+.mk-links a.mk-cta{border:1px solid rgba(168,139,74,0.45);padding:9px 20px;color:#193826;font-weight:500;transition:background .25s,border-color .25s}
+.mk-links a.mk-cta:hover{background:rgba(168,139,74,0.1);border-color:#A88B4A}
 .mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
-.mk-burger span{display:block;width:22px;height:1.5px;background:#1a3826}
+.mk-burger span{display:block;width:22px;height:1.5px;background:#193826}
 @media(max-width:1240px){
   .mk-links{display:none}
-  .mk-links[data-aberto="true"]{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:#fff;border-bottom:1px solid rgba(26,56,38,.09);padding:24px 36px;gap:18px;z-index:999}
+  .mk-links[data-aberto="true"]{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:#fff;border-bottom:1px solid rgba(25,56,38,0.09);padding:24px 36px;gap:18px;z-index:999}
   .mk-burger{display:flex}
 }
 @media print{header.mk-topo{display:none}}
 </style>
 <style id="mk-rodape-css">
 /* RODAPÉ padrão */
-footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 28px;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;line-height:1.6;text-align:left}
+footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 28px;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;line-height:1.6;text-align:left}
 .mk-rodape *{box-sizing:border-box;margin:0;padding:0}
 .mk-rodape .mk-wrap{max-width:1180px;margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
 .mk-rodape .rodape-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:clamp(28px,4vw,48px)}
 .mk-rodape .rodape-marca img{width:36px;height:auto;margin-bottom:14px;display:block}
-.mk-rodape .rodape-marca p{font-size:.875rem;max-width:30ch;color:rgba(249,246,241,.8)}
-.mk-rodape h2{font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:.75rem;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:#c9a96e;margin-bottom:14px;line-height:1.4}
+.mk-rodape .rodape-marca p{font-size:16px;max-width:30ch;color:rgba(235,224,196,0.8)}
+.mk-rodape h2{font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:#B49755;margin-bottom:14px;line-height:1.4}
 .mk-rodape ul{list-style:none;display:grid;gap:4px}
-.mk-rodape a{font-size:.875rem;text-decoration:none;color:rgba(249,246,241,.9);padding-block:2px;display:inline-block;letter-spacing:normal;text-transform:none}
-.mk-rodape a:hover{color:#f9f6f1}
-.mk-rodape .rodape-base{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px 24px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(249,246,241,.15);font-size:.875rem;color:rgba(249,246,241,.8)}
+.mk-rodape a{font-size:13px;text-decoration:none;color:rgba(235,224,196,0.9);padding-block:2px;display:inline-block;letter-spacing:normal;text-transform:none}
+.mk-rodape a:hover{color:#EBE0C4}
+.mk-rodape .rodape-base{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px 24px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(235,224,196,0.15);font-size:13px;color:rgba(235,224,196,0.8)}
 .mk-rodape .rodape-base a{font-size:inherit;color:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
 .mk-rodape .rodape-legal{display:flex;gap:18px;flex-wrap:wrap}
 .mk-rodape .rodape-legal a{text-decoration:none}
-.mk-rodape .rodape-legal a:hover{color:#f9f6f1}
+.mk-rodape .rodape-legal a:hover{color:#EBE0C4}
 @media (max-width:900px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr 1fr}.mk-rodape .rodape-marca{grid-column:1/-1}}
 @media (max-width:560px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr;gap:28px 20px}.mk-rodape .rodape-grid>div:last-child{grid-column:1/-1}}
 @media print{footer.mk-rodape{display:none}}
 /* espaço para o botão flutuante do WhatsApp não cobrir os últimos links */
 @media(max-width:600px){.mk-rodape .rodape-base{padding-bottom:84px}}
+
+/* Fase 3: sem enfeites (sombras, gradientes, linhas finas, caixas desenhadas, anéis, estrelinhas, ícones e rótulos em caixa alta) */
+.mk-rodape h2{text-transform:none;letter-spacing:normal;font-weight:500}
+.mk-rodape .rodape-base{border-top-color:transparent}
 </style>
 </head>
 <body>
