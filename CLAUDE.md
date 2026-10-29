@@ -15,6 +15,8 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 ## Gestão de milhas
 
 - Milha nunca é apresentada como investimento, patrimônio ou dinheiro. A comparação com assessor de investimentos só pode aparecer como analogia de cuidado e organização.
+- No painel do cliente e no relatório mensal, todo valor de milhas em reais leva, perto do valor, o aviso "Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro."
+- No painel e no relatório, todo total de economia que inclua pontos de cartão convertidos em reais leva a nota "Inclui pontos de cartão convertidos pelo valor de referência do milheiro." A nota só aparece quando o total tem pontos convertidos. Nesses totais não se usa o aviso "Não é saldo em dinheiro".
 - Nas páginas de venda, nada sobre senha, credenciais ou acesso às contas dos programas de fidelidade. Nunca afirmar que a Maktub acessa as contas, e nunca afirmar que não acessa. Usar "gerencia" ou "gerenciamos".
 - O diferencial de segurança é o cofre digital: as informações confidenciais da gestão ficam em um cofre digital criptografado, com acesso restrito à equipe responsável pela carteira do cliente.
 - Não publicar o preço da gestão de milhas. O valor só é passado pelo closer, depois do diagnóstico.
