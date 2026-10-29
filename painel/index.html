@@ -144,6 +144,8 @@
     .sav-headline p{font-size:13px;color:rgba(249,246,241,.65);line-height:1.55;font-weight:300}
     .sav-cell{text-align:center;padding:0 14px;border-left:1px solid rgba(201,169,110,.18)}
     .sav-cell .p span{color:var(--gold-warm)}
+    .sav-nota{font-size:11px;line-height:1.45;color:rgba(249,246,241,.72);margin-top:8px;font-weight:300}
+    .sav-nota[hidden]{display:none}
     .sav-cell .p{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(249,246,241,.5);margin-bottom:10px;font-weight:600}
     .sav-cell .a{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold-warm);font-weight:400;line-height:1;letter-spacing:-.01em}
     .sav-cell .a .c{font-size:14px;color:rgba(249,246,241,.55);font-style:italic;margin-right:3px;font-weight:300}
@@ -854,14 +856,17 @@
           <div class="sav-cell">
             <div class="p">No mês · <span id="ecoMesLbl"></span></div>
             <div class="a"><span class="c">R$</span><span id="ecoMes">0</span></div>
+            <div class="sav-nota" id="ecoMesNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
           <div class="sav-cell">
             <div class="p">No ano · <span id="ecoAnoLbl"></span></div>
             <div class="a"><span class="c">R$</span><span id="ecoAno">0</span></div>
+            <div class="sav-nota" id="ecoAnoNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
           <div class="sav-cell">
             <div class="p">Desde o início</div>
             <div class="a"><span class="c">R$</span><span id="ecoTotal">0</span></div>
+            <div class="sav-nota" id="ecoTotalNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
         </div>
       </div>
@@ -1906,7 +1911,9 @@
   function renderEconomiaResumo(rows) {
     const now = new Date(), mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, yk = String(now.getFullYear());
     let mes = 0, ano = 0, total = 0;
-    rows.forEach(r => { const v = ecoValor(r), d = String(r.data || ''); total += v; if (d.startsWith(yk)) ano += v; if (d.startsWith(mk)) mes += v; });
+    const pts = { mes: false, ano: false, total: false };
+    rows.forEach(r => { const v = ecoValor(r), d = String(r.data || ''), p = ecoCat(r) === 'acumulo' && v > 0; total += v; if (p) pts.total = true; if (d.startsWith(yk)) { ano += v; if (p) pts.ano = true; } if (d.startsWith(mk)) { mes += v; if (p) pts.mes = true; } });
+    $('ecoMesNota').hidden = !pts.mes; $('ecoAnoNota').hidden = !pts.ano; $('ecoTotalNota').hidden = !pts.total;
     $('ecoMes').textContent = fmtMoney(mes);
     $('ecoAno').textContent = fmtMoney(ano);
     $('ecoTotal').textContent = fmtMoney(total);
