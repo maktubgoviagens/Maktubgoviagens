@@ -16,6 +16,19 @@ const EM_PRODUCAO = ['producao', 'gravacao', 'edicao'];
 /* visão geral: três grupos. As etapas detalhadas continuam dentro de Em andamento */
 const GRUPOS = [['planejado', 'Ideias'], ['andamento', 'Em andamento'], ['publicado', 'Publicado']];
 const grupo = (p) => p.status === 'ideia' ? 'planejado' : p.status === 'publicado' ? 'publicado' : 'andamento';
+/* Kanban: uma coluna por etapa, cada etapa com um dono. Publicado sai do Kanban (fica no Calendário).
+   Criação: quem faz o roteiro ou a arte. Gravação: quem grava (com prazo). Edição: quem edita.
+   Aprovação: sempre os sócios. Agendado: quem posta, na data do app. */
+const COLS = [['producao', 'Criação'], ['gravacao', 'Gravação'], ['edicao', 'Edição'], ['aprovacao', 'Aprovação'], ['agendado', 'Agendado']];
+const colNome = (k) => (COLS.find(c => c[0] === k) || [k, ST[k] || k])[1];
+// vídeo já gravado (o "Já gravei" do Início) conta como Edição; ideia com data já conta como Criação
+const etapa = (p) => p.status === 'ideia' ? (p.data_prevista ? 'producao' : 'ideia') : p.status === 'gravacao' && p.gravado_em ? 'edicao' : p.status;
+const caminho = (p) => [...(ehVideo(p) ? ['producao', 'gravacao', 'edicao'] : ['producao']), ...(exigir() ? ['aprovacao'] : []), 'agendado', 'publicado'];
+const proxima = (p) => { const c = caminho(p), i = c.indexOf(etapa(p)); return i < 0 ? 'producao' : c[i + 1] || null; };
+const donos = (p, k = etapa(p)) => (k === 'producao' || k === 'ideia' ? [p.responsavel_id] : k === 'gravacao' ? equipeG(p) : k === 'edicao' ? [p.edicao_por] : k === 'agendado' ? [p.postagem_por] : []).filter(Boolean);
+const donoTxt = (p) => etapa(p) === 'aprovacao' ? 'os sócios' : donos(p).map(id => primeiro(nomeT(id))).filter(Boolean).join(' e ');
+const possoMexer = (p) => etapa(p) === 'aprovacao' ? !!X.ADMIN : !!X.DELEGA || donos(p).includes(X.meuId);
+const prazoGrav = (p) => p.gravacao_data || null;
 /* duas contas no Instagram e collab com os sócios */
 const CONTAS = [['maktub', 'Maktub Go', '#1b4332', 'rgba(27,67,50,.05)'], ['bragas', 'Os Bragas', '#c96a28', 'rgba(201,106,40,.09)']];
 const contaDe = (p) => p.conta || 'maktub';
@@ -103,12 +116,12 @@ export function minhasTarefas(eu, coord) {
   if (!LISTA) return [];
   const T = [], ja = new Set();
   const add = (p, oQue, quando) => { if (ja.has(p.id)) return; ja.add(p.id); T.push({ id: p.id, titulo: p.titulo, desc: oQue + (quando ? (/até$/.test(oQue) ? ' ' : ' · ') + dm(quando) : ''), atrasado: !!(quando && quando < hoje()) }); };
-  LISTA.filter(p => equipeG(p).includes(eu) && !p.gravado_em && p.status !== 'publicado').forEach(p => add(p, 'Gravar até', p.gravacao_data || p.data_prevista));
-  LISTA.filter(p => p.ajuste && EM_PRODUCAO.includes(p.status) && (p.responsavel_id === eu || p.edicao_por === eu)).forEach(p => add(p, 'Ajuste pedido', p.data_prevista));
-  LISTA.filter(p => p.edicao_por === eu && (p.status === 'edicao' || (p.status === 'gravacao' && p.gravado_em))).forEach(p => add(p, 'Editar', p.data_prevista));
-  LISTA.filter(p => p.responsavel_id === eu && (p.status === 'producao' || (p.status === 'ideia' && p.data_prevista))).forEach(p => add(p, ehVideo(p) ? 'Fazer o roteiro' : 'Criar a arte', p.data_prevista));
-  LISTA.filter(p => p.postagem_por === eu && p.status !== 'publicado' && (p.status !== 'ideia' || p.data_prevista)).forEach(p => add(p, 'Postar', p.data_prevista));
-  if (coord) LISTA.filter(p => p.status === 'aprovacao').forEach(p => add(p, 'Aprovar', p.data_prevista));
+  // cada pessoa vê o que está com ela na etapa atual (aprovação fica com os sócios, nos avisos deles)
+  LISTA.filter(p => etapa(p) === 'gravacao' && equipeG(p).includes(eu)).forEach(p => add(p, 'Gravar até', p.gravacao_data || p.data_prevista));
+  LISTA.filter(p => p.ajuste && ['producao', 'edicao'].includes(etapa(p)) && donos(p).includes(eu)).forEach(p => add(p, 'Ajuste pedido', p.data_prevista));
+  LISTA.filter(p => etapa(p) === 'edicao' && p.edicao_por === eu).forEach(p => add(p, 'Editar', p.data_prevista));
+  LISTA.filter(p => etapa(p) === 'producao' && p.responsavel_id === eu).forEach(p => add(p, ehVideo(p) ? 'Fazer o roteiro' : 'Criar a arte', p.data_prevista));
+  LISTA.filter(p => etapa(p) === 'agendado' && p.postagem_por === eu).forEach(p => add(p, 'Postar', p.data_prevista));
   return T;
 }
 // abre um post direto (vindo do sino)
@@ -236,6 +249,11 @@ function estilos() {
 .mk-rasc{background:rgba(168,139,74,.1);border-left:3px solid var(--dourado);padding:10px 12px;font-size:13.5px;margin-top:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}
 .mk-rasc button{flex:0 0 auto;background:none;border:1px solid var(--linha);padding:7px 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);cursor:pointer}
 .mk-rapida{display:flex;gap:8px;margin-top:12px}.mk-rapida input{flex:1;min-width:0;padding:12px;border:1px solid var(--linha);font-size:16px;background:var(--branco)}
+.mk-dono{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--verde);font-weight:700;margin-top:7px}.mk-dono.falta{color:var(--alerta)}
+.mk-kac>span:last-child:not(.mk-kl){font-size:11px;color:var(--tinta-3)}
+.mk-pas .fl{display:block;margin-top:12px}.mk-pas .fl>span{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-2);margin-bottom:6px}
+.mk-pas select,.mk-pas input[type=date],.mk-pas input[type=time]{width:100%;padding:11px 10px;border:1px solid var(--linha);background:var(--branco);font:inherit;font-size:16px;color:var(--tinta)}
+.mk-pas .mk-btns{margin-top:16px}
 `;
   document.head.appendChild(s);
 }
@@ -248,7 +266,7 @@ export function tela(P, ctx) {
     P.innerHTML = `<h1 class="titulo">Marketing</h1>${X.tec('<div class="config" style="margin-top:12px">O marketing ainda não foi ativado no Supabase. Rode o marketing.sql do guia.</div>')}${X.so ? sairBtn() : ''}`;
     return;
   }
-  const abas = X.COORD ? ['painel', 'producao', 'calendario', 'estrategia'] : ['semana', 'producao', 'calendario', 'estrategia'];
+  const abas = X.COORD ? ['painel', 'producao', 'ideias', 'calendario', 'estrategia'] : ['semana', 'producao', 'ideias', 'calendario', 'estrategia'];
   const vistas = X.DELEGA ? [...abas, 'tarefas'] : abas;
   if (!vistas.includes(VIEW)) VIEW = vistas[0];
   if (!MES) MES = mesK(hoje());
@@ -306,9 +324,9 @@ function vPainel() {
       ${porPilar.length || semPilar ? porPilar.map(([pl, n]) => `<div class="mk-barra"><span>${esc(pl.titulo)}</span><span class="t"><i style="width:${n / maxP * 100}%;background:${pl.cor || CORES[0]}"></i></span><span class="q">${n}</span></div>`).join('') + (semPilar ? `<div class="mk-barra"><span style="color:var(--tinta-3)">Sem pilar</span><span class="t"><i style="width:${semPilar / maxP * 100}%;background:var(--tinta-3)"></i></span><span class="q">${semPilar}</span></div>` : '') : '<div class="vazio">Cadastre os pilares em Estratégia para ver o equilíbrio dos temas.</div>'}
       ${pilares().length && porPilar.some(x => !x[1]) ? `<div class="sub">Sem post no mês: ${porPilar.filter(x => !x[1]).map(x => esc(x[0].titulo)).join(', ')}.</div>` : ''}
     </section>
-    <div class="pend" style="margin-top:12px"><button data-v="producao"><span>Banco de ideias</span><span>${ideias ? `<b>${ideias}</b>` : ''}<span class="seta">›</span></span></button></div>`;
+    <div class="pend" style="margin-top:12px"><button data-v="ideias"><span>Banco de ideias</span><span>${ideias ? `<b>${ideias}</b>` : ''}<span class="seta">›</span></span></button></div>`;
 }
-const gravPend = () => LISTA.filter(p => equipeG(p).length && !p.gravado_em && p.status !== 'publicado').sort((a, b) => String(a.gravacao_data || a.data_prevista || '9999').localeCompare(String(b.gravacao_data || b.data_prevista || '9999')));
+const gravPend = () => LISTA.filter(p => etapa(p) === 'gravacao' && equipeG(p).length).sort((a, b) => String(a.gravacao_data || a.data_prevista || '9999').localeCompare(String(b.gravacao_data || b.data_prevista || '9999')));
 function linhaGrav(p) {
   const { esc } = X, prazo = p.gravacao_data || p.data_prevista, atr = prazo && prazo < hoje();
   return `<button class="mk-lin" data-p="${p.id}"><i style="background:${atr ? 'var(--alerta)' : 'var(--dourado)'}"></i><span class="t">${esc(p.titulo)}<small>${esc(nomesG(p) || 'Equipe')}${prazo ? ' · até ' + dm(prazo) : ''}${atr ? ' · atrasado' : ''}</small></span><span class="seta">›</span></button>`;
@@ -333,7 +351,7 @@ function cardAprovar(p) {
     ${p.legenda ? `<div class="leg">${esc(p.legenda)}</div>` : ''}
     ${links(p) || '<div class="sub">Sem link da arte.</div>'}
     ${AJ === p.id ? `<label class="fl"><span>O que precisa ajustar</span><textarea id="mkAjTxt" rows="3"></textarea></label><div class="mk-btns"><button class="sec" data-ajc>Cancelar</button><button class="zap" data-ajok="${p.id}">Devolver com ajuste</button></div>`
-      : `<div class="mk-btns"><button class="sec" data-aj="${p.id}">Pedir ajuste</button><button class="zap" data-aprovar="${p.id}">Aprovar</button></div>`}
+      : X.ADMIN ? `<div class="mk-btns"><button class="sec" data-aj="${p.id}">Pedir ajuste</button><button class="zap" data-aprovar="${p.id}">Aprovar</button></div>` : '<div class="sub">Aguardando a aprovação da Isadora ou do Matheus.</div>'}
   </div>`;
 }
 
@@ -364,49 +382,100 @@ function vCalendario() {
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
 }
 
-/* ---------- visão geral (kanban em três colunas) ---------- */
+/* ---------- Kanban: uma coluna por etapa, com o dono de cada etapa ---------- */
 function vProducao() {
-  const limite = maisDias(hoje(), -30);
-  const col = (g) => vis().filter(p => grupo(p) === g && (g !== 'publicado' || (p.publicado_em || p.data_prevista || hoje()) >= limite))
-    .sort(g === 'publicado' ? (a, b) => String(diaPost(b)).localeCompare(String(diaPost(a))) : porData);
+  const col = (k) => vis().filter(p => etapa(p) === k).sort(porData);
   return `
     <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
     ${filtroConta()}
-    <div class="kdica" style="margin-top:12px">Arraste para o lado para ver as colunas. Segure o card para mudar de coluna, ou toque para abrir.</div>
-    <div class="kanban" data-mk="1" style="margin-top:8px">${GRUPOS.map(([g, n]) => { const L = col(g); return `<div class="kcol" data-ket="${g}"><h3>${n} <small>${L.length}</small></h3>${L.map(kcard).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
-    <div class="sub">Publicados aparecem por 30 dias. O histórico completo está no Calendário.</div>`;
+    <div class="kdica" style="margin-top:12px">Arraste para o lado para ver as etapas. Para avançar, toque no botão do card: você escolhe quem assume a próxima etapa.</div>
+    <div class="kanban" data-mk="1" style="margin-top:8px">${COLS.filter(([k]) => k !== 'aprovacao' || exigir()).map(([k, n]) => { const L = col(k); return `<div class="kcol" data-ket="${k}"><h3>${n} <small>${L.length}</small></h3>${L.map(kcard).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}</div>
+    <div class="sub">Depois de postado, o post sai do Kanban e fica no Calendário. Ideias sem data ficam na aba Ideias.</div>`;
 }
 function kcard(p) {
-  const { esc } = X, g = grupo(p), quando = diaPost(p);
-  const prox = g === 'planejado' ? `<button data-mover="${p.id}" data-g="andamento">Começar</button>` : g === 'andamento' ? (acao(p) || `<button data-mover="${p.id}" data-g="publicado">Publicado</button>`) : '';
-  const quem = [p.responsavel_id ? (ehVideo(p) ? 'roteiro: ' : 'arte: ') + primeiro(nomeT(p.responsavel_id)) : '', nomesG(p) ? 'grava: ' + nomesG(p) : '', p.edicao_por ? 'edita: ' + primeiro(nomeT(p.edicao_por)) : '', p.postagem_por ? 'posta: ' + primeiro(nomeT(p.postagem_por)) : ''].filter(Boolean).join(' · ');
+  const { esc } = X, k = etapa(p), quando = diaPost(p), dono = donoTxt(p);
+  const pg = k === 'gravacao' ? prazoGrav(p) : null, atrG = pg && pg < hoje();
+  const data = k === 'gravacao' ? (pg ? 'gravar até ' + dm(pg) : 'sem prazo de gravação') + (quando ? ' · post em ' + dm(quando) : '') : quando ? 'post em ' + dm(quando) + (p.hora ? ' às ' + hhmm(p.hora) : '') : 'sem data';
   return `<div class="kc mk-kc" data-kid="${p.id}" style="border-left:5px solid ${contaCor(p)};background:${contaFundo(p)}"><button data-p="${p.id}" class="mk-kb">
-      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${g === 'andamento' ? `<span class="st">${esc(stNome(p))}</span>` : ''}${atrasado(p) ? '<span class="st" style="color:#8a4618;font-weight:600">atrasado</span>' : ''}</span>
+      <span class="mk-kt"><span class="pill" style="background:${corP(p)}">${ehVideo(p) ? 'Vídeo' : 'Estático'} · ${fmtN(p)}</span>${k === 'producao' ? `<span class="st">${ehVideo(p) ? 'Roteiro' : 'Arte'}</span>` : ''}${atrasado(p) || atrG ? '<span class="st" style="color:#8a4618;font-weight:600">atrasado</span>' : ''}</span>
       <span class="mk-conta" style="color:${contaCor(p)}">${contaN(p)}${collabN(p) ? ' · ' + collabN(p) : ''}</span>
       <b>${esc(p.titulo)}</b>
-      <small>${quando ? dm(quando) + (p.hora ? ' às ' + esc(hhmm(p.hora)) : '') : 'sem data'}${quem ? '' : ' · ninguém escalado'}</small>
-      ${quem ? `<small>${esc(quem)}</small>` : ''}
-      ${p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
-    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(urlOk(p.link_referencia))}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(urlOk(p.link_bruto))}" target="_blank" rel="noopener">Material bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(urlOk(p.link_arquivo))}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${prox}</div></div>`;
+      <span class="mk-dono ${dono ? '' : 'falta'}">${dono ? 'Com ' + esc(dono) : 'Sem responsável'}</span>
+      <small>${esc(data)}</small>
+      ${p.ajuste && ['producao', 'edicao'].includes(k) ? `<div class="mk-ajuste">${esc(p.ajuste)}</div>` : p.obs ? `<span class="mk-desc">${esc(p.obs)}</span>` : ''}</button>
+    <div class="mk-kac"><span class="mk-kl">${p.link_referencia ? `<a href="${esc(urlOk(p.link_referencia))}" target="_blank" rel="noopener">Referência ›</a>` : ''}${p.link_bruto ? `<a href="${esc(urlOk(p.link_bruto))}" target="_blank" rel="noopener">Bruto ›</a>` : ''}${p.link_arquivo ? `<a href="${esc(urlOk(p.link_arquivo))}" target="_blank" rel="noopener">Pasta ›</a>` : '<span>Sem pasta</span>'}</span>${acao(p)}</div></div>`;
 }
-// mudar de coluna (botão ou arrastar)
-export function mover(id, g) {
-  const p = LISTA && LISTA.find(x => x.id === id); if (!p || grupo(p) === g) return;
-  if (g === 'planejado') return mudar(id, { status: 'ideia', publicado_em: null }, 'Voltou para Ideias.');
-  if (g === 'andamento') return mudar(id, { status: p.status === 'publicado' && p.aprovado_em ? 'agendado' : 'producao', publicado_em: null }, 'Foi para Em andamento.');
-  if (g === 'publicado') return mudar(id, { status: 'publicado', publicado_em: p.publicado_em || hoje() }, 'Marcado como publicado. Abra o post para colar o link do Instagram.');
+// arrastar no Kanban: para a próxima etapa abre a escolha do responsável; para trás devolve; pular etapa não pode
+export function mover(id, k) {
+  const p = LISTA && LISTA.find(x => x.id === id); if (!p) return;
+  const at = etapa(p); if (k === at) return;
+  const c = caminho(p), ia = c.indexOf(at), ik = c.indexOf(k);
+  if (ik < 0) { X.aviso(`Post estático não passa por ${colNome(k)}.`); return; }
+  if (ik > ia) { if (ik === ia + 1) passar(id); else X.aviso('Avance uma etapa por vez, escolhendo quem assume.'); return; }
+  if (!possoMexer(p)) { X.aviso(at === 'aprovacao' ? 'Só a Isadora ou o Matheus mexem no que está em aprovação.' : `Esse post está com ${donoTxt(p) || 'outra pessoa'}.`); return; }
+  mudar(id, { status: k, ...(c.indexOf('gravacao') >= ik ? { gravado_em: null } : {}) }, `Voltou para ${colNome(k)}, com ${donoTxt({ ...p, status: k }) || 'ninguém escalado'}.`);
 }
-// quem posta (Maju, Jéssica ou quem estiver escalado) marca que o post já está no Instagram, em qualquer etapa depois da produção
+// quem posta marca que o post já está no Instagram (abre o post para colar o link)
 const jaPostei = (p) => `<button data-publicar="${p.id}">Já postei</button>`;
-// botão de próxima etapa de cada post
+const ROT_PROX = (p, n) => ({ producao: ehVideo(p) ? 'Fazer roteiro' : 'Criar arte', gravacao: 'Pronto para gravar', edicao: 'Gravado, mandar para edição', aprovacao: 'Enviar para aprovação', agendado: etapa(p) === 'aprovacao' ? 'Aprovar' : 'Pronto, agendar' }[n] || 'Avançar');
+// botão de próxima etapa: só para o dono da etapa, a coordenação e os sócios (aprovação só os sócios)
 function acao(p) {
-  if (p.status === 'ideia') return `<button data-mudar="${p.id}" data-st="producao">${ehVideo(p) ? 'Fazer roteiro' : 'Criar arte'}</button>` + (p.data_prevista ? jaPostei(p) : '');
-  if (p.status === 'producao' && ehVideo(p)) return `<button data-gravar="${p.id}">Pronto para gravar</button>`;
-  if (p.status === 'gravacao') return p.gravado_em ? `<button data-mudar="${p.id}" data-st="edicao">Começar edição</button>` + jaPostei(p) : `<button data-gravado="${p.id}">Já gravei</button>`;
-  if (p.status === 'producao' || p.status === 'edicao') return (exigir() && !X.COORD ? `<button data-mudar="${p.id}" data-st="aprovacao">Enviar para aprovação</button>` : `<button data-mudar="${p.id}" data-st="agendado">${X.COORD ? 'Aprovar e agendar' : 'Marcar agendado'}</button>`) + jaPostei(p);
-  if (p.status === 'aprovacao') return (X.COORD || !exigir() ? `<button data-aprovar="${p.id}">Aprovar</button>` : '<span>Aguardando aprovação</span>') + jaPostei(p);
-  if (p.status === 'agendado') return jaPostei(p);
-  return '';
+  const n = proxima(p); if (!n) return '';
+  if (!possoMexer(p)) return `<span>${etapa(p) === 'aprovacao' ? 'Aguardando os sócios' : donoTxt(p) ? 'Com ' + X.esc(donoTxt(p)) : 'Sem responsável'}</span>`;
+  if (n === 'publicado') return jaPostei(p);
+  return `<button data-passar="${p.id}">${ROT_PROX(p, n)}</button>`;
+}
+/* passar para a próxima etapa: obriga a escolher quem assume (e o prazo, na gravação) */
+function passar(id) {
+  const p = LISTA.find(x => x.id === id); if (!p) return;
+  const n = proxima(p); if (!n) return;
+  if (n === 'publicado') { abrirPost(id, { status: 'publicado' }); X.aviso('Cole o link do post no Instagram e salve.'); return; }
+  if (!possoMexer(p)) { X.aviso(etapa(p) === 'aprovacao' ? 'Só a Isadora ou o Matheus aprovam.' : `Esse post está com ${donoTxt(p) || 'outra pessoa'}.`); return; }
+  const { esc } = X, pessoas = TIME.filter(t => t.user_id);
+  const sel = (nome, atual) => `<select name="${nome}"><option value="">Escolha</option>${pessoas.map(t => `<option value="${t.user_id}" ${atual === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select>`;
+  let campos = '';
+  if (n === 'producao') campos = `<label class="fl"><span>${ehVideo(p) ? 'Quem faz o roteiro' : 'Quem cria a arte'}</span>${sel('resp', p.responsavel_id)}</label>`;
+  if (n === 'gravacao') campos = `<div class="fl"><span>Quem grava (pode marcar os dois)</span><div class="mk-fmts">${pessoas.map(t => `<label style="--c:var(--verde)"><input type="checkbox" name="grava" value="${t.user_id}" ${equipeG(p).includes(t.user_id) ? 'checked' : ''}><span>${esc(primeiro(t.nome))}</span></label>`).join('')}</div></div>
+      <label class="fl"><span>Gravar até (obrigatório)</span><input type="date" name="prazo" value="${esc(p.gravacao_data || '')}"></label>`;
+  if (n === 'edicao') campos = `<label class="fl"><span>Quem edita</span>${sel('resp', p.edicao_por)}</label>`;
+  if (n === 'aprovacao') campos = '<div class="sub">Vai para a Isadora e o Matheus aprovarem. Se precisar de ajuste, volta com o pedido escrito.</div>';
+  if (n === 'agendado') campos = `<label class="fl"><span>Quem posta</span>${sel('resp', p.postagem_por)}</label>
+      <div class="duas-col"><label class="fl"><span>Data do post</span><input type="date" name="data" value="${esc(p.data_prevista || '')}"></label><label class="fl"><span>Horário</span><input type="time" name="hora" value="${esc(hhmm(p.hora))}"></label></div>`;
+  let f = document.getElementById('mkPassar');
+  if (!f) { f = document.createElement('div'); f.id = 'mkPassar'; f.className = 'folha'; document.body.appendChild(f); }
+  f.innerHTML = `<div class="folha-fundo" data-pasx></div><form class="folha-caixa mk-pas" novalidate>
+    <div class="folha-tit">${etapa(p) === 'aprovacao' ? 'Aprovar' : 'Passar para ' + colNome(n)}</div>
+    <div class="nome" style="font-size:17px">${esc(p.titulo)}</div>
+    <div class="sub" style="margin-top:4px">${esc(colNome(etapa(p) === 'ideia' ? 'ideia' : etapa(p)))} › ${esc(colNome(n))}</div>
+    ${campos}
+    <div class="mk-msg erro" id="mkPasMsg" hidden></div>
+    <div class="mk-btns"><button type="button" class="sec" data-pasx>Cancelar</button><button type="submit" class="zap">${n === 'agendado' && etapa(p) === 'aprovacao' ? 'Aprovar' : 'Confirmar'}</button></div></form>`;
+  f.hidden = false;
+  const fecha = () => { f.hidden = true; };
+  f.querySelectorAll('[data-pasx]').forEach(b => b.onclick = fecha);
+  const fm = f.querySelector('form'), el = fm.elements;
+  const erro = (t) => { const m = document.getElementById('mkPasMsg'); m.textContent = t; m.hidden = false; };
+  fm.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const reg = { status: n };
+    if (n === 'producao') { if (!el.resp.value) return erro('Escolha quem assume a criação.'); reg.responsavel_id = el.resp.value; }
+    if (n === 'gravacao') {
+      const eq = [...fm.querySelectorAll('[name=grava]:checked')].map(c => c.value);
+      if (!eq.length) return erro('Escolha quem grava.');
+      if (!el.prazo.value) return erro('Toda gravação precisa de prazo. Escolha a data.');
+      Object.assign(reg, { gravacao_equipe: eq, gravacao_por: eq[0], gravacao_data: el.prazo.value, gravado_em: null });
+    }
+    if (n === 'edicao') { if (!el.resp.value) return erro('Escolha quem edita.'); reg.edicao_por = el.resp.value; if (!p.gravado_em) reg.gravado_em = new Date().toISOString(); }
+    if (n === 'aprovacao') reg.ajuste = null;
+    if (n === 'agendado') {
+      if (!el.resp.value) return erro('Escolha quem posta.');
+      if (!el.data.value) return erro('Escolha a data do post. É nela que a pessoa posta.');
+      Object.assign(reg, { postagem_por: el.resp.value, data_prevista: el.data.value, hora: el.hora.value || null, ajuste: null });
+    }
+    fecha();
+    const quem = n === 'aprovacao' ? 'os sócios' : donoTxt({ ...p, ...reg, status: n, gravado_em: n === 'gravacao' ? null : reg.gravado_em || p.gravado_em });
+    mudar(id, reg, etapa(p) === 'aprovacao' ? `Aprovado. Agendado com ${quem}.` : `Foi para ${colNome(n)}, com ${quem}.`);
+  };
 }
 
 /* ---------- equipe de marketing: semana ---------- */
@@ -423,10 +492,10 @@ function vSemana() {
   const hora = new Date().getHours();
   // cada post aparece uma vez só, no primeiro bloco em que se encaixa (com a data no card)
   const visto = new Set(), unico = (L) => L.filter(p => !visto.has(p.id) && visto.add(p.id));
-  const criar = unico(LISTA.filter(p => p.responsavel_id === X.meuId && (p.status === 'producao' || (p.status === 'ideia' && p.data_prevista))).sort(porData));
+  const criar = unico(LISTA.filter(p => p.responsavel_id === X.meuId && etapa(p) === 'producao').sort(porData));
   const gravar = unico(gravPend().filter(p => equipeG(p).includes(X.meuId)));
-  const editar = unico(LISTA.filter(p => p.edicao_por === X.meuId && (p.status === 'edicao' || (p.status === 'gravacao' && p.gravado_em))).sort(porData));
-  const postar = unico(LISTA.filter(p => p.postagem_por === X.meuId && p.status !== 'publicado' && (p.status !== 'ideia' || p.data_prevista)).sort(porData));
+  const editar = unico(LISTA.filter(p => p.edicao_por === X.meuId && etapa(p) === 'edicao').sort(porData));
+  const postar = unico(LISTA.filter(p => p.postagem_por === X.meuId && etapa(p) === 'agendado').sort(porData));
   const ajustes = unico(LISTA.filter(p => EM_PRODUCAO.includes(p.status) && p.ajuste).sort(porData));
   const atras = unico(LISTA.filter(atrasado).sort(porData));
   const semData = LISTA.filter(p => grupo(p) === 'andamento' && !p.data_prevista && !visto.has(p.id));
@@ -449,7 +518,7 @@ function vSemana() {
     </div>
     <div style="display:flex;gap:8px;margin-top:14px"><button class="zap" data-novo="producao" style="flex:1">+ Novo post</button><button class="sec" data-novo="ideia" style="flex:1">+ Ideia</button></div>
     ${atalhoTarefas()}
-    ${DIA ? '' : bloco('Para você criar', criar, null, p => (ehVideo(p) ? 'roteiro' : 'arte') + (diaPost(p) ? ' · post em ' + dm(diaPost(p)) : '')) + bloco('Para você gravar', gravar, p => p.status === 'gravacao' ? '' : `<button class="zap" data-gravado="${p.id}" style="width:100%;margin:-4px 0 10px">Já gravei</button>`, p => (p.gravacao_data ? 'gravar até ' + dm(p.gravacao_data) + ' · ' : '') + (diaPost(p) ? 'post em ' + dm(diaPost(p)) : '')) + bloco('Para você editar', editar) + bloco('Para você postar', postar) + bloco('Ajustes pedidos', ajustes) + bloco('Atrasados', atras)}
+    ${DIA ? '' : bloco('Para você criar', criar, null, p => (ehVideo(p) ? 'roteiro' : 'arte') + (diaPost(p) ? ' · post em ' + dm(diaPost(p)) : '')) + bloco('Para você gravar', gravar, null, p => (p.gravacao_data ? 'gravar até ' + dm(p.gravacao_data) + ' · ' : '') + (diaPost(p) ? 'post em ' + dm(diaPost(p)) : '')) + bloco('Para você editar', editar) + bloco('Para você postar', postar) + bloco('Ajustes pedidos', ajustes) + bloco('Atrasados', atras)}
     ${doDia || `<div class="mk-dia">${DIA ? dia(DIA) : 'Próximos 7 dias'}</div><div class="vazio" style="padding:6px 0">${!DIA && visto.size ? 'Nada mais programado. O que é seu está nos blocos acima.' : 'Nada programado.'}</div>`}
     ${!DIA && semData.length ? `<div class="mk-dia">Em andamento sem data</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}
     ${DIA && dias.includes(DIA) ? '<button class="sec" data-sdia="" style="width:100%;margin-top:12px">Ver a semana inteira</button>' : ''}`;
@@ -520,10 +589,10 @@ async function escalar(id, campos, ok) {
 function vIdeias() {
   const { esc } = X, L = LISTA.filter(p => p.status === 'ideia').sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)));
   return `
-    <div class="sub" style="margin-top:12px">Anote a ideia na hora. Quando for produzir, toque em Produzir e ela vai para a produção.</div>
+    <div class="sub" style="margin-top:12px">Anote a ideia na hora. Quando for produzir, toque em Produzir, escolha quem cria e ela entra no Kanban, em Criação.</div>
     <div class="mk-fmts" id="mkIdFmt" style="margin-top:10px">${Object.entries(FMT).map(([k, [n, c]]) => `<label style="--c:${c}"><input type="radio" name="idfmt" value="${k}" ${ID_FMT === k ? 'checked' : ''}><span>${n}</span></label>`).join('')}</div>
     <div class="mk-rapida"><input id="mkIdTxt" placeholder="Nova ideia de post" maxlength="160"><button class="zap" id="mkIdOk" style="flex:0 0 auto;min-width:0">Salvar</button></div>
-    ${L.length ? `<div class="mk-ideias">${L.map((p, i) => `<div style="display:flex;flex-direction:column"><button class="mk-ideia" data-p="${p.id}" style="--r:${[-1, .8, -.5, 1.2][i % 4]}deg;--c:${corP(p)}"><b>${esc(p.titulo)}</b><small>${fmtN(p)}${est(p.pilar_id) ? ' · ' + esc(est(p.pilar_id).titulo) : ''}</small></button><button class="sec" data-mudar="${p.id}" data-st="producao" style="margin-top:6px;padding:8px">Produzir</button></div>`).join('')}</div>` : '<div class="vazio" style="margin-top:10px">Nenhuma ideia guardada ainda.</div>'}`;
+    ${L.length ? `<div class="mk-ideias">${L.map((p, i) => `<div style="display:flex;flex-direction:column"><button class="mk-ideia" data-p="${p.id}" style="--r:${[-1, .8, -.5, 1.2][i % 4]}deg;--c:${corP(p)}"><b>${esc(p.titulo)}</b><small>${fmtN(p)}${est(p.pilar_id) ? ' · ' + esc(est(p.pilar_id).titulo) : ''}</small></button><button class="sec" data-passar="${p.id}" style="margin-top:6px;padding:8px">Produzir</button></div>`).join('')}</div>` : '<div class="vazio" style="margin-top:10px">Nenhuma ideia guardada ainda.</div>'}`;
 }
 
 /* ---------- estratégia ---------- */
@@ -532,7 +601,7 @@ function vEstrategia() {
   const camp = campanhas().sort((a, b) => String(b.inicio || '').localeCompare(String(a.inicio || '')));
   const ativa = (c) => c.ativo && (!c.fim || c.fim >= hoje());
   return `
-    ${X.COORD ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação da coordenação do marketing ou dos sócios antes de ser agendado ou publicado</span></label></section>` : ''}
+    ${X.ADMIN ? `<section class="bloco"><h2>Aprovação</h2><label class="fc"><input type="checkbox" id="mkExigir" ${exigir() ? 'checked' : ''}><span>Todo post passa pela aprovação dos sócios (Isadora ou Matheus) antes de ser agendado</span></label></section>` : ''}
     <div class="secao">Metas do mês</div>
     <div class="mesnav" id="mkMes"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(k)}</span><button data-n="1" aria-label="Próximo mês">›</button></div>
     <div class="numeros" style="margin-top:8px">
@@ -554,7 +623,7 @@ function formPost(P) {
   const base = nova ? { titulo: '', formato: 'reels', status: 'ideia', conta: FCONTA || 'maktub', collab: [], responsavel_id: X.COORD ? null : X.meuId } : LISTA.find(x => x.id === ED);
   if (!base) { ED = null; return tela(P, X); }
   const p = { ...base, ...(PRE || {}) };
-  const pode = (s) => s === 'publicado' || X.COORD || !exigir() || ['ideia', ...EM_PRODUCAO, 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
+  const pode = (s) => s === 'publicado' || X.ADMIN || !exigir() || ['ideia', ...EM_PRODUCAO, 'aprovacao'].includes(s) || base.aprovado_em || base.status === s;
   const marketing = TIME.filter(t => t.user_id);
   P.innerHTML = `<button class="voltar" id="mkVoltarF">‹ Marketing</button><h1 class="titulo" style="margin-top:6px">${nova ? (p.status === 'ideia' ? 'Nova <em>ideia</em>' : 'Novo <em>post</em>') : 'Editar <em>post</em>'}</h1>
     ${!nova && base.ajuste && EM_PRODUCAO.includes(base.status) ? `<div class="mk-ajuste"><b>Ajuste pedido:</b> ${esc(base.ajuste)}</div>` : ''}
@@ -781,7 +850,7 @@ function ligar(P) {
   q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); abrirPost(b.dataset.p); });
   q('[data-novo]').forEach(b => b.onclick = () => abrirPost('nova', { status: b.dataset.novo }));
   q('[data-novo-dia]').forEach(b => b.onclick = () => abrirPost('nova', { status: 'producao', data_prevista: b.dataset.novoDia }));
-  q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', edicao: 'Foi para a edição.', aprovacao: 'Enviado para aprovação. A coordenação recebe o aviso.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
+  q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', edicao: 'Foi para a edição.', aprovacao: 'Enviado para aprovação dos sócios.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
   q('[name=fconta]').forEach(r => r.onchange = () => { FCONTA = r.value; rerender(); });
   q('[name=sofalta]').forEach(r => r.onchange = () => { SO_FALTA = !!r.value; rerender(); });
   q('[data-tf]').forEach(i => i.onchange = () => { const c = i.dataset.campo, v = i.value || null, nome = primeiro(nomeT(v)); escalar(i.dataset.tf, { [c]: v }, c === 'gravacao_data' ? 'Prazo de gravação salvo.' : v ? `Salvo: ${nome} ${{ responsavel_id: 'faz essa parte', edicao_por: 'edita', postagem_por: 'posta' }[c]}.` : 'Salvo: ninguém escalado.'); });
@@ -790,7 +859,8 @@ function ligar(P) {
   q('[data-gravar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const pp = LISTA.find(x => x.id === b.dataset.gravar); if (!pp) return;
     if (!equipeG(pp).length) { abrirPost(pp.id, { status: 'gravacao' }); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
     mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${nomesG(pp)}.`); });
-  q('[data-aprovar]').forEach(b => b.onclick = () => mudar(b.dataset.aprovar, { status: 'agendado' }, 'Post aprovado.'));
+  q('[data-aprovar]').forEach(b => b.onclick = () => passar(b.dataset.aprovar));
+  q('[data-passar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); passar(b.dataset.passar); });
   q('[data-publicar]').forEach(b => b.onclick = () => { abrirPost(b.dataset.publicar, { status: 'publicado' }); X.aviso('Cole o link do post no Instagram e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
