@@ -56,5 +56,4 @@
 .fd--escuro .fd-msg a{color:#B49755}
 .fd--escuro .fd-zap{background:#B49755;color:#193826!important}
 
-/* Fase 3: sem enfeites (sombras, gradientes, linhas finas, caixas desenhadas, anéis, estrelinhas, ícones e rótulos em caixa alta) */
-.fd label{text-transform:none;letter-spacing:normal;font-weight:500}
+/* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */

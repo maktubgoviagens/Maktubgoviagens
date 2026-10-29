@@ -585,16 +585,20 @@ footer a:hover{color:var(--creme)}
   .inicio-foto img{width:100%;aspect-ratio:4/5;max-height:calc(100svh - 190px);object-fit:cover}
   .inicio-foto figcaption{margin-top:10px;font-size:13px;color:var(--tinta-suave)}
 }
-/* /viagens/ no celular: histórias, depoimentos e fotos da equipe em carrossel deslizante */
+/* /viagens/ no celular: histórias, depoimentos e fotos da equipe em carrossel deslizante.
+   Cada item é um cartão; do próximo aparece só um filete da foto, para indicar que desliza. */
 .carrossel-pontos{display:none}
 @media (max-width:760px){
- .casos,.depoimentos,.vividos-trilho{display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:clamp(22px,5vw,36px);gap:14px;margin-inline:calc(-1*clamp(22px,5vw,36px));padding:0 clamp(22px,5vw,36px) 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .casos,.depoimentos,.vividos-trilho{--borda:clamp(22px,5vw,36px);display:flex!important;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:var(--borda);gap:12px;margin-inline:calc(-1*var(--borda));padding:0 var(--borda) 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:none!important;border:0!important}
  .casos::-webkit-scrollbar,.depoimentos::-webkit-scrollbar,.vividos-trilho::-webkit-scrollbar{display:none}
- .casos>.caso,.depoimentos>.depo{flex:0 0 84%;scroll-snap-align:start}
- .depoimentos{background:none!important;border:0!important}
- .vividos-trilho{margin-inline:0;padding:0 clamp(22px,5vw,36px) 4px}
- .vividos-trilho>.wrap{flex:0 0 86%;scroll-snap-align:start;margin-top:0!important;display:grid;grid-template-columns:1fr;align-content:start;padding:0!important}
- #vividos .figura{order:-1;max-height:none!important;aspect-ratio:4/3!important}
+ .casos>.caso,.depoimentos>.depo,.vividos-trilho>.wrap{flex:0 0 calc(100vw - var(--borda) - 30px);scroll-snap-align:start}
+ .depoimentos>.depo{border:1px solid var(--linha)}
+ .vividos-trilho{margin-inline:0;padding-inline:var(--borda)}
+ .vividos-trilho>.wrap{margin-top:0!important;display:flex!important;flex-direction:column;align-items:stretch!important;padding:0 0 26px!important;background:var(--creme);border:1px solid var(--linha);max-width:none}
+ .vividos-trilho>.wrap>div:not(.figura){padding:0 22px}
+ .vividos-trilho .figura{max-height:none!important;aspect-ratio:4/3!important;margin-bottom:22px}
+ .vividos-trilho .figura{order:-1}
+ .casos .galeria-pontos,.vividos-trilho .galeria-pontos{display:none}
  .carrossel-pontos{display:flex;justify-content:center;gap:2px;margin-top:16px}
  .carrossel-pontos button{width:28px;height:28px;border:0;padding:0;background:none;cursor:pointer;display:grid;place-items:center}
  .carrossel-pontos button::before{content:'';width:8px;height:8px;border-radius:4px;background:rgba(25,56,38,.28);transition:width .3s,background .3s}
@@ -627,25 +631,9 @@ ol.prateleira,ol.jornada,ul.servicos{list-style:none}
 @media (max-width:639px){#servicos .servicos{grid-template-columns:1fr}}
 @media (max-width:760px){.por-tras ul{grid-template-columns:1fr}.cond-gestao{padding:24px 22px}}
 
-/* Fase 3: sem enfeites (sombras, gradientes, linhas finas, caixas desenhadas, anéis, estrelinhas, ícones e rótulos em caixa alta) */
-.olho{text-transform:none;letter-spacing:normal;font-weight:500}
-.caso{border-color:transparent}
-.caso-rot{text-transform:none;letter-spacing:normal;font-weight:500}
-.depoimentos{border-color:transparent}
-.depo cite{text-transform:none;letter-spacing:normal;font-weight:500}
-.nota-google a{text-transform:none;letter-spacing:normal;font-weight:500}
-.prateleira{border-top-color:transparent}
-.etapa{border-bottom-color:transparent}
-.passo{border-top-color:transparent}
-.cond-gestao{border-color:transparent;background-color:rgba(235,224,196,.07)}
+/* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 .cond-gestao li::before{content:"•"}
 .por-tras li::before{content:"•"}
-.por-tras li{border-bottom-color:transparent}
-.objecao{border-color:transparent;background-color:rgba(235,224,196,.07)}
-.servicos{border-color:transparent}
-.link-texto{text-transform:none;letter-spacing:normal;font-weight:500}
-footer h2{text-transform:none;letter-spacing:normal;font-weight:500}
-.rodape-base{border-top-color:transparent}
 .servico svg{display:none}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
@@ -737,9 +725,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 /* espaço para o botão flutuante do WhatsApp não cobrir os últimos links */
 @media(max-width:600px){.mk-rodape .rodape-base{padding-bottom:84px}}
 
-/* Fase 3: sem enfeites (sombras, gradientes, linhas finas, caixas desenhadas, anéis, estrelinhas, ícones e rótulos em caixa alta) */
-.mk-rodape h2{text-transform:none;letter-spacing:normal;font-weight:500}
-.mk-rodape .rodape-base{border-top-color:transparent}
+/* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
 </head>
 <body>
