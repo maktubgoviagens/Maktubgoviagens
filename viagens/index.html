@@ -576,6 +576,7 @@ footer a:hover{color:var(--creme)}
 .fecho .acoes{justify-content:center}
 /* legibilidade: botões maiores sem quebrar linha no celular */
 @media(max-width:480px){.btn{padding:0 22px;letter-spacing:.13em}}
+.sub-depo{margin-top:var(--e6)}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
@@ -694,6 +695,11 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
 <main id="conteudo">
  
 <!-- ===================== VIAGENS =====================
+     Clientes da alfaiataria de viagens da Maktub Go.
+     Para incluir uma família: copie um <article class="caso"> inteiro e troque
+     a foto (arquivo em /ativos/), o lugar, o título e o texto. Para várias fotos
+     se alternando no mesmo quadro, use o modelo de Gramado (classe figura-alterna).
+     A mesma história pode ir também para a seção "Quem já viajou com a gente" da home.
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
 <section class="secao primeira" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
@@ -772,6 +778,28 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       </article>
  
     </div>
+ 
+    <!-- Depoimentos de clientes da alfaiataria. Para incluir um, copie um <figure class="depo">. -->
+    <h2 class="sub-depo" id="t-depo">O que dizem<em>depois do retorno.</em></h2>
+    <div class="depoimentos">
+      <figure class="depo">
+        <blockquote>Mais do que a organização e o profissionalismo, chamou minha atenção o cuidado nos detalhes, a atenção dedicada e a sutileza do servir. Esses gestos fazem toda a diferença para as famílias.</blockquote>
+        <cite>Maria Teresa, Ouro Preto</cite>
+      </figure>
+      <figure class="depo">
+        <blockquote>Tornaram meu sonho em realidade. Escolhi Gramado para comemorar meu aniversário e foi incrível a experiência. (...) Amei ainda mais a surpresa que ajudaram meu esposo a fazer para mim no quarto. (...) Passamos zero stress na viagem, e ele nos acompanhou do início ao fim, até chegarmos em casa literalmente.</blockquote>
+        <cite>Rhaissa Siqueira, Gramado</cite>
+      </figure>
+      <figure class="depo">
+        <blockquote>Atendimento nota 1000! A equipe é incrível e super prestativa. Podem ir sem medo, recomendo demais!</blockquote>
+        <cite>Luara Gusmão, avaliação no Google</cite>
+      </figure>
+      <figure class="depo">
+        <blockquote>Excelente, profissional, amorosa, dedicada, resumindo: só primores. Só me resta é agradecer por tudo que recebi.</blockquote>
+        <cite>Maria Eugenia, avaliação no Google</cite>
+      </figure>
+    </div>
+    <p class="nota-google"><a href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener">Ver todas as avaliações no Google</a></p>
   </div>
 </section>
  
@@ -819,7 +847,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
     <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="/#contato">Planejar minha viagem</a>
+      <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
       <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
     </div>
   </div>

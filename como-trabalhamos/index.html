@@ -583,6 +583,7 @@ footer a:hover{color:var(--creme)}
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
 </script>
 <!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
 <script>
@@ -770,9 +771,9 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
       <article class="servico servico-destaque">
         <span class="selo">Serviço exclusivo</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.4 6.2L12 17l-5.6 3 1.4-6.2L3 9.5l6.4-.7Z"/></svg>
-        <h3>Gestão de milhas concierge</h3>
-        <p>Acompanhamento do seu patrimônio de milhas o ano inteiro, com painel privado e reunião mensal com seu gestor.</p>
-        <a class="link-texto" href="/gestao-de-milhas/">Conhecer a gestão</a>
+        <h3>Gestão de Milhas Maktub Go</h3>
+        <p>Uma equipe cuidando dos seus pontos e milhas o ano inteiro, com painel privado e reunião mensal.</p>
+        <a class="link-texto" href="/diagnostico/" data-diagnostico="como_trabalhamos_card">Quero meu diagnóstico</a>
       </article>
  
       <article class="servico">
@@ -828,7 +829,7 @@ footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 2
     <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
     <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
     <div class="acoes" style="margin-top:var(--e4)">
-      <a class="btn btn-ouro" href="/#contato">Planejar minha viagem</a>
+      <a class="btn btn-ouro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
       <a class="btn btn-claro" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Falar no WhatsApp</a>
     </div>
   </div>

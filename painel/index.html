@@ -782,7 +782,7 @@
       <div class="sb-avatar" id="avatarUser">··</div>
       <div class="sb-user">
         <div class="name" id="nameUser">Carregando...</div>
-        <div class="role">Cliente Concierge</div>
+        <div class="role">Cliente da Gestão</div>
       </div>
       <button class="sb-logout" id="btnLogout" title="Sair">
         <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -993,8 +993,8 @@
       <div class="club">
         <div class="club-hero">
           <div class="k">Clube Maktub</div>
-          <h3>Um círculo <em>por convite.</em></h3>
-          <p>A Gestão de Milhas Concierge atende um número restrito de clientes. Como cliente, você pode indicar pessoas próximas. Cada indicação é tratada pessoalmente pelo seu gestor, com toda a discrição.</p>
+          <h3>Indique pessoas <em>próximas.</em></h3>
+          <p>Como cliente da Gestão de Milhas Maktub Go, você pode indicar pessoas próximas. Cada indicação é tratada pessoalmente pela nossa equipe, com toda a discrição.</p>
           <div class="club-count"><div class="n" id="convCount">0</div><div class="l" id="convCountLbl">convites disponíveis</div></div>
         </div>
         <div>
@@ -1033,7 +1033,7 @@
         <div class="form-card" id="meetDone" hidden>
           <h3>Sua reunião do mês <em id="meetDoneEst">está reservada</em></h3>
           <p id="meetDoneTxt"></p>
-          <p id="meetDoneRegra">Cada cliente Concierge tem direito a uma reunião mensal com o gestor. Cancelamentos com 24 horas ou mais de antecedência liberam um novo horário na hora. Com menos de 24 horas, é preciso informar o motivo.</p>
+          <p id="meetDoneRegra">Cada cliente da gestão tem direito a uma reunião mensal com o gestor. Cancelamentos com 24 horas ou mais de antecedência liberam um novo horário na hora. Com menos de 24 horas, é preciso informar o motivo.</p>
           <div class="meet-actions">
             <button type="button" class="btn-line cancel" id="meetDoneCancel" hidden>Preciso remarcar ou cancelar</button>
             <a class="btn-line" id="meetDoneWa" target="_blank" rel="noopener" href="#">Falar com seu gestor</a>
@@ -1041,7 +1041,7 @@
         </div>
         <div class="cal-box" id="calBox" hidden>
           <h3>Agenda de <em id="calGestor">seu gestor</em></h3>
-          <div class="scarce"><span class="dot"></span>Agenda restrita a clientes Concierge: poucos horários por dia, uma reunião por mês. Os horários exibidos são os disponíveis neste momento.</div>
+          <div class="scarce"><span class="dot"></span>Agenda restrita a clientes da gestão: poucos horários por dia, uma reunião por mês. Os horários exibidos são os disponíveis neste momento.</div>
           <div id="calInline"></div>
         </div>
         <form class="form-card" id="meetForm" novalidate>
@@ -2062,7 +2062,7 @@
       lista.unshift(data);
       await renderConvites(lista);
       const link = `${location.origin}/gestao-de-milhas/?convite=${encodeURIComponent(CLIENTE.nome_completo || '')}#convite`;
-      const texto = `${firstName(nome)}, indiquei você para a Gestão de Milhas Concierge da Maktub Go, que é por convite. A equipe vai entrar em contato. Se preferir, solicite por aqui: ${link}`;
+      const texto = `${firstName(nome)}, indiquei você para a Gestão de Milhas Maktub Go. A equipe vai entrar em contato. Se preferir, peça seu diagnóstico por aqui: ${link}`;
       msg.className = 'form-msg ok';
       msg.innerHTML = `Indicação registrada. Nossa equipe fará um contato cuidadoso com <strong>${escapeHtml(firstName(nome))}</strong>, em seu nome.` +
         (digits(whatsapp).length >= 10 ? `<br><a class="btn-line" target="_blank" rel="noopener" href="https://wa.me/${digits(whatsapp).length <= 11 ? '55' : ''}${digits(whatsapp)}?text=${encodeURIComponent(texto)}">Avisar ${escapeHtml(firstName(nome))} pelo WhatsApp</a>` : '');

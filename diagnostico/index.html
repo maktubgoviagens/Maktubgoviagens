@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico gratuito de milhas | Maktub Go</title>
+<meta name="description" content="Peça o diagnóstico gratuito da Gestão de Milhas Maktub Go. Em uma chamada, nossa equipe conhece seus gastos e seus planos de viagem e apresenta a proposta.">
+<meta name="theme-color" content="#1a3826">
+<link rel="canonical" href="https://www.maktubgo.com.br/diagnostico/">
+<link rel="icon" href="/ativos/simbolo-verde.png">
+<link rel="apple-touch-icon" href="/ativos/simbolo-verde.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Maktub Go">
+<meta property="og:url" content="https://www.maktubgo.com.br/diagnostico/">
+<meta property="og:title" content="Diagnóstico gratuito de milhas | Maktub Go">
+<meta property="og:description" content="Diagnóstico gratuito por chamada. Uma equipe cuidando dos seus pontos e milhas o ano inteiro.">
+<meta property="og:image" content="https://www.maktubgo.com.br/ativos/og-maktubgo.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+ {"@type":"ListItem","position":1,"name":"Início","item":"https://www.maktubgo.com.br/"},
+ {"@type":"ListItem","position":2,"name":"Diagnóstico","item":"https://www.maktubgo.com.br/diagnostico/"}]}
+</script>
+<link rel="stylesheet" href="/diagnostico/formulario.css">
+<style>
+:root{--verde:#1a3826;--dourado:#8a6520;--dourado-texto:#75551a;--dourado-claro:#c9a96e;--creme:#f9f6f1;--creme-fundo:#f2ece1;--tinta:#2b2b26;--tinta-suave:rgba(43,43,38,.82)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--creme-fundo);color:var(--tinta);font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-weight:300;font-size:1rem;line-height:1.7;-webkit-font-smoothing:antialiased}
+.pular{position:absolute;left:-9999px;top:0;z-index:2000;background:var(--verde);color:var(--creme);padding:14px 22px}
+.pular:focus{left:12px;top:12px}
+:focus-visible{outline:2px solid var(--dourado);outline-offset:3px}
+.diag{max-width:1120px;margin:0 auto;padding:clamp(104px,14vw,150px) clamp(20px,5vw,36px) clamp(64px,8vw,104px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"texto form" "seg form";grid-template-rows:auto 1fr;gap:28px clamp(40px,6vw,80px);align-items:start}
+.diag-texto{grid-area:texto}
+.diag-form{grid-area:form}
+.diag-seg{grid-area:seg}
+h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:300;font-size:clamp(2.4rem,5.4vw,3.8rem);line-height:1.06;color:var(--verde);text-wrap:balance}
+h1 em{display:block;font-style:italic;color:var(--dourado-texto)}
+.diag-gratis{margin-top:18px;font-size:1.0625rem;font-weight:500;color:var(--verde)}
+.diag-depois{margin-top:12px;font-size:1.0625rem;color:var(--tinta-suave);max-width:46ch}
+.diag-seg{background:var(--verde);color:rgba(249,246,241,.86);padding:26px 28px}
+.diag-seg h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;font-size:1.6rem;line-height:1.2;color:var(--creme)}
+.diag-seg h2 em{font-style:italic;color:var(--dourado-claro)}
+.diag-seg ul{list-style:none;display:grid;gap:10px;margin-top:14px;font-size:.9375rem;line-height:1.55}
+.diag-seg li{padding-left:18px;position:relative}
+.diag-seg li::before{content:'';position:absolute;left:0;top:.62em;width:6px;height:6px;background:var(--dourado-claro)}
+.diag-seg a{color:var(--dourado-claro)}
+@media (max-width:860px){
+  .diag{grid-template-columns:1fr;grid-template-areas:"texto" "form" "seg";padding-top:96px;gap:22px}
+  .diag-gratis{margin-top:10px}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+</style>
+<!-- Google Analytics 4: visitas, cliques no WhatsApp, cliques nos botões de diagnóstico e diagnósticos enviados -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-diagnostico]');if(a)gtag('event','clique_diagnostico',{local:a.getAttribute('data-diagnostico'),pagina:location.pathname,transport_type:'beacon'});},true);
+</script>
+<!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
+<script>
+/* Equipe Maktub fora do Clarity: aparelho marcado pelo app da operação (ou ?equipe=1) não é gravado. ?equipe=0 desfaz. */
+(function(){var equipe=false;try{var q=location.search;if(/[?&]equipe=0/.test(q))localStorage.removeItem('maktub_equipe');else if(/[?&]equipe=1/.test(q)||/maktubgo\.com\.br\/(admin\/|acesso\/app)/.test(document.referrer))localStorage.setItem('maktub_equipe','1');equipe=localStorage.getItem('maktub_equipe')==='1';}catch(e){}if(equipe)return;
+(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m")
+})();
+</script>
+<style id="mk-topo-css">
+/* TOPO padrão (igual à página Gestão de Milhas) */
+header.mk-topo{position:fixed;top:0;left:0;right:0;bottom:auto;z-index:1000;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(26,56,38,.09);transition:box-shadow .3s;font-family:'Jost',sans-serif;line-height:1.8}
+header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(26,56,38,.07);border-bottom-color:rgba(26,56,38,.09)}
+.mk-topo *{box-sizing:border-box;margin:0;padding:0}
+.mk-topo a{color:inherit;text-decoration:none}
+.mk-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1320px;margin:0 auto;padding:0 32px}
+.mk-logo{display:flex;align-items:center;gap:12px;margin-right:48px;flex-shrink:0}
+.mk-logo-img{width:42px;height:32px;object-fit:contain;display:block}
+.mk-logo-text{display:flex;flex-direction:column;line-height:1.2}
+.mk-logo-name{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#1a3826}
+.mk-logo-sub{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#5c5c5c}
+.mk-links{display:flex;align-items:center;gap:32px;list-style:none}
+.mk-links a{white-space:nowrap;font-size:12px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
+.mk-links a:hover{color:#1a3826}
+.mk-links a.mk-ouro{color:#8a6520}
+.mk-links a.mk-cta{border:1px solid rgba(138,101,32,.45);padding:9px 20px;color:#1a3826;font-weight:500;transition:background .25s,border-color .25s}
+.mk-links a.mk-cta:hover{background:rgba(138,101,32,.10);border-color:#8a6520}
+.mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+.mk-burger span{display:block;width:22px;height:1.5px;background:#1a3826}
+@media(max-width:1240px){
+  .mk-links{display:none}
+  .mk-links[data-aberto="true"]{display:flex;flex-direction:column;position:fixed;top:68px;left:0;right:0;background:#fff;border-bottom:1px solid rgba(26,56,38,.09);padding:24px 36px;gap:18px;z-index:999}
+  .mk-burger{display:flex}
+}
+@media print{header.mk-topo{display:none}}
+</style>
+<style id="mk-rodape-css">
+/* RODAPÉ padrão */
+footer.mk-rodape{background:#1a3826;color:rgba(249,246,241,.78);padding:56px 0 28px;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;line-height:1.6;text-align:left}
+.mk-rodape *{box-sizing:border-box;margin:0;padding:0}
+.mk-rodape .mk-wrap{max-width:1180px;margin-inline:auto;padding-inline:clamp(22px,5vw,36px)}
+.mk-rodape .rodape-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:clamp(28px,4vw,48px)}
+.mk-rodape .rodape-marca img{width:36px;height:auto;margin-bottom:14px;display:block}
+.mk-rodape .rodape-marca p{font-size:.875rem;max-width:30ch;color:rgba(249,246,241,.8)}
+.mk-rodape h2{font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:.75rem;font-weight:400;letter-spacing:.19em;text-transform:uppercase;color:#c9a96e;margin-bottom:14px;line-height:1.4}
+.mk-rodape ul{list-style:none;display:grid;gap:4px}
+.mk-rodape a{font-size:.875rem;text-decoration:none;color:rgba(249,246,241,.9);padding-block:2px;display:inline-block;letter-spacing:normal;text-transform:none}
+.mk-rodape a:hover{color:#f9f6f1}
+.mk-rodape .rodape-base{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px 24px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(249,246,241,.15);font-size:.875rem;color:rgba(249,246,241,.8)}
+.mk-rodape .rodape-base a{font-size:inherit;color:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
+.mk-rodape .rodape-legal{display:flex;gap:18px;flex-wrap:wrap}
+.mk-rodape .rodape-legal a{text-decoration:none}
+.mk-rodape .rodape-legal a:hover{color:#f9f6f1}
+@media (max-width:900px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr 1fr}.mk-rodape .rodape-marca{grid-column:1/-1}}
+@media (max-width:560px){.mk-rodape .rodape-grid{grid-template-columns:1fr 1fr;gap:28px 20px}.mk-rodape .rodape-grid>div:last-child{grid-column:1/-1}}
+@media print{footer.mk-rodape{display:none}}
+/* espaço para o botão flutuante do WhatsApp não cobrir os últimos links */
+@media(max-width:600px){.mk-rodape .rodape-base{padding-bottom:84px}}
+</style>
+</head>
+<body>
+ 
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+ 
+<header class="mk-topo" id="navbar">
+  <div class="mk-inner">
+    <a class="mk-logo" href="/" aria-label="Maktub Go, página inicial">
+      <img src="/ativos/simbolo-verde.png" alt="Maktub Go" class="mk-logo-img">
+      <span class="mk-logo-text">
+        <span class="mk-logo-name">Maktub Go</span>
+        <span class="mk-logo-sub">Alfaiataria de Viagens</span>
+      </span>
+    </a>
+    <ul class="mk-links" id="menu" aria-label="Principal">
+      <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
+      <li><a href="/viagens/">Viagens</a></li>
+      <li><a href="/quem-somos/">Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+      <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
+    </ul>
+    <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
+  </div>
+</header>
+ 
+<main id="conteudo">
+<section class="diag" aria-labelledby="t-diag">
+  <div class="diag-texto">
+    <h1 id="t-diag">Vamos conversar<em>sobre os seus pontos.</em></h1>
+    <p class="diag-gratis">Diagnóstico gratuito por chamada</p>
+    <p class="diag-depois">Depois do envio, nossa equipe chama você no WhatsApp para marcar a chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem e, se a gestão fizer sentido para você, apresentamos a proposta.</p>
+  </div>
+  <div class="diag-form">
+    <!-- Formulário de diagnóstico: o mesmo em /diagnostico/, na home e na gestão (script e estilo em /diagnostico/). -->
+    <form class="fd fd--claro" id="formDiagnostico" novalidate>
+      <div class="fd-campo">
+        <label for="fdNome">Nome</label>
+        <input id="fdNome" name="nome" type="text" maxlength="120" autocomplete="name" required>
+      </div>
+      <div class="fd-campo">
+        <label for="fdWhats">WhatsApp</label>
+        <input id="fdWhats" name="whatsapp" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="(21) 99999-9999" required>
+      </div>
+      <div class="fd-campo">
+        <label for="fdGasto">Gasto mensal nos cartões</label>
+        <select id="fdGasto" name="gasto_mensal" required><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+      </div>
+      <details class="fd-opcionais" id="fdOpcionais">
+        <summary>Quer adiantar mais informações? (opcional)</summary>
+        <div class="fd-opcionais-corpo">
+          <div class="fd-campo">
+            <label for="fdEmail">E-mail</label>
+            <input id="fdEmail" name="email" type="email" inputmode="email" maxlength="160" autocomplete="email" spellcheck="false">
+          </div>
+          <div class="fd-campo">
+            <label for="fdPix">Movimentação mensal via Pix</label>
+            <select id="fdPix" name="movimentacao_pix" aria-describedby="fdPixAjuda"><option value="">Selecione</option><option>Até R$ 20 mil</option><option>De R$ 20 mil a R$ 50 mil</option><option>De R$ 50 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select>
+            <p class="fd-ajuda" id="fdPixAjuda">Essa informação ajuda nossa equipe a avaliar o seu potencial de acúmulo de pontos.</p>
+          </div>
+          <div class="fd-campo">
+            <label for="fdProg">Programas que usa</label>
+            <input id="fdProg" name="programas" type="text" maxlength="300" placeholder="Ex.: Latam Pass, Smiles, Livelo">
+          </div>
+          <div class="fd-campo">
+            <label for="fdComo">Como nos conheceu?</label>
+            <select id="fdComo" name="como_conheceu"><option value="">Selecione</option><option>Google</option><option>Instagram</option><option>Indicação</option><option>Inteligência artificial (ChatGPT, Gemini etc.)</option><option>Outro</option></select>
+          </div>
+          <div class="fd-campo" id="fdCampoInd" hidden>
+            <label for="fdInd">Quem indicou?</label>
+            <input id="fdInd" name="indicado_por" type="text" maxlength="120">
+          </div>
+        </div>
+      </details>
+      <div class="fd-hp" aria-hidden="true"><label for="fdSite">Site</label><input id="fdSite" name="site" tabindex="-1" autocomplete="off"></div>
+      <button type="submit" class="fd-botao" id="fdBotao">Quero meu diagnóstico</button>
+      <p class="fd-nota">Sem compromisso. Você só avança se a proposta fizer sentido para você.</p>
+      <div class="fd-msg" id="fdMsg" role="status" aria-live="polite"></div>
+      <p class="fd-lgpd">Ao enviar, você concorda com a nossa <a href="/privacidade/">Política de Privacidade</a>.</p>
+    </form>
+  </div>
+  <!-- Bloco de segurança resumido. A versão completa está na home e na gestão. -->
+  <aside class="diag-seg" aria-labelledby="t-seg">
+    <h2 id="t-seg">Seus dados, <em>guardados com cuidado.</em></h2>
+    <ul>
+      <li>As informações confidenciais da sua gestão ficam em um cofre digital criptografado, com acesso restrito à equipe responsável pela sua carteira.</li>
+      <li>Nada disso circula por WhatsApp, e-mail ou planilha.</li>
+      <li>A gestão é feita com contrato, que trata os seus dados conforme a LGPD, como descrito na nossa <a href="/privacidade/">Política de Privacidade</a>.</li>
+    </ul>
+  </aside>
+</section>
+</main>
+ 
+<footer class="mk-rodape">
+  <div class="mk-wrap">
+    <div class="rodape-grid">
+      <div class="rodape-marca">
+        <img src="/ativos/simbolo-creme.png" alt="Maktub Go" width="40" height="40" loading="lazy">
+        <p>Gestão de milhas e alfaiataria de viagens. Seus pontos viram viagens inteiras.</p>
+      </div>
+      <div>
+        <h2>Navegar</h2>
+        <ul>
+          <li><a href="/quem-somos/">Quem somos</a></li>
+          <li><a href="/como-trabalhamos/">Como trabalhamos</a></li>
+          <li><a href="/viagens/">Viagens</a></li>
+          <li><a href="/quem-somos/#time">O time</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Serviços</h2>
+        <ul>
+          <li><a href="/gestao-de-milhas/">Gestão de milhas</a></li>
+          <li><a href="/classe-executiva-com-milhas/">Executiva com milhas</a></li>
+          <li><a href="/corporativo/">Maktub Corporativo</a></li>
+          <li><a href="/como-trabalhamos/#contratacao">Como contratar</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Contato</h2>
+        <ul>
+          <li><a href="https://wa.me/5521976275225" target="_blank" rel="noopener">(21) 97627-5225</a></li>
+          <li><a href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a></li>
+          <li><a href="https://www.instagram.com/maktubgo_" target="_blank" rel="noopener">Instagram @maktubgo_</a></li>
+          <li><a href="/acesso/">Acesso cliente</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="rodape-base">
+      <span>© 2026 Maktub Go Agência de Viagens Ltda · CNPJ e Cadastur 64.284.471/0001-51 · <a href="/ativos/certificado-cadastur.pdf" target="_blank" rel="noopener">Certificado Cadastur</a></span>
+      <span class="rodape-legal"><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos de Uso</a><a href="/trabalheconosco/">Trabalhe conosco</a></span>
+    </div>
+  </div>
+</footer>
+ 
+<script>
+/* menu em telas menores */
+const btn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+btn.addEventListener('click', function(){
+  const aberto = menu.dataset.aberto !== 'true';
+  menu.dataset.aberto = aberto;
+  btn.setAttribute('aria-expanded', aberto);
+  btn.setAttribute('aria-label', aberto ? 'Fechar menu' : 'Abrir menu');
+});
+menu.addEventListener('click', function(e){
+  if(e.target.tagName === 'A'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); }
+});
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
+});
+ 
+/* borda do cabeçalho ao rolar */
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 24);
+},{passive:true});
+</script>
+<script src="/diagnostico/formulario.js" defer></script>
+</body>
+</html>
