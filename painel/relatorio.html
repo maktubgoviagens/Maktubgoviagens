@@ -63,6 +63,9 @@
     td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
     .r{text-align:right;white-space:nowrap}
     .mute{color:var(--muted);font-size:12px}
+    .aviso-valor{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
+    .nota-pontos{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:4px}
+    .kpi.hl .nota-pontos{color:rgba(249,246,241,.72)}
     .strike{text-decoration:line-through;color:var(--muted)}
     .eco{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--green);font-weight:600}
     .tag{display:inline-block;font-size:8px;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--border);padding:2px 6px;color:var(--mid);margin-right:6px}
@@ -176,6 +179,7 @@
     const ecoMes = economias.filter(r => String(r.data) >= ini);
     const ecoAno = economias.filter(r => String(r.data) >= anoIni);
     const sum = (a) => a.reduce((s, r) => s + ecoValor(r), 0);
+    const notaPts = (a) => a.some(r => (r.categoria === 'acumulo' || r.categoria === 'cartao') && ecoValor(r) > 0) ? '<span class="nota-pontos" data-nota-pontos>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</span>' : '';
     const saldoMes = (k) => saldos.filter(r => String(r.mes).slice(0, 7) === k);
     const totMes = (k) => saldoMes(k).reduce((s, r) => s + Number(r.saldo || 0), 0);
     let saldoAtual = totMes(mes), fonteSaldo = 'fechamento do mês';
@@ -239,10 +243,10 @@
         <section>
           <h2>Resumo do mês</h2>
           <div class="kpis">
-            <div class="kpi hl"><div class="l">Economia no mês</div><div class="v"><small>R$</small>${brl(sum(ecoMes))}</div><div class="s">${ecoMes.length} ${ecoMes.length === 1 ? 'ganho registrado' : 'ganhos registrados'}</div></div>
-            <div class="kpi"><div class="l">Economia no ano</div><div class="v"><small>R$</small>${brl(sum(ecoAno))}</div><div class="s">Acumulado em ${mes.slice(0, 4)}</div></div>
-            <div class="kpi"><div class="l">Desde o início</div><div class="v"><small>R$</small>${brl(sum(economias))}</div><div class="s">Economia total da gestão</div></div>
-            <div class="kpi"><div class="l">Carteira de milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${temRef ? 'Equivale a ' + brl2(patrMes) : fonteSaldo}</div></div>
+            <div class="kpi hl"><div class="l">Economia no mês</div><div class="v"><small>R$</small>${brl(sum(ecoMes))}</div><div class="s">${ecoMes.length} ${ecoMes.length === 1 ? 'ganho registrado' : 'ganhos registrados'}${notaPts(ecoMes)}</div></div>
+            <div class="kpi"><div class="l">Economia no ano</div><div class="v"><small>R$</small>${brl(sum(ecoAno))}</div><div class="s">Acumulado em ${mes.slice(0, 4)}${notaPts(ecoAno)}</div></div>
+            <div class="kpi"><div class="l">Desde o início</div><div class="v"><small>R$</small>${brl(sum(economias))}</div><div class="s">Economia total da gestão${notaPts(economias)}</div></div>
+            <div class="kpi"><div class="l">Carteira de milhas</div><div class="v">${compact(saldoAtual)}</div><div class="s">${temRef ? 'Equivale a ' + brl2(patrMes) + '<span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>' : fonteSaldo}</div></div>
             <div class="kpi"><div class="l">Variação no mês</div><div class="v ${variacao > 0 ? 'up' : variacao < 0 ? 'down' : ''}">${variacao === null ? '·' : (variacao > 0 ? '+' : variacao < 0 ? '−' : '') + compact(Math.abs(variacao))}</div><div class="s">${variacao === null ? 'Sem fechamento do mês anterior' : 'Em relação a ' + MESES[Number(prevKey.slice(5)) - 1]}</div></div>
             <div class="kpi"><div class="l">Entradas / usadas</div><div class="v">${compact(entradas)} <small>/ ${compact(usadas)}</small></div><div class="s">Pontos que entraram e milhas usadas</div></div>
           </div>
@@ -262,7 +266,7 @@
         <section>
           <h2>Carteira de milhas</h2>
           ${chart}
-          ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th>${temRef ? '<th class="r">Em reais</th>' : ''}</tr></thead><tbody>${progRows}</tbody></table>` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
+          ${progRows ? `<table style="margin-top:14px"><thead><tr><th>Programa</th><th class="r">${MES_C[Number(prevKey.slice(5)) - 1]}</th><th class="r">${MES_C[Number(mes.slice(5)) - 1]}</th><th class="r">Variação</th>${temRef ? '<th class="r">Em reais</th>' : ''}</tr></thead><tbody>${progRows}</tbody></table>${temRef ? '<p class="aviso-valor" data-aviso-valor style="margin-top:8px">Em reais: Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</p>' : ''}` : (chart ? '' : '<div class="empty">Fechamento de saldos ainda não registrado para este mês.</div>')}
         </section>
  
         <section>
@@ -272,7 +276,7 @@
               ? (r.pontos_gerados ? '+ ' + num(r.pontos_gerados) + ' pts' : esc(r.observacao || ''))
               : (r.valor_mercado_brl ? `<span class="strike">${brl2(r.valor_mercado_brl)}</span><br><span class="mute">investiu ${brl2(r.valor_pago_brl)}</span>` : '');
               return `<tr><td class="mute">${brDate(r.data)}</td><td><span class="tag">${CAT[r.categoria] || 'Passagem'}</span>${esc(r.descricao)}${r.programa ? `<div class="mute">${esc(r.programa)}${r.milhas_utilizadas ? ' · ' + num(r.milhas_utilizadas) + ' milhas' : ''}</div>` : ''}</td><td class="r">${det}</td><td class="r"><span class="eco">${brl2(v)}</span></td></tr>`; }).join('')}
-          </tbody></table>` : '<div class="empty">Nenhuma economia registrada neste mês.</div>'}
+          </tbody></table>${ecoMes.some(r => (r.categoria === 'acumulo' || r.categoria === 'cartao') && r.pontos_gerados) ? '<p class="aviso-valor" data-aviso-valor style="margin-top:8px">Pontos de cartões e super acúmulo em reais: Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</p>' : ''}` : '<div class="empty">Nenhuma economia registrada neste mês.</div>'}
         </section>
  
         <section>

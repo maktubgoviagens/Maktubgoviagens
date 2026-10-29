@@ -107,6 +107,7 @@
     .h-amount .cur{font-size:30px;color:var(--gold);font-style:italic;margin-right:8px;font-weight:400;vertical-align:.9em;letter-spacing:0}
     .h-equiv .mi{color:var(--green);font-weight:500;font-family:'Cormorant Garamond',serif;font-size:22px}
     .h-note{display:block;font-size:11.5px;color:var(--text-muted);margin-top:4px}
+    .aviso-valor{display:block;font-size:11.5px;line-height:1.5;color:var(--text-muted);margin-top:8px;font-weight:300;font-style:normal;letter-spacing:normal;text-transform:none}
     .h-amount .u{font-size:24px;color:var(--text-muted);font-style:italic;margin-left:6px;font-weight:300}
     .h-equiv{color:var(--text-mid);font-size:14px;margin-bottom:28px;font-weight:300}
     .h-equiv strong{color:var(--gold);font-weight:500;font-family:'Cormorant Garamond',serif;font-size:17px;font-style:italic}
@@ -143,6 +144,8 @@
     .sav-headline p{font-size:13px;color:rgba(249,246,241,.65);line-height:1.55;font-weight:300}
     .sav-cell{text-align:center;padding:0 14px;border-left:1px solid rgba(201,169,110,.18)}
     .sav-cell .p span{color:var(--gold-warm)}
+    .sav-nota{font-size:11px;line-height:1.45;color:rgba(249,246,241,.72);margin-top:8px;font-weight:300}
+    .sav-nota[hidden]{display:none}
     .sav-cell .p{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(249,246,241,.5);margin-bottom:10px;font-weight:600}
     .sav-cell .a{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--gold-warm);font-weight:400;line-height:1;letter-spacing:-.01em}
     .sav-cell .a .c{font-size:14px;color:rgba(249,246,241,.55);font-style:italic;margin-right:3px;font-weight:300}
@@ -814,7 +817,7 @@
       <div class="heritage-total">
         <div class="blk-title">Carteira consolidada</div>
         <div class="h-amount num" id="patrimonioTotal">0<span class="u">milhas</span></div>
-        <div class="h-equiv" id="patrimonioEquiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro</div>
+        <div class="h-equiv" id="patrimonioEquiv">Equivalente estimado: <strong id="patrimonioBrl">R$ 0</strong> pelo valor de mercado do milheiro<span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span></div>
         <div class="h-trend">
           <div class="h-trend-item">
             <div class="l">Milhas no mês</div>
@@ -853,14 +856,17 @@
           <div class="sav-cell">
             <div class="p">No mês · <span id="ecoMesLbl"></span></div>
             <div class="a"><span class="c">R$</span><span id="ecoMes">0</span></div>
+            <div class="sav-nota" id="ecoMesNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
           <div class="sav-cell">
             <div class="p">No ano · <span id="ecoAnoLbl"></span></div>
             <div class="a"><span class="c">R$</span><span id="ecoAno">0</span></div>
+            <div class="sav-nota" id="ecoAnoNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
           <div class="sav-cell">
             <div class="p">Desde o início</div>
             <div class="a"><span class="c">R$</span><span id="ecoTotal">0</span></div>
+            <div class="sav-nota" id="ecoTotalNota" data-nota-pontos hidden>Inclui pontos de cartão convertidos pelo valor de referência do milheiro.</div>
           </div>
         </div>
       </div>
@@ -1243,7 +1249,7 @@
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + (programas.some(p => p.patrimonio_brl !== null && p.patrimonio_brl !== undefined && Number(p.saldo) > 0) ? '<div class="aviso-valor" data-aviso-valor style="margin-top:14px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</div>' : '');
   }
  
   function renderCartoes(cartoes) {
@@ -1571,7 +1577,7 @@
         <td class="r">${Number(p.custo_medio_milheiro) === 0 ? '100% orgânico' : brl(p.custo_medio_milheiro)}</td>${temPat ? `<td class="r">${brl(p.patrimonio_brl)}</td>` : ''}</tr>`).join('')}
       <tr><td><strong>Total</strong></td><td class="r"><strong>${n(saldo)}</strong></td><td class="r">${n(tot('qtd_herdado'))}</td><td class="r">${n(tot('qtd_organico'))}</td><td class="r">${n(tot('qtd_pago'))}</td>
         <td class="r"><strong>${saldo > 0 ? brl(custo / saldo * 1000) : ''}</strong></td>${temPat ? `<td class="r"><strong>${brl(tot('patrimonio_brl'))}</strong></td>` : ''}</tr>
-      </tbody></table><div class="mute" style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Custo médio por milheiro (1.000 milhas). Orgânico: cartão, parceiros e bônus, sem custo. Comprado: pontos adquiridos, pelo valor pago.</div>`;
+      </tbody></table><div class="mute" style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Custo médio por milheiro (1.000 milhas). Orgânico: cartão, parceiros e bônus, sem custo. Comprado: pontos adquiridos, pelo valor pago.${temPat ? '<span class="aviso-valor" data-aviso-valor>Equivalente estimado: Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>' : ''}</div>`;
   }
  
   // ===== Histórico de economias =====
@@ -1629,7 +1635,7 @@
         </div>
         <div class="eco-v"><span class="c">R$</span>${fmtMoney(v)}</div>
       </div>`;
-    }).join('') : '<div class="empty-list">As economias aparecem aqui item a item: passagens, pontos de cartões e super acúmulos, e cashback.</div>';
+    }).join('') + (rows.some(r => ecoCat(r) === 'acumulo' && r.pontos_gerados && ecoValor(r)) ? '<div class="aviso-valor" data-aviso-valor style="margin-top:14px">Pontos de cartões e super acúmulo em reais: Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</div>' : '') : '<div class="empty-list">As economias aparecem aqui item a item: passagens, pontos de cartões e super acúmulos, e cashback.</div>';
   }
  
   function renderEconomias(rows) {
@@ -1643,7 +1649,7 @@
     $('ecoKpis').innerHTML = [
       ['Economia total', total, `${plural(rows.length, 'ganho registrado', 'ganhos registrados')} desde o início`, true, ''],
       ['Passagens', tot.emissao, plural(qtd.emissao, 'emissão com milhas', 'emissões com milhas'), false, 'emissao'],
-      ['Cartões e super acúmulo', pontos, tot.acumulo ? `Equivale a ${money2(tot.acumulo)} pelo valor do milheiro` : plural(qtd.acumulo, 'acúmulo registrado', 'acúmulos registrados'), false, 'acumulo', 'pts'],
+      ['Cartões e super acúmulo', pontos, tot.acumulo ? `Equivale a ${money2(tot.acumulo)} pelo valor do milheiro<span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>` : plural(qtd.acumulo, 'acúmulo registrado', 'acúmulos registrados'), false, 'acumulo', 'pts'],
       ['Cashback', tot.cashback, plural(qtd.cashback, 'cashback recebido', 'cashbacks recebidos'), false, 'cashback']
     ].map(([l, v, s, hl, cat, un]) => `<div class="kpi ${hl ? 'hl' : 'kpi-link'}" ${cat ? `data-ecocat="${cat}" role="button" tabindex="0" title="Ver detalhes"` : ''}>
         <div class="l">${l}</div><div class="v">${un === 'pts' ? `${fmtNum(v)}<span class="c" style="margin:0 0 0 6px">pontos</span>` : `<span class="c">R$</span>${fmtMoney(v)}`}</div><div class="s">${s}</div></div>`).join('');
@@ -1905,7 +1911,9 @@
   function renderEconomiaResumo(rows) {
     const now = new Date(), mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, yk = String(now.getFullYear());
     let mes = 0, ano = 0, total = 0;
-    rows.forEach(r => { const v = ecoValor(r), d = String(r.data || ''); total += v; if (d.startsWith(yk)) ano += v; if (d.startsWith(mk)) mes += v; });
+    const pts = { mes: false, ano: false, total: false };
+    rows.forEach(r => { const v = ecoValor(r), d = String(r.data || ''), p = ecoCat(r) === 'acumulo' && v > 0; total += v; if (p) pts.total = true; if (d.startsWith(yk)) { ano += v; if (p) pts.ano = true; } if (d.startsWith(mk)) { mes += v; if (p) pts.mes = true; } });
+    $('ecoMesNota').hidden = !pts.mes; $('ecoAnoNota').hidden = !pts.ano; $('ecoTotalNota').hidden = !pts.total;
     $('ecoMes').textContent = fmtMoney(mes);
     $('ecoAno').textContent = fmtMoney(ano);
     $('ecoTotal').textContent = fmtMoney(total);
@@ -2383,7 +2391,7 @@
       const heroReais = patrBrl > 0;
       if (heroReais) {
         $('patrimonioTotal').innerHTML = `<span class="cur">R$</span>${fmtMoney(patrBrl)}`;
-        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira<span class="h-note">Estimativa pelo valor de mercado do milheiro de cada programa</span>`;
+        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira<span class="h-note">Estimativa pelo valor de mercado do milheiro de cada programa</span><span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>`;
       }
  
       if (economia) {
@@ -2446,7 +2454,7 @@
       const cashbackBrl = (economias || []).filter(r => r.categoria === 'cashback').reduce((s, r) => s + (Number(r.valor_economia_brl) || 0), 0);
       if (cashbackBrl > 0) {
         $('patrimonioTotal').innerHTML = `<span class="cur">R$</span>${fmtMoney(patrBrl + cashbackBrl)}`;
-        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira e <span class="mi">R$ ${fmtMoney(cashbackBrl)}</span> em cashback<span class="h-note">Milhas estimadas pelo valor de mercado do milheiro de cada programa</span>`;
+        $('patrimonioEquiv').innerHTML = `<span class="mi">${fmtNum(totalMilhas)}</span> milhas e pontos na sua carteira e <span class="mi">R$ ${fmtMoney(cashbackBrl)}</span> em cashback<span class="h-note">Milhas estimadas pelo valor de mercado do milheiro de cada programa</span><span class="aviso-valor" data-aviso-valor>Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</span>`;
         const cont = $('programasList');
         if (cont.querySelector('.empty-progs')) cont.innerHTML = '';
         cont.insertAdjacentHTML('beforeend', `
