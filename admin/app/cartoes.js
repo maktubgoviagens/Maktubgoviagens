@@ -65,7 +65,7 @@ export async function telaBase(P, X) {
   }
   if (ED) return formBase(P, X);
   const cot = D.cfg && n(D.cfg.cotacao_dolar);
-  const velho = (d) => !d || (Date.now() - new Date(d + 'T12:00:00')) / 864e5 > 180;
+  const velho = (d) => !d || (Date.now() - new Date(d + 'T12:00:00')) / 864e5 > 90;
   const L = BASE.filter(b => (!SO_ILIM || b.salas_vip_ilimitado) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button>
     <h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1>
@@ -81,7 +81,7 @@ export async function telaBase(P, X) {
           <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.reducao_gasto_mes) && n(b.reducao_pct) ? 'cai ' + dec(b.reducao_pct) + '% com ' + brl(b.reducao_gasto_mes) + '/mês' : '', n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
         <span${velho(b.conferido_em) ? ' style="color:var(--alerta)"' : ''}>${b.conferido_em ? 'conferido ' + b.conferido_em.split('-').reverse().join('/') : 'não conferido'}</span></button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
-    <div class="sub" style="margin-top:8px">${num(BASE.length)} cartões na base. Em laranja, os conferidos há mais de 6 meses: vale revisar no site do banco.</div>`;
+    <div class="sub" style="margin-top:8px">${num(BASE.length)} cartões na base. Em laranja, os conferidos há mais de 90 dias: vale revisar no site do banco.</div>`;
   $('voltar').onclick = voltar;
   $('bBusca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
   $('bNovo').onclick = () => { ED = 'novo'; telaBase(P, X); };

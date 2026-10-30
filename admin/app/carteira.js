@@ -3,6 +3,8 @@
 let sb = null;
 export function usar(cliente) { sb = cliente; }
 export const normProg = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// âncora da economia de uma emissão: o maior entre o valor pagante e a tarifa de referência (REX); null se nenhum dos dois
+export const ancora = (pag, rex) => { const m = Math.max(Number(pag) || 0, Number(rex) || 0); return m > 0 ? m : null; };
 const round2 = (n) => n === null || n === undefined || !isFinite(n) ? null : Math.round(n * 100) / 100;
 const hojeISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 export function calcCarteira(extrato) {
@@ -121,12 +123,12 @@ export async function syncCarteira(cid, refs) {
   if (temRef) ind.patrimonio_equivalente_brl = round2(patrimonio);
   ops.push(ec.data ? sb.from('economia_gerada').update(ind).eq('id', ec.data.id) : sb.from('economia_gerada').insert({ ...ind, cliente_id: cid }));
   const emis = (ex.data || []).filter(x => x.tipo === 'emissao');
-  const comEco = emis.filter(x => Number(x.valor_pagante_brl) > 0), semEco = emis.filter(x => !(Number(x.valor_pagante_brl) > 0));
+  const comEco = emis.filter(x => ancora(x.valor_pagante_brl, x.valor_rex_brl)), semEco = emis.filter(x => !ancora(x.valor_pagante_brl, x.valor_rex_brl));
   if (comEco.length) ops.push(sb.from('historico_economia').upsert(comEco.map(x => {
     const i = W.porLinha[x.id] || {};
     return { cliente_id: cid, extrato_id: x.id, categoria: !x.categoria_uso || x.categoria_uso === 'passagem' ? 'emissao' : 'outro', data: x.data,
       descricao: x.descricao || 'Uso de milhas', programa: nome(normProg(x.programa)), milhas_utilizadas: Math.abs(Number(x.quantidade || 0)),
-      valor_mercado_brl: Number(x.valor_pagante_brl), valor_pago_brl: round2(i.custo_real || 0), valor_economia_brl: null,
+      valor_mercado_brl: ancora(x.valor_pagante_brl, x.valor_rex_brl), valor_rex_brl: Number(x.valor_rex_brl) > 0 ? Number(x.valor_rex_brl) : null, valor_pago_brl: round2(i.custo_real || 0), valor_economia_brl: null,
       custo_milhas_brl: round2(i.custo_milhas || 0), taxas_brl: x.taxas_brl === null || x.taxas_brl === undefined ? null : Number(x.taxas_brl) };
   }), { onConflict: 'extrato_id' }));
   if (semEco.length) ops.push(sb.from('historico_economia').delete().in('extrato_id', semEco.map(x => x.id)));
