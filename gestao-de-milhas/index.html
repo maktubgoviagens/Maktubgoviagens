@@ -241,6 +241,28 @@
     .gestor p{font-size:16px;color:var(--text);max-width:640px}
     .gestor p+p{margin-top:12px}
  
+
+    /* ===== O que muda, O que a gestão entrega, perfis ===== */
+    .muda{background:var(--cream);text-align:center}
+    .muda .container{max-width:980px}
+    .muda h2{font-size:clamp(36px,5.5vw,64px);margin-bottom:20px}
+    .muda .lead{font-size:18px;color:var(--text);font-weight:300;max-width:640px;margin:0 auto}
+    .entrega{background:var(--white)}
+    .entrega-head{text-align:center;max-width:760px;margin:0 auto 56px}
+    .entrega-head h2{font-size:clamp(36px,5.5vw,64px);margin-bottom:20px}
+    .entrega-head p{font-size:18px;color:var(--text);font-weight:300}
+    .cinco-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
+    .cinco-grid>*{grid-column:span 2;background:var(--white);padding:34px 30px}
+    .cinco-grid>*:nth-child(-n+2){grid-column:span 3}
+    .cinco-grid .n{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--gold);font-size:22px;margin-bottom:10px}
+    .cinco-grid h3{font-family:'Jost',sans-serif;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
+    .cinco-grid p{font-size:16px;color:var(--text);line-height:1.7}
+    .entrega-nota{margin-top:24px;text-align:center;font-size:14px;color:var(--text-muted)}
+    .perfis-grid{margin-top:48px}
+    .perfis-grid>*{background:var(--cream)}
+    .perfis-grid h3{font-family:'Cormorant Garamond',serif;font-size:26px;letter-spacing:0;text-transform:none;font-weight:500}
+    @media(max-width:900px){.cinco-grid{grid-template-columns:1fr 1fr}.cinco-grid>*,.cinco-grid>*:nth-child(-n+2){grid-column:span 1}.cinco-grid>*:last-child{grid-column:span 2}}
+    @media(max-width:600px){.cinco-grid{grid-template-columns:1fr}.cinco-grid>*,.cinco-grid>*:nth-child(-n+2),.cinco-grid>*:last-child{grid-column:span 1}}
     .perfil{background:var(--white)}
     .perfil-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:48px}
     .perfil-col{background:var(--white);padding:40px}
@@ -900,6 +922,42 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
 </section>
 <div class="prova-ponte-wrap"><p class="prova-ponte">Suas milhas merecem <span class="italic-gold">uma equipe.</span></p></div>
  
+<section class="muda" id="o-que-muda">
+  <div class="container">
+    <span class="label reveal d1">O que muda</span>
+    <div class="divider reveal d1" style="margin-left:auto;margin-right:auto"></div>
+    <h2 class="reveal d2">O que fica na mesa<br><span class="italic-gold">sem uma estratégia.</span></h2>
+    <p class="lead reveal d3">Quase todo mundo que gasta bem no cartão deixa valor para trás sem perceber. É isso que a gestão muda.</p>
+    <div class="diferenca-grid">
+      <div class="diferenca-col before reveal d3">
+        <h3>Sem a gestão</h3>
+        <ul>
+          <li>Pontos vencendo sem ninguém ver.</li>
+          <li>Pontos trocados por produto, valendo uma fração do que valeriam em passagem.</li>
+          <li>Transferência para a companhia aérea sem bônus.</li>
+          <li>Gasto concentrado no cartão que pontua menos.</li>
+          <li>Anuidade paga, e sala VIP, seguro e concierge sem uso.</li>
+          <li>Passagem paga em dinheiro quando os gastos já cobriam.</li>
+          <li>Imprevisto na viagem sem ninguém para resolver.</li>
+        </ul>
+      </div>
+      <div class="diferenca-divider"></div>
+      <div class="diferenca-col after reveal d4">
+        <h3>Com a gestão</h3>
+        <ul>
+          <li>Todo vencimento acompanhado, com ação antes do prazo.</li>
+          <li>Pontos usados em passagem, onde rendem mais.</li>
+          <li>Transferência feita na campanha bonificada certa.</li>
+          <li>Cada gasto no cartão que mais rende para você.</li>
+          <li>Cada benefício do cartão conhecido e usado.</li>
+          <li>Viagem emitida com as milhas que os seus gastos já geram.</li>
+          <li>A equipe acompanhando os seus voos.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+ 
 <section class="diferenca">
   <div class="container">
     <span class="label reveal d1">A diferença</span>
@@ -930,6 +988,25 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       </div>
     </div>
     <p class="assume-fecho reveal d5">Você continua decidindo: nada é feito sem o seu ok.</p>
+  </div>
+</section>
+ 
+<section class="entrega" id="entrega">
+  <div class="container--wide">
+    <div class="entrega-head">
+      <span class="label reveal d1">O que a gestão entrega</span>
+      <div class="divider reveal d1" style="margin-left:auto;margin-right:auto"></div>
+      <h2 class="reveal d2">Cinco frentes,<br><span class="italic-gold">uma equipe só.</span></h2>
+      <p class="reveal d3">A equipe cuida dos seus cartões, pontos e benefícios o ano inteiro, para os gastos que você já tem virarem viagens melhores.</p>
+    </div>
+    <div class="cinco-grid">
+      <div class="reveal d1"><div class="n">i.</div><h3>Cartões</h3><p>O cartão certo para o seu perfil, com anuidade e isenção sob controle, e o caminho para pedir mais limite e uma categoria melhor. Quem aprova é o banco; a estratégia é nossa.</p></div>
+      <div class="reveal d2"><div class="n">ii.</div><h3>Pontos</h3><p>Os pontos do dia a dia acompanhados para não vencer, transferidos na campanha bonificada certa e multiplicados nas compras dentro dos programas, como Livelo e Esfera.</p></div>
+      <div class="reveal d3"><div class="n">iii.</div><h3>Benefícios</h3><p>Tudo o que o seu cartão já dá e quase ninguém usa: salas VIP e restaurantes de aeroporto, seguro viagem, concierge e as ofertas do dia dos programas do cartão.</p></div>
+      <div class="reveal d4"><div class="n">iv.</div><h3>Viagem</h3><p>Emissões ilimitadas com as suas milhas, o calendário de viagens do ano planejado com você e o planejamento incluso na primeira viagem do titular.</p></div>
+      <div class="reveal d5"><div class="n">v.</div><h3>Equipe e painel</h3><p>Atendimento em horário comercial, suporte nas urgências da viagem e um painel com saldos, vencimentos, viagens e relatório, atualizado pela equipe.</p></div>
+    </div>
+    <p class="entrega-nota reveal d5">Benefícios de sala VIP, restaurante e descanso no aeroporto variam conforme o cartão. O serviço de emissão está incluso; passagens, taxas dos programas e custos de terceiros são pagos à parte.</p>
   </div>
 </section>
  
@@ -1176,6 +1253,13 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
     <span class="label reveal d1">Para quem é e para quem não é</span>
     <div class="divider reveal d1"></div>
     <h2 class="reveal d2" style="font-size:clamp(36px,5vw,48px)">Um serviço desenhado<br><span class="italic-gold">para poucos.</span></h2>
+    <div class="cinco-grid perfis-grid">
+      <div class="reveal d1"><h3>Empresários, de qualquer ramo</h3><p>Viagens de trabalho e de família misturadas, gasto alto no cartão e nenhum tempo para estudar milhas.</p></div>
+      <div class="reveal d2"><h3>Profissionais de alta renda</h3><p>Agenda cheia e um cartão premium que quase nunca é usado por inteiro.</p></div>
+      <div class="reveal d3"><h3>Famílias que viajam juntas</h3><p>Vários passageiros, datas fixas como as férias escolares e a viagem internacional que pesa no bolso.</p></div>
+      <div class="reveal d4"><h3>Quem já acumula e não sabe usar</h3><p>Pontos espalhados em vários programas, vencendo ou trocados por produto.</p></div>
+      <div class="reveal d5"><h3>Quem quer viajar melhor</h3><p>Executiva, sala VIP e hotel bom, sem pagar o preço cheio.</p></div>
+    </div>
     <div class="perfil-wrap">
       <div class="perfil-col reveal d3">
         <h3>Para quem <em>é</em></h3>
