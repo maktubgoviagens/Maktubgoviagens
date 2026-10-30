@@ -25,8 +25,8 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 - Quem só precisa de uma passagem é atendido como passagem avulsa, pelo WhatsApp.
 - Condições, sempre com estas palavras, em qualquer página ou no app:
   - Emissões: emissões ilimitadas para o cliente, com as milhas dele. O que está incluso é o serviço de emissão. Passagens, taxas dos programas e custos de terceiros são pagos à parte.
-  - Primeira viagem: "Na primeira viagem em que o titular do contrato esteja viajando, o planejamento é incluso: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias."
-  - Viagens seguintes: "Nas viagens seguintes do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária."
+  - Planejamento incluso: "Um planejamento de viagem do titular do contrato é incluso, por conta da Maktub: se a viagem tiver taxa de planejamento, ela não é cobrada, e o roteiro é incluso sem limite de dias."
+  - Demais viagens: "Nas demais viagens do titular, a taxa de planejamento segue a regra normal, quando houver, e o roteiro tem 40% de desconto sobre a diária."
   - A taxa de planejamento existe só em algumas viagens, conforme a complexidade (em geral internacionais e com vários destinos). Quando houver, é informada antes e devolvida integralmente em cashback quando a viagem é fechada com a Maktub. Nunca escrever que ela existe em toda viagem. O roteiro dia a dia tem investimento por dia (a diária do roteiro).
 
 ## Diagnóstico
