@@ -617,6 +617,25 @@
 .vs-check{box-shadow:none}
 .perfil-col li::before{content:"•"}
 .convite::before{display:none}
+
+/* selo do Google no topo e animações sutis (quem pede menos movimento no aparelho vê tudo pronto, parado) */
+.g-selo{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin:0 0 18px;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.3;text-decoration:none}
+.g-selo .estrelas{display:inline-flex;gap:3px;font-size:17px;letter-spacing:0}
+.g-selo .estrelas i{font-style:normal}
+.g-selo strong{font-weight:500}
+.g-selo .g-ver{border-bottom:1px solid rgba(168,139,74,.55)}
+.g-claro{color:#2B2B26}.g-claro .estrelas i{color:#A88B4A}.g-claro strong{color:#193826}
+.g-escuro{color:#EBE0C4}.g-escuro .estrelas i{color:#B49755}.g-escuro strong{color:#F7F3EA}
+@media (prefers-reduced-motion:no-preference){
+ .entra-topo>*{animation:f3entra .8s cubic-bezier(.2,.7,.2,1) both}
+ .entra-topo>:nth-child(2){animation-delay:.08s}.entra-topo>:nth-child(3){animation-delay:.16s}.entra-topo>:nth-child(4){animation-delay:.24s}.entra-topo>:nth-child(5){animation-delay:.32s}.entra-topo>:nth-child(n+6){animation-delay:.4s}
+ @keyframes f3entra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+ .g-selo .estrelas i{animation:f3estrela .45s ease both}
+ .g-selo .estrelas i:nth-child(1){animation-delay:.5s}.g-selo .estrelas i:nth-child(2){animation-delay:.62s}.g-selo .estrelas i:nth-child(3){animation-delay:.74s}.g-selo .estrelas i:nth-child(4){animation-delay:.86s}.g-selo .estrelas i:nth-child(5){animation-delay:.98s}
+ @keyframes f3estrela{from{opacity:.18}to{opacity:1}}
+ .titulo-entra{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+ .titulo-entra:not(.na-tela){opacity:0;transform:translateY(14px)}
+}
 </style>
 <link rel="stylesheet" href="/diagnostico/formulario.css">
 <!-- Google Analytics 4: visitas, cliques no WhatsApp, cliques nos botões de diagnóstico e diagnósticos enviados -->
@@ -827,6 +846,7 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   <div class="vh-grid">
     <div class="vh-texto reveal d1">
       <span class="vh-etiqueta">Gestão de Milhas Maktub Go</span>
+      <a class="g-selo g-escuro" href="https://www.google.com/maps/place/?q=place_id:ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
       <h1 class="venda-h1">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
       <p class="vh-linha">Uma equipe acompanha seus pontos e milhas durante 12 meses.</p>
       <div class="venda-ctas prova-ctas">
@@ -1370,5 +1390,25 @@ avalia();})();
 </script>
  
 <script src="/diagnostico/formulario.js" defer></script>
+<script>
+/* AVALIAÇÕES DO GOOGLE: a nota e o total vêm de /ativos/avaliacoes.json (atualizado pelo n8n). Os números da página ficam como reserva. */
+(function(){
+  function aplica(d){
+    if(!d || !/^\d,\d$/.test(d.nota) || !(d.total > 0 && d.total < 100000)) return;
+    document.querySelectorAll('[data-mk-nota]').forEach(function(e){ e.textContent = d.nota; });
+    document.querySelectorAll('[data-mk-total]').forEach(function(e){ e.textContent = d.total; });
+  }
+  try{ fetch('/ativos/avaliacoes.json', {cache:'no-cache'}).then(function(r){ return r.ok ? r.json() : null; }).then(aplica).catch(function(){}); }catch(e){}
+})();
+</script>
+<script>
+/* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
+   Quem pede menos movimento no aparelho não recebe nada disso. */
+(function(){
+  if(!('IntersectionObserver' in window) || !window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('na-tela'); io.unobserve(e.target); } }); }, { rootMargin:'0px 0px 20% 0px' });
+  document.querySelectorAll('main section h2').forEach(function(h){ if(h.closest('.reveal')) return; h.classList.add('titulo-entra'); io.observe(h); });
+})();
+</script>
 </body>
 </html>
