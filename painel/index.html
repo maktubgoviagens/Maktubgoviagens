@@ -258,6 +258,19 @@
     .view{animation:viewIn .35s ease-out}
     @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     .sec{margin-bottom:48px}
+    /* roteiros e novidades */
+    .rt-list,.nov-list{display:flex;flex-direction:column;gap:10px}
+    .rt-item,.nov-item{background:var(--white);border:1px solid var(--border);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+    .rt-item h3{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:22px;color:var(--green);line-height:1.2}
+    .rt-item .m,.nov-item .m{font-size:13px;color:var(--text-light);margin-top:2px}
+    .rt-item button{flex:0 0 auto;background:var(--green);color:var(--cream);border:0;padding:10px 16px;font:500 13px 'Jost',sans-serif;letter-spacing:.06em;cursor:pointer}
+    .nov-item{display:block;color:inherit}
+    .nov-item b{display:block;font-weight:500;color:var(--green);font-size:16px}
+    .nov-item.nova{border-left:3px solid var(--gold)}
+    .nov-item .t{font-size:16px;color:var(--text);margin-top:2px}
+    .sb-bell{position:relative;color:rgba(249,246,241,.6);background:none;border:0;padding:0;cursor:pointer;display:flex}
+    .sb-bell svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
+    .sb-bell .dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--gold-warm)}
  
     /* KPIs */
     .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:48px}
@@ -730,6 +743,10 @@
         <svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
         Minhas Viagens
       </a></li>
+      <li><a class="sb-link" href="#roteiros" data-view="roteiros">
+        <svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>
+        Meus Roteiros
+      </a></li>
       <li><a class="sb-link" href="#cartoes" data-view="cartoes">
         <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
         Meus Cartões
@@ -788,6 +805,10 @@
         <div class="name" id="nameUser">Carregando...</div>
         <div class="role">Cliente da Gestão</div>
       </div>
+      <a class="sb-bell" id="btnNovidades" href="#novidades" title="Novidades" aria-label="Novidades">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="dot" id="novDot" hidden></span>
+      </a>
       <button class="sb-logout" id="btnLogout" title="Sair">
         <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
@@ -911,6 +932,20 @@
       <section class="sec">
         <div class="blk-title">Meus Cartões</div>
         <div id="meusCartoes"><div class="empty-cards">Carregando cartões</div></div>
+      </section>
+    </div>
+
+    <div class="view" id="view-roteiros" hidden>
+      <section class="sec">
+        <div class="blk-title">Meus Roteiros</div>
+        <div class="rt-list" id="roteirosList"><div class="empty-cards">Carregando roteiros</div></div>
+      </section>
+    </div>
+
+    <div class="view" id="view-novidades" hidden>
+      <section class="sec">
+        <div class="blk-title">Novidades</div>
+        <div class="nov-list" id="novidadesList"><div class="empty-cards">Nenhuma novidade por enquanto</div></div>
       </section>
     </div>
 
@@ -1338,6 +1373,51 @@
       inp.addEventListener('change', salvar);
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
     });
+  }
+
+  // roteiros publicados: HTML abre isolado num quadro sem scripts; PDF abre direto
+  let ROTEIROS = [];
+  function renderRoteiros(L) {
+    ROTEIROS = L || [];
+    const cont = $('roteirosList'); if (!cont) return;
+    if (!ROTEIROS.length) { cont.innerHTML = '<div class="empty-cards">Seus roteiros aparecem aqui assim que a equipe preparar</div>'; return; }
+    cont.innerHTML = ROTEIROS.map(r => `<div class="rt-item"><div><h3>${escapeHtml(r.titulo || r.destino || 'Roteiro')}</h3>
+      <div class="m">${[r.destino && r.titulo ? r.destino : '', r.dias ? r.dias + (Number(r.dias) === 1 ? ' dia' : ' dias') : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div></div>
+      <button type="button" data-rt="${escapeHtml(String(r.id))}">Abrir</button></div>`).join('');
+    cont.querySelectorAll('[data-rt]').forEach(b => b.onclick = () => abrirRoteiro(ROTEIROS.find(r => String(r.id) === b.dataset.rt), b));
+  }
+  async function abrirRoteiro(r, b) {
+    if (!r) return;
+    if (!r.arquivo_path) { if (r.link) window.open(r.link, '_blank', 'noopener'); return; }
+    const w = window.open('', '_blank');
+    b.disabled = true;
+    const { data, error } = await supabase.storage.from('roteiros').download(r.arquivo_path);
+    b.disabled = false;
+    if (error || !data) { if (w) w.close(); alert('Não conseguimos abrir o roteiro agora. Tente de novo em instantes.'); return; }
+    if (!w) return;
+    if (/\.pdf$/i.test(r.arquivo_path)) { w.location = URL.createObjectURL(data); return; }
+    const html = await data.text();
+    w.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roteiro</title><style>html,body,iframe{margin:0;border:0;width:100%;height:100%}</style><iframe sandbox="allow-popups"></iframe>');
+    w.document.close();
+    w.document.querySelector('iframe').srcdoc = html;
+  }
+  // novidades: o sino ganha um ponto enquanto houver novidade não vista
+  let NOVIDADES = [];
+  function renderNovidades(L) {
+    NOVIDADES = L || [];
+    const dot = $('novDot'); if (dot) dot.hidden = !NOVIDADES.some(n => !n.visto_em);
+    const cont = $('novidadesList'); if (!cont) return;
+    cont.innerHTML = NOVIDADES.length ? NOVIDADES.map(n => `<a class="nov-item ${n.visto_em ? '' : 'nova'}" href="${escapeHtml(/^#[a-z]+$/.test(n.link || '') ? n.link : '#inicio')}">
+        <b>${escapeHtml(n.titulo)}</b>${n.texto ? `<div class="t">${escapeHtml(n.texto)}</div>` : ''}<div class="m">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</div></a>`).join('')
+      : '<div class="empty-cards">Nenhuma novidade por enquanto</div>';
+    if (location.hash === '#novidades') marcarNovidadesVistas();
+  }
+  async function marcarNovidadesVistas() {
+    if (!NOVIDADES.some(n => !n.visto_em)) return;
+    try { const { error } = await supabase.rpc('painel_novidades_vistas'); if (error) return; } catch (_) { return; }
+    const agora = new Date().toISOString();
+    NOVIDADES.forEach(n => { if (!n.visto_em) n.visto_em = agora; });
+    const dot = $('novDot'); if (dot) dot.hidden = true;
   }
 
   function renderViagens(viagens) {
@@ -2291,6 +2371,8 @@
   const VIEW_SUB = {
     inicio: 'Confira a evolução da sua carteira de milhas e os movimentos estratégicos do mês.',
     viagens: 'Cada viagem com seus voos, hospedagem e documentos, organizados pela sua equipe.',
+    roteiros: 'Os roteiros das suas viagens, preparados e conferidos pela equipe.',
+    novidades: 'O que a equipe atualizou no seu painel.',
     cartoes: 'Seus cartões, limites e anuidades. Atualize o disponível sempre que quiser: ajuda a equipe a planejar as compras.',
     milhas: 'A evolução do seu saldo, os vencimentos monitorados e cada movimentação registrada.',
     economias: 'Tudo o que a gestão já gerou para você: passagens, pontos de cartões e super acúmulos, e cashback.',
@@ -2307,6 +2389,7 @@
     document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== 'view-' + view);
     document.querySelectorAll('.sb-link[data-view]').forEach(a => a.classList.toggle('active', a.dataset.view === view));
     $('greetingSub').textContent = VIEW_SUB[view];
+    if (view === 'novidades') marcarNovidadesVistas();
     const act = document.querySelector('.sb-link.active');
     const nav = $('sbNav');
     if (act && window.innerWidth <= 1100) nav.scrollLeft = act.offsetLeft - (nav.clientWidth - act.offsetWidth) / 2;
@@ -2432,6 +2515,11 @@
  
       // 5b. Novas áreas (tabelas opcionais: se ainda não existirem, as áreas ficam vazias)
       const uid = user.id;
+      // roteiros publicados pela equipe e novidades do painel (62-viagens-roteiros-novidades.sql)
+      Promise.all([
+        safe(supabase.from('roteiros').select('id,titulo,destino,dias,arquivo_path,link,publicado_em').eq('cliente_id', uid).eq('publicado_painel', true).order('publicado_em', { ascending: false })),
+        safe(supabase.from('painel_novidades').select('*').eq('cliente_id', uid).order('criado_em', { ascending: false }).limit(30))
+      ]).then(([rts, novs]) => { renderRoteiros(rts); renderNovidades(novs); });
       const [voos, saldos, extrato, economias, agendamentos, documentos, relatorios, convites, gestorArr] = await Promise.all([
         safe(supabase.from('voos').select('*').eq('cliente_id', uid).order('data_voo', { ascending: true }).order('hora_partida', { ascending: true })),
         safe(supabase.from('historico_saldos').select('*').eq('cliente_id', uid).order('mes', { ascending: true })),
