@@ -557,7 +557,8 @@ import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
 import * as COT from '/admin/app/cotador.js?v=50';
-import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
+import { ligarBuscaAero, carregarAero, cidadeDe } from '/admin/app/cot-colar.js?v=5';
+import * as VIAG from '/admin/app/viagens.js?v=1';
 import * as VENDA from '/admin/app/venda.js?v=23';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=16';
@@ -1243,6 +1244,7 @@ async function carregar(silencioso, manterTela) {
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
   if (!manterTela) tela();
+  sincronizarViagens();
 }
 
 function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: () => ABA, mesNome, nomeTime, CAT_DESP, mes: () => EM_MES, setMes: (k) => { EM_MES = k; }, seletorMes, ligarMes, folha: (k) => CMP.folha(ctxCMP(), k), mesCaixa: CMP.MES_CAIXA }; }
@@ -4472,7 +4474,7 @@ function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
-  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['cartoes', 'Cartões'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['cartoes', 'Cartões'], ['viagens', 'Viagens'], ['roteiros', 'Roteiros'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
   if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
@@ -4485,7 +4487,7 @@ function telaFicha(P, id) {
   $('voltar').onclick = () => voltarSeguro('clientes');
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
-  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, viagens: (el, c) => VIAG.fichaViagens(el, c, ctxViag()), roteiros: (el, c) => VIAG.fichaRoteiros(el, c, ctxViag()), reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
 function fiResumo(el, c) {
@@ -5291,6 +5293,15 @@ async function fiTarefas(el, c) {
 let FI_ONB = false;
 
 // cartões do cliente: ligados à base de cartões, com as contas de anuidade e pontos
+// viagens e roteiros do cliente da Gestão (viagens.js): a emissão do app sobe sozinha para o painel do cliente
+const ctxViag = () => ({ sb, D, esc, aviso, CRM, B2B, cidadeDe, carregarAero, limparTec, tec, adminLink });
+let VIAG_RODANDO = false;
+async function sincronizarViagens() {
+  if (VIAG_RODANDO || !pode('gestao') || !(D.clientes || []).length || !D.pessoas) return;
+  VIAG_RODANDO = true;
+  try { await VIAG.sincronizar(ctxViag()); } catch (_) { /* sem o 62-viagens-roteiros-novidades.sql ou sem rede: tenta de novo na próxima carga */ }
+  VIAG_RODANDO = false;
+}
 function fiCartoes(el, c) {
   el.innerHTML = '<section class="bloco" style="margin-top:14px" id="gtCartBox"></section>';
   CARTOES.secaoCliente($('gtCartBox'), c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec }, async () => {
