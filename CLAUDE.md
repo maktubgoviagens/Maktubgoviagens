@@ -49,6 +49,9 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 - Cores: verde #1B4332 (fundo em uso #193826), dourado #A88B4A, creme #EBE0C4.
 - Não usar tons de verde fora da paleta.
 - Títulos em Cormorant Garamond com itálico em dourado. Textos em Jost.
+- Escala de fontes: 13, 16, 18, 22, 28, 36, 48 e 64 px. Nada abaixo de 13px e texto corrido com 16px ou mais. Exceções: o "Alfaiataria de Viagens" do logo e o título principal (h1) da home no computador, que usa 80px. Essa é a única exceção de tamanho maior, e o botão de diagnóstico precisa continuar na primeira tela em 1440x900, 1366x768 e 1280x720.
+- Paleta em uso: verde #193826; dourado #715E32 em texto sobre fundo claro, #B49755 em texto pequeno e botões sobre o verde, #A88B4A em linhas e títulos grandes sobre o verde; fundo geral #F7F3EA e creme #EBE0C4 em faixas e cartões; texto do corpo #2B2B26.
+- Animações sempre sutis e sempre respeitando a configuração de reduzir movimento do aparelho (prefers-reduced-motion): para quem usa, tudo aparece pronto, sem animação. Nada de animação que atrase o botão de diagnóstico.
 - Logo: usar sempre os arquivos oficiais da pasta `ativos/`. Nunca recriar a logo em código.
 - O topo (cabeçalho e menu) de todas as páginas deve ser igual ao da página Gestão de Milhas.
 - Fotos: só fotos reais (clientes, equipe ou viagens da equipe), nunca banco de imagens. Fotos novas reais podem entrar.
