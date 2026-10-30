@@ -566,6 +566,12 @@ footer a:hover{color:var(--creme)}
   nav a{display:block;padding-block:17px;font-size:13px}
   nav a.destaque{text-align:center;padding:16px}
   .duas,.milhas,.contato{grid-template-columns:1fr}
+  /* diagnóstico no celular: o formulário vem logo depois dos passos; contatos e outros caminhos ficam depois dele */
+  .contato{row-gap:0}
+  .contato > div:first-child{display:contents}
+  .contato > div:first-child > *{order:1}
+  .contato > form{order:2;margin-top:32px}
+  .contato > div:first-child > .canais,.contato > div:first-child > .outras-portas{order:3}
   .comparativo{grid-template-columns:1fr}
   .duas .figura{order:-1;max-height:56vh}
   .hero{min-height:auto;padding-block:130px var(--e6)}
