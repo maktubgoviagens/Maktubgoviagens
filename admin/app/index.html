@@ -120,11 +120,43 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .card .quando{font-size:12px;color:var(--tinta-3);white-space:nowrap}
 .tag{display:inline-block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--linha);color:var(--tinta-2);margin-top:4px}
 .tag.ouro{border-color:rgba(138,101,32,.4);color:var(--dourado)}
+.prio{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;margin-right:6px;font:600 13px/1 'Jost',sans-serif;border:1px solid var(--linha);color:var(--tinta-2);vertical-align:1px;border-radius:4px}
+.prio.pA{background:var(--verde);border-color:var(--verde);color:var(--creme)}.prio.pB{border-color:var(--dourado);color:var(--dourado)}
 .tag.ok{border-color:rgba(27,67,50,.35);color:var(--verde);background:rgba(27,67,50,.06)}
 .ciclo{display:block;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-left:3px solid var(--dourado);padding:14px;margin-top:14px;cursor:pointer;font:inherit;color:inherit}
 .ciclo .top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--verde)}
 .ciclo .top b{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}
 .ciclo small{display:block;margin-top:8px;font-size:12.5px;color:var(--tinta-3);line-height:1.45}
+/* base do mês */
+.kbase{margin-top:8px;background:var(--branco);border:1px solid var(--linha);border-left:3px solid var(--dourado);padding:12px 14px}
+.kbase.al{border-left-color:var(--alerta)}.kbase.ok{border-left-color:var(--ok)}
+.kbase .kbt{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}.kbase .kbt b{font-size:16px;font-weight:500;color:var(--verde)}.kbase.al .kbt b{color:var(--alerta)}
+.kbase .kbt span{font-size:13px;color:var(--tinta-3)}
+.kbase .kbl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--linha);font-size:14px}
+.kbase .kbl small{font-size:13px;color:var(--tinta-3)}
+.kbase .kfal{font-size:13px;color:var(--tinta-2);padding:6px 0 2px;border-top:1px solid var(--linha)}.kbase .kfal + .kbl{border-top:0}
+.kbase .kbl button{flex:0 0 auto;min-width:0;padding:7px 12px;font-size:13px;letter-spacing:.04em;text-transform:none;white-space:nowrap;width:auto}.kbase .kbl .q{font-size:13px;color:var(--tinta-3);white-space:nowrap}
+.kbase .kmais summary{list-style:none;color:var(--dourado)}.kbase .kmais summary::-webkit-details-marker{display:none}
+.kbase .kmais .f,.kbase .kmais[open] .a{display:none}.kbase .kmais[open] .f{display:inline}
+.kbase summary{cursor:pointer;font-size:13px;color:var(--tinta-2);padding:8px 0 2px;border-top:1px solid var(--linha)}
+/* KPIs da Gestão */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+@media (min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpi{background:var(--branco);border:1px solid var(--linha);padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:2px;font:inherit;color:inherit;min-width:0}
+button.kpi{cursor:pointer;border-left:3px solid var(--dourado)}
+.kpi .l{font-size:13px;color:var(--tinta-2);font-weight:500;line-height:1.3}
+.kpi .v{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--verde);line-height:1.1;font-variant-numeric:lining-nums;white-space:nowrap}
+.kpi .d{font-size:13px;color:var(--tinta-3);line-height:1.35}
+.kpi .kb{height:6px;background:var(--creme-2);margin-top:6px;position:relative}.kpi .kb i{position:absolute;inset:0 auto 0 0;background:var(--verde)}
+.kalerta{margin-top:8px;border:1px solid var(--linha);border-left:3px solid var(--ok);background:var(--branco);padding:10px 14px;font-size:13px;color:var(--tinta-2)}
+.kalerta summary{display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;list-style:none}.kalerta summary::-webkit-details-marker{display:none}
+.kalerta b{font-size:16px;color:var(--ok)}
+.kalerta.al{border-left-color:var(--alerta)}.kalerta.al b{color:var(--alerta)}
+.kalerta .lin{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linha);font-size:13px}
+.khist{background:var(--branco);border:1px solid var(--linha);padding:4px 14px}
+.khist .m{display:grid;grid-template-columns:76px 1fr 64px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--linha);font-size:13px}.khist .m:first-child{border-top:0}
+.khist .m .kb{height:8px;background:var(--creme-2);position:relative}.khist .m .kb i{position:absolute;inset:0 auto 0 0;background:var(--verde)}
+.khist .m b{text-align:right;color:var(--verde);font-variant-numeric:tabular-nums}
 .fseg{overflow-x:auto;scrollbar-width:none}.fseg::-webkit-scrollbar{display:none}.fseg button{font-size:10px;letter-spacing:.02em;padding:11px 5px;flex:1 0 auto;white-space:nowrap}
 .botoes4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .botoes4 .zap,.botoes4 .sec{min-width:0;padding:12px 6px;font-size:11px}
@@ -518,8 +550,8 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
 import * as MKT from '/admin/app/marketing.js?v=21';
-import * as CART from '/admin/app/carteira.js?v=2';
-import * as CARTOES from '/admin/app/cartoes.js?v=7';
+import * as CART from '/admin/app/carteira.js?v=3';
+import * as CARTOES from '/admin/app/cartoes.js?v=8';
 import * as ACV from '/admin/app/acervo.js?v=7';
 import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=4';
@@ -634,7 +666,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
     $('portaoA').innerHTML = '<a class="btn" href="/painel/">Ir para o meu painel</a>';
     return;
   }
-  D.perfil = perfil; D.meuId = session.user.id; ADMIN = perfil.papel === 'admin';
+  D.perfil = perfil; D.meuId = session.user.id; D.meuEmail = session.user.email || ''; ADMIN = perfil.papel === 'admin';
   D.eu = String(perfil.nome || '').split(' ')[0];
   $('portao').hidden = true; $('app').hidden = false;
   if (ADMIN && 'serviceWorker' in navigator) navigator.serviceWorker.register('/admin/app/sw.js', { scope: '/admin/app/' }).catch(() => {});
@@ -1151,11 +1183,15 @@ async function carregar(silencioso, manterTela) {
     ]) : null,
     G ? Promise.all([
       sb.from('convites').select('*').order('created_at', { ascending: false }).limit(300),
-      sb.from('relatorios_mensais').select('cliente_id,publicado').eq('mes', mesMais(k0, -1) + '-01'),
-      sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', k0 + '-01'),
-      sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', k0 + '-01'),
+      // relatórios, lançamentos e reuniões dos últimos 6 meses: o mês atual alimenta o Ciclo; os anteriores, o histórico do KPI Ciclo em dia
+      sb.from('relatorios_mensais').select('cliente_id,mes,publicado').gte('mes', mesMais(k0, -7) + '-01'),
+      sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', mesMais(k0, -5) + '-01').order('created_at', { ascending: false }).limit(5000),
+      sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', mesMais(k0, -5) + '-01'),
       sb.from('gestao_tarefas').select('*').limit(5000),
-      sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em').order('criado_em', { ascending: false }).limit(3000)
+      sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em').order('criado_em', { ascending: false }).limit(3000),
+      sb.from('gestao_ciclos').select('cliente_id,inicio,vencimento').limit(5000),
+      sb.from('extrato_milhas').select('cliente_id,data,quantidade,programa').eq('tipo', 'expiracao').limit(5000),
+      sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
     ]) : null,
     CRMok ? Promise.all([
       sb.from('pessoas').select('*').order('nome').limit(10000),
@@ -1189,7 +1225,14 @@ async function carregar(silencioso, manterTela) {
     [D.leads, D.sols, D.tal, D.clientes, D.gestores, D.progs, D.eco, D.voos, D.viagens, D.ags] = q.slice(0, 10).map(r => (r && r.data) || []);
     D.talErro = q[2].error; D.convPend = q[10].count || 0;
   }
-  if (gx) { [D.indic, D.rel, D.extMes, D.atasMes, D.gtar, D.ctrs] = gx.map(r => r.data || []); if (gx[4].error) D.gtar = null; }
+  if (gx) {
+    [D.indic, D.relH, D.extH, D.atasH, D.gtar, D.ctrs, D.ciclosG, D.expir, D.confs] = gx.map(r => r.data || []); if (gx[4].error) D.gtar = null;
+    if (gx[6].error) D.ciclosG = null; if (gx[7].error) D.expir = null; if (gx[8].error) D.confs = null;
+    // recortes do mês atual, usados pelo Ciclo de mês (e atualizados na hora pelas telas)
+    D.rel = D.relH.filter(r => String(r.mes).slice(0, 7) === mesMais(k0, -1));
+    D.extMes = D.extH.filter(x => mesLocal(x.created_at) === k0);
+    D.atasMes = D.atasH.filter(x => String(x.data_reuniao).slice(0, 7) >= k0);
+  }
   if (px) {
     D.pessoas = px[0].error ? null : (px[0].data || []);
     D.avaliacoes = av.error ? null : (av.data || []);
@@ -2175,6 +2218,11 @@ function htmlLinhaTempo(r) {
 // perguntas que o SDR manda ao lead da Gestão antes da ligação (o Granola grava a ligação)
 const PERGUNTAS_SDR = ['Quanto você gasta, em média, por mês no cartão?', 'Quais bancos e cartões você usa hoje?', 'Em quais programas de milhas você já tem conta, e mais ou menos quanto tem em cada um?', 'Quantas viagens faz por ano, e para onde costuma ir?', 'Qual é a viagem dos sonhos que você quer realizar com as milhas?', 'A decisão de contratar é só sua ou junto com mais alguém?'];
 const textoPerguntasSdr = (r) => `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é ${String(nomeTime(D.meuId) || '').split(' ')[0] || 'a equipe'}, da Maktub Go. Para eu chegar no nosso diagnóstico com tudo bem estudado, me conta rapidinho:\n\n${PERGUNTAS_SDR.map((x, i) => (i + 1) + '. ' + x).join('\n')}\n\nPode responder do seu jeito, até por áudio.`;
+// prioridade do lead da Gestão, marcada pelo SDR na qualificação (fica em qualificacao.prioridade)
+const PRIO_G = [['A', 'tem o perfil e quer viajar logo'], ['B', 'tem o perfil, sem viagem à vista'], ['C', 'perfil não confirmado']];
+const prioDe = (r) => ((r && r.qualificacao) || {}).prioridade || '';
+const htmlPrio = (r) => prioDe(r) ? `<span class="prio p${esc(prioDe(r))}" title="Prioridade ${esc(prioDe(r))}: ${esc((PRIO_G.find(x => x[0] === prioDe(r)) || [])[1] || '')}">${esc(prioDe(r))}</span>` : '';
+let GE_PRIO = 'todas';
 function htmlGestaoSdr(r) {
   const q = r.qualificacao || {}, so = solDoCard(r) || {};
   const pre = (k, v) => q[k] != null && q[k] !== '' ? q[k] : (v == null ? '' : v);
@@ -2182,6 +2230,7 @@ function htmlGestaoSdr(r) {
   const aberto = ['Novo lead', 'Qualificação'].includes(etapaDe(r)) || !q.gasto;
   return `<div class="grupo">Quem conduz</div>
       <div class="duas-col"><label class="fl"><span>SDR (qualifica e agenda)</span><select name="sdr_id">${opT(r.sdr_id || (r.id ? r.assumido_por : D.meuId))}</select></label><label class="fl"><span>Closer (diagnóstico e proposta)</span><select name="closer_id">${opT(r.closer_id)}</select></label></div>
+      ${selG('q_prioridade', 'Prioridade', [['', 'Sem prioridade'], ...PRIO_G.map(([v, l]) => [v, v + ': ' + l])], q.prioridade || '')}
       <details class="gsec gsec-q" ${aberto ? 'open' : ''}><summary><span>Qualificação do SDR${q.gasto || q.granola ? '' : ' · <b style="color:var(--alerta)">pendente</b>'}<small>Perguntas, resumo do Granola e respostas</small></span></summary>
       <div class="sub" style="margin:8px 0 4px">1. Mande as perguntas ao lead. 2. Faça a ligação com o Granola gravando. 3. Cole o resumo do Granola e confira os campos. 4. Passe para o closer: etapa Diagnóstico agendado, com o closer e a data.</div>
       ${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zap" target="_blank" rel="noopener" style="display:block;text-align:center;margin:6px 0 10px" href="${esc(zapLink(r.contato, r.cliente, textoPerguntasSdr(r)))}">Mandar as perguntas pelo WhatsApp</a>` : `<div class="sub">Sem WhatsApp no card: copie as perguntas: ${esc(PERGUNTAS_SDR.join(' '))}</div>`}
@@ -2474,7 +2523,7 @@ function htmlJornadaGestao() {
     else if (et === 'Diagnóstico feito') { const x = (M[et] || {}).em || r.etapa_desde; s = 'Feito há ' + desde(x); c = x && Date.now() - tsDe(x) > 2 * 864e5 ? 'al' : ''; prox = 'Marcar a reunião de proposta'; }
     else if (et === 'Follow-up') { const dt = r.proximo_passo_data, dv = dt ? diasPara(dt) : null, F = (r.marcos || {})['Follow-up'] || {}; s = dt ? (dv < 0 ? 'Atrasado desde ' + dataCurta(dia(dt)) : dv === 0 ? 'Chamar hoje' : 'Chamar em ' + dataCurta(dia(dt))) : 'Sem data de retorno'; c = !dt || dv <= 0 ? 'al' : 'ok'; prox = F.nota || 'Retomar contato'; }
     else { const ap = agProp(r), passou = ap && tsDe(ap.data) < Date.now(); s = ap ? 'Proposta ' + quandoDiag(ap.data) : 'Sem data da reunião'; c = !ap || passou ? 'al' : 'ok'; prox = passou ? 'Registrar se fechou e por quê' : ap ? 'Apresentar a proposta' : 'Marcar a reunião de proposta'; }
-    return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
+    return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${htmlPrio(r)}${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
   };
   const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Gestor ' + String(g.nome).split(' ')[0] : 'Sem gestor'; };
   const kC = (c, s, cls, prox) => `<button class="gjk" data-gj-c="${c.id}"><span class="n">${esc(c.nome_completo)}</span><span class="s ${cls}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(gestor(c))}</span></button>`;
@@ -2617,7 +2666,7 @@ function htmlKCard(r, etapas) {
   const et = etapaDe(r), i = etapas.indexOf(et);
   const atr = r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
   return `<div class="kc ${atr ? 'atr' : ''}" data-kid="${r.id}">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" data-kz="${r.id}" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${ehGestao(r) ? htmlPrio(r) : ''}${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" data-kz="${r.id}" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     ${ehGestao(r) && RE_VISTA !== 'gestao' ? '<span class="tag ouro" style="margin:4px 0 0">Gestão</span>' : ''}<div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
     ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
     ${ehGestao(r) && (r.sdr_id || r.closer_id) ? `<div class="t">SDR ${esc(nomeTime(r.sdr_id) || '-')} · Closer ${esc(nomeTime(r.closer_id) || '-')}</div>` : ''}
@@ -2679,7 +2728,8 @@ function telaReunioes(P) {
     <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Funil · ${abertos.length}</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
     ${RE_PARTE === 'res' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>
-    <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(ehGestao(r)))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPos).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
+    ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
+    <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(ehGestao(r)))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPos).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
 `}
     ${RE_PARTE === 'funil' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
@@ -2702,6 +2752,7 @@ function telaReunioes(P) {
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
+  if ($('gePrio')) $('gePrio').onclick = (e) => { const b = e.target.closest('button'); if (b) { GE_PRIO = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
   $('novaR').onclick = () => { if (!G) return escolherAtendimento(); RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
@@ -3049,7 +3100,7 @@ function telaFormReuniao(P) {
     if (nova && r.solicitacao_id) row.solicitacao_id = r.solicitacao_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     if (G) {
-      const q = { gasto: g('q_gasto'), cartoes: g('q_cartoes'), programas: g('q_programas'), viagens: g('q_viagens'), objetivo: g('q_objetivo'), decisor: g('q_decisor'), granola: g('q_granola') };
+      const q = { gasto: g('q_gasto'), cartoes: g('q_cartoes'), programas: g('q_programas'), viagens: g('q_viagens'), objetivo: g('q_objetivo'), decisor: g('q_decisor'), granola: g('q_granola'), prioridade: g('q_prioridade') };
       row.qualificacao = q; row.sdr_id = g('sdr_id') || null; row.closer_id = g('closer_id') || null;
       const etN = g('etapa'), mudou = nova || etN !== etapaDe(base), iG = ETAPAS_G.indexOf(etN);
       if (mudou && (iG >= 2 || etN === 'Fechou')) {
@@ -3997,10 +4048,137 @@ const mesAnterior = () => mesMais(mesKey(new Date()), -1);
 const mesNomeCurto = (k) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 function cicloCliente(c) {
   const k = mesKey(new Date());
-  const saldos = (D.extMes || []).some(x => x.cliente_id === c.id) || !!(c.conferencia_em && mesLocal(c.conferencia_em) === k);
+  const saldos = !!confDoMes(c, k);
   const reuniao = (D.agenda || []).some(a => a.cliente_id === c.id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasMes || []).some(x => x.cliente_id === c.id);
   const carta = (D.rel || []).some(r => r.cliente_id === c.id && r.publicado);
   return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
+}
+
+/* ---------- KPIs da Gestão (topo da tela Gestão) ---------- */
+const META_CLIENTES = 100; // meta de clientes ativos em 2027
+const META_ANO = 2027;
+const inicioGestao = (c) => [c.gestao_inicio, ...(D.ciclosG || []).filter(x => String(x.cliente_id) === String(c.id)).map(x => x.inicio)].filter(Boolean).map(x => String(x).slice(0, 10)).sort()[0] || null;
+// ativo: contrato com data de entrada e não vencido; o congelado conta (o contrato só está pausado)
+const ativoGestao = (c) => !!c.gestao_inicio && (!!c.gestao_congelado_em || (!!c.gestao_vencimento && diasPara(c.gestao_vencimento) >= 0));
+const ativoNoMes = (c, k) => { const i = inicioGestao(c); if (!i || i.slice(0, 7) > k) return false; return !!c.gestao_congelado_em || !c.gestao_vencimento || String(c.gestao_vencimento).slice(0, 7) >= k; };
+const clientesAtivos = () => (D.clientes || []).filter(ativoGestao);
+// ciclo de um mês que já passou, pelo histórico carregado (o mês atual usa cicloCliente)
+function cicloMes(c, k) {
+  const id = String(c.id), ant = mesMais(k, -1);
+  // antes de novembro de 2026 a conferência sem diferença não deixava registro: nesses meses, qualquer lançamento conta
+  const saldos = (D.confs || []).some(x => String(x.cliente_id) === id && mesLocal(x.feita_em) === k) || (k < '2026-11' && (D.extH || []).some(x => String(x.cliente_id) === id && mesLocal(x.created_at) === k));
+  const reuniao = (D.agenda || []).some(a => String(a.cliente_id) === id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasH || []).some(x => String(x.cliente_id) === id && String(x.data_reuniao).slice(0, 7) === k);
+  const carta = (D.relH || []).some(r => String(r.cliente_id) === id && String(r.mes).slice(0, 7) === ant && r.publicado);
+  return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
+}
+function historicoCiclo(n) {
+  const k0 = mesKey(new Date()), H = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const k = mesMais(k0, -i), L = i ? (D.clientes || []).filter(c => ativoNoMes(c, k)) : clientesAtivos();
+    H.push({ k, total: L.length, emDia: L.filter(c => (i ? cicloMes(c, k) : cicloCliente(c)).feitos === 3).length });
+  }
+  return H;
+}
+const fechouEm = (r) => r.fechado_em || ((r.marcos || {})['Fechou'] || {}).em || r.data;
+// conversão da call: fechados no mês ÷ reuniões de proposta realizadas no mês
+function kpiConversaoCall(k) {
+  const G = (D.reunioes || []).filter(ehGestao);
+  const fechados = G.filter(r => r.resultado === 'Fechou' && fechouEm(r) && mesLocal(fechouEm(r)) === k).length;
+  const calls = G.reduce((t, r) => t + reunioesDe(r.id).filter(a => /proposta/i.test(a.titulo || '') && a.status === 'Realizada' && mesLocal(a.data) === k).length, 0);
+  return { fechados, calls, taxa: calls ? fechados / calls * 100 : null };
+}
+// onboarding no prazo: clientes com D0 no mês e o checklist todo feito até o fim do D7; quem ainda está dentro dos 7 dias fica de fora
+function kpiOnboarding(k) {
+  if (D.gtar === null) return null;
+  let prazo = 0, atraso = 0, andamento = 0;
+  (D.clientes || []).forEach(c => {
+    const d0 = c.implantacao_inicio || c.gestao_inicio; if (!d0 || String(d0).slice(0, 7) !== k) return;
+    const L = tarefasOb(c.id); if (!L.length) return;
+    const lim = dia(d0).getTime() + 8 * 864e5, ok = L.every(t => t.feito);
+    const fim = ok ? Math.max(...L.map(t => t.feito_em ? new Date(t.feito_em).getTime() : Infinity)) : null;
+    if (ok && fim < lim) prazo++; else if (!ok && Date.now() < lim) andamento++; else atraso++;
+  });
+  return { prazo, atraso, andamento, taxa: prazo + atraso ? prazo / (prazo + atraso) * 100 : null };
+}
+// renovação nos últimos 12 meses: ciclos que venceram e têm um ciclo seguinte ÷ esses mais os contratos vencidos sem renovar
+function kpiRenovacao() {
+  if (!D.ciclosG) return null;
+  const ini = maisDias(-365), hj = hojeISO();
+  let renovaram = 0, naoRenovaram = 0;
+  (D.clientes || []).forEach(c => {
+    const id = String(c.id), atual = c.gestao_vencimento ? String(c.gestao_vencimento).slice(0, 10) : null;
+    renovaram += D.ciclosG.filter(x => { const v = String(x.vencimento || '').slice(0, 10); return String(x.cliente_id) === id && v && v >= ini && v <= hj && atual && v < atual; }).length;
+    if (atual && !c.gestao_congelado_em && atual >= ini && atual < hj) naoRenovaram++;
+  });
+  return { renovaram, venceram: renovaram + naoRenovaram, taxa: renovaram + naoRenovaram ? renovaram / (renovaram + naoRenovaram) * 100 : null };
+}
+// pontos vencidos de clientes da Gestão desde a entrada: o alerta deve ficar em zero
+function kpiVencidos() {
+  const cli = new Map((D.clientes || []).map(c => [String(c.id), c]));
+  const exp = (D.expir || []).filter(x => { const c = cli.get(String(x.cliente_id)), i = c && inicioGestao(c); return i && String(x.data).slice(0, 10) >= i; });
+  const porCli = {}; exp.forEach(x => { porCli[x.cliente_id] = (porCli[x.cliente_id] || 0) + Math.abs(Number(x.quantidade) || 0); });
+  const conferir = (D.progs || []).filter(p => cli.has(String(p.cliente_id)) && p.vencimento_data && Number(p.vencimento_quantidade) > 0 && diasPara(p.vencimento_data) < 0);
+  return { pontos: Object.values(porCli).reduce((a, b) => a + b, 0), porCli, conferir, semDados: D.expir === null };
+}
+/* ---------- base do mês: conferência dos saldos do mês que fechou, do dia 1 ao dia 10 do mês seguinte ---------- */
+const PRAZO_BASE = 10;
+// primeira conferência salva no mês k (a do mês atual alimenta a base do mês que fechou)
+const confDoMes = (c, k) => {
+  const L = (D.confs || []).filter(x => String(x.cliente_id) === String(c.id) && mesLocal(x.feita_em) === k).sort((a, b) => String(a.feita_em).localeCompare(String(b.feita_em)));
+  return L[0] || (c.conferencia_em && mesLocal(c.conferencia_em) === k ? { feita_em: c.conferencia_em } : null);
+};
+// precisa alimentar a base no mês k: ativo, não congelado e já na Gestão antes do mês começar
+const precisaBase = (c, k) => ativoGestao(c) && !c.gestao_congelado_em && !!inicioGestao(c) && inicioGestao(c).slice(0, 7) < k;
+const quemFez = (f) => f && f.feita_por ? ' por ' + String(nomeTime(f.feita_por) || '').split(' ')[0] : '';
+// quem alimenta a base é o gestor da conta; os administradores (Isadora e Matheus) veem a base de todos.
+// O cadastro de gestores não guarda o usuário do app: a ligação é pelo e-mail.
+const gestorDe = (c) => (D.gestores || []).find(g => g.id === c.gestor_id) || null;
+const souGestorDe = (c) => { const em = String(D.meuEmail || '').trim().toLowerCase(), g = gestorDe(c); return !!(em && g && String(g.email || '').trim().toLowerCase() === em); };
+const vejoBase = (c) => ADMIN || souGestorDe(c);
+// abre a carteira do cliente já na Conferência do mês (a carteira abre o formulário depois de carregar)
+function alimentarBase(id) { abrirFicha(id, 'carteira'); FI_FORM = 'conferencia'; }
+function htmlBaseMes() {
+  const k = mesKey(new Date()), ref = mesNomeCurto(mesAnterior()), d = diaHoje();
+  const L = (D.clientes || []).filter(c => precisaBase(c, k) && vejoBase(c)).map(c => ({ c, f: confDoMes(c, k) }));
+  if (!L.length) return '';
+  const linha = ({ c }) => `<div class="kbl"><span>${esc(c.nome_completo)}${gest(c)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar</button></div>`;
+  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'gestor ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem gestor'}</small>` : '';
+  // primeiro quem tem o dia planejado mais cedo; sem dia planejado vai para o fim
+  const falta = L.filter(x => !x.f).sort((a, b) => (Number(a.c.dia_saldos) || 99) - (Number(b.c.dia_saldos) || 99) || String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
+  const feitas = L.filter(x => x.f).sort((a, b) => String(b.f.feita_em).localeCompare(String(a.f.feita_em)));
+  const cls = !falta.length ? 'ok' : d > PRAZO_BASE ? 'al' : '';
+  const tit = !falta.length ? `Todas as bases de ${ref} alimentadas` : d > PRAZO_BASE ? `Base de ${ref} atrasada: ${plural(falta.length, 'cliente', 'clientes')}` : `Base de ${ref}: ${feitas.length} de ${L.length} alimentadas`;
+  const sub = !falta.length ? `${L.length} de ${L.length} · a última em ${dataCurta(new Date(feitas[0].f.feita_em))}${quemFez(feitas[0].f)}`
+    : d > PRAZO_BASE ? `O prazo era dia ${PRAZO_BASE}. Alimente hoje.` : d === PRAZO_BASE ? `Hoje é o último dia do prazo.` : `Prazo dia ${PRAZO_BASE} · faltam ${plural(PRAZO_BASE - d, 'dia', 'dias')}`;
+  return `<section class="kbase ${cls}">
+    <div class="kbt"><b>${tit}</b><span>${sub}</span></div>
+    ${falta.length ? `<div class="kfal">Você não alimentou a base de:</div>` : ''}
+    ${falta.slice(0, 3).map(linha).join('')}
+    ${falta.length > 3 ? `<details class="kmais"><summary><span class="a">Mostrar mais ${falta.length - 3}</span><span class="f">Mostrar menos</span></summary>${falta.slice(3).map(linha).join('')}</details>` : ''}
+    ${feitas.length ? `<details${falta.length ? '' : ' open'}><summary>Alimentadas · ${feitas.length}</summary>${feitas.map(({ c, f }) => `<div class="kbl"><span>${esc(c.nome_completo)}</span><span class="q">${dataCurta(new Date(f.feita_em))}${quemFez(f)}</span></div>`).join('')}</details>` : ''}
+  </section>`;
+}
+function htmlKpisGestao() {
+  const k = mesKey(new Date()), at = clientesAtivos(), cong = at.filter(c => c.gestao_congelado_em).length;
+  const conv = kpiConversaoCall(k), ob = kpiOnboarding(k), ren = kpiRenovacao(), V = kpiVencidos();
+  const emDia = at.filter(c => cicloCliente(c).feitos === 3).length, eco = economiaAno();
+  const pc = (x) => x === null || x === undefined ? '-' : pct(x);
+  const card = (l, v, d, extra) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div>${extra || ''}</div>`;
+  const barra = (x) => `<div class="kb"><i style="width:${Math.min(100, Math.max(0, x))}%"></i></div>`;
+  const alerta = V.pontos > 0 || V.conferir.length;
+  return `<div class="kpis">
+    ${card('Clientes ativos', at.length, `de ${META_CLIENTES}, meta de ${META_ANO}${cong ? ` · ${plural(cong, 'congelado', 'congelados')}` : ''}`, barra(at.length / META_CLIENTES * 100))}
+    ${card('Conversão da call', pc(conv.taxa), `${plural(conv.fechados, 'fechado', 'fechados')} · ${plural(conv.calls, 'call de proposta', 'calls de proposta')} em ${mesNomeCurto(k)}`)}
+    ${card('Onboarding no prazo', ob ? pc(ob.taxa) : '-', ob ? `${ob.prazo} de ${ob.prazo + ob.atraso} em ${mesNomeCurto(k)}${ob.andamento ? ` · ${ob.andamento} dentro dos 7 dias` : ''}` : 'Tarefas da Gestão não carregaram')}
+    <button class="kpi" type="button" id="kpiCiclo"><div class="l">Ciclo em dia</div><div class="v">${at.length ? pct(emDia / at.length * 100) : '-'}</div><div class="d">${emDia} de ${at.length} em ${mesNomeCurto(k)} · mês a mês ›</div></button>
+    ${card('Economia por cliente', at.length ? brlC(eco / at.length) : '-', `no ano · ${brlC(eco)} no total`)}
+    ${card('Renovação', ren ? pc(ren.taxa) : '-', ren ? `${ren.renovaram} de ${plural(ren.venceram, 'contrato vencido', 'contratos vencidos')} em 12 meses` : 'Ciclos da Gestão não carregaram')}
+  </div>
+  <details class="kalerta ${alerta ? 'al' : ''}"><summary><span>Pontos vencidos de clientes da Gestão${V.conferir.length ? ` · ${plural(V.conferir.length, 'vencimento passado', 'vencimentos passados')} a conferir` : ''}</span><b>${V.semDados ? '-' : num(V.pontos)}</b></summary>
+    ${Object.entries(V.porCli).map(([cid, q]) => `<div class="lin"><span>${esc(nomeCli(cid))}</span><span>${num(q)} vencidos</span></div>`).join('')}
+    ${V.conferir.map(p => `<div class="lin"><span>${esc(nomeCli(p.cliente_id))} · ${esc(p.programa)}</span><span>${num(p.vencimento_quantidade)} em ${dataBR(p.vencimento_data)}, conferir</span></div>`).join('')}
+    ${alerta ? '' : '<div class="lin"><span>Nenhum ponto vencido desde a entrada de cada cliente.</span></div>'}
+  </details>`;
 }
 const vencendo = () => vencimentos(30).filter(({ p }) => !(p.vencimento_avisado_em && dia(p.vencimento_avisado_em) >= new Date(dia(p.vencimento_data) - 60 * 864e5)));
 const normNome = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -4030,13 +4208,13 @@ function pendGestao() {
     ['Milhas de clientes vencendo', vencendo().length],
     ['Renovações em 90 dias', renovacoes(90).length],
     ['Clientes sem data de entrada', semContrato().length],
-    ['Saldos para atualizar', saldosDoDia().length],
+    ['Bases para alimentar', saldosDoDia().length],
     ['Tarefas da Gestão para hoje', tarefasParaHoje().length]
   ];
 }
 const pilula = (ok, txt) => `<span class="tag ${ok ? 'ok' : 'alerta'}">${ok ? '✓ ' : ''}${txt}</span>`;
 function htmlCiclo(c, ciclo) {
-  return `${pilula(ciclo.saldos, 'Saldos')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
+  return `${pilula(ciclo.saldos, 'Base')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
 }
 // todos os pedidos de diagnóstico do site, com filtro e status (a aba Leads só tem um atalho para cá)
 function htmlPedidosDiagnostico() {
@@ -4071,13 +4249,15 @@ function telaGestao(P) {
   P.innerHTML = `
     <h1 class="titulo">Gestão de <em>Milhas</em></h1>
     <div class="sub">${total ? plural(total, 'coisa', 'coisas') + ' para resolver' : 'Nada pendente agora'} · ${D.clientes.length} cliente${D.clientes.length === 1 ? '' : 's'}</div>
+    ${htmlKpisGestao()}
+    ${htmlBaseMes()}
 
     ${htmlJornadaGestao()}
     <details class="gsec" style="margin-top:14px"${GE_SOL_ABERTO ? ' open' : ''}><summary><span>Para resolver hoje<small>Ciclo do mês, tarefas, pedidos, renovações e números da carteira</small></span><b style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:${total ? 'var(--alerta)' : 'var(--tinta-3)'};margin-left:auto">${total}</b></summary>
     <button class="ciclo" id="geCiclo">
       <div class="top"><span>Ciclo de ${mesNomeCurto(mesKey(new Date()))}</span><b>${emDia} de ${D.clientes.length} em dia</b></div>
       <div class="barra2"><i class="${emDia === D.clientes.length && emDia ? 'ok' : ''}" style="width:${D.clientes.length ? emDia / D.clientes.length * 100 : 0}%"></i></div>
-      <small>Saldos lançados, reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
+      <small>Base de ${mesNomeCurto(mesAnterior())} alimentada (conferência do mês), reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
     </button>
 
     ${grupo('Tarefas de hoje', htmlTarefasHoje())}
@@ -4118,7 +4298,7 @@ function telaGestao(P) {
 
     <div class="secao">Carteira de clientes</div>
     <div class="numeros" style="margin-top:0">
-      <div class="num destaque"><div class="l">Patrimônio sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
+      <div class="num destaque"><div class="l">Carteira sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
       <div class="num"><div class="l">Conversão no ano</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} leads decididos</div></div>
       <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
@@ -4157,7 +4337,8 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-cli]').forEach(b => b.onclick = () => ir('clientes'));
   { const k = $('gjKanban'), c = k && [...k.querySelectorAll('.gjc')].find(x => x.querySelector('.gjk')); if (k && c && !k._rolou) { k._rolou = 1; k.scrollLeft = c.offsetLeft - k.offsetLeft - 16; } }
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
-  $('geCiclo') && ($('geCiclo').onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); });
+  P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
+  ['geCiclo', 'kpiCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
   P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
@@ -4228,18 +4409,23 @@ function telaCiclo(P) {
   const falta = (t) => L.filter(y => !y.x[t]).length;
   P.innerHTML = `<button class="voltar" id="voltarCiclo">‹ Gestão</button>
     <h1 class="titulo" style="margin-top:6px">Ciclo de <em>${mesNomeCurto(k)}</em></h1>
-    <div class="sub">Tudo aqui é marcado sozinho: lançar na carteira marca Saldos, registrar a reunião realizada marca Reunião e publicar a carta marca Carta.</div>
+    <div class="sub">Tudo aqui é marcado sozinho: salvar a Conferência do mês na carteira marca Base, registrar a reunião realizada marca Reunião e publicar a carta marca Carta.</div>
     <div class="numeros" style="margin-top:12px">
-      <div class="num ${falta('saldos') ? 'alerta' : ''}"><div class="l">Sem saldos no mês</div><div class="v">${falta('saldos')}</div></div>
+      <div class="num ${falta('saldos') ? 'alerta' : ''}"><div class="l">Sem base de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('saldos')}</div></div>
       <div class="num ${falta('reuniao') ? 'alerta' : ''}"><div class="l">Sem reunião no mês</div><div class="v">${falta('reuniao')}</div></div>
       <div class="num ${falta('carta') ? 'alerta' : ''}"><div class="l">Sem carta de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('carta')}</div></div>
     </div>
+    <div class="secao">Ciclo em dia, mês a mês</div>
+    <div class="khist">${historicoCiclo(6).map(h => `<div class="m"><span>${mesNomeCurto(h.k)}</span><div class="kb"><i style="width:${h.total ? h.emDia / h.total * 100 : 0}%"></i></div><b>${h.total ? pct(h.emDia / h.total * 100) : '-'}</b></div>`).join('')}</div>
+    <div class="sub" style="margin-top:6px">Em dia = base do mês anterior alimentada (conferência do mês), reunião realizada e carta do mês anterior publicada, sobre os clientes ativos de cada mês. Antes de novembro de 2026 a conferência sem diferença de saldo não deixava registro: nesses meses, qualquer lançamento na carteira conta como base.</div>
+    <div class="secao">Cliente por cliente em ${mesNomeCurto(k)}</div>
     <div class="lista">${L.length ? L.map(({ c, x }) => `<article class="card">
       <div class="cab"><div class="nome">${esc(c.nome_completo)}</div><span class="quando">${x.feitos} de 3${c.dia_saldos ? ' · saldos dia ' + c.dia_saldos : ''}</span></div>
       <div style="margin-top:6px">${htmlCiclo(c, x)}</div>
-      ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-ficha="${c.id}" data-fa="carteira">Lançar saldos</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
+      ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-base="${c.id}">Alimentar a base</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
     </article>`).join('') : '<div class="vazio">Nenhum cliente na Gestão.</div>'}</div>`;
   $('voltarCiclo').onclick = () => voltarSeguro('gestao');
+  P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
 }
 function abrirFicha(id, aba) {
@@ -4309,7 +4495,7 @@ function fiResumo(el, c) {
   const eco = D.eco.filter(r => r.cliente_id === id).sort((a, b) => String(b.data).localeCompare(String(a.data)));
   el.innerHTML = `
     <div class="numeros" style="margin-top:12px">
-      <div class="num destaque"><div class="l">Patrimônio</div><div class="v">${brlC(patrimonio(id))}</div><div class="d">${milC(milhas(id))} milhas e pontos</div></div>
+      <div class="num destaque"><div class="l">Carteira</div><div class="v">${brlC(patrimonio(id))}</div><div class="d">${milC(milhas(id))} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia no ano</div><div class="v">${brlC(economiaAno(id))}</div><div class="d">${eco.length} registro${eco.length === 1 ? '' : 's'}</div></div>
     </div>
     <div class="secao">Contrato da Gestão</div>
@@ -4343,8 +4529,10 @@ async function fiCarteira(el, c) {
   el.innerHTML = `
     <div class="numeros" style="margin-top:12px">
       <div class="num destaque"><div class="l">Saldo total</div><div class="v">${milC(W.total)}</div><div class="d">${W.programas.filter(p => p.saldo).length} programas</div></div>
-      <div class="num"><div class="l">Patrimônio</div><div class="v">${brlC(patr)}</div><div class="d">pelo valor do milheiro</div></div>
+      <div class="num"><div class="l">Carteira em R$</div><div class="v">${brlC(patr)}</div><div class="d">pelo valor do milheiro</div></div>
     </div>
+    ${(() => { const k = mesKey(new Date()), ref = mesNomeCurto(mesAnterior()); if (!precisaBase(c, k)) return ''; const f = confDoMes(c, k);
+      return `<div class="kbase ${f ? 'ok' : diaHoje() > PRAZO_BASE ? 'al' : ''}" style="margin-top:10px"><div class="kbt"><b>${f ? `Base de ${ref} alimentada` : `Base de ${ref} ainda não alimentada`}</b><span>${f ? `em ${dataCurta(new Date(f.feita_em))}${quemFez(f)}` : `${diaHoje() > PRAZO_BASE ? 'O prazo era' : 'Prazo:'} dia ${PRAZO_BASE}. Salve a Conferência do mês abaixo.`}</span></div></div>`; })()}
     <div class="botoes4">
       <button class="zap" data-form="conferencia" style="grid-column:1/-1">Conferência do mês</button>
       <button class="sec" data-form="entrada">+ Entrada</button>
@@ -4407,8 +4595,9 @@ function formCarteira(c) {
       <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('programa', 'Programa', comSaldo, (comSaldo[0] || [''])[0])}</div>
       <div class="duas-col">${campo('quantidade', 'Milhas usadas', '', 'number', 'required min="1"')}${selG('categoria_uso', 'O que foi emitido', [['passagem', 'Passagem aérea'], ['hospedagem', 'Hospedagem'], ['upgrade', 'Upgrade'], ['produto', 'Produtos ou vale-compras'], ['outro', 'Outro']], 'passagem')}</div>
       <div class="duas-col">${campo('taxas_brl', 'Taxas pagas (R$)', '', 'number')}${campo('valor_pagante_brl', 'Valor em dinheiro (R$)', '', 'number')}</div>
+      ${campo('valor_rex_brl', 'Tarifa de referência REX (R$, opcional)', '', 'number')}
       ${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: GRU > SCL, executiva, 2 passageiros"')}
-      <div class="sub" style="margin-top:4px">Com o valor em dinheiro, a economia entra sozinha no painel do cliente.</div>`,
+      <div class="sub" style="margin-top:4px">Com o valor em dinheiro ou a REX, a economia entra sozinha no painel do cliente. Vale o maior dos dois.</div>`,
     transf: `<h2>Transferência entre programas</h2>
       <div class="duas-col">${campo('data', 'Data', hoje, 'date', 'required')}${selG('de', 'De', comSaldo, (comSaldo[0] || [''])[0])}</div>
       ${progIn('para', 'Para')}
@@ -4429,7 +4618,7 @@ function formCarteira(c) {
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const f = $('fCart');
   const pre = tipo === 'uso' && FI_PRE && String(FI_PRE.cliente_id) === String(c.id) ? FI_PRE : null;
-  if (pre) { if (pre.data) f.elements.data.value = pre.data; if (pre.quantidade) f.elements.quantidade.value = Math.round(pre.quantidade); if (pre.taxas) f.elements.taxas_brl.value = pre.taxas; if (pre.descricao) f.elements.descricao.value = pre.descricao; $('prevCart').textContent = 'Preenchido a partir da emissão. Confira o programa e informe o valor em dinheiro para calcular a economia.'; }
+  if (pre) { if (pre.data) f.elements.data.value = pre.data; if (pre.quantidade) f.elements.quantidade.value = Math.round(pre.quantidade); if (pre.taxas) f.elements.taxas_brl.value = pre.taxas; if (pre.descricao) f.elements.descricao.value = pre.descricao; $('prevCart').textContent = 'Preenchido a partir da emissão. Confira o programa e informe o valor em dinheiro ou a REX para calcular a economia.'; }
   $('cancCart').onclick = () => { FI_FORM = null; FI_PRE = null; box.innerHTML = ''; };
   const estado = (nome) => W.programas.find(p => p.key === CART.normProg(nome));
   let manual = false;
@@ -4440,7 +4629,7 @@ function formCarteira(c) {
       const q = nv(f, 'quantidade'), cu = nv(f, 'custo_brl');
       pv.textContent = !$('wCusto').hidden && q > 0 && cu > 0 ? `Milheiro desta entrada: ${brl2(cu / q * 1000)}` : '';
     } else if (tipo === 'uso') {
-      const s = estado(tv(f, 'programa')), q = nv(f, 'quantidade'), tx = nv(f, 'taxas_brl') || 0, pag = nv(f, 'valor_pagante_brl');
+      const s = estado(tv(f, 'programa')), q = nv(f, 'quantidade'), tx = nv(f, 'taxas_brl') || 0, pag = CART.ancora(nv(f, 'valor_pagante_brl'), nv(f, 'valor_rex_brl'));
       if (s && q > 0 && s.custo_medio !== null) { const real = s.custo_medio * q / 1000 + tx; pv.textContent = `Custo real: ${brl2(real)}` + (pag > 0 ? ` · economia: ${brl2(pag - real)}` : ''); } else pv.textContent = '';
     } else if (tipo === 'transf') {
       if (ev && ev.target && ev.target.name === 'recebidas') manual = true;
@@ -4463,7 +4652,7 @@ function formCarteira(c) {
       const q = nv(f, 'quantidade'), s = estado(tv(f, 'programa'));
       if (!(q > 0) || !tv(f, 'descricao')) return erro('Preencha milhas usadas e descrição.');
       if (!s || q > s.saldo) return erro(`Saldo insuficiente: ${num(s ? s.saldo : 0)}.`);
-      linhas = [{ data: tv(f, 'data'), programa: tv(f, 'programa'), tipo: 'emissao', quantidade: -Math.round(q), categoria_uso: tv(f, 'categoria_uso'), taxas_brl: nv(f, 'taxas_brl'), valor_pagante_brl: nv(f, 'valor_pagante_brl'), descricao: tv(f, 'descricao') }];
+      linhas = [{ data: tv(f, 'data'), programa: tv(f, 'programa'), tipo: 'emissao', quantidade: -Math.round(q), categoria_uso: tv(f, 'categoria_uso'), taxas_brl: nv(f, 'taxas_brl'), valor_pagante_brl: nv(f, 'valor_pagante_brl'), valor_rex_brl: nv(f, 'valor_rex_brl'), descricao: tv(f, 'descricao') }];
     } else if (tipo === 'transf') {
       const de = tv(f, 'de'), para = tv(f, 'para'), env = nv(f, 'enviados'), rec = nv(f, 'recebidas'), par = Number(tv(f, 'paridade') || 1), s = estado(de);
       if (!para || !(env > 0) || !(rec > 0)) return erro('Preencha destino, pontos enviados e milhas recebidas.');
@@ -4713,7 +4902,8 @@ function formConferencia(c, vals) {
          <input type="number" name="custo" placeholder="Valor pago (R$)" hidden step="any" inputmode="decimal">`
       : `<select name="tipo"><option value="emissao">Uso de milhas</option><option value="expiracao">Expiração</option><option value="ajuste">Ajuste para menos</option></select>
          <input name="desc" placeholder="O que foi emitido (ex.: GRU > LIS, 2 pax)">
-         <div class="duas-col"><input type="number" name="pagante" placeholder="Valor em dinheiro (R$)" step="any" inputmode="decimal"><input type="number" name="taxas" placeholder="Taxas (R$)" step="any" inputmode="decimal"></div>`;
+         <div class="duas-col"><input type="number" name="pagante" placeholder="Valor em dinheiro (R$)" step="any" inputmode="decimal"><input type="number" name="taxas" placeholder="Taxas (R$)" step="any" inputmode="decimal"></div>
+         <input type="number" name="rex" placeholder="Tarifa de referência REX (R$, opcional)" step="any" inputmode="decimal">`;
   };
   const ler = () => lista().map((x, i) => {
     const div = f.querySelector(`.conf[data-i="${i}"]`), v = div.querySelector('[name=novo]').value.trim();
@@ -4729,11 +4919,11 @@ function formConferencia(c, vals) {
       detalhe(r.div, r.dif, r.atual);
       const d = r.div.querySelector('.det');
       if (d.dataset.t === 'sobe') { const t = d.querySelector('[name=tipo]').value; d.querySelector('[name=custo]').hidden = !(t === 'compra' || t === 'clube'); }
-      if (d.dataset.t === 'desce') { const t = d.querySelector('[name=tipo]').value; d.querySelectorAll('[name=desc],[name=pagante],[name=taxas]').forEach(x => { x.hidden = t !== 'emissao'; }); d.querySelector('.duas-col').hidden = t !== 'emissao'; }
+      if (d.dataset.t === 'desce') { const t = d.querySelector('[name=tipo]').value; d.querySelectorAll('[name=desc],[name=pagante],[name=taxas],[name=rex]').forEach(x => { x.hidden = t !== 'emissao'; }); d.querySelector('.duas-col').hidden = t !== 'emissao'; }
       if (r.novo !== null) mexidos++;
       if (r.dif > 0) { sobe += r.dif; if (refs[r.key] !== undefined) valor += r.dif * refs[r.key] / 1000; }
     });
-    $('confResumo').innerHTML = mexidos ? `<b>${plural(mexidos, 'programa conferido', 'programas conferidos')}</b>${sobe ? ` · ${num(sobe)} novos pontos${valor ? ', cerca de ' + brl2(valor) + ' em patrimônio' : ''}` : ''}` : '';
+    $('confResumo').innerHTML = mexidos ? `<b>${plural(mexidos, 'programa conferido', 'programas conferidos')}</b>${sobe ? ` · ${num(sobe)} novos pontos${valor ? ', cerca de ' + brl2(valor) + ' na carteira' : ''}` : ''}` : '';
   };
   aplicarPrints(); desenharPrints();
   f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
@@ -4750,9 +4940,9 @@ function formConferencia(c, vals) {
         if ((t === 'compra' || t === 'clube') && !(custo > 0)) { aviso(`${r.nome}: informe o valor pago.`); return; }
         linhas.push({ data, programa: r.nome, tipo: t, quantidade: r.dif, custo_brl: t === 'compra' || t === 'clube' ? custo : null, descricao: 'Conferência mensal' });
       } else if (t === 'emissao') {
-        const desc = d.querySelector('[name=desc]').value.trim(), pag = d.querySelector('[name=pagante]').value.trim(), tx = d.querySelector('[name=taxas]').value.trim();
+        const desc = d.querySelector('[name=desc]').value.trim(), pag = d.querySelector('[name=pagante]').value.trim(), tx = d.querySelector('[name=taxas]').value.trim(), rex = d.querySelector('[name=rex]').value.trim();
         if (!desc) { aviso(`${r.nome}: descreva o que foi emitido.`); return; }
-        linhas.push({ data, programa: r.nome, tipo: 'emissao', quantidade: r.dif, categoria_uso: 'passagem', descricao: desc, valor_pagante_brl: pag ? Number(pag.replace(',', '.')) : null, taxas_brl: tx ? Number(tx.replace(',', '.')) : null });
+        linhas.push({ data, programa: r.nome, tipo: 'emissao', quantidade: r.dif, categoria_uso: 'passagem', descricao: desc, valor_pagante_brl: pag ? Number(pag.replace(',', '.')) : null, valor_rex_brl: rex ? Number(rex.replace(',', '.')) : null, taxas_brl: tx ? Number(tx.replace(',', '.')) : null });
       } else linhas.push({ data, programa: r.nome, tipo: t, quantidade: r.dif, descricao: 'Conferência mensal' });
     }
     $('salvarConf').disabled = true; $('salvarConf').textContent = 'Salvando...';
@@ -4763,6 +4953,9 @@ function formConferencia(c, vals) {
     const agora = new Date().toISOString();
     const cf = await sb.from('clientes').update({ conferencia_em: agora }).eq('id', c.id);
     if (!cf.error) c.conferencia_em = agora;
+    // registro de cada conferência, mesmo sem diferença de saldo: alimenta o histórico do Ciclo em dia (61-rex-e-conferencias.sql)
+    const rc = await sb.from('gestao_conferencias').insert({ cliente_id: c.id, feita_em: agora });
+    if (!rc.error && D.confs) D.confs.push({ cliente_id: c.id, feita_em: agora, feita_por: D.meuId });
     // vencimentos lidos do print: grava depois do recálculo, que cria o programa novo na carteira
     const comVenc = Object.values(leituras).filter(L => L.vencVisivel);
     let semVenc = '';
@@ -4772,7 +4965,7 @@ function formConferencia(c, vals) {
       if (er) semVenc = ' ' + tec('Os vencimentos do print não foram gravados: rode no Supabase o SQL das colunas vencimentos_lidos (' + er + ').');
     }
     c._confExtra = []; c._prints = {};
-    await depoisDaCarteira(c, (linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.') + semVenc);
+    await depoisDaCarteira(c, `Base de ${mesNomeCurto(mesAnterior())} de ${c.nome_completo} alimentada. ` + (linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.') + semVenc);
   };
 }
 
@@ -4832,6 +5025,7 @@ async function fiRelatorio(el, c) {
     const { error: er } = await sb.from('relatorios_mensais').upsert(row, { onConflict: 'cliente_id,mes' });
     if (er) { aviso('Não salvou: ' + er.message); return; }
     if (mes === mesAnterior()) { D.rel = (D.rel || []).filter(x => x.cliente_id !== c.id).concat([{ cliente_id: c.id, publicado: pub }]); }
+    D.relH = (D.relH || []).filter(x => !(x.cliente_id === c.id && String(x.mes).slice(0, 7) === mes)).concat([{ cliente_id: c.id, mes: mes + '-01', publicado: pub }]);
     aviso(pub ? 'Carta publicada. O cliente já vê no relatório.' : 'Rascunho salvo.'); telaFicha($('pagina'), c.id);
   };
 }
@@ -4887,7 +5081,8 @@ const GT_SQL_OB = 'Rode o 52-onboarding-gestao.sql e publique a função gestao-
 const tarefasDe = (cid) => (D.gtar || []).filter(t => String(t.cliente_id) === String(cid)).sort((a, b) => a.ordem - b.ordem || a.id - b.id);
 const diaHoje = () => new Date().getDate();
 function saldosDoDia() {
-  return (D.clientes || []).filter(c => c.dia_saldos && diaHoje() >= c.dia_saldos && !cicloCliente(c).saldos);
+  const k = mesKey(new Date());
+  return (D.clientes || []).filter(c => precisaBase(c, k) && vejoBase(c) && c.dia_saldos && diaHoje() >= c.dia_saldos && !cicloCliente(c).saldos);
 }
 function tarefasParaHoje() {
   return (D.gtar || []).filter(t => !t.feito && t.prazo && diasPara(t.prazo) <= 0 && D.clientes.some(c => String(c.id) === String(t.cliente_id)))
@@ -4900,8 +5095,8 @@ function implantacoesAbertas() {
 function htmlTarefasHoje() {
   const sd = saldosDoDia(), th = tarefasParaHoje();
   const s = sd.map(c => `<article class="card" style="margin-bottom:8px">
-      <div class="cab"><div><div class="nome">${esc(c.nome_completo)}</div><span class="tag ${diaHoje() === c.dia_saldos ? 'ouro' : 'alerta'}">${diaHoje() === c.dia_saldos ? 'hoje é o dia dos saldos' : 'saldos atrasados'}</span></div><span class="quando">todo dia ${c.dia_saldos}</span></div>
-      <div class="acoes"><button class="zap" data-ficha="${c.id}" data-fa="carteira">Atualizar saldos</button></div></article>`).join('');
+      <div class="cab"><div><div class="nome">${esc(c.nome_completo)}</div><span class="tag ${diaHoje() === c.dia_saldos ? 'ouro' : 'alerta'}">${diaHoje() === c.dia_saldos ? 'hoje é o dia da base' : diaHoje() > PRAZO_BASE ? 'base atrasada' : 'base pendente'}</span></div><span class="quando">todo dia ${c.dia_saldos}</span></div>
+      <div class="acoes"><button class="zap" data-base="${c.id}">Alimentar a base</button></div></article>`).join('');
   const t = th.map(x => { const dv = diasPara(x.prazo); return `<article class="card" style="margin-bottom:8px">
       <div class="cab"><div><div class="nome">${esc(nomeCli(x.cliente_id))}</div><span class="tag ${dv < 0 ? 'alerta' : 'ouro'}">${dv < 0 ? 'atrasada desde ' + dataCurta(dia(x.prazo)) : 'para hoje'}</span>${x.grupo === 'cliente' ? ' <span class="tag">cobrar do cliente</span>' : ''}</div></div>
       <div class="info"><div>${esc(x.titulo)}</div></div>
@@ -4966,7 +5161,7 @@ Fechamento (3 min): "Amanhã te mando um resumo do que entendi. Se algo estiver 
 Regras: perguntar sobre hábitos e desejos, nunca pedir valores detalhados ou extratos; anotar as palavras do cliente como ele disse (elas vão para o resumo); não recomendar cartão nem estratégia nesta reunião.`;
 function textoAcessoPainel(c) {
   const pf = (D.pessoas || []).find(x => x.cliente_id === c.id), nome = String(c.nome_completo || '').split(' ')[0];
-  return `Oi, ${nome}! Seu painel da Gestão de Milhas Maktub Go já está liberado.\n\nPara entrar: https://www.maktubgo.com.br/acesso/\nUse o seu e-mail${pf && pf.email ? ' (' + pf.email + ')' : ''} e digite o código que chega na sua caixa de entrada. Não tem senha.\n\nLá você faz o seu cadastro: cartões, programas, saldos e quem viaja com você.`;
+  return `Oi, ${nome}! Seu painel da Gestão de Milhas Maktub Go já está liberado.\n\nPara entrar: https://www.maktubgo.com.br/acesso/\nUse o seu e-mail${pf && pf.email ? ' (' + pf.email + ')' : ''} e a sua senha. Depois, digite o código de 6 dígitos que chega no seu e-mail.\nSe ainda não criou a sua senha, use o link do e-mail de cadastro que enviamos para você.\n\nLá você faz o seu cadastro: cartões, programas, saldos e quem viaja com você.`;
 }
 
 async function fiTarefas(el, c) {
@@ -5024,9 +5219,9 @@ async function fiTarefas(el, c) {
 
     <div class="secao" id="gtRotina">Rotina mensal</div>
     <section class="bloco" style="margin-top:0">
-      <label class="fl" style="margin-top:0"><span>Dia fixo de atualização dos saldos</span><select id="gtDia"><option value="">Sem dia fixo</option>${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}" ${Number(c.dia_saldos) === i + 1 ? 'selected' : ''}>Todo dia ${i + 1}</option>`).join('')}</select></label>
-      <div class="sub">${c.dia_saldos ? (cicloCliente(c).saldos ? 'Saldos deste mês já lançados.' : diaHoje() >= c.dia_saldos ? '<span style="color:var(--alerta)">Saldos deste mês ainda não lançados.</span>' : 'Próxima atualização: dia ' + c.dia_saldos + '.') : 'Sem dia fixo, o cliente entra só no aviso geral de conferência do dia 5.'} No dia, chega aviso no app e no Telegram às 9h, e de novo 3 dias depois se nada for lançado.</div>
-      <button class="sec" id="gtDiaOk" style="margin-top:8px;width:100%">Salvar dia fixo</button></section>`;
+      <label class="fl" style="margin-top:0"><span>Dia planejado para alimentar a base (prazo: dia ${PRAZO_BASE})</span><select id="gtDia"><option value="">Sem dia planejado</option>${Array.from({ length: Math.max(PRAZO_BASE, Number(c.dia_saldos) || 0) }, (_, i) => `<option value="${i + 1}" ${Number(c.dia_saldos) === i + 1 ? 'selected' : ''}>Todo dia ${i + 1}${i + 1 > PRAZO_BASE ? ' (depois do prazo)' : ''}</option>`).join('')}</select></label>
+      <div class="sub">${cicloCliente(c).saldos ? `Base de ${mesNomeCurto(mesAnterior())} já alimentada.` : diaHoje() > PRAZO_BASE ? `<span style="color:var(--alerta)">Base de ${mesNomeCurto(mesAnterior())} atrasada: o prazo era dia ${PRAZO_BASE}.</span>` : c.dia_saldos && diaHoje() >= c.dia_saldos ? `<span style="color:var(--alerta)">Base de ${mesNomeCurto(mesAnterior())} ainda não alimentada.</span>` : `Base de ${mesNomeCurto(mesAnterior())}: alimentar até o dia ${PRAZO_BASE}${c.dia_saldos ? ', planejado para o dia ' + c.dia_saldos : ''}.`} A base é alimentada salvando a Conferência do mês na carteira, mesmo sem diferença de saldo. No dia, chega aviso no app e no Telegram às 9h, e de novo 3 dias depois se nada for lançado.</div>
+      <button class="sec" id="gtDiaOk" style="margin-top:8px;width:100%">Salvar dia planejado</button></section>`;
 
   const P = $('pagina'), de = () => telaFicha(P, c.id);
   el.querySelectorAll('[data-gt]').forEach(b => b.onchange = async () => { if (await gtMarcar(b.dataset.gt, b.checked)) de(); else b.checked = !b.checked; });
@@ -5090,7 +5285,7 @@ async function fiTarefas(el, c) {
     const { error } = await sb.from('clientes').update({ dia_saldos: v }).eq('id', c.id);
     if (error) { aviso(/dia_saldos/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
     c.dia_saldos = v; if (v) await gtMarcarChave(c, 'dia_saldos');
-    aviso(v ? 'Saldos todo dia ' + v + '.' : 'Dia fixo removido.'); de();
+    aviso(v ? 'Base planejada para todo dia ' + v + '.' : 'Dia planejado removido.'); de();
   };
 }
 let FI_ONB = false;

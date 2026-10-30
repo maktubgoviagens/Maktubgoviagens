@@ -1610,7 +1610,9 @@
   function ecoDetail(r) {
     const c = ecoCat(r), parts = [];
     if (c === 'emissao') {
-      if (r.valor_mercado_brl) parts.push(`Valor de mercado <span class="strike">${money2(r.valor_mercado_brl)}</span>`);
+      // quando a âncora da economia foi a tarifa de referência (REX), o rótulo diz isso
+      const ehRex = Number(r.valor_rex_brl) > 0 && Number(r.valor_rex_brl) === Number(r.valor_mercado_brl);
+      if (r.valor_mercado_brl) parts.push(`${ehRex ? 'Tarifa de referência' : 'Valor de mercado'} <span class="strike">${money2(r.valor_mercado_brl)}</span>`);
       if (r.valor_pago_brl !== null && r.valor_pago_brl !== undefined && r.valor_pago_brl !== '') parts.push(`Você investiu ${money2(r.valor_pago_brl)}` + (r.custo_milhas_brl !== null && r.custo_milhas_brl !== undefined && r.extrato_id ? ` (milhas ${money2(r.custo_milhas_brl)} + taxas ${money2(r.taxas_brl || 0)})` : ''));
       if (r.milhas_utilizadas) parts.push(`${fmtNum(r.milhas_utilizadas)} milhas${r.programa ? ' ' + escapeHtml(r.programa) : ''}`);
       const m = Number(r.valor_mercado_brl);

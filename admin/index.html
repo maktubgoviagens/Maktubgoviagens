@@ -231,7 +231,7 @@
       cols: ['created_at','nome','whatsapp','status'] }
   };
   const CLIENT_VIEWS = [
-    ['cadastro','Cadastro e gestor'],['carteira','Carteira de milhas'],['indicadores','Indicadores do patrimônio'],['programas_milhas','Programas e vencimentos'],['cartoes','Cartões'],
+    ['cadastro','Cadastro e gestor'],['carteira','Carteira de milhas'],['indicadores','Indicadores da carteira'],['programas_milhas','Programas e vencimentos'],['cartoes','Cartões'],
     ['viagens','Viagens'],['voos','Voos'],['documentos','Documentos'],['historico_saldos','Saldos mensais'],
     ['historico_economia','Economias'],['movimentos_estrategicos','Movimentos estratégicos'],['reunioes','Histórico de reuniões'],
     ['agendamentos_reuniao','Agendamentos'],['relatorio','Relatório mensal'],['convites','Indicações']
@@ -458,10 +458,10 @@
     const { data, error } = await sb.from('economia_gerada').select('*').eq('cliente_id', c.id).maybeSingle();
     if (error) throw error;
     const r = data || {};
-    m.innerHTML = header(k, 'Indicadores do <em>patrimônio</em>', 'Calculados sozinhos pela Carteira de milhas e pelo valor do milheiro. Aqui só se edita a próxima reunião.',
+    m.innerHTML = header(k, 'Indicadores da <em>carteira</em>', 'Calculados sozinhos pela Carteira de milhas e pelo valor do milheiro. Aqui só se edita a próxima reunião.',
       '<button class="btn" id="recalc">Recalcular agora</button>') + `
       <div class="cards">
-        <div class="card"><div class="l">Patrimônio em milhas</div><div class="v">${num(r.patrimonio_total ?? 0)}</div></div>
+        <div class="card"><div class="l">Carteira em milhas</div><div class="v">${num(r.patrimonio_total ?? 0)}</div></div>
         <div class="card"><div class="l">Equivalente em R$</div><div class="v">${brl(r.patrimonio_equivalente_brl ?? 0)}</div></div>
         <div class="card"><div class="l">Evolução no mês</div><div class="v">${num(r.evolucao_mes ?? 0)}</div></div>
         <div class="card"><div class="l">Evolução no ano</div><div class="v">${num(r.evolucao_ano ?? 0)}</div></div>
@@ -525,7 +525,7 @@
       (async () => {
         try {
           const n = await pontosParaCarteira(c.id, rows);
-          if (n) { toast(`${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e patrimônio atualizados.`); render(); }
+          if (n) { toast(`${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e carteira em reais atualizados.`); render(); }
         } catch (err) { console.error(err); }
       })();
       $('impEco').onclick = () => importarEconomias(c, rows);
@@ -533,7 +533,7 @@
         $('ptsCart').disabled = true;
         try {
           const n = await pontosParaCarteira(c.id, rows);
-          toast(n ? `${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e patrimônio atualizados.` : 'Todos os acúmulos já estavam na carteira.');
+          toast(n ? `${n} ${n === 1 ? 'acúmulo levado' : 'acúmulos levados'} para a carteira. Saldo e carteira em reais atualizados.` : 'Todos os acúmulos já estavam na carteira.');
           render();
         } catch (err) { toast(errMsg(err)); $('ptsCart').disabled = false; }
       };
@@ -837,6 +837,8 @@
   // O saldo de cada programa é a soma dos lançamentos. O custo médio segue o método da média ponderada
   // (igual a carteira de ações) e separa o que é herdado, orgânico e pago.
   const normProg = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // âncora da economia de uma emissão: o maior entre o valor pagante e a tarifa de referência (REX); null se nenhum dos dois
+  const ancora = (pag, rex) => { const m = Math.max(Number(pag) || 0, Number(rex) || 0); return m > 0 ? m : null; };
   const round2 = (n) => n === null || n === undefined || !isFinite(n) ? null : Math.round(n * 100) / 100;
   const cpm = (n) => n === null || n === undefined || !isFinite(n) ? '' : brl(n);
   const hojeISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
@@ -958,12 +960,12 @@
     if (temRef) ind.patrimonio_equivalente_brl = round2(patrimonio);
     ops.push(ec.data ? sb.from('economia_gerada').update(ind).eq('id', ec.data.id) : sb.from('economia_gerada').insert({ ...ind, cliente_id: cid }));
     const emis = (ex.data || []).filter(x => x.tipo === 'emissao');
-    const comEco = emis.filter(x => Number(x.valor_pagante_brl) > 0), semEco = emis.filter(x => !(Number(x.valor_pagante_brl) > 0));
+    const comEco = emis.filter(x => ancora(x.valor_pagante_brl, x.valor_rex_brl)), semEco = emis.filter(x => !ancora(x.valor_pagante_brl, x.valor_rex_brl));
     if (comEco.length) ops.push(sb.from('historico_economia').upsert(comEco.map(x => {
       const i = W.porLinha[x.id] || {};
       return { cliente_id: cid, extrato_id: x.id, categoria: !x.categoria_uso || x.categoria_uso === 'passagem' ? 'emissao' : 'outro', data: x.data,
         descricao: x.descricao || 'Uso de milhas', programa: nome(normProg(x.programa)), milhas_utilizadas: Math.abs(Number(x.quantidade || 0)),
-        valor_mercado_brl: Number(x.valor_pagante_brl), valor_pago_brl: round2(i.custo_real || 0), valor_economia_brl: null,
+        valor_mercado_brl: ancora(x.valor_pagante_brl, x.valor_rex_brl), valor_rex_brl: Number(x.valor_rex_brl) > 0 ? Number(x.valor_rex_brl) : null, valor_pago_brl: round2(i.custo_real || 0), valor_economia_brl: null,
         custo_milhas_brl: round2(i.custo_milhas || 0), taxas_brl: x.taxas_brl === null || x.taxas_brl === undefined ? null : Number(x.taxas_brl) };
     }), { onConflict: 'extrato_id' }));
     if (semEco.length) ops.push(sb.from('historico_economia').delete().in('extrato_id', semEco.map(x => x.id)));
@@ -988,14 +990,14 @@
       `<button class="btn pri" id="lnEntrada">+ Entrada de pontos</button><button class="btn" id="lnTransf">Transferência</button><button class="btn" id="lnUso">Uso de milhas</button><button class="btn" id="lnAjuste">Expiração ou ajuste</button><button class="btn" id="lnRecalc">Recalcular painel</button><button class="btn" id="lnExp">Exportar planilha</button><button class="btn" id="lnImp">Importar planilha</button>`) + `
       <div class="cards">
         <div class="card"><div class="l">Saldo total</div><div class="v">${num(W.total)}</div><div class="muted">milhas e pontos</div></div>
-        <div class="card"><div class="l">Patrimônio estimado</div><div class="v">${brl(patr)}</div><div class="muted">${semRef.length ? 'Sem valor de referência: ' + esc(semRef.join(', ')) : 'Pelo valor de referência do milheiro'}</div></div>
+        <div class="card"><div class="l">Carteira estimada em R$</div><div class="v">${brl(patr)}</div><div class="muted">${semRef.length ? 'Sem valor de referência: ' + esc(semRef.join(', ')) : 'Pelo valor de referência do milheiro'}</div></div>
         <div class="card"><div class="l">Custo médio da carteira</div><div class="v">${W.total > 0 ? brl(W.custo_total / W.total * 1000) : ''}</div><div class="muted">por milheiro · custo total ${brl(W.custo_total)}</div></div>
         <div class="card"><div class="l">Composição</div><div class="v" style="font-size:22px">${pct(h)} · ${pct(o)} · ${pct(pg)}</div><div class="muted">herdado · orgânico · pago</div></div>
       </div>
-      ${semRef.length ? '<div class="hint">Para calcular o patrimônio em reais, cadastre o valor de referência do milheiro desses programas em <strong>Valor do milheiro</strong> (menu Operação).</div>' : ''}
+      ${semRef.length ? '<div class="hint">Para calcular a carteira em reais, cadastre o valor de referência do milheiro desses programas em <strong>Valor do milheiro</strong> (menu Operação).</div>' : ''}
       <h2>Por programa</h2>
       <div class="tblw"><table><thead><tr><th>Programa</th><th style="text-align:right">Saldo</th><th style="text-align:right">Herdado</th><th style="text-align:right">Orgânico</th><th style="text-align:right">Pago</th>
-        <th style="text-align:right">Custo total</th><th style="text-align:right">Custo médio</th><th style="text-align:right">Custo das compras</th><th style="text-align:right">Valor ref.</th><th style="text-align:right">Patrimônio</th></tr></thead><tbody>
+        <th style="text-align:right">Custo total</th><th style="text-align:right">Custo médio</th><th style="text-align:right">Custo das compras</th><th style="text-align:right">Valor ref.</th><th style="text-align:right">Carteira em R$</th></tr></thead><tbody>
       ${W.programas.length ? W.programas.map(p => { const r = refs[p.key]; return `<tr><td><strong>${esc(nomeProg[p.key] || p.programa)}</strong></td><td class="a">${num(p.saldo)}</td><td class="a">${num(p.herdado)}</td><td class="a">${num(p.organico)}</td><td class="a">${num(p.pago)}</td>
         <td class="a">${brl(p.custo_total)}</td><td class="a"><strong>${cpm(p.custo_medio)}</strong></td><td class="a">${cpm(p.custo_compras)}</td><td class="a">${r !== undefined ? brl(r) : '<span class="muted">sem valor</span>'}</td><td class="a">${r !== undefined ? brl(p.saldo * r / 1000) : ''}</td></tr>`; }).join('')
         : '<tr><td colspan="10" class="empty">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa (Entrada de pontos, origem "Saldo herdado").</td></tr>'}
@@ -1009,7 +1011,7 @@
         if (['saldo_inicial', 'compra', 'clube'].includes(x.tipo) && x.custo_brl !== null && x.custo_brl !== undefined) valor = brl(x.custo_brl);
         else if (i.custo_milhas !== null && i.custo_milhas !== undefined) valor = `<span class="muted">${brl(i.custo_milhas)}</span>`;
         let desc = esc(x.descricao || '');
-        if (x.tipo === 'emissao') desc += `<div class="muted">Custo real ${brl(i.custo_real || 0)}${x.taxas_brl ? ' (milhas ' + brl(i.custo_milhas || 0) + ' + taxas ' + brl(x.taxas_brl) + ')' : ''}${Number(x.valor_pagante_brl) > 0 ? ' · em dinheiro ' + brl(x.valor_pagante_brl) + ' · economia <strong>' + brl(Number(x.valor_pagante_brl) - (i.custo_real || 0)) + '</strong>' : ''}</div>`;
+        if (x.tipo === 'emissao') desc += `<div class="muted">Custo real ${brl(i.custo_real || 0)}${x.taxas_brl ? ' (milhas ' + brl(i.custo_milhas || 0) + ' + taxas ' + brl(x.taxas_brl) + ')' : ''}${Number(x.valor_pagante_brl) > 0 ? ' · em dinheiro ' + brl(x.valor_pagante_brl) : ''}${Number(x.valor_rex_brl) > 0 ? ' · REX ' + brl(x.valor_rex_brl) : ''}${ancora(x.valor_pagante_brl, x.valor_rex_brl) ? ' · economia <strong>' + brl(ancora(x.valor_pagante_brl, x.valor_rex_brl) - (i.custo_real || 0)) + '</strong>' : ''}</div>`;
         if (x.validade) desc += `<div class="muted">Validade ${brDate(x.validade)}</div>`;
         if (quem(x.criado_por)) desc += `<div class="muted">Lançado por ${esc(quem(x.criado_por))}</div>`;
         const orig = ORIGEM_LBL[x.tipo] ? ` <span class="pill ${x.tipo === 'compra' || x.tipo === 'clube' ? 'p-warn' : x.tipo === 'saldo_inicial' ? '' : 'p-ok'}">${ORIGEM_LBL[x.tipo]}</span>` : '';
@@ -1026,14 +1028,14 @@
     $('lnImp').onclick = () => importarCarteira(ctx);
     $('lnRecalc').onclick = async () => {
       $('lnRecalc').disabled = true;
-      try { await syncCarteira(c.id, await valoresRef()); toast('Painel do cliente recalculado: saldos, custo médio, vencimentos e patrimônio.'); render(); }
+      try { await syncCarteira(c.id, await valoresRef()); toast('Painel do cliente recalculado: saldos, custo médio, vencimentos e carteira em reais.'); render(); }
       catch (err) { toast(errMsg(err)); $('lnRecalc').disabled = false; }
     };
     $('lnExp').onclick = () => {
       if (!lista.length) return toast('Não há lançamentos para exportar.');
       baixarCsv(nomeArq(c, 'carteira-de-milhas'), [CAR_COLS, ...lista.map(x => [brDate(x.data), CAR_TIPO_SAIDA[x.tipo] || x.tipo, x.programa || '',
         Math.abs(Number(x.quantidade || 0)), csvNum(x.custo_brl), x.validade ? brDate(x.validade) : '', x.tipo === 'emissao' ? (x.categoria_uso || 'passagem') : '',
-        csvNum(x.taxas_brl), csvNum(x.valor_pagante_brl), x.descricao || ''])]);
+        csvNum(x.taxas_brl), csvNum(x.valor_pagante_brl), x.descricao || '', csvNum(x.valor_rex_brl)])]);
     };
     m.querySelectorAll('[data-edl]').forEach(b => b.onclick = () => {
       const x = ex.find(r => String(r.id) === b.dataset.edl); if (!x) return;
@@ -1053,13 +1055,14 @@
   }
  
   // ===== Importar carteira de milhas por planilha =====
-  // Colunas: data | tipo | programa | quantidade | custo_rs | validade | uso | taxas_rs | valor_dinheiro_rs | descricao
-  const CAR_COLS = ['data', 'tipo', 'programa', 'quantidade', 'custo_rs', 'validade', 'uso', 'taxas_rs', 'valor_dinheiro_rs', 'descricao'];
+  // Colunas: data | tipo | programa | quantidade | custo_rs | validade | uso | taxas_rs | valor_dinheiro_rs | descricao | rex_rs
+  const CAR_COLS = ['data', 'tipo', 'programa', 'quantidade', 'custo_rs', 'validade', 'uso', 'taxas_rs', 'valor_dinheiro_rs', 'descricao', 'rex_rs'];
   const CAR_TIPO_SAIDA = { saldo_inicial: 'saldo herdado', acumulo: 'acumulo', bonus: 'bonus', compra: 'compra', clube: 'clube', emissao: 'emissao', expiracao: 'expiracao', ajuste: 'ajuste', transf_entrada: 'transferencia', transf_saida: 'transferencia', transferencia: 'transferencia' };
   const CAR_ALIAS = { data: 'data', dia: 'data', tipo: 'tipo', lancamento: 'tipo', origem: 'tipo', programa: 'programa', quantidade: 'quantidade', milhas: 'quantidade',
     pontos: 'quantidade', 'milhas usadas': 'quantidade', custo_rs: 'custo_rs', custo: 'custo_rs', 'valor pago': 'custo_rs', 'valor pago (r$)': 'custo_rs',
     validade: 'validade', uso: 'uso', 'o que foi emitido': 'uso', taxas_rs: 'taxas_rs', taxas: 'taxas_rs', 'taxas pagas': 'taxas_rs',
-    valor_dinheiro_rs: 'valor_dinheiro_rs', 'valor em dinheiro': 'valor_dinheiro_rs', 'valor pagante': 'valor_dinheiro_rs', 'valor tarifado': 'valor_dinheiro_rs', descricao: 'descricao' };
+    valor_dinheiro_rs: 'valor_dinheiro_rs', 'valor em dinheiro': 'valor_dinheiro_rs', 'valor pagante': 'valor_dinheiro_rs', 'valor tarifado': 'valor_dinheiro_rs', descricao: 'descricao',
+    rex_rs: 'rex_rs', rex: 'rex_rs', 'valor rex': 'rex_rs', 'tarifa de referencia': 'rex_rs', 'tarifa de referência': 'rex_rs' };
   const carTipo = (v) => {
     const t = impNorm(v);
     if (!t) return null;
@@ -1078,17 +1081,17 @@
     if (/^upgrade/.test(t)) return 'upgrade'; if (/^produto|^vale/.test(t)) return 'produto'; if (/^outro/.test(t)) return 'outro'; return null; };
   function carModeloCsv() {
     baixarCsv('modelo-importar-carteira.csv', [CAR_COLS,
-      ['01/08/2026', 'saldo herdado', 'Livelo', 120000, '', '', '', '', '', 'Saldo que já existia antes da gestão'],
-      ['05/09/2026', 'acumulo', 'Esfera', 45000, '', '31/12/2027', '', '', '', 'Fatura de agosto do Unique'],
-      ['10/09/2026', 'compra', 'Smiles', 50000, '750,00', '', '', '', '', 'Promoção de compra de pontos'],
-      ['20/09/2026', 'emissao', 'Livelo', 90000, '', '', 'passagem', '184,60', '4200,00', 'GRU > SCL, executiva, 2 passageiros']]);
+      ['01/08/2026', 'saldo herdado', 'Livelo', 120000, '', '', '', '', '', 'Saldo que já existia antes da gestão', ''],
+      ['05/09/2026', 'acumulo', 'Esfera', 45000, '', '31/12/2027', '', '', '', 'Fatura de agosto do Unique', ''],
+      ['10/09/2026', 'compra', 'Smiles', 50000, '750,00', '', '', '', '', 'Promoção de compra de pontos', ''],
+      ['20/09/2026', 'emissao', 'Livelo', 90000, '', '', 'passagem', '184,60', '4200,00', 'GRU > SCL, executiva, 2 passageiros', '5100,00']]);
   }
   function importarCarteira(ctx) {
     const c = ctx.c;
     $('panel').classList.add('wide');
     $('panel').innerHTML = `<h3>Importar carteira de milhas</h3><div class="ph">${esc(c.nome_completo)} · os lançamentos entram só neste cliente</div>
-      <div class="hint">Colunas: <strong>data, tipo, programa, quantidade</strong> e, conforme o tipo, <strong>custo_rs, validade, uso, taxas_rs, valor_dinheiro_rs, descricao</strong>.
-      Tipos: <strong>saldo herdado, acumulo, bonus, compra, clube</strong> (entradas) e <strong>emissao</strong> (uso de milhas). Compra e clube pedem o custo_rs. Na emissão, o <strong>valor_dinheiro_rs</strong> é o preço da mesma emissão em dinheiro: é ele que gera a economia da passagem. Transferências, expirações e ajustes continuam manuais.</div>
+      <div class="hint">Colunas: <strong>data, tipo, programa, quantidade</strong> e, conforme o tipo, <strong>custo_rs, validade, uso, taxas_rs, valor_dinheiro_rs, descricao, rex_rs</strong>.
+      Tipos: <strong>saldo herdado, acumulo, bonus, compra, clube</strong> (entradas) e <strong>emissao</strong> (uso de milhas). Compra e clube pedem o custo_rs. Na emissão, o <strong>valor_dinheiro_rs</strong> é o preço da mesma emissão em dinheiro e o <strong>rex_rs</strong> (opcional) é a tarifa de referência: a economia da passagem usa o maior dos dois. Transferências, expirações e ajustes continuam manuais.</div>
       <div style="margin-bottom:14px"><button type="button" class="btn sm" id="carModelo">Baixar planilha modelo</button></div>
       <div class="imp-drop">Escolha o arquivo (.xlsx ou .csv)<br><input type="file" id="carFile" accept=".xlsx,.xls,.csv,.txt" /></div>
       <div id="carOut"></div>
@@ -1131,6 +1134,7 @@
         let custo = impValor(o.custo_rs); if (Number.isNaN(custo)) { erros.push('custo inválido'); custo = null; }
         let taxas = impValor(o.taxas_rs); if (Number.isNaN(taxas)) { erros.push('taxas inválidas'); taxas = null; }
         let pagante = impValor(o.valor_dinheiro_rs); if (Number.isNaN(pagante)) { erros.push('valor em dinheiro inválido'); pagante = null; }
+        let rex = impValor(o.rex_rs); if (Number.isNaN(rex)) { erros.push('REX inválida'); rex = null; }
         const descricao = String(o.descricao || '').trim();
         let validade = null;
         if (String(o.validade || '').trim()) { validade = impData(o.validade); if (!validade) erros.push('validade inválida'); }
@@ -1147,12 +1151,12 @@
           row = { cliente_id: c.id, data, programa, tipo, quantidade: tipo === 'emissao' ? -qtd : qtd,
             custo_brl: tipo === 'acumulo' || tipo === 'bonus' || tipo === 'emissao' ? null : (custo === null ? null : custo),
             validade: tipo === 'emissao' ? null : validade, descricao: descricao || null,
-            categoria_uso: tipo === 'emissao' ? uso : null, taxas_brl: tipo === 'emissao' ? taxas : null, valor_pagante_brl: tipo === 'emissao' ? pagante : null };
+            categoria_uso: tipo === 'emissao' ? uso : null, taxas_brl: tipo === 'emissao' ? taxas : null, valor_pagante_brl: tipo === 'emissao' ? pagante : null, valor_rex_brl: tipo === 'emissao' ? rex : null };
           const k2 = chave(row); dup = jaTem.has(k2) || vistos.has(k2); vistos.add(k2);
           const kp = normProg(programa);
           if (!dup) saldo[kp] = (saldo[kp] || 0) + (tipo === 'emissao' ? -qtd : qtd);
         }
-        res[n] = { n, data, tipo, programa, qtd, custo, taxas, pagante, uso, descricao, erros, row, dup };
+        res[n] = { n, data, tipo, programa, qtd, custo, taxas, pagante, rex, uso, descricao, erros, row, dup };
       });
       const linhas = brutas.map(b => res[b.n]);
       validas = linhas.filter(l => l.row && !l.dup).map(l => l.row);
@@ -1165,7 +1169,7 @@
           <td>${l.data ? brDate(l.data) : ''}</td><td>${esc(TL[l.tipo] || '')}${l.tipo === 'emissao' && l.uso ? `<div class="muted">${esc(l.uso)}</div>` : ''}</td><td>${esc(l.programa || '')}</td>
           <td style="text-align:right">${l.qtd > 0 ? (l.tipo === 'emissao' ? '− ' : '+ ') + num(l.qtd) : ''}</td>
           <td style="text-align:right">${l.custo !== null && l.custo !== undefined ? brl(l.custo) : ''}</td>
-          <td style="text-align:right">${l.pagante ? brl(l.pagante) : ''}${l.taxas ? `<div class="muted">taxas ${brl(l.taxas)}</div>` : ''}</td>
+          <td style="text-align:right">${l.pagante ? brl(l.pagante) : ''}${l.rex ? `<div class="muted">REX ${brl(l.rex)}</div>` : ''}${l.taxas ? `<div class="muted">taxas ${brl(l.taxas)}</div>` : ''}</td>
           <td>${esc(l.descricao || '')}</td></tr>`).join('')}
         </tbody></table></div>`;
       $('carOk').disabled = !validas.length;
@@ -1297,7 +1301,7 @@
     const r = row || { data: hojeISO(), categoria_uso: 'passagem' };
     if (!row && !ctx.W.programas.some(p => p.saldo > 0)) return toast('Não há saldo lançado para usar.');
     drawer(row ? 'Editar uso de milhas' : 'Uso de milhas', esc(ctx.c.nome_completo), `
-      <div class="hint">O custo das milhas sai pelo custo médio do programa. Somando as taxas, você tem o custo real da emissão. Informando o valor em dinheiro, a economia entra sozinha no Histórico de Economias do cliente.</div>
+      <div class="hint">O custo das milhas sai pelo custo médio do programa. Somando as taxas, você tem o custo real da emissão. Informando o valor em dinheiro ou a tarifa de referência (REX), a economia entra sozinha no Histórico de Economias do cliente. Vale o maior dos dois.</div>
       <div class="grid">
         <div class="f"><label>Data <b>*</b></label><input type="date" name="data" value="${esc(String(r.data).slice(0, 10))}" /></div>
         <div class="f"><label>Programa <b>*</b></label><select name="programa">${progComSaldo(ctx, r.programa || '')}</select></div>
@@ -1305,6 +1309,7 @@
         <div class="f"><label>O que foi emitido</label><select name="categoria_uso">${USO.map(([v, l]) => `<option value="${v}" ${v === r.categoria_uso ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="f"><label>Taxas pagas (R$)</label><input type="number" min="0" step="0.01" name="taxas_brl" value="${esc(r.taxas_brl ?? '')}" /></div>
         <div class="f"><label>Valor em dinheiro (R$)</label><input type="number" min="0" step="0.01" name="valor_pagante_brl" value="${esc(r.valor_pagante_brl ?? '')}" /><span class="h">Preço da mesma emissão pagando em dinheiro.</span></div>
+        <div class="f"><label>Tarifa de referência REX (R$)</label><input type="number" min="0" step="0.01" name="valor_rex_brl" value="${esc(r.valor_rex_brl ?? '')}" /><span class="h">Opcional. A economia usa o maior entre o valor em dinheiro e a REX.</span></div>
         <div class="f"><label>Viagem</label><select name="viagem_id"><option value="">Sem viagem</option>${TRIPS.map(t => `<option value="${t.id}" ${t.id === r.viagem_id ? 'selected' : ''}>${esc(t.destino)} · ${brDate(t.data_viagem)}</option>`).join('')}</select></div>
         <div class="f full"><label>Descrição <b>*</b></label><input name="descricao" value="${esc(r.descricao || '')}" placeholder="Ex.: GRU > SCL, executiva, 2 passageiros" /></div>
       </div><div class="msg ok" id="prev" hidden></div>`,
@@ -1314,16 +1319,16 @@
       const s = stateOf(ctx, val(f, 'programa')), jaUsado = row && normProg(row.programa) === normProg(val(f, 'programa')) ? Math.abs(row.quantidade) : 0;
       if (!s || q > s.saldo + jaUsado) return fail(`Saldo insuficiente em ${val(f, 'programa')}: ${num(s ? s.saldo : 0)}.`), false;
       await salvarLinhas(ctx, row, { data: val(f, 'data'), programa: val(f, 'programa'), tipo: 'emissao', quantidade: -Math.round(q), categoria_uso: val(f, 'categoria_uso'),
-        taxas_brl: numv(f, 'taxas_brl'), valor_pagante_brl: numv(f, 'valor_pagante_brl'), viagem_id: val(f, 'viagem_id') || null, descricao: val(f, 'descricao') });
+        taxas_brl: numv(f, 'taxas_brl'), valor_pagante_brl: numv(f, 'valor_pagante_brl'), valor_rex_brl: numv(f, 'valor_rex_brl'), viagem_id: val(f, 'viagem_id') || null, descricao: val(f, 'descricao') });
     });
     const f = $('fl');
     const upd = () => {
-      const s = stateOf(ctx, val(f, 'programa')), q = numv(f, 'quantidade'), tx = numv(f, 'taxas_brl') || 0, pag = numv(f, 'valor_pagante_brl');
+      const s = stateOf(ctx, val(f, 'programa')), q = numv(f, 'quantidade'), tx = numv(f, 'taxas_brl') || 0, pag = ancora(numv(f, 'valor_pagante_brl'), numv(f, 'valor_rex_brl'));
       const show = s && q > 0 && s.custo_medio !== null;
       $('prev').hidden = !show; if (!show) return;
       const cm = s.custo_medio * q / 1000, real = cm + tx;
       $('prev').innerHTML = `Custo das milhas: <strong>${brl(cm)}</strong> (${brl(s.custo_medio)} por milheiro)<br>Custo real da emissão: <strong>${brl(real)}</strong>` +
-        (pag > 0 ? `<br>Economia: <strong>${brl(pag - real)}</strong> (${Math.round((pag - real) / pag * 100)}% menos que em dinheiro)` : '');
+        (pag > 0 ? `<br>Economia: <strong>${brl(pag - real)}</strong> (${Math.round((pag - real) / pag * 100)}% menos que ${numv(f, 'valor_rex_brl') > (numv(f, 'valor_pagante_brl') || 0) ? 'a tarifa de referência' : 'em dinheiro'})` : '');
     };
     f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
   }
@@ -1352,7 +1357,7 @@
     const { data, error } = await sb.from('valores_milheiro').select('*').order('programa');
     if (error) throw error;
     const rows = data || [];
-    m.innerHTML = header('Operação', 'Valor do <em>milheiro</em>', 'Valor de referência por programa, usado para calcular o patrimônio em reais de todos os clientes.',
+    m.innerHTML = header('Operação', 'Valor do <em>milheiro</em>', 'Valor de referência por programa, usado para calcular a carteira em reais de todos os clientes.',
       '<button class="btn" id="aplicar">Atualizar todos os painéis</button><button class="btn pri" id="novoV">+ Programa</button>') + `
       <div class="hint">Atualize uma vez por mês. Use o valor que a milha rende em emissão (referência de mercado), não valor de venda. Ao salvar, os painéis de todos os clientes são recalculados.</div>
       <div class="tblw"><table><thead><tr><th>Programa</th><th style="text-align:right">Valor por milheiro</th><th>Observação</th><th>Atualizado em</th><th></th></tr></thead><tbody>

@@ -274,7 +274,7 @@
           ${ecoMes.length ? `<table><thead><tr><th>Data</th><th>Ganho</th><th class="r">Detalhe</th><th class="r">Economia</th></tr></thead><tbody>
             ${ecoMes.map(r => { const v = ecoValor(r); const det = r.categoria === 'acumulo' || r.categoria === 'cartao' || r.categoria === 'cashback' || r.categoria === 'outro'
               ? (r.pontos_gerados ? '+ ' + num(r.pontos_gerados) + ' pts' : esc(r.observacao || ''))
-              : (r.valor_mercado_brl ? `<span class="strike">${brl2(r.valor_mercado_brl)}</span><br><span class="mute">investiu ${brl2(r.valor_pago_brl)}</span>` : '');
+              : (r.valor_mercado_brl ? `${Number(r.valor_rex_brl) > 0 && Number(r.valor_rex_brl) === Number(r.valor_mercado_brl) ? '<span class="mute">tarifa de referência</span><br>' : ''}<span class="strike">${brl2(r.valor_mercado_brl)}</span><br><span class="mute">investiu ${brl2(r.valor_pago_brl)}</span>` : '');
               return `<tr><td class="mute">${brDate(r.data)}</td><td><span class="tag">${CAT[r.categoria] || 'Passagem'}</span>${esc(r.descricao)}${r.programa ? `<div class="mute">${esc(r.programa)}${r.milhas_utilizadas ? ' · ' + num(r.milhas_utilizadas) + ' milhas' : ''}</div>` : ''}</td><td class="r">${det}</td><td class="r"><span class="eco">${brl2(v)}</span></td></tr>`; }).join('')}
           </tbody></table>${ecoMes.some(r => (r.categoria === 'acumulo' || r.categoria === 'cartao') && r.pontos_gerados) ? '<p class="aviso-valor" data-aviso-valor style="margin-top:8px">Pontos de cartões e super acúmulo em reais: Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro.</p>' : ''}` : '<div class="empty">Nenhuma economia registrada neste mês.</div>'}
         </section>
