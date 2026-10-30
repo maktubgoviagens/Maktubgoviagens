@@ -195,7 +195,9 @@
       .preview-grid{grid-template-columns:1fr}
       .mock-row{grid-template-columns:1fr}
       .mock-grid-4{grid-template-columns:repeat(3,1fr)}
-      .mock-mini{padding:12px 6px}
+      .mock-grid-4{grid-template-columns:1fr;gap:8px}
+      .mock-mini{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;text-align:left}
+      .mock-mini-label{margin:0;letter-spacing:.12em}
       .hero-actions a{width:100%;text-align:center}
       .mock-body{padding:22px}
       .footer-inner{flex-direction:column;align-items:flex-start;gap:16px}
@@ -587,6 +589,14 @@
       .hero-compacta .vs-ou{display:none}
       .hero-compacta .vs-foto{aspect-ratio:1/1}
       .vh-linha{font-size:16px}
+      /* no celular: título, logo abaixo o exemplo que o "por isso" aponta, depois a chamada e o botão */
+      .vh-grid{display:flex;flex-direction:column;gap:0}
+      .vh-texto,.vh-exemplo,.vh-exemplo figcaption{display:contents}
+      .vh-grid{align-items:stretch;text-align:left}.vh-etiqueta{order:1;align-self:flex-start}.vh-grid .g-selo{order:2;align-self:flex-start}.hero-compacta .venda-h1{order:3}
+      .vh-exemplo .prova-selo{order:4;align-self:flex-start;margin:24px 0 0}.hero-compacta .vs-grid{order:5;margin-top:16px}
+      .vh-perda{order:6}.vh-linha{order:7;margin-top:22px}.hero-compacta .venda-cuidar{order:8;margin-top:10px}
+      .hero-compacta .venda-ctas{order:9;margin:22px 0 0;align-self:stretch;width:100%}.hero-compacta .venda-ctas .btn-grande{width:100%}
+      .hero-compacta .venda-gratis{order:10;align-self:stretch;margin-left:0;margin-right:0;text-align:left}.vh-condicoes{order:11;margin-top:18px}
     }
     /* o que a equipe assume */
     .assume-titulo{margin-top:48px;font-size:clamp(28px,3.4vw,36px);text-align:center}
