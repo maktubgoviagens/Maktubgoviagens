@@ -127,6 +127,14 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .ciclo .top{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--verde)}
 .ciclo .top b{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}
 .ciclo small{display:block;margin-top:8px;font-size:12.5px;color:var(--tinta-3);line-height:1.45}
+/* base do mês */
+.kbase{margin-top:8px;background:var(--branco);border:1px solid var(--linha);border-left:3px solid var(--dourado);padding:12px 14px}
+.kbase.al{border-left-color:var(--alerta)}.kbase.ok{border-left-color:var(--ok)}
+.kbase .kbt{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}.kbase .kbt b{font-size:16px;font-weight:500;color:var(--verde)}.kbase.al .kbt b{color:var(--alerta)}
+.kbase .kbt span{font-size:13px;color:var(--tinta-3)}
+.kbase .kbl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--linha);font-size:14px}
+.kbase .kbl button{flex:0 0 auto;min-width:0;padding:9px 12px;font-size:13px;letter-spacing:.04em;text-transform:none;white-space:nowrap;width:auto}.kbase .kbl .q{font-size:13px;color:var(--tinta-3);white-space:nowrap}
+.kbase summary{cursor:pointer;font-size:13px;color:var(--tinta-2);padding:8px 0 2px;border-top:1px solid var(--linha)}
 /* KPIs da Gestão */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 @media (min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
@@ -1179,7 +1187,7 @@ async function carregar(silencioso, manterTela) {
       sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em').order('criado_em', { ascending: false }).limit(3000),
       sb.from('gestao_ciclos').select('cliente_id,inicio,vencimento').limit(5000),
       sb.from('extrato_milhas').select('cliente_id,data,quantidade,programa').eq('tipo', 'expiracao').limit(5000),
-      sb.from('gestao_conferencias').select('cliente_id,feita_em').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
+      sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
     ]) : null,
     CRMok ? Promise.all([
       sb.from('pessoas').select('*').order('nome').limit(10000),
@@ -4036,7 +4044,7 @@ const mesAnterior = () => mesMais(mesKey(new Date()), -1);
 const mesNomeCurto = (k) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 function cicloCliente(c) {
   const k = mesKey(new Date());
-  const saldos = (D.extMes || []).some(x => x.cliente_id === c.id) || !!(c.conferencia_em && mesLocal(c.conferencia_em) === k);
+  const saldos = !!confDoMes(c, k);
   const reuniao = (D.agenda || []).some(a => a.cliente_id === c.id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasMes || []).some(x => x.cliente_id === c.id);
   const carta = (D.rel || []).some(r => r.cliente_id === c.id && r.publicado);
   return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
@@ -4053,7 +4061,8 @@ const clientesAtivos = () => (D.clientes || []).filter(ativoGestao);
 // ciclo de um mês que já passou, pelo histórico carregado (o mês atual usa cicloCliente)
 function cicloMes(c, k) {
   const id = String(c.id), ant = mesMais(k, -1);
-  const saldos = (D.extH || []).some(x => String(x.cliente_id) === id && mesLocal(x.created_at) === k) || (D.confs || []).some(x => String(x.cliente_id) === id && mesLocal(x.feita_em) === k);
+  // antes de novembro de 2026 a conferência sem diferença não deixava registro: nesses meses, qualquer lançamento conta
+  const saldos = (D.confs || []).some(x => String(x.cliente_id) === id && mesLocal(x.feita_em) === k) || (k < '2026-11' && (D.extH || []).some(x => String(x.cliente_id) === id && mesLocal(x.created_at) === k));
   const reuniao = (D.agenda || []).some(a => String(a.cliente_id) === id && a.status === 'Realizada' && mesLocal(a.data) === k) || (D.atasH || []).some(x => String(x.cliente_id) === id && String(x.data_reuniao).slice(0, 7) === k);
   const carta = (D.relH || []).some(r => String(r.cliente_id) === id && String(r.mes).slice(0, 7) === ant && r.publicado);
   return { saldos, reuniao, carta, feitos: [saldos, reuniao, carta].filter(Boolean).length };
@@ -4107,6 +4116,34 @@ function kpiVencidos() {
   const conferir = (D.progs || []).filter(p => cli.has(String(p.cliente_id)) && p.vencimento_data && Number(p.vencimento_quantidade) > 0 && diasPara(p.vencimento_data) < 0);
   return { pontos: Object.values(porCli).reduce((a, b) => a + b, 0), porCli, conferir, semDados: D.expir === null };
 }
+/* ---------- base do mês: conferência dos saldos do mês que fechou, do dia 1 ao dia 10 do mês seguinte ---------- */
+const PRAZO_BASE = 10;
+// primeira conferência salva no mês k (a do mês atual alimenta a base do mês que fechou)
+const confDoMes = (c, k) => {
+  const L = (D.confs || []).filter(x => String(x.cliente_id) === String(c.id) && mesLocal(x.feita_em) === k).sort((a, b) => String(a.feita_em).localeCompare(String(b.feita_em)));
+  return L[0] || (c.conferencia_em && mesLocal(c.conferencia_em) === k ? { feita_em: c.conferencia_em } : null);
+};
+// precisa alimentar a base no mês k: ativo, não congelado e já na Gestão antes do mês começar
+const precisaBase = (c, k) => ativoGestao(c) && !c.gestao_congelado_em && !!inicioGestao(c) && inicioGestao(c).slice(0, 7) < k;
+const quemFez = (f) => f && f.feita_por ? ' por ' + String(nomeTime(f.feita_por) || '').split(' ')[0] : '';
+// abre a carteira do cliente já na Conferência do mês (a carteira abre o formulário depois de carregar)
+function alimentarBase(id) { abrirFicha(id, 'carteira'); FI_FORM = 'conferencia'; }
+function htmlBaseMes() {
+  const k = mesKey(new Date()), ref = mesNomeCurto(mesAnterior()), d = diaHoje();
+  const L = (D.clientes || []).filter(c => precisaBase(c, k)).map(c => ({ c, f: confDoMes(c, k) }));
+  if (!L.length) return '';
+  const falta = L.filter(x => !x.f).sort((a, b) => String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
+  const feitas = L.filter(x => x.f).sort((a, b) => String(b.f.feita_em).localeCompare(String(a.f.feita_em)));
+  const cls = !falta.length ? 'ok' : d > PRAZO_BASE ? 'al' : '';
+  const tit = !falta.length ? `Todas as bases de ${ref} alimentadas` : d > PRAZO_BASE ? `Base de ${ref} atrasada: ${plural(falta.length, 'cliente', 'clientes')}` : `Base de ${ref}: ${feitas.length} de ${L.length} alimentadas`;
+  const sub = !falta.length ? `${L.length} de ${L.length} · a última em ${dataCurta(new Date(feitas[0].f.feita_em))}${quemFez(feitas[0].f)}`
+    : d > PRAZO_BASE ? `O prazo era dia ${PRAZO_BASE}. Alimente hoje.` : d === PRAZO_BASE ? `Hoje é o último dia do prazo.` : `Prazo dia ${PRAZO_BASE} · faltam ${plural(PRAZO_BASE - d, 'dia', 'dias')}`;
+  return `<section class="kbase ${cls}">
+    <div class="kbt"><b>${tit}</b><span>${sub}</span></div>
+    ${falta.map(({ c }) => `<div class="kbl"><span>Você não alimentou a base de ${esc(c.nome_completo)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar agora</button></div>`).join('')}
+    ${feitas.length ? `<details${falta.length ? '' : ' open'}><summary>Alimentadas · ${feitas.length}</summary>${feitas.map(({ c, f }) => `<div class="kbl"><span>${esc(c.nome_completo)}</span><span class="q">${dataCurta(new Date(f.feita_em))}${quemFez(f)}</span></div>`).join('')}</details>` : ''}
+  </section>`;
+}
 function htmlKpisGestao() {
   const k = mesKey(new Date()), at = clientesAtivos(), cong = at.filter(c => c.gestao_congelado_em).length;
   const conv = kpiConversaoCall(k), ob = kpiOnboarding(k), ren = kpiRenovacao(), V = kpiVencidos();
@@ -4157,13 +4194,13 @@ function pendGestao() {
     ['Milhas de clientes vencendo', vencendo().length],
     ['Renovações em 90 dias', renovacoes(90).length],
     ['Clientes sem data de entrada', semContrato().length],
-    ['Saldos para atualizar', saldosDoDia().length],
+    ['Bases para alimentar', saldosDoDia().length],
     ['Tarefas da Gestão para hoje', tarefasParaHoje().length]
   ];
 }
 const pilula = (ok, txt) => `<span class="tag ${ok ? 'ok' : 'alerta'}">${ok ? '✓ ' : ''}${txt}</span>`;
 function htmlCiclo(c, ciclo) {
-  return `${pilula(ciclo.saldos, 'Saldos')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
+  return `${pilula(ciclo.saldos, 'Base')} ${pilula(ciclo.reuniao, 'Reunião')} ${pilula(ciclo.carta, 'Carta de ' + mesNomeCurto(mesAnterior()))}`;
 }
 // todos os pedidos de diagnóstico do site, com filtro e status (a aba Leads só tem um atalho para cá)
 function htmlPedidosDiagnostico() {
@@ -4199,13 +4236,14 @@ function telaGestao(P) {
     <h1 class="titulo">Gestão de <em>Milhas</em></h1>
     <div class="sub">${total ? plural(total, 'coisa', 'coisas') + ' para resolver' : 'Nada pendente agora'} · ${D.clientes.length} cliente${D.clientes.length === 1 ? '' : 's'}</div>
     ${htmlKpisGestao()}
+    ${htmlBaseMes()}
 
     ${htmlJornadaGestao()}
     <details class="gsec" style="margin-top:14px"${GE_SOL_ABERTO ? ' open' : ''}><summary><span>Para resolver hoje<small>Ciclo do mês, tarefas, pedidos, renovações e números da carteira</small></span><b style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:${total ? 'var(--alerta)' : 'var(--tinta-3)'};margin-left:auto">${total}</b></summary>
     <button class="ciclo" id="geCiclo">
       <div class="top"><span>Ciclo de ${mesNomeCurto(mesKey(new Date()))}</span><b>${emDia} de ${D.clientes.length} em dia</b></div>
       <div class="barra2"><i class="${emDia === D.clientes.length && emDia ? 'ok' : ''}" style="width:${D.clientes.length ? emDia / D.clientes.length * 100 : 0}%"></i></div>
-      <small>Saldos lançados, reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
+      <small>Base de ${mesNomeCurto(mesAnterior())} alimentada (conferência do mês), reunião do mês e carta de ${mesNomeCurto(mesAnterior())} publicada. Toque para ver cliente por cliente.</small>
     </button>
 
     ${grupo('Tarefas de hoje', htmlTarefasHoje())}
@@ -4285,6 +4323,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-cli]').forEach(b => b.onclick = () => ir('clientes'));
   { const k = $('gjKanban'), c = k && [...k.querySelectorAll('.gjc')].find(x => x.querySelector('.gjk')); if (k && c && !k._rolou) { k._rolou = 1; k.scrollLeft = c.offsetLeft - k.offsetLeft - 16; } }
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
+  P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   ['geCiclo', 'kpiCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
   P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
@@ -4356,22 +4395,23 @@ function telaCiclo(P) {
   const falta = (t) => L.filter(y => !y.x[t]).length;
   P.innerHTML = `<button class="voltar" id="voltarCiclo">‹ Gestão</button>
     <h1 class="titulo" style="margin-top:6px">Ciclo de <em>${mesNomeCurto(k)}</em></h1>
-    <div class="sub">Tudo aqui é marcado sozinho: lançar na carteira marca Saldos, registrar a reunião realizada marca Reunião e publicar a carta marca Carta.</div>
+    <div class="sub">Tudo aqui é marcado sozinho: salvar a Conferência do mês na carteira marca Base, registrar a reunião realizada marca Reunião e publicar a carta marca Carta.</div>
     <div class="numeros" style="margin-top:12px">
-      <div class="num ${falta('saldos') ? 'alerta' : ''}"><div class="l">Sem saldos no mês</div><div class="v">${falta('saldos')}</div></div>
+      <div class="num ${falta('saldos') ? 'alerta' : ''}"><div class="l">Sem base de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('saldos')}</div></div>
       <div class="num ${falta('reuniao') ? 'alerta' : ''}"><div class="l">Sem reunião no mês</div><div class="v">${falta('reuniao')}</div></div>
       <div class="num ${falta('carta') ? 'alerta' : ''}"><div class="l">Sem carta de ${mesNomeCurto(mesAnterior())}</div><div class="v">${falta('carta')}</div></div>
     </div>
     <div class="secao">Ciclo em dia, mês a mês</div>
     <div class="khist">${historicoCiclo(6).map(h => `<div class="m"><span>${mesNomeCurto(h.k)}</span><div class="kb"><i style="width:${h.total ? h.emDia / h.total * 100 : 0}%"></i></div><b>${h.total ? pct(h.emDia / h.total * 100) : '-'}</b></div>`).join('')}</div>
-    <div class="sub" style="margin-top:6px">Em dia = saldos lançados, reunião realizada e carta do mês anterior publicada, sobre os clientes ativos de cada mês. Antes de novembro de 2026, a conferência sem diferença de saldo não deixava registro, então esses meses podem aparecer abaixo do real.</div>
+    <div class="sub" style="margin-top:6px">Em dia = base do mês anterior alimentada (conferência do mês), reunião realizada e carta do mês anterior publicada, sobre os clientes ativos de cada mês. Antes de novembro de 2026 a conferência sem diferença de saldo não deixava registro: nesses meses, qualquer lançamento na carteira conta como base.</div>
     <div class="secao">Cliente por cliente em ${mesNomeCurto(k)}</div>
     <div class="lista">${L.length ? L.map(({ c, x }) => `<article class="card">
       <div class="cab"><div class="nome">${esc(c.nome_completo)}</div><span class="quando">${x.feitos} de 3${c.dia_saldos ? ' · saldos dia ' + c.dia_saldos : ''}</span></div>
       <div style="margin-top:6px">${htmlCiclo(c, x)}</div>
-      ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-ficha="${c.id}" data-fa="carteira">Lançar saldos</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
+      ${x.feitos < 3 ? `<div class="acoes">${!x.saldos ? `<button class="sec" data-base="${c.id}">Alimentar a base</button>` : ''}${!x.reuniao ? `<button class="sec" data-ficha="${c.id}" data-fa="reunioes">Reunião</button>` : ''}${!x.carta ? `<button class="sec" data-ficha="${c.id}" data-fa="relatorio">Escrever carta</button>` : ''}</div>` : ''}
     </article>`).join('') : '<div class="vazio">Nenhum cliente na Gestão.</div>'}</div>`;
   $('voltarCiclo').onclick = () => voltarSeguro('gestao');
+  P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
 }
 function abrirFicha(id, aba) {
@@ -4477,6 +4517,8 @@ async function fiCarteira(el, c) {
       <div class="num destaque"><div class="l">Saldo total</div><div class="v">${milC(W.total)}</div><div class="d">${W.programas.filter(p => p.saldo).length} programas</div></div>
       <div class="num"><div class="l">Carteira em R$</div><div class="v">${brlC(patr)}</div><div class="d">pelo valor do milheiro</div></div>
     </div>
+    ${(() => { const k = mesKey(new Date()), ref = mesNomeCurto(mesAnterior()); if (!precisaBase(c, k)) return ''; const f = confDoMes(c, k);
+      return `<div class="kbase ${f ? 'ok' : diaHoje() > PRAZO_BASE ? 'al' : ''}" style="margin-top:10px"><div class="kbt"><b>${f ? `Base de ${ref} alimentada` : `Base de ${ref} ainda não alimentada`}</b><span>${f ? `em ${dataCurta(new Date(f.feita_em))}${quemFez(f)}` : `${diaHoje() > PRAZO_BASE ? 'O prazo era' : 'Prazo:'} dia ${PRAZO_BASE}. Salve a Conferência do mês abaixo.`}</span></div></div>`; })()}
     <div class="botoes4">
       <button class="zap" data-form="conferencia" style="grid-column:1/-1">Conferência do mês</button>
       <button class="sec" data-form="entrada">+ Entrada</button>
@@ -4899,7 +4941,7 @@ function formConferencia(c, vals) {
     if (!cf.error) c.conferencia_em = agora;
     // registro de cada conferência, mesmo sem diferença de saldo: alimenta o histórico do Ciclo em dia (61-rex-e-conferencias.sql)
     const rc = await sb.from('gestao_conferencias').insert({ cliente_id: c.id, feita_em: agora });
-    if (!rc.error && D.confs) D.confs.push({ cliente_id: c.id, feita_em: agora });
+    if (!rc.error && D.confs) D.confs.push({ cliente_id: c.id, feita_em: agora, feita_por: D.meuId });
     // vencimentos lidos do print: grava depois do recálculo, que cria o programa novo na carteira
     const comVenc = Object.values(leituras).filter(L => L.vencVisivel);
     let semVenc = '';
@@ -4909,7 +4951,7 @@ function formConferencia(c, vals) {
       if (er) semVenc = ' ' + tec('Os vencimentos do print não foram gravados: rode no Supabase o SQL das colunas vencimentos_lidos (' + er + ').');
     }
     c._confExtra = []; c._prints = {};
-    await depoisDaCarteira(c, (linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.') + semVenc);
+    await depoisDaCarteira(c, `Base de ${mesNomeCurto(mesAnterior())} de ${c.nome_completo} alimentada. ` + (linhas.length ? `Conferência salva: ${plural(linhas.length, 'lançamento feito', 'lançamentos feitos')} e painel atualizado.` : 'Conferência salva: nenhum saldo mudou.') + semVenc);
   };
 }
 
@@ -5025,7 +5067,8 @@ const GT_SQL_OB = 'Rode o 52-onboarding-gestao.sql e publique a função gestao-
 const tarefasDe = (cid) => (D.gtar || []).filter(t => String(t.cliente_id) === String(cid)).sort((a, b) => a.ordem - b.ordem || a.id - b.id);
 const diaHoje = () => new Date().getDate();
 function saldosDoDia() {
-  return (D.clientes || []).filter(c => c.dia_saldos && diaHoje() >= c.dia_saldos && !cicloCliente(c).saldos);
+  const k = mesKey(new Date());
+  return (D.clientes || []).filter(c => precisaBase(c, k) && c.dia_saldos && diaHoje() >= c.dia_saldos && !cicloCliente(c).saldos);
 }
 function tarefasParaHoje() {
   return (D.gtar || []).filter(t => !t.feito && t.prazo && diasPara(t.prazo) <= 0 && D.clientes.some(c => String(c.id) === String(t.cliente_id)))
@@ -5038,8 +5081,8 @@ function implantacoesAbertas() {
 function htmlTarefasHoje() {
   const sd = saldosDoDia(), th = tarefasParaHoje();
   const s = sd.map(c => `<article class="card" style="margin-bottom:8px">
-      <div class="cab"><div><div class="nome">${esc(c.nome_completo)}</div><span class="tag ${diaHoje() === c.dia_saldos ? 'ouro' : 'alerta'}">${diaHoje() === c.dia_saldos ? 'hoje é o dia dos saldos' : 'saldos atrasados'}</span></div><span class="quando">todo dia ${c.dia_saldos}</span></div>
-      <div class="acoes"><button class="zap" data-ficha="${c.id}" data-fa="carteira">Atualizar saldos</button></div></article>`).join('');
+      <div class="cab"><div><div class="nome">${esc(c.nome_completo)}</div><span class="tag ${diaHoje() === c.dia_saldos ? 'ouro' : 'alerta'}">${diaHoje() === c.dia_saldos ? 'hoje é o dia da base' : diaHoje() > PRAZO_BASE ? 'base atrasada' : 'base pendente'}</span></div><span class="quando">todo dia ${c.dia_saldos}</span></div>
+      <div class="acoes"><button class="zap" data-base="${c.id}">Alimentar a base</button></div></article>`).join('');
   const t = th.map(x => { const dv = diasPara(x.prazo); return `<article class="card" style="margin-bottom:8px">
       <div class="cab"><div><div class="nome">${esc(nomeCli(x.cliente_id))}</div><span class="tag ${dv < 0 ? 'alerta' : 'ouro'}">${dv < 0 ? 'atrasada desde ' + dataCurta(dia(x.prazo)) : 'para hoje'}</span>${x.grupo === 'cliente' ? ' <span class="tag">cobrar do cliente</span>' : ''}</div></div>
       <div class="info"><div>${esc(x.titulo)}</div></div>
@@ -5162,9 +5205,9 @@ async function fiTarefas(el, c) {
 
     <div class="secao" id="gtRotina">Rotina mensal</div>
     <section class="bloco" style="margin-top:0">
-      <label class="fl" style="margin-top:0"><span>Dia fixo de atualização dos saldos</span><select id="gtDia"><option value="">Sem dia fixo</option>${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}" ${Number(c.dia_saldos) === i + 1 ? 'selected' : ''}>Todo dia ${i + 1}</option>`).join('')}</select></label>
-      <div class="sub">${c.dia_saldos ? (cicloCliente(c).saldos ? 'Saldos deste mês já lançados.' : diaHoje() >= c.dia_saldos ? '<span style="color:var(--alerta)">Saldos deste mês ainda não lançados.</span>' : 'Próxima atualização: dia ' + c.dia_saldos + '.') : 'Sem dia fixo, o cliente entra só no aviso geral de conferência do dia 5.'} No dia, chega aviso no app e no Telegram às 9h, e de novo 3 dias depois se nada for lançado.</div>
-      <button class="sec" id="gtDiaOk" style="margin-top:8px;width:100%">Salvar dia fixo</button></section>`;
+      <label class="fl" style="margin-top:0"><span>Dia planejado para alimentar a base (prazo: dia ${PRAZO_BASE})</span><select id="gtDia"><option value="">Sem dia planejado</option>${Array.from({ length: Math.max(PRAZO_BASE, Number(c.dia_saldos) || 0) }, (_, i) => `<option value="${i + 1}" ${Number(c.dia_saldos) === i + 1 ? 'selected' : ''}>Todo dia ${i + 1}${i + 1 > PRAZO_BASE ? ' (depois do prazo)' : ''}</option>`).join('')}</select></label>
+      <div class="sub">${cicloCliente(c).saldos ? `Base de ${mesNomeCurto(mesAnterior())} já alimentada.` : diaHoje() > PRAZO_BASE ? `<span style="color:var(--alerta)">Base de ${mesNomeCurto(mesAnterior())} atrasada: o prazo era dia ${PRAZO_BASE}.</span>` : c.dia_saldos && diaHoje() >= c.dia_saldos ? `<span style="color:var(--alerta)">Base de ${mesNomeCurto(mesAnterior())} ainda não alimentada.</span>` : `Base de ${mesNomeCurto(mesAnterior())}: alimentar até o dia ${PRAZO_BASE}${c.dia_saldos ? ', planejado para o dia ' + c.dia_saldos : ''}.`} A base é alimentada salvando a Conferência do mês na carteira, mesmo sem diferença de saldo. No dia, chega aviso no app e no Telegram às 9h, e de novo 3 dias depois se nada for lançado.</div>
+      <button class="sec" id="gtDiaOk" style="margin-top:8px;width:100%">Salvar dia planejado</button></section>`;
 
   const P = $('pagina'), de = () => telaFicha(P, c.id);
   el.querySelectorAll('[data-gt]').forEach(b => b.onchange = async () => { if (await gtMarcar(b.dataset.gt, b.checked)) de(); else b.checked = !b.checked; });
@@ -5228,7 +5271,7 @@ async function fiTarefas(el, c) {
     const { error } = await sb.from('clientes').update({ dia_saldos: v }).eq('id', c.id);
     if (error) { aviso(/dia_saldos/.test(error.message) ? tec(GT_SQL) : 'Não salvou: ' + error.message); return; }
     c.dia_saldos = v; if (v) await gtMarcarChave(c, 'dia_saldos');
-    aviso(v ? 'Saldos todo dia ' + v + '.' : 'Dia fixo removido.'); de();
+    aviso(v ? 'Base planejada para todo dia ' + v + '.' : 'Dia planejado removido.'); de();
   };
 }
 let FI_ONB = false;
