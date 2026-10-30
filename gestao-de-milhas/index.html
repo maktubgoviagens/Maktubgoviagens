@@ -589,14 +589,16 @@
       .hero-compacta .vs-ou{display:none}
       .hero-compacta .vs-foto{aspect-ratio:1/1}
       .vh-linha{font-size:16px}
-      /* no celular: título, logo abaixo o exemplo que o "por isso" aponta, depois a chamada e o botão */
-      .vh-grid{display:flex;flex-direction:column;gap:0}
-      .vh-texto,.vh-exemplo,.vh-exemplo figcaption{display:contents}
-      .vh-grid{align-items:stretch;text-align:left}.vh-etiqueta{order:1;align-self:flex-start}.vh-grid .g-selo{order:2;align-self:flex-start}.hero-compacta .venda-h1{order:3}
+      /* no celular a história segue em ordem: problema, prova (o exemplo que o "por isso" aponta), como a gestão chega lá,
+         quem faz, e só então o botão; as condições do exemplo e o método ficam no fim */
+      .vh-grid,.vh-texto,.vh-exemplo,.vh-exemplo figcaption{display:contents}
+      .vh-etiqueta{order:1;align-self:flex-start}.hero-compacta .g-selo{order:2;align-self:flex-start}.hero-compacta .venda-h1{order:3}
       .vh-exemplo .prova-selo{order:4;align-self:flex-start;margin:24px 0 0}.hero-compacta .vs-grid{order:5;margin-top:16px}
-      .vh-perda{order:6}.vh-linha{order:7;margin-top:22px}.hero-compacta .venda-cuidar{order:8;margin-top:10px}
-      .hero-compacta .venda-ctas{order:9;margin:22px 0 0;align-self:stretch;width:100%}.hero-compacta .venda-ctas .btn-grande{width:100%}
-      .hero-compacta .venda-gratis{order:10;align-self:stretch;margin-left:0;margin-right:0;text-align:left}.vh-condicoes{order:11;margin-top:18px}
+      .vh-perda{order:6}.hero-compacta .prova-como{order:7;margin-top:28px}
+      .vh-linha{order:8;margin-top:28px}.hero-compacta .venda-cuidar{order:9;margin-top:6px}
+      .hero-compacta .venda-ctas{order:10;margin:22px 0 0;align-self:stretch;width:100%}.hero-compacta .venda-ctas .btn-grande{width:100%}
+      .hero-compacta .venda-gratis{order:11;align-self:stretch;margin-left:0;margin-right:0;text-align:left}
+      .vh-condicoes{order:12;margin-top:22px}.hero-compacta .prova-metodo{order:13;align-self:center}.hero-compacta .hero-client{order:14;align-self:center}
     }
     /* o que a equipe assume */
     .assume-titulo{margin-top:48px;font-size:clamp(28px,3.4vw,36px);text-align:center}
@@ -870,12 +872,12 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
       <span class="vh-etiqueta">Gestão de Milhas Maktub Go</span>
       <a class="g-selo g-escuro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
       <h1 class="venda-h1">Pare de trocar seus pontos <span class="italic-gold">por isso.</span></h1>
-      <p class="vh-linha">Uma equipe acompanha seus pontos e milhas durante 12 meses.</p>
+      <p class="vh-linha">Nossa equipe acompanha seus pontos e milhas durante 12 meses, encontra o melhor caminho e cuida de tudo.</p>
       <div class="venda-ctas prova-ctas">
         <a href="/diagnostico/" class="btn-gold btn-grande" data-diagnostico="gestao_hero">Quero meu diagnóstico</a>
       </div>
       <p class="venda-gratis">Diagnóstico gratuito por chamada</p>
-      <p class="venda-cuidar">Nossa equipe analisa seus pontos, encontra o melhor caminho e cuida de tudo. <strong>Você só escolhe para onde quer ir.</strong></p>
+      <p class="venda-cuidar"><strong>Você só escolhe para onde quer ir.</strong></p>
     </div>
     <!-- Exemplo real panela x viagem. Atualizar valores e data a cada 3 meses, junto com a home. -->
     <figure class="vh-exemplo reveal d2">
