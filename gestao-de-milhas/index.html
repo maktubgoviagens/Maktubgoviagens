@@ -603,6 +603,18 @@
     @media(min-width:901px){.perfil-col.inv{grid-column:1/-1}}
     .perfil-col.nao{background:var(--cream)}
     .perfil-col.nao a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+    /* para quem é: abertura, perfis e as três dores (tempo, desafio, gestão) */
+    .perfil-intro{max-width:780px;margin-top:28px;font-size:18px;line-height:1.7;color:var(--text)}
+    .perfil-tags{list-style:none;display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+    .perfil-tags li{border:1px solid rgba(113,94,50,.35);color:var(--gold);padding:8px 16px;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+    .perfil-dores{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:40px}
+    .perfil-dor{background:var(--white);padding:36px 32px}
+    .perfil-dor h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:500;color:var(--green);margin-bottom:14px}
+    .perfil-dor h3 em{color:var(--gold)}
+    .perfil-dor p{font-size:16px;line-height:1.7;color:var(--text)}
+    .perfil-wrap.dois{margin-top:24px}
+    @media(min-width:901px){.perfil-wrap.dois .perfil-col.inv{grid-column:auto}}
+    @media(max-width:900px){.perfil-dores{grid-template-columns:1fr}.perfil-dor{padding:28px}.perfil-intro{font-size:16px}}
     /* barra fixa: some na hora, aparece com transição */
     .cta-fixa:not(.on){transition:none!important}
     /* perguntas e diagnóstico aparecem prontos, sem esperar animação */
@@ -1175,18 +1187,26 @@ d.classList.add('anima');setTimeout(function(){if(!window.revealPronto)d.classLi
   <div class="container--wide">
     <span class="label reveal d1">Para quem é e para quem não é</span>
     <div class="divider reveal d1"></div>
-    <h2 class="reveal d2" style="font-size:clamp(36px,5vw,48px)">Um serviço desenhado<br><span class="italic-gold">para poucos.</span></h2>
-    <div class="perfil-wrap">
-      <div class="perfil-col reveal d3">
-        <h3>Para quem <em>é</em></h3>
-        <ul>
-          <li>Quem movimenta a partir de R$ 20 mil por mês, somando cartões e Pix. Esse valor é uma referência: no diagnóstico, também olhamos o saldo acumulado, a frequência de viagens e a vontade de delegar.</li>
-          <li>Quem quer transformar esse consumo em viagens com mais conforto.</li>
-          <li>Quem prefere delegar a estratégia a uma equipe, sem precisar estudar o assunto.</li>
-          <li>Quem valoriza acompanhamento contínuo, discrição e atendimento pessoal.</li>
-          <li>Quem mora no Brasil ou fora: o atendimento é online.</li>
-        </ul>
+    <h2 class="reveal d2" style="font-size:clamp(36px,5vw,48px)">Para quem tem a agenda cheia<br><span class="italic-gold">e quer viajar melhor.</span></h2>
+    <p class="perfil-intro reveal d3">Empresários, médicos, advogados, executivos e profissionais liberais que viajam bastante, a trabalho ou com a família, e não têm tempo para acompanhar programas de pontos. Ideal para quem movimenta a partir de R$ 20 mil por mês, somando cartões e Pix. Esse valor é uma referência: no diagnóstico, também olhamos o saldo acumulado, a frequência de viagens e a vontade de delegar.</p>
+    <ul class="perfil-tags reveal d3" aria-label="Perfis de clientes">
+      <li>Empresários</li><li>Médicos</li><li>Advogados</li><li>Profissionais liberais</li><li>Executivos</li><li>Produtores rurais</li><li>Assessores de investimentos</li>
+    </ul>
+    <div class="perfil-dores">
+      <div class="perfil-dor reveal d3">
+        <h3>O seu <em>tempo</em></h3>
+        <p>Sua agenda já está cheia. Promoção de transferência, vencimento de pontos e regra de programa ficam com a equipe. Você delega a estratégia, sem precisar estudar o assunto, e só decide para onde quer ir.</p>
       </div>
+      <div class="perfil-dor reveal d4">
+        <h3>O <em>desafio</em></h3>
+        <p>Os pontos ficam espalhados em vários cartões e programas, e as regras mudam o tempo todo. Sem acompanhamento, é fácil deixar pontos vencerem ou emitir no momento errado. A gestão transforma esse consumo em viagens com mais conforto.</p>
+      </div>
+      <div class="perfil-dor reveal d5">
+        <h3>A <em>gestão</em></h3>
+        <p>A equipe acompanha seus cartões e programas todo mês e organiza tudo no seu painel, com relatório mensal, discrição e atendimento pessoal em horário comercial. Para quem mora no Brasil ou fora: o atendimento é online.</p>
+      </div>
+    </div>
+    <div class="perfil-wrap dois">
       <div class="perfil-col nao reveal d4">
         <h3>Para quem <em>não é</em></h3>
         <ul>
