@@ -132,9 +132,12 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .kbase.al{border-left-color:var(--alerta)}.kbase.ok{border-left-color:var(--ok)}
 .kbase .kbt{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}.kbase .kbt b{font-size:16px;font-weight:500;color:var(--verde)}.kbase.al .kbt b{color:var(--alerta)}
 .kbase .kbt span{font-size:13px;color:var(--tinta-3)}
-.kbase .kbl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--linha);font-size:14px}
-.kbase .kbl small{display:block;font-size:13px;color:var(--tinta-3)}
-.kbase .kbl button{flex:0 0 auto;min-width:0;padding:9px 12px;font-size:13px;letter-spacing:.04em;text-transform:none;white-space:nowrap;width:auto}.kbase .kbl .q{font-size:13px;color:var(--tinta-3);white-space:nowrap}
+.kbase .kbl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--linha);font-size:14px}
+.kbase .kbl small{font-size:13px;color:var(--tinta-3)}
+.kbase .kfal{font-size:13px;color:var(--tinta-2);padding:6px 0 2px;border-top:1px solid var(--linha)}.kbase .kfal + .kbl{border-top:0}
+.kbase .kbl button{flex:0 0 auto;min-width:0;padding:7px 12px;font-size:13px;letter-spacing:.04em;text-transform:none;white-space:nowrap;width:auto}.kbase .kbl .q{font-size:13px;color:var(--tinta-3);white-space:nowrap}
+.kbase .kmais summary{list-style:none;color:var(--dourado)}.kbase .kmais summary::-webkit-details-marker{display:none}
+.kbase .kmais .f,.kbase .kmais[open] .a{display:none}.kbase .kmais[open] .f{display:inline}
 .kbase summary{cursor:pointer;font-size:13px;color:var(--tinta-2);padding:8px 0 2px;border-top:1px solid var(--linha)}
 /* KPIs da Gestão */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
@@ -4138,8 +4141,10 @@ function htmlBaseMes() {
   const k = mesKey(new Date()), ref = mesNomeCurto(mesAnterior()), d = diaHoje();
   const L = (D.clientes || []).filter(c => precisaBase(c, k) && vejoBase(c)).map(c => ({ c, f: confDoMes(c, k) }));
   if (!L.length) return '';
-  const gest = (c) => ADMIN ? `<small>${gestorDe(c) ? 'Gestor: ' + esc(gestorDe(c).nome) : 'Sem gestor definido'}</small>` : '';
-  const falta = L.filter(x => !x.f).sort((a, b) => String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
+  const linha = ({ c }) => `<div class="kbl"><span>${esc(c.nome_completo)}${gest(c)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar</button></div>`;
+  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'gestor ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem gestor'}</small>` : '';
+  // primeiro quem tem o dia planejado mais cedo; sem dia planejado vai para o fim
+  const falta = L.filter(x => !x.f).sort((a, b) => (Number(a.c.dia_saldos) || 99) - (Number(b.c.dia_saldos) || 99) || String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
   const feitas = L.filter(x => x.f).sort((a, b) => String(b.f.feita_em).localeCompare(String(a.f.feita_em)));
   const cls = !falta.length ? 'ok' : d > PRAZO_BASE ? 'al' : '';
   const tit = !falta.length ? `Todas as bases de ${ref} alimentadas` : d > PRAZO_BASE ? `Base de ${ref} atrasada: ${plural(falta.length, 'cliente', 'clientes')}` : `Base de ${ref}: ${feitas.length} de ${L.length} alimentadas`;
@@ -4147,7 +4152,9 @@ function htmlBaseMes() {
     : d > PRAZO_BASE ? `O prazo era dia ${PRAZO_BASE}. Alimente hoje.` : d === PRAZO_BASE ? `Hoje é o último dia do prazo.` : `Prazo dia ${PRAZO_BASE} · faltam ${plural(PRAZO_BASE - d, 'dia', 'dias')}`;
   return `<section class="kbase ${cls}">
     <div class="kbt"><b>${tit}</b><span>${sub}</span></div>
-    ${falta.map(({ c }) => `<div class="kbl"><span>Você não alimentou a base de ${esc(c.nome_completo)}${gest(c)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar agora</button></div>`).join('')}
+    ${falta.length ? `<div class="kfal">Você não alimentou a base de:</div>` : ''}
+    ${falta.slice(0, 3).map(linha).join('')}
+    ${falta.length > 3 ? `<details class="kmais"><summary><span class="a">Mostrar mais ${falta.length - 3}</span><span class="f">Mostrar menos</span></summary>${falta.slice(3).map(linha).join('')}</details>` : ''}
     ${feitas.length ? `<details${falta.length ? '' : ' open'}><summary>Alimentadas · ${feitas.length}</summary>${feitas.map(({ c, f }) => `<div class="kbl"><span>${esc(c.nome_completo)}</span><span class="q">${dataCurta(new Date(f.feita_em))}${quemFez(f)}</span></div>`).join('')}</details>` : ''}
   </section>`;
 }
