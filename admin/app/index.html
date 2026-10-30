@@ -1927,7 +1927,7 @@ function ligarAjuste(e, travado) {
 
 /* ================= avisos ================= */
 const VAPID = 'BC3X1jCIe3UoWoPDk9q857kykbSiRbJQQZ8gNhf2fmHiCFDlWgzNMzrIXhwRPdytmYqcfLgz7zlsPy27HodS7EQ';
-const AV_IC = { venda: '$', pagamento: '$', lead: '@', convite: '+', reuniao: '•', talento: '+', checkin: '✈', milhas: '!', receber: '$', resumo: '≡', fechou: '✓', retorno: '↺', teste: '•', sistema: '•', alteracao: '↻', nota: '▤' };
+const AV_IC = { venda: '$', pagamento: '$', lead: '@', convite: '+', reuniao: '•', talento: '+', checkin: '✈', milhas: '!', receber: '$', resumo: '≡', fechou: '✓', retorno: '↺', teste: '•', sistema: '•', alteracao: '↻', nota: '▤', avaliacao: '★' };
 async function carregarAvisos() {
   const [a, s] = await Promise.all([sb.from('avisos').select('*').order('id', { ascending: false }).limit(200), sb.rpc('avisos_situacao')]);
   D.avisos = a.data || []; D.avSit = s.error ? null : s.data;
@@ -5558,20 +5558,63 @@ const avgPend = () => avgOrdem((D.avGoogle || []).filter(a => !a.respondida));
 const avgEstrelas = (n) => n ? `<span style="color:var(--dourado);letter-spacing:2px;white-space:nowrap">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>` : '';
 const avgQuando = (a) => a.recebida_em ? dataBR(a.recebida_em) : (a.data_texto || '');
 const LINK_RESPONDER_GOOGLE = 'https://business.google.com/reviews';
-function avgSugestao(a) {
-  const prim = String(a.cliente || '').trim().split(/\s+/)[0] || 'Olá';
-  const n = Number(a.nota) || 0;
-  if (n && n <= 3) return `${prim}, obrigado por compartilhar a sua experiência. Não era isso que a gente queria para a sua viagem, e queremos entender o que aconteceu para corrigir. Pode nos chamar no WhatsApp (21) 97627-5225 para conversarmos? Equipe Maktub Go`;
-  if (n === 4) return `${prim}, obrigado pela avaliação! Ficamos felizes que a experiência tenha sido boa, e queremos que a próxima seja perfeita. Se houver algo que poderíamos ter feito melhor, conta pra gente no WhatsApp. Equipe Maktub Go`;
-  if (a.comentario) return `${prim}, que alegria ler isso! Obrigado por confiar na Maktub Go para cuidar da sua viagem. Cada detalhe é pensado para que você só precise aproveitar, e saber que deu certo é o que move a gente. Esperamos acompanhar você na próxima! Equipe Maktub Go`;
-  return `${prim}, muito obrigado pelas 5 estrelas! Foi um prazer cuidar da sua viagem. Conte com a gente na próxima. Equipe Maktub Go`;
+/* resposta sugerida: escrita pela IA (função resposta-avaliacao, Claude Haiku 5.5) a partir do texto, da nota e da ficha do CRM.
+   É gerada uma vez e fica guardada em avaliacoes_google; só muda quando alguém toca em "Gerar outra". */
+const AVG_RASC = {};            // texto editado de cada avaliação: não se perde quando o app atualiza os dados ou redesenha a tela
+const AVG_GERANDO = new Set();  // avaliações sendo escritas agora neste aparelho
+const AVG_PEDIU = new Set();    // primeira sugestão já pedida nesta sessão (não pede de novo sozinho)
+const avgTexto = (a) => AVG_RASC[a.codigo] != null ? AVG_RASC[a.codigo] : (a.sugestao || '');
+const avgBotao = (a) => AVG_GERANDO.has(a.codigo) ? 'Escrevendo...' : a.sugestao ? 'Gerar outra' : 'Gerar sugestão';
+// o campo cresce até mostrar a resposta inteira, com a assinatura
+const avgAltura = (t) => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+function avgInfo(a) {
+  if (AVG_GERANDO.has(a.codigo)) return 'Escrevendo uma resposta para esta avaliação...';
+  if (!a.sugestao) return a.sugestao_erro ? `Não consegui gerar a sugestão${ADMIN ? ': ' + esc(a.sugestao_erro) : ''}. Toque em Gerar sugestão para tentar de novo.` : 'A sugestão ainda não foi gerada.';
+  const f = a.sugestao_ficha;
+  const ficha = f ? `Usou a ficha de ${esc(f.nome)}${f.destino ? ' · ' + esc(f.destino) : ''}${f.gestao ? ' · cliente da Gestão' : ''}.` : 'Sem ficha do CRM: a resposta não cita viagem.';
+  return ficha + (a.sugestao_erro ? ` <span style="color:var(--alerta)">${esc(a.sugestao_erro)}</span>` : '');
+}
+// atualiza só o campo daquela avaliação, sem redesenhar a tela
+function avgAtualizar(a, trocarTexto) {
+  const c = CSS.escape(a.codigo);
+  document.querySelectorAll(`[data-avgtxt="${c}"]`).forEach(t => { if (trocarTexto) { t.value = avgTexto(a); avgAltura(t); } });
+  document.querySelectorAll(`[data-avginfo="${c}"]`).forEach(el => { el.innerHTML = avgInfo(a); });
+  document.querySelectorAll(`[data-avgoutra="${c}"]`).forEach(b => { b.disabled = AVG_GERANDO.has(a.codigo); b.textContent = avgBotao(a); });
+}
+async function avgGerar(a, nova, tentativa = 0) {
+  if (AVG_GERANDO.has(a.codigo)) return;
+  AVG_GERANDO.add(a.codigo); avgAtualizar(a);
+  const { data, error } = await sb.functions.invoke('resposta-avaliacao', { body: { codigo: a.codigo, nova: !!nova } });
+  let msg = data && data.erro;
+  if (!msg && error) {
+    try { msg = (await error.context.json()).erro; } catch (_) { /* sem corpo */ }
+    if (!msg) msg = error.context && error.context.status === 404 ? 'A função resposta-avaliacao ainda não está publicada no Supabase.' : error.message;
+  }
+  AVG_GERANDO.delete(a.codigo);
+  // o app pode ter recarregado os dados enquanto a IA escrevia: atualiza o registro atual também
+  const alvos = [a, (D.avGoogle || []).find(x => x.codigo === a.codigo)].filter(Boolean);
+  if (data && data.ok) {
+    alvos.forEach(x => Object.assign(x, { sugestao: data.sugestao, sugestao_em: data.sugestao_em, sugestao_erro: data.sugestao_erro || null, sugestao_ficha: data.ficha || null }));
+    // primeira sugestão: se a pessoa já começou a escrever no campo, o texto dela fica
+    if (nova || AVG_RASC[a.codigo] == null) delete AVG_RASC[a.codigo];
+    avgAtualizar(a, true);
+  } else if (data && data.gerando && tentativa < 3) {
+    // outra pessoa da equipe está gerando agora: busca o resultado daqui a pouco
+    avgAtualizar(a);
+    setTimeout(() => avgGerar(a, false, tentativa + 1), 20e3);
+  } else {
+    if (!a.sugestao) alvos.forEach(x => { x.sugestao_erro = msg || 'tente de novo'; });
+    else aviso('Não gerou outra: ' + (msg || 'tente de novo'));
+    avgAtualizar(a);
+  }
 }
 function avgCard(a, comResposta) {
   return `<div class="card ${a.respondida ? '' : 'novo'}" style="margin-top:8px">
     <div class="cab"><div><div class="nome">${esc(a.cliente)}</div>${avgEstrelas(Number(a.nota) || 0)}</div><span class="quando">${esc(avgQuando(a))}</span></div>
     <div style="margin-top:6px;white-space:pre-wrap;color:var(--tinta-2);font-size:14px">${a.comentario ? esc(a.comentario) : '<span style="color:var(--tinta-3)">Só a nota, sem comentário.</span>'}</div>
-    ${comResposta ? `<div style="margin-top:12px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600">Resposta sugerida (pode editar)</div>
-    <textarea data-avgtxt="${esc(a.codigo)}" rows="5" style="width:100%;margin-top:6px;padding:10px;border:1px solid var(--linha);font:inherit;font-size:14px;background:var(--branco)">${esc(avgSugestao(a))}</textarea>
+    ${comResposta ? `<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dourado);font-weight:600">Resposta sugerida (pode editar)</span><button class="sec" type="button" data-avgoutra="${esc(a.codigo)}" style="padding:6px 10px;font-size:11px;flex:none"${AVG_GERANDO.has(a.codigo) ? ' disabled' : ''}>${avgBotao(a)}</button></div>
+    <textarea data-avgtxt="${esc(a.codigo)}" rows="6" placeholder="A resposta aparece aqui." style="width:100%;margin-top:6px;padding:10px;border:1px solid var(--linha);font:inherit;font-size:14px;background:var(--branco)">${esc(avgTexto(a))}</textarea>
+    <div class="sub" data-avginfo="${esc(a.codigo)}" style="margin-top:4px">${avgInfo(a)}</div>
     <div class="botoes4" style="margin-top:10px"><button class="zap" type="button" data-avgresp="${esc(a.codigo)}">Copiar e responder no Google</button><button class="sec" type="button" data-avgok="${esc(a.codigo)}">Já respondi</button></div>
     ${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:13px;color:var(--verde);text-decoration:underline">Abrir o e-mail do Google desta avaliação</a>` : ''}`
     : `<div style="margin-top:8px"><button class="sec" type="button" data-avgok="${esc(a.codigo)}" style="padding:6px 10px;font-size:11px">${a.respondida ? 'Respondida ✓ (desfazer)' : 'Marcar como respondida'}</button></div>`}
@@ -5607,11 +5650,23 @@ function ligarAvg(P, render) {
   const achar = (c) => (D.avGoogle || []).find(x => x.codigo === c);
   P.querySelectorAll('[data-avgresp]').forEach(b => b.onclick = async () => {
     const a = achar(b.dataset.avgresp); if (!a) return;
-    const t = P.querySelector(`[data-avgtxt="${CSS.escape(a.codigo)}"]`), texto = t ? t.value : avgSugestao(a);
+    const t = P.querySelector(`[data-avgtxt="${CSS.escape(a.codigo)}"]`), texto = (t ? t.value : avgTexto(a)).trim();
+    if (!texto) { aviso('A resposta ainda está sendo escrita. Espere um instante ou escreva a sua.'); return; }
     try { await navigator.clipboard.writeText(texto); } catch (_) { if (t) { t.focus(); t.select(); document.execCommand('copy'); } }
     window.open(LINK_RESPONDER_GOOGLE, '_blank', 'noopener');
     aviso('Resposta copiada. Cole no Google e publique; depois toque em "Já respondi".');
   });
+  P.querySelectorAll('[data-avgtxt]').forEach(t => { avgAltura(t); t.oninput = () => { AVG_RASC[t.dataset.avgtxt] = t.value; avgAltura(t); }; });
+  P.querySelectorAll('[data-avgoutra]').forEach(b => b.onclick = () => {
+    const a = achar(b.dataset.avgoutra); if (!a) return;
+    const t = P.querySelector(`[data-avgtxt="${CSS.escape(a.codigo)}"]`);
+    if (t && t.value.trim() && t.value !== (a.sugestao || '') && !confirm('Trocar o texto que você editou por uma nova sugestão?')) return;
+    avgGerar(a, !!a.sugestao);
+  });
+  // avaliação nova, ainda sem sugestão: pede uma vez, uma de cada vez
+  const fila = [...P.querySelectorAll('[data-avgtxt]')].map(t => achar(t.dataset.avgtxt)).filter(a => a && !a.sugestao && !a.sugestao_erro && !AVG_PEDIU.has(a.codigo));
+  fila.forEach(a => AVG_PEDIU.add(a.codigo));
+  if (fila.length) (async () => { for (const a of fila) await avgGerar(a, false); })();
   P.querySelectorAll('[data-avgok]').forEach(b => b.onclick = async () => {
     const a = achar(b.dataset.avgok); if (!a) return;
     b.disabled = true;
