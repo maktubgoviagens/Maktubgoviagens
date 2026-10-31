@@ -1,8 +1,14 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
+import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=1';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
-let BASE = null, ED = null, BUSCA = '', SO_ILIM = false;
+let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
+// abas da Base de cartões (Cartões, Salas VIP, Bancos, Correções) e o que cada uma guarda
+let ABA_B = 'cartoes', IMP = false, LIN_ED = null, CORR_ED = null;
+let SALAS = null, SEGS = null, CORR = null, NPEND = null;
+const SV = { filtro: 'todas', rede: '', aero: '', gasto: 'todos' };
+let BUSCA_BANCO = '', CORR_ST = 'pendente';
 
 export async function carregarBase(sb, forcar) {
   if (BASE && !forcar) return BASE;
@@ -14,13 +20,20 @@ export async function carregarBase(sb, forcar) {
 const nomeBase = (b) => `${b.banco} ${b.nome}`.trim();
 // redução parcial da anuidade depende das colunas reducao_gasto_mes e reducao_pct (SQL da redução de anuidade)
 const TEM_REDUCAO = () => (BASE || []).some(b => 'reducao_pct' in b);
+// régua, salas VIP, bancos e correções dependem do 62-ia-cartoes-bases.sql
+const TEM_NOVAS = () => (BASE || []).some(b => 'vendido_hoje' in b);
 const dec = (x) => Number(x).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 export const salaVip = (b) => !b ? '' : b.salas_vip_ilimitado ? `sala VIP ilimitada${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}`
   : n(b.salas_vip_ano) ? `${b.salas_vip_ano} ${Number(b.salas_vip_ano) === 1 ? 'acesso' : 'acessos'}/ano a sala VIP${b.salas_vip_programa ? ' (' + b.salas_vip_programa + ')' : ''}` : '';
 const n = (x) => x === null || x === undefined || x === '' ? null : Number(x);
+const hojeISO = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+const velho = (d) => !d || (Date.now() - new Date(String(d).slice(0, 10) + 'T12:00:00')) / 864e5 > 90;
+const dataBR = (d) => d ? String(d).slice(0, 10).split('-').reverse().join('/') : '';
+const conferido = (d) => `<span${velho(d) ? ' style="color:var(--alerta)"' : ''}>${d ? 'conferido ' + dataBR(d) : 'não conferido'}</span>`;
+const avisoVelhos = (L, X) => { const v = L.filter(x => velho(x.conferido_em)).length; return v ? `<div class="sub" style="margin-top:8px;font-size:13px">${X.num(v)} ${v === 1 ? 'item conferido' : 'itens conferidos'} há mais de 90 dias ou sem data, em laranja: vale revisar no site do banco.</div>` : ''; };
 
 // ao entrar pelo menu, abre a lista (e não o cartão que ficou aberto da última vez)
-export function inicio() { ED = null; }
+export function inicio() { ED = null; ABA_B = 'cartoes'; IMP = false; LIN_ED = null; CORR_ED = null; SALAS = SEGS = CORR = NPEND = null; IMPORTAR.limpar(); }
 // Contas de um cartão do cliente. cat: cartão da base (ou null); refs: valor do milheiro por programa.
 export function calc(cart, cat, cotacao, refs, normProg) {
   const gasto = n(cart.gasto_medio_mes) || 0, cheia = cat ? n(cat.anuidade_anual) : null, minimo = cat ? n(cat.isencao_gasto_mes) : null;
@@ -53,40 +66,84 @@ function textosPainel(cart, cat, k) {
   return { anuidade, pontuacao: pont };
 }
 
-/* ---------------- tela da base de cartões (aba Empresa) ---------------- */
+/* ---------------- Base de cartões (aba Gestão): Cartões, Salas VIP, Bancos e Correções ---------------- */
+const ABAS_B = [['cartoes', 'Cartões'], ['salas', 'Salas VIP'], ['bancos', 'Bancos'], ['correcoes', 'Correções']];
+const rotuloAba = (k, l) => k === 'correcoes' && NPEND ? `${l} (${NPEND})` : l;
+const TIPO_SALA = { rede_global: 'rede global', sala_banco: 'sala do banco', sala_bandeira: 'sala da bandeira', sala_companhia: 'sala da companhia' };
+async function contarPendentes(sb) {
+  const r = await sb.from('cartoes_correcoes').select('id', { count: 'exact', head: true }).eq('status', 'pendente');
+  return r.error ? 0 : (r.count || 0);
+}
+// carrega uma tabela da aba e redesenha; sem o SQL, a aba avisa
+async function carregar(X, P, tabela, ordem, guardar) {
+  let q = X.sb.from(tabela).select('*');
+  ordem.forEach(o => { q = q.order(o); });
+  const r = await q;
+  guardar(r.error ? false : (r.data || []));
+  if (X.aba() === 'cartoesbase' && !ED && !IMP && !LIN_ED) telaBase(P, X);
+}
+
 export async function telaBase(P, X) {
-  const { sb, $, esc, aviso, campo, ir, D, num, brl } = X;
-  const voltar = () => { ED = null; ir('empresa'); };
+  const { sb, $, esc } = X;
+  const voltar = () => { ED = null; X.ir('gestao'); };
   if (!BASE) {
-    P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1><div class="vazio">Carregando...</div>`;
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1><div class="vazio">Carregando...</div>`;
     $('voltar').onclick = voltar;
     try { await carregarBase(sb); } catch (e) { if (X.aba() === 'cartoesbase') P.querySelector('.vazio').textContent = X.tec('A base de cartões ainda não foi ativada: rode no Supabase o SQL da base de cartões.'); return; }
     if (X.aba() !== 'cartoesbase') return;
   }
+  if (IMP) return IMPORTAR.telaImportar(P, X, { base: BASE, voltar: () => { IMP = false; telaBase(P, X); scrollTo(0, 0); },
+    recarregar: async () => { await carregarBase(sb, true); SALAS = SEGS = CORR = NPEND = null; } });
   if (ED) return formBase(P, X);
-  const cot = D.cfg && n(D.cfg.cotacao_dolar);
-  const velho = (d) => !d || (Date.now() - new Date(d + 'T12:00:00')) / 864e5 > 90;
-  const L = BASE.filter(b => (!SO_ILIM || b.salas_vip_ilimitado) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button>
+  if (LIN_ED) return formLinha(P, X);
+  if (TEM_NOVAS() && NPEND === null) { NPEND = 0; contarPendentes(sb).then(c => { NPEND = c; const b = P.querySelector('[data-ab="correcoes"]'); if (b) b.textContent = rotuloAba('correcoes', 'Correções'); }); }
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Gestão</button>
     <h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1>
-    <div class="sub">Anuidade, isenção e pontuação de cada cartão do mercado. Os cartões dos clientes usam estes dados nas contas.</div>
+    ${TEM_NOVAS() ? `<div class="chips" id="abasB" style="margin-top:10px">${ABAS_B.map(([k, l]) => `<button data-ab="${k}" class="${ABA_B === k ? 'on' : ''}">${rotuloAba(k, l)}</button>`).join('')}</div>` : ''}
+    <div id="corpoB"></div>`;
+  $('voltar').onclick = voltar;
+  P.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { ABA_B = b.dataset.ab; telaBase(P, X); });
+  const corpo = $('corpoB');
+  if (ABA_B === 'salas' && TEM_NOVAS()) return abaSalas(corpo, P, X);
+  if (ABA_B === 'bancos' && TEM_NOVAS()) return abaBancos(corpo, P, X);
+  if (ABA_B === 'correcoes' && TEM_NOVAS()) return abaCorrecoes(corpo, P, X);
+  return abaCartoes(corpo, P, X);
+}
+
+function resumoCartao(b, brl) {
+  const pts = n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback'
+    : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (n(b.pts_internacional) && n(b.pts_internacional) !== n(b.pontos_por) ? ` (exterior ${dec(b.pts_internacional)})` : '') + (b.programa ? ' ' + b.programa : '')) : '';
+  return [b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano',
+    n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''),
+    n(b.reducao_gasto_mes) && n(b.reducao_pct) ? 'cai ' + dec(b.reducao_pct) + '% com ' + brl(b.reducao_gasto_mes) + '/mês' : '', pts, salaVip(b)].filter(Boolean).join(' · ');
+}
+function abaCartoes(corpo, P, X) {
+  const { sb, $, esc, aviso, campo, D, num, brl } = X;
+  const cot = D.cfg && n(D.cfg.cotacao_dolar);
+  const filtros = [['todos', 'Todos'], ['ilim', 'Sala VIP ilimitada'], ['conf', 'A confirmar'], ['fora', 'Fora de linha']];
+  const passa = (b) => FILTRO_C === 'ilim' ? b.salas_vip_ilimitado : FILTRO_C === 'conf' ? b.a_confirmar : FILTRO_C === 'fora' ? b.vendido_hoje === false || b.ativo === false : true;
+  const L = BASE.filter(b => passa(b) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
+  corpo.innerHTML = `<div class="sub">Anuidade, isenção e pontuação de cada cartão do mercado. Os cartões dos clientes usam estes dados nas contas.</div>
     <section class="bloco">
       <div class="duas-col" style="align-items:end">${campo('cot', 'Cotação de referência do dólar (R$)', cot ?? '', 'number', 'placeholder="Ex.: 5,40"')}<button class="sec" id="cotOk" style="height:44px">Salvar cotação</button></div>
       <div class="sub">Usada para converter os gastos dos cartões que pontuam por dólar.</div>
     </section>
     <div class="duas-col" style="margin-top:14px;align-items:end"><label class="fl"><span>Buscar</span><input id="bBusca" value="${esc(BUSCA)}" placeholder="Banco, cartão ou programa"></label><button class="zap" id="bNovo" style="height:44px">+ Novo cartão</button></div>
-    <label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${SO_ILIM ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>
+    ${TEM_NOVAS() ? `<div class="chips" style="margin-top:8px">${filtros.map(([k, l]) => `<button data-fc="${k}" class="${FILTRO_C === k ? 'on' : ''}">${l}</button>`).join('')}</div>`
+      : `<label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${FILTRO_C === 'ilim' ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>`}
     <section class="bloco" style="margin-top:10px">${L.length ? L.map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
-        <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${!b.ativo ? ' <small>(fora de linha)</small>' : ''}
-          <small style="display:block;color:var(--tinta-3);font-size:12px">${[b.anuidade_anual === null ? 'anuidade não informada' : Number(b.anuidade_anual) === 0 ? 'sem anuidade' : brl(b.anuidade_anual) + '/ano', n(b.isencao_gasto_mes) ? 'isenta com ' + brl(b.isencao_gasto_mes) + '/mês' : (Number(b.anuidade_anual) === 0 ? '' : b.isencao || ''), n(b.reducao_gasto_mes) && n(b.reducao_pct) ? 'cai ' + dec(b.reducao_pct) + '% com ' + brl(b.reducao_gasto_mes) + '/mês' : '', n(b.pontos_por) ? (b.pontos_moeda === 'PCT' ? dec(b.pontos_por) + '% de cashback' : dec(b.pontos_por) + ' pts/' + (b.pontos_moeda === 'USD' ? 'US$' : 'R$') + (b.programa ? ' ' + b.programa : '')) : '', salaVip(b)].filter(Boolean).map(esc).join(' · ')}</small></span>
-        <span${velho(b.conferido_em) ? ' style="color:var(--alerta)"' : ''}>${b.conferido_em ? 'conferido ' + b.conferido_em.split('-').reverse().join('/') : 'não conferido'}</span></button>`).join('')
+        <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${b.ativo === false ? ' <small>(fora da lista)</small>' : b.vendido_hoje === false ? ' <small>(fora de linha)</small>' : ''}${b.a_confirmar ? ' <span class="tag alerta">a confirmar</span>' : ''}
+          <small style="display:block;color:var(--tinta-3);font-size:13px">${esc(resumoCartao(b, brl))}</small></span>
+        ${conferido(b.conferido_em)}</button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
-    <div class="sub" style="margin-top:8px">${num(BASE.length)} cartões na base. Em laranja, os conferidos há mais de 90 dias: vale revisar no site do banco.</div>`;
-  $('voltar').onclick = voltar;
+    <div class="sub" style="margin-top:8px">${num(L.length)} de ${num(BASE.length)} cartões. Em laranja, os conferidos há mais de 90 dias: vale revisar no site do banco.</div>
+    ${X.admin ? (TEM_NOVAS() ? '<button class="sec" id="bImp" style="width:100%;margin-top:14px">Importar planilha da base</button>' : X.tec('<div class="config" style="margin-top:14px">Para salas VIP, bancos, correções e a importação da planilha, rode no Supabase o 62-ia-cartoes-bases.sql.</div>')) : ''}`;
   $('bBusca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
   $('bNovo').onclick = () => { ED = 'novo'; telaBase(P, X); };
-  $('bIlim').onchange = (e) => { SO_ILIM = e.target.checked; telaBase(P, X); };
-  P.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { ED = el.dataset.b; telaBase(P, X); });
+  if ($('bIlim')) $('bIlim').onchange = (e) => { FILTRO_C = e.target.checked ? 'ilim' : 'todos'; telaBase(P, X); };
+  corpo.querySelectorAll('[data-fc]').forEach(b => b.onclick = () => { FILTRO_C = b.dataset.fc; telaBase(P, X); });
+  if ($('bImp')) $('bImp').onclick = () => { IMP = true; telaBase(P, X); scrollTo(0, 0); };
+  corpo.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { ED = el.dataset.b; telaBase(P, X); scrollTo(0, 0); });
   $('cotOk').onclick = async () => {
     const v = n(String(P.querySelector('[name=cot]').value).replace(',', '.'));
     if (v !== null && !(v > 0)) { aviso('Cotação inválida.'); return; }
@@ -99,27 +156,45 @@ export async function telaBase(P, X) {
 
 function formBase(P, X) {
   const { sb, $, esc, aviso, campo } = X;
-  const b = ED === 'novo' ? { ativo: true, pontos_moeda: 'USD' } : BASE.find(x => x.id === ED);
+  const b = ED === 'novo' ? { ativo: true, vendido_hoje: true, pontos_moeda: 'USD' } : BASE.find(x => x.id === ED);
   if (!b) { ED = null; return telaBase(P, X); }
-  const sel = (nome, rot, ops, v) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(([k, l]) => `<option value="${esc(k)}"${String(k) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  const novas = TEM_NOVAS();
+  const sel = (nome, rot, ops, v) => `<label class="fl"><span>${rot}</span><select name="${nome}">${ops.map(([k, l]) => `<option value="${esc(k)}"${String(k) === String(v ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  const caixa = (nome, rot, v) => `<label class="fc"><input type="checkbox" name="${nome}" ${v ? 'checked' : ''}><span>${rot}</span></label>`;
+  const grupo = (t) => `<div class="secao" style="margin:18px 0 0">${t}</div>`;
+  const c = CORR_ED && CORR_ED.catalogo_id === b.id ? CORR_ED : null;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Base de cartões</button>
     <h1 class="titulo" style="margin-top:6px">${ED === 'novo' ? 'Novo <em>cartão</em>' : esc(nomeBase(b))}</h1>
+    ${c ? `<div class="config" style="margin-top:12px;font-size:14px"><b>Correção a aplicar: ${esc(c.campo)}</b><br>Hoje na base: ${esc(c.valor_na_base || 'vazio')}<br>Valor atual: ${esc(c.valor_atual || '')}${c.observacao ? '<br>' + esc(c.observacao) : ''}<br>Ajuste o campo abaixo e salve: a correção fica como aceita.</div>` : ''}
     <form class="bloco form" id="fBase">
       <div class="duas-col">${campo('banco', 'Banco *', b.banco, 'text', 'required placeholder="Ex.: Santander"')}${campo('nome', 'Cartão *', b.nome, 'text', 'required placeholder="Ex.: Unique Visa Infinite"')}</div>
       <div class="duas-col">${campo('bandeira', 'Bandeira', b.bandeira, 'text', 'placeholder="Visa, Mastercard, Elo"')}${campo('categoria', 'Categoria', b.categoria, 'text', 'placeholder="Gold, Platinum, Black..."')}</div>
-      <div class="duas-col">${campo('anuidade_anual', 'Anuidade cheia (R$ por ano)', b.anuidade_anual, 'number')}${campo('isencao_gasto_mes', 'Gasto por mês que isenta (R$)', b.isencao_gasto_mes, 'number', 'placeholder="em branco se não houver"')}</div>
+      ${novas ? grupo('Régua') + `<div class="duas-col">${campo('familia_regua', 'Família', b.familia_regua, 'text', 'placeholder="Ex.: Santander alta renda"')}${campo('posicao_regua', 'Posição (1 = entrada)', b.posicao_regua, 'number')}</div>${campo('proximo_degrau', 'Próximo cartão da família', b.proximo_degrau)}` : ''}
+      ${novas ? grupo('Anuidade e isenção') : ''}
+      <div class="duas-col">${campo('anuidade_anual', 'Anuidade cheia (R$ por ano)', b.anuidade_anual, 'number')}${campo('isencao_gasto_mes', 'Gasto por mês que isenta 100% (R$)', b.isencao_gasto_mes, 'number', 'placeholder="em branco se não houver"')}</div>
       ${TEM_REDUCAO() ? `<div class="duas-col">${campo('reducao_gasto_mes', 'Gasto por mês que reduz (R$)', b.reducao_gasto_mes, 'number', 'placeholder="em branco se não houver"')}${campo('reducao_pct', 'Redução da anuidade (%)', b.reducao_pct, 'number', 'placeholder="Ex.: 50"')}</div>` : X.tec('<div class="sub">Para guardar a redução parcial da anuidade (ex.: 50% com um gasto menor), rode no Supabase o SQL da redução de anuidade.</div>')}
+      ${novas ? campo('isencao_invest', 'Valor investido que isenta 100% (R$)', b.isencao_invest, 'number', 'placeholder="em branco se não houver"') : ''}
       ${campo('isencao', 'Regra de isenção, como o banco descreve', b.isencao, 'text', 'placeholder="Ex.: isenta com R$ 10 mil/mês ou R$ 100 mil investidos"')}
-      <div class="duas-col">${campo('pontos_por', 'Pontuação', b.pontos_por, 'number', 'placeholder="Ex.: 2,2"')}${sel('pontos_moeda', 'Por', MOEDAS, b.pontos_moeda)}</div>
-      ${campo('programa', 'Programa de pontos', b.programa, 'text', 'placeholder="Ex.: Esfera, Livelo, Átomos, Azul"')}
+      ${novas ? campo('isencao_outras', 'Outras regras de isenção', b.isencao_outras) : ''}
+      ${novas ? grupo('Pontuação') : ''}
+      <div class="duas-col">${campo('pontos_por', novas ? 'Pontuação no Brasil' : 'Pontuação', b.pontos_por, 'number', 'placeholder="Ex.: 2,2"')}${sel('pontos_moeda', 'Por', MOEDAS, b.pontos_moeda)}</div>
+      ${novas ? `<div class="duas-col">${campo('pts_internacional', 'Pontuação no exterior', b.pts_internacional, 'number', 'placeholder="Ex.: 3"')}${sel('tipo_destino', 'Para onde vão os pontos', [['', ''], ['programa_banco', 'Programa do banco'], ['aerea_direta', 'Direto na companhia aérea'], ['cashback', 'Cashback'], ['nenhum', 'Sem pontos'], ['outro', 'Outro']], b.tipo_destino)}</div>
+        ${campo('pts_condicional', 'Pontuação com condição', b.pts_condicional, 'text', 'placeholder="Ex.: 2,5 com fatura a partir de R$ 4 mil"')}${campo('destino_pontos', 'Destino dos pontos', b.destino_pontos, 'text', 'placeholder="Ex.: Livelo (transfere para LATAM Pass, Smiles...)"')}` : ''}
+      ${campo('programa', 'Programa de pontos (usado no valor do milheiro)', b.programa, 'text', 'placeholder="Ex.: Esfera, Livelo, Átomos, Azul"')}
+      ${novas ? campo('pontos_expiram', 'Validade dos pontos', b.pontos_expiram) : ''}
+      ${novas ? grupo('Sala VIP') : ''}
       <div class="duas-col">${campo('salas_vip_programa', 'Sala VIP: programa', b.salas_vip_programa, 'text', 'placeholder="LoungeKey, Priority Pass, DragonPass..."')}${campo('salas_vip_ano', 'Acessos por ano (titular)', b.salas_vip_ano, 'number', 'placeholder="em branco se não tiver"')}</div>
       <label class="fc"><input type="checkbox" name="salas_vip_ilimitado" ${b.salas_vip_ilimitado ? 'checked' : ''}><span>Sala VIP ilimitada</span></label>
+      ${novas ? '<div class="sub" style="font-size:13px">O detalhe de cada sala (acompanhantes, gasto mínimo, aeroportos) fica na aba Salas VIP.</div>' + grupo('Para ter o cartão') + `<div class="duas-col">${campo('exige_renda', 'Renda mínima (R$/mês)', b.exige_renda, 'number')}${campo('exige_invest', 'Investimento mínimo (R$)', b.exige_invest, 'number')}</div>${campo('exige_outro', 'Outra exigência', b.exige_outro, 'text', 'placeholder="Ex.: cliente Private, via gerente"')}${caixa('somente_convite', 'Somente por convite', b.somente_convite)}` : ''}
+      ${novas ? grupo('Outros') : ''}
       ${campo('beneficios', 'Outros benefícios e condições', b.beneficios, 'text', 'placeholder="Ex.: acesso exige gasto mínimo, seguro viagem"')}
+      ${novas ? campo('seguro_viagem', 'Seguro viagem', b.seguro_viagem) + campo('observacoes', 'Observações', b.observacoes) : ''}
       <div class="duas-col">${campo('fonte', 'Fonte (site do banco)', b.fonte, 'url', 'placeholder="https://..."')}${campo('conferido_em', 'Conferido em', b.conferido_em, 'date')}</div>
-      <label class="fc"><input type="checkbox" name="ativo" ${b.ativo !== false ? 'checked' : ''}><span>Cartão ainda é oferecido pelo banco</span></label>
+      ${novas ? caixa('vendido_hoje', 'O banco ainda vende este cartão', b.vendido_hoje !== false) + caixa('a_confirmar', 'Falta conferir no site do banco', b.a_confirmar) : ''}
+      ${caixa('ativo', novas ? 'Aparece na lista para lançar nos clientes' : 'Cartão ainda é oferecido pelo banco', b.ativo !== false)}
       <div style="display:flex;gap:8px;margin-top:12px"><button class="zap" type="submit" style="flex:2">Salvar</button>${ED !== 'novo' ? '<button class="sec" type="button" id="bDel" style="flex:1">Excluir</button>' : ''}</div>
     </form>`;
-  const voltar = () => { ED = null; telaBase(P, X); };
+  const voltar = () => { ED = null; if (c) { CORR_ED = null; ABA_B = 'correcoes'; } telaBase(P, X); };
   $('voltar').onclick = voltar;
   const f = $('fBase'), v = (k) => f.elements[k].value.trim(), nv = (k) => v(k) === '' ? null : Number(v(k).replace(',', '.'));
   f.onsubmit = async (e) => {
@@ -128,17 +203,24 @@ function formBase(P, X) {
       isencao: v('isencao') || null, pontos_por: nv('pontos_por'), pontos_moeda: v('pontos_moeda'), programa: v('programa') || null, beneficios: v('beneficios') || null,
       fonte: v('fonte') || null, conferido_em: v('conferido_em') || null, ativo: f.elements.ativo.checked, atualizado_em: new Date().toISOString(),
       salas_vip_programa: v('salas_vip_programa') || null, salas_vip_ano: nv('salas_vip_ano') === null ? null : Math.round(nv('salas_vip_ano')), salas_vip_ilimitado: f.elements.salas_vip_ilimitado.checked,
-      ...(TEM_REDUCAO() ? { reducao_gasto_mes: nv('reducao_gasto_mes'), reducao_pct: nv('reducao_pct') } : {}) };
+      ...(TEM_REDUCAO() ? { reducao_gasto_mes: nv('reducao_gasto_mes'), reducao_pct: nv('reducao_pct') } : {}),
+      // a pontuação no Brasil é a mesma que as contas usam
+      ...(novas ? { familia_regua: v('familia_regua') || null, posicao_regua: nv('posicao_regua') === null ? null : Math.round(nv('posicao_regua')), proximo_degrau: v('proximo_degrau') || null,
+        isencao_invest: nv('isencao_invest'), isencao_outras: v('isencao_outras') || null, pts_nacional: nv('pontos_por'), pts_internacional: nv('pts_internacional'), tipo_destino: v('tipo_destino') || null,
+        pts_condicional: v('pts_condicional') || null, destino_pontos: v('destino_pontos') || null, pontos_expiram: v('pontos_expiram') || null, exige_renda: nv('exige_renda'), exige_invest: nv('exige_invest'),
+        exige_outro: v('exige_outro') || null, somente_convite: f.elements.somente_convite.checked, seguro_viagem: v('seguro_viagem') || null, observacoes: v('observacoes') || null,
+        vendido_hoje: f.elements.vendido_hoje.checked, a_confirmar: f.elements.a_confirmar.checked } : {}) };
     if (row.reducao_pct !== undefined && row.reducao_pct !== null && !(row.reducao_pct > 0 && row.reducao_pct <= 100)) { aviso('A redução é uma porcentagem entre 1 e 100.'); return; }
     if (!row.banco || !row.nome) { aviso('Informe banco e cartão.'); return; }
-    if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por', 'salas_vip_ano'].some(k => row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
+    if (['anuidade_anual', 'isencao_gasto_mes', 'pontos_por', 'salas_vip_ano', 'pts_internacional', 'isencao_invest', 'exige_renda', 'exige_invest'].some(k => row[k] !== undefined && row[k] !== null && !(row[k] >= 0))) { aviso('Confira os números.'); return; }
     const r = ED === 'novo' ? await sb.from('cartoes_catalogo').insert(row).select().single() : await sb.from('cartoes_catalogo').update(row).eq('id', ED).select().single();
     if (r.error) { aviso('Não salvou: ' + r.error.message); return; }
     if (ED === 'novo') BASE.push(r.data); else Object.assign(BASE.find(x => x.id === ED), r.data);
     // quem já tem esse cartão: os textos do painel do cliente (anuidade e pontuação) acompanham a base
     if (ED !== 'novo' && X.CART) atualizarPaineis(sb, X.CART, X.D, r.data).catch(() => {});
-    BASE.sort((a, c) => nomeBase(a).localeCompare(nomeBase(c)));
-    aviso('Cartão salvo na base.'); voltar();
+    BASE.sort((a, x) => nomeBase(a).localeCompare(nomeBase(x)));
+    if (c) { await decidirCorrecao(X, c, 'aceita'); aviso('Cartão salvo e correção aceita.'); } else aviso('Cartão salvo na base.');
+    voltar();
   };
   if ($('bDel')) $('bDel').onclick = async (e) => {
     if (e.target.dataset.ok !== '1') { e.target.dataset.ok = '1'; e.target.textContent = 'Toque de novo'; return; }
@@ -147,6 +229,175 @@ function formBase(P, X) {
     BASE = BASE.filter(x => x.id !== ED); aviso('Cartão excluído da base.'); voltar();
   };
 }
+
+/* ---------- Salas VIP: uma linha por cartão e por rede ou sala ---------- */
+const acessosTxt = (a) => a === null || a === undefined ? 'acessos não informados' : Number(a) === -1 ? 'ilimitado' : Number(a) === 0 ? 'sem acesso grátis' : `${a} ${Number(a) === 1 ? 'acesso' : 'acessos'} por ano`;
+const temGastoMin = (s) => n(s.gasto_minimo_rs) > 0 || /r\$\s*\d/i.test(s.gasto_minimo || '');
+const semGastoMin = (s) => !temGastoMin(s) && /sem gasto|n[aã]o h[aá] gasto/i.test(s.gasto_minimo || '');
+function abaSalas(corpo, P, X) {
+  const { $, esc, num, brl } = X;
+  if (SALAS === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'cartoes_salas_vip', ['banco', 'nome_cartao'], d => { SALAS = d; }); return; }
+  if (SALAS === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar as salas VIP.</div>'); return; }
+  const filtros = [['todas', 'Todas'], ['ilim', 'Ilimitadas'], ['mudou', 'Mudou em 2026'], ['conf', 'Só conferidas']];
+  const t = (x) => String(x || '').toLowerCase();
+  const L = SALAS.filter(s => (SV.filtro !== 'ilim' || Number(s.acessos_titular_ano) === -1) && (SV.filtro !== 'mudou' || s.mudou_em_2026) && (SV.filtro !== 'conf' || !s.a_confirmar)
+    && (!SV.rede || t(s.rede_ou_sala).includes(t(SV.rede))) && (!SV.aero || t(s.aeroportos).includes(t(SV.aero)))
+    && (SV.gasto === 'todos' || (SV.gasto === 'sem' ? semGastoMin(s) : temGastoMin(s))));
+  const grupos = []; L.forEach(s => { const k = s.banco + ' · ' + s.nome_cartao; const g = grupos.find(x => x.k === k); g ? g.L.push(s) : grupos.push({ k, s, L: [s] }); });
+  const linha = (s) => `<div style="border-top:1px solid var(--linha);padding:10px 0">
+      <div><b style="font-weight:600">${esc(s.rede_ou_sala)}</b> ${s.tipo ? `<span class="tag">${TIPO_SALA[s.tipo] || esc(s.tipo)}</span>` : ''}${s.a_confirmar ? ' <span class="tag alerta">a confirmar</span>' : ''}</div>
+      <div style="font-size:13px;color:var(--tinta-2);margin-top:4px">${esc([acessosTxt(s.acessos_titular_ano), s.acompanhantes ? 'acompanhantes: ' + s.acompanhantes : '', s.adicionais ? 'adicionais: ' + s.adicionais : ''].filter(Boolean).join(' · '))}</div>
+      ${s.gasto_minimo ? `<div style="font-size:13px;margin-top:2px;${temGastoMin(s) ? 'color:var(--verde)' : 'color:var(--tinta-3)'}">Gasto mínimo: ${esc(s.gasto_minimo)}${n(s.gasto_minimo_rs) ? ` (${brl(s.gasto_minimo_rs)}${n(s.gasto_minimo_faturas) > 1 ? ' em ' + s.gasto_minimo_faturas + ' faturas' : n(s.gasto_minimo_faturas) === 1 ? ' na fatura' : ''})` : ''}</div>` : ''}
+      ${s.aeroportos ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:2px">Aeroportos: ${esc(s.aeroportos)}</div>` : ''}
+      ${s.como_acessar || s.condicao_extra ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc([s.como_acessar, s.condicao_extra].filter(Boolean).join(' · '))}</div>` : ''}
+      ${s.mudou_em_2026 ? `<div style="font-size:13px;color:var(--alerta);margin-top:2px">Mudou em 2026: ${esc(s.mudou_em_2026)}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px">${conferido(s.conferido_em)}<span><button class="mini" data-se="${s.id}">editar</button>${s.a_confirmar ? `<button class="mini" data-sc="${s.id}">conferida</button>` : ''}</span></div></div>`;
+  corpo.innerHTML = `<div class="sub">Uma linha por cartão e por rede ou sala. No painel do cliente só aparecem as já conferidas.</div>
+    <div class="chips" style="margin-top:8px">${filtros.map(([k, l]) => `<button data-sf="${k}" class="${SV.filtro === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="duas-col"><label class="fl"><span>Rede ou sala</span><input id="svRede" value="${esc(SV.rede)}" placeholder="LoungeKey, Priority..."></label><label class="fl"><span>Aeroporto</span><input id="svAero" value="${esc(SV.aero)}" placeholder="Ex.: GRU"></label></div>
+    <label class="fl"><span>Gasto mínimo para liberar</span><select id="svGasto">${[['todos', 'Todos'], ['sem', 'Sem gasto mínimo'], ['com', 'Com gasto mínimo']].map(([k, l]) => `<option value="${k}"${SV.gasto === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${SV.aero ? '<div class="sub" style="font-size:13px">Redes globais (LoungeKey, DragonPass, Priority Pass) atendem muitos aeroportos e só entram aqui quando a planilha cita o aeroporto. A lista de salas de cada aeroporto fica no app da rede.</div>' : ''}
+    ${grupos.length ? grupos.map(g => `<section class="bloco"><h2 style="margin-bottom:4px">${esc(g.k)}</h2>${g.L.map(linha).join('')}</section>`).join('') : '<div class="vazio">Nenhuma sala com esses filtros.</div>'}
+    <div class="sub" style="margin-top:8px;font-size:13px">${num(L.length)} de ${num(SALAS.length)} linhas.</div>${avisoVelhos(L, X)}`;
+  corpo.querySelectorAll('[data-sf]').forEach(b => b.onclick = () => { SV.filtro = b.dataset.sf; telaBase(P, X); });
+  const texto = (id, k) => { $(id).oninput = (e) => { SV[k] = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const el = $(id); el.focus(); el.setSelectionRange(pos, pos); }; };
+  texto('svRede', 'rede'); texto('svAero', 'aero');
+  $('svGasto').onchange = (e) => { SV.gasto = e.target.value; telaBase(P, X); };
+  corpo.querySelectorAll('[data-se]').forEach(b => b.onclick = () => { LIN_ED = { tabela: 'cartoes_salas_vip', id: b.dataset.se }; telaBase(P, X); scrollTo(0, 0); });
+  corpo.querySelectorAll('[data-sc]').forEach(b => b.onclick = () => marcarConferido(X, P, 'cartoes_salas_vip', SALAS, b.dataset.sc));
+}
+
+/* ---------- Bancos: segmentos em ordem, da entrada ao topo ---------- */
+function abaBancos(corpo, P, X) {
+  const { $, esc, num, brl } = X;
+  if (SEGS === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'bancos_segmentos', ['banco', 'posicao_regua'], d => { SEGS = d; }); return; }
+  if (SEGS === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar a base de bancos.</div>'); return; }
+  const L = SEGS.filter(s => !BUSCA_BANCO || (s.banco + ' ' + s.segmento).toLowerCase().includes(BUSCA_BANCO.toLowerCase()));
+  const bancos = [...new Set(L.map(s => s.banco))];
+  const valor = (v, t) => n(v) ? brl(v) : t || 'não informado';
+  const item = (rot, v) => v ? `<div style="font-size:13px;margin-top:6px"><span style="color:var(--tinta-3)">${rot}:</span> ${esc(v)}</div>` : '';
+  const seg = (s) => `<details style="border-top:1px solid var(--linha);padding:10px 0"><summary style="cursor:pointer"><b style="font-weight:600">${s.posicao_regua ? s.posicao_regua + '. ' : ''}${esc(s.segmento)}</b>${s.somente_convite ? ' <span class="tag ouro">convite</span>' : ''}${s.a_confirmar ? ' <span class="tag alerta">a confirmar</span>' : ''}
+      <small style="display:block;color:var(--tinta-3);font-size:13px">renda mínima: ${esc(valor(s.renda_minima, s.renda_minima_txt))} · investimento mínimo: ${esc(valor(s.investimento_minimo, s.investimento_minimo_txt))}</small></summary>
+      ${item('Outra exigência', s.outra_exigencia)}${item('Cartões liberados', s.cartoes_liberados)}${(s.cartoes_ids || []).length ? `<div style="font-size:13px;color:var(--tinta-3)">${s.cartoes_ids.length} ligados à base de cartões</div>` : ''}
+      ${item('Isenção pelo relacionamento', s.isencao_relacionamento)}${item('Bônus de pontos', s.bonus_pontos)}${item('Sala VIP do segmento', s.beneficio_sala_vip)}${item('Como subir', s.como_subir)}${item('Observações', s.observacoes)}${item('Fonte', s.fonte)}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:13px">${conferido(s.conferido_em)}<span><button class="mini" data-be="${s.id}">editar</button>${s.a_confirmar ? `<button class="mini" data-bc="${s.id}">conferido</button>` : ''}</span></div></details>`;
+  corpo.innerHTML = `<div class="sub">Segmentos de cada banco, do de entrada ao topo: o que pedem, que cartões liberam e como subir.</div>
+    <label class="fl"><span>Buscar</span><input id="bbBusca" value="${esc(BUSCA_BANCO)}" placeholder="Banco ou segmento"></label>
+    ${bancos.length ? bancos.map(bn => `<section class="bloco"><h2 style="margin-bottom:4px">${esc(bn)}</h2>${L.filter(s => s.banco === bn).sort((a, b) => (a.posicao_regua || 99) - (b.posicao_regua || 99)).map(seg).join('')}</section>`).join('') : '<div class="vazio">Nenhum segmento com essa busca.</div>'}
+    <div class="sub" style="margin-top:8px;font-size:13px">${num(L.length)} segmentos de ${num(bancos.length)} bancos.</div>${avisoVelhos(L, X)}`;
+  $('bbBusca').oninput = (e) => { BUSCA_BANCO = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const el = $('bbBusca'); el.focus(); el.setSelectionRange(pos, pos); };
+  corpo.querySelectorAll('[data-be]').forEach(b => b.onclick = () => { LIN_ED = { tabela: 'bancos_segmentos', id: b.dataset.be }; telaBase(P, X); scrollTo(0, 0); });
+  corpo.querySelectorAll('[data-bc]').forEach(b => b.onclick = () => marcarConferido(X, P, 'bancos_segmentos', SEGS, b.dataset.bc));
+}
+async function marcarConferido(X, P, tabela, lista, id) {
+  const up = { a_confirmar: false, conferido_em: hojeISO(), atualizado_em: new Date().toISOString() };
+  const { error } = await X.sb.from(tabela).update(up).eq('id', id);
+  if (error) { X.aviso('Não salvou: ' + error.message); return; }
+  Object.assign(lista.find(x => x.id === id) || {}, up); X.aviso('Marcado como conferido hoje.'); telaBase(P, X);
+}
+
+// edição de uma sala VIP ou de um segmento de banco
+const CAMPOS_LIN = {
+  cartoes_salas_vip: [['rede_ou_sala', 'Rede ou sala', 'text'], ['tipo', 'Tipo', 'select', [['', ''], ...Object.entries(TIPO_SALA)]], ['acessos_titular_ano', 'Acessos do titular por ano (-1 = ilimitado)', 'int'],
+    ['acompanhantes', 'Acompanhantes', 'text'], ['adicionais', 'Adicionais', 'text'], ['gasto_minimo', 'Gasto mínimo, como o banco descreve', 'text'], ['gasto_minimo_rs', 'Gasto mínimo para liberar (R$)', 'num'],
+    ['gasto_minimo_faturas', 'Em quantas faturas (1 = no mês, 3 = últimas 3)', 'int'], ['aeroportos', 'Aeroportos', 'text'], ['como_acessar', 'Como acessar', 'text'], ['condicao_extra', 'Condição extra', 'text'],
+    ['mudou_em_2026', 'O que mudou em 2026', 'text'], ['fonte', 'Fonte', 'text'], ['conferido_em', 'Conferido em', 'date'], ['a_confirmar', 'Falta conferir no site do banco', 'bool']],
+  bancos_segmentos: [['segmento', 'Segmento', 'text'], ['posicao_regua', 'Posição na régua (1 = entrada)', 'int'], ['renda_minima', 'Renda mínima (R$/mês)', 'num'], ['renda_minima_txt', 'Renda, como o banco descreve', 'text'],
+    ['investimento_minimo', 'Investimento mínimo (R$)', 'num'], ['investimento_minimo_txt', 'Investimento, como o banco descreve', 'text'], ['outra_exigencia', 'Outra exigência', 'area'], ['somente_convite', 'Somente por convite', 'bool'],
+    ['cartoes_liberados', 'Cartões liberados', 'area'], ['isencao_relacionamento', 'Isenção ou desconto pelo relacionamento', 'area'], ['bonus_pontos', 'Bônus de pontos', 'area'], ['beneficio_sala_vip', 'Sala VIP do segmento', 'area'],
+    ['como_subir', 'Como subir', 'area'], ['observacoes', 'Observações', 'area'], ['fonte', 'Fonte', 'text'], ['conferido_em', 'Conferido em', 'date'], ['a_confirmar', 'Falta conferir no site do banco', 'bool']],
+};
+function formLinha(P, X) {
+  const { sb, $, esc, aviso, campo } = X;
+  const lista = LIN_ED.tabela === 'cartoes_salas_vip' ? SALAS : SEGS, x = (lista || []).find(y => y.id === LIN_ED.id);
+  const voltar = () => { LIN_ED = null; telaBase(P, X); };
+  if (!x) return voltar();
+  const C = CAMPOS_LIN[LIN_ED.tabela];
+  const titulo = LIN_ED.tabela === 'cartoes_salas_vip' ? `${esc(x.banco)} · ${esc(x.nome_cartao)}` : `${esc(x.banco)}`;
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Base de cartões</button><h1 class="titulo" style="margin-top:6px">${titulo}</h1>
+    <form class="bloco form" id="fLin">${C.map(([k, rot, tipo, ops]) => tipo === 'bool' ? `<label class="fc"><input type="checkbox" name="${k}" ${x[k] ? 'checked' : ''}><span>${rot}</span></label>`
+      : tipo === 'select' ? `<label class="fl"><span>${rot}</span><select name="${k}">${ops.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(x[k] ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`
+      : tipo === 'area' ? `<label class="fl"><span>${rot}</span><textarea name="${k}" rows="3">${esc(x[k] ?? '')}</textarea></label>`
+      : campo(k, rot, x[k], tipo === 'int' || tipo === 'num' ? 'number' : tipo === 'date' ? 'date' : 'text')).join('')}
+      <button class="zap" type="submit" style="width:100%;margin-top:12px">Salvar</button></form>`;
+  $('voltar').onclick = voltar;
+  $('fLin').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, up = { atualizado_em: new Date().toISOString() };
+    for (const [k, , tipo] of C) {
+      if (tipo === 'bool') { up[k] = f.elements[k].checked; continue; }
+      const v = f.elements[k].value.trim();
+      if (tipo === 'int' || tipo === 'num') { const num = v === '' ? null : Number(v.replace(',', '.')); if (num !== null && !isFinite(num)) { aviso('Confira os números.'); return; } up[k] = num === null ? null : tipo === 'int' ? Math.round(num) : num; }
+      else up[k] = v || null;
+    }
+    if (!up[C[0][0]]) { aviso('Preencha ' + C[0][1].toLowerCase() + '.'); return; }
+    const { error } = await sb.from(LIN_ED.tabela).update(up).eq('id', x.id);
+    if (error) { aviso('Não salvou: ' + X.limparTec(error.message)); return; }
+    Object.assign(x, up); aviso('Salvo.'); voltar();
+  };
+}
+
+/* ---------- Correções a revisar (planilha e, depois, o vigia do mercado) ---------- */
+// campos que entram sozinhos no cartão quando o valor atual é só um número (ou um link)
+const AUTO = { anuidade_ano_rs: ['anuidade_anual'], pts_nacional: ['pts_nacional', 'pontos_por'], pts_internacional: ['pts_internacional'], vip_acessos_ano: ['salas_vip_ano'], fonte: ['fonte'] };
+const CAMPO_TXT = { sala_vip_texto: 'Sala VIP', isencao: 'Isenção', vip_convidados_ano: 'Acompanhantes na sala VIP', anuidade_ano_rs: 'Anuidade (R$/ano)', pts_nacional: 'Pontos no Brasil',
+  pts_internacional: 'Pontos no exterior', vip_acessos_ano: 'Acessos de sala VIP por ano', vip_rede_global: 'Rede de sala VIP', fonte: 'Fonte', vip_salas_ilimitadas: 'Salas ilimitadas', gasto_minimo_vip: 'Gasto mínimo para a sala VIP' };
+function valorAuto(c) {
+  if (!AUTO[c.campo]) return undefined;
+  const v = String(c.valor_atual || '').trim();
+  if (c.campo === 'fonte') return /^https?:\/\/\S+$/.test(v) ? v : undefined;
+  return /^-?\d+([.,]\d+)?$/.test(v) ? Number(v.replace(',', '.')) : undefined;
+}
+async function decidirCorrecao(X, c, status) {
+  const up = { status, decidido_por: status === 'pendente' ? null : X.D.meuId, decidido_em: status === 'pendente' ? null : new Date().toISOString() };
+  const { error } = await X.sb.from('cartoes_correcoes').update(up).eq('id', c.id);
+  if (error) { X.aviso('Não salvou: ' + error.message); return false; }
+  if (c.status === 'pendente' && status !== 'pendente') NPEND = Math.max(0, (NPEND || 0) - 1);
+  if (c.status !== 'pendente' && status === 'pendente') NPEND = (NPEND || 0) + 1;
+  Object.assign(c, up); return true;
+}
+function abaCorrecoes(corpo, P, X) {
+  const { sb, esc, aviso, num } = X;
+  if (CORR === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'cartoes_correcoes', ['banco', 'nome_cartao'], d => { CORR = d; }); return; }
+  if (CORR === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar as correções.</div>'); return; }
+  const L = CORR.filter(c => c.status === CORR_ST);
+  const st = [['pendente', 'Pendentes'], ['aceita', 'Aceitas'], ['recusada', 'Recusadas']];
+  const cat = (c) => c.catalogo_id && BASE.find(b => b.id === c.catalogo_id);
+  corpo.innerHTML = `<div class="sub">Diferenças achadas entre a base e o site do banco. Nada muda no cartão sem um toque da equipe.</div>
+    <div class="chips" style="margin-top:8px">${st.map(([k, l]) => `<button data-cs="${k}" class="${CORR_ST === k ? 'on' : ''}">${l} (${CORR.filter(c => c.status === k).length})</button>`).join('')}</div>
+    ${L.length ? L.map(c => `<section class="bloco" style="padding:12px 14px">
+      <div><b style="font-weight:600">${esc(c.banco)} · ${esc(c.nome_cartao)}</b> <span class="tag">${esc(CAMPO_TXT[c.campo] || c.campo)}</span>${c.origem === 'vigia' ? ' <span class="tag ouro">vigia</span>' : ''}</div>
+      <div style="font-size:13px;margin-top:6px"><span style="color:var(--tinta-3)">Na base:</span> ${esc(c.valor_na_base || 'vazio')}</div>
+      <div style="font-size:14px;margin-top:2px"><span style="color:var(--tinta-3);font-size:13px">Atual:</span> <b style="font-weight:600">${esc(c.valor_atual || '')}</b></div>
+      ${c.observacao ? `<div style="font-size:13px;color:var(--tinta-2);margin-top:4px">${esc(c.observacao)}</div>` : ''}
+      ${c.fonte ? `<div style="font-size:13px;margin-top:4px;overflow-wrap:anywhere">${/^https?:\/\//.test(c.fonte) ? `<a href="${esc(c.fonte)}" target="_blank" rel="noopener">fonte</a>` : esc(c.fonte)}</div>` : ''}
+      ${!cat(c) ? '<div style="font-size:13px;color:var(--alerta);margin-top:4px">Este cartão ainda não está na base.</div>' : ''}
+      <div style="display:flex;gap:8px;margin-top:10px">${c.status === 'pendente' ? `<button class="zap" data-ca="${c.id}" style="flex:1">${valorAuto(c) !== undefined && cat(c) ? 'Aceitar e aplicar' : cat(c) ? 'Aceitar e ajustar' : 'Aceitar'}</button><button class="sec" data-cr="${c.id}" style="flex:1">Recusar</button>`
+        : `<button class="sec" data-cp="${c.id}" style="flex:1">Voltar para pendentes</button>`}</div></section>`).join('') : `<div class="vazio">Nenhuma correção ${CORR_ST === 'pendente' ? 'pendente' : CORR_ST === 'aceita' ? 'aceita' : 'recusada'}.</div>`}
+    <div class="sub" style="margin-top:8px;font-size:13px">${num(L.length)} nesta lista.</div>`;
+  corpo.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => { CORR_ST = b.dataset.cs; telaBase(P, X); });
+  const achar = (id) => CORR.find(c => c.id === id);
+  corpo.querySelectorAll('[data-cr]').forEach(b => b.onclick = async () => { if (await decidirCorrecao(X, achar(b.dataset.cr), 'recusada')) { aviso('Correção recusada.'); telaBase(P, X); } });
+  corpo.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { if (await decidirCorrecao(X, achar(b.dataset.cp), 'pendente')) telaBase(P, X); });
+  corpo.querySelectorAll('[data-ca]').forEach(b => b.onclick = async () => {
+    const c = achar(b.dataset.ca), k = cat(c), v = valorAuto(c);
+    if (k && v !== undefined) {
+      const up = { atualizado_em: new Date().toISOString() };
+      if (c.campo === 'vip_acessos_ano') Object.assign(up, v === -1 ? { salas_vip_ilimitado: true, salas_vip_ano: null } : { salas_vip_ano: Math.round(v) });
+      else AUTO[c.campo].forEach(col => { up[col] = v; });
+      const r = await sb.from('cartoes_catalogo').update(up).eq('id', k.id).select().single();
+      if (r.error) { aviso('Não salvou no cartão: ' + r.error.message); return; }
+      Object.assign(k, r.data);
+      if (X.CART) atualizarPaineis(sb, X.CART, X.D, r.data).catch(() => {});
+      if (await decidirCorrecao(X, c, 'aceita')) { aviso('Correção aplicada no cartão.'); telaBase(P, X); }
+      return;
+    }
+    // valor em texto: abre o cartão para a equipe ajustar; ao salvar, a correção fica aceita
+    if (k) { CORR_ED = c; ED = k.id; ABA_B = 'cartoes'; telaBase(P, X); scrollTo(0, 0); return; }
+    if (await decidirCorrecao(X, c, 'aceita')) { aviso('Marcada como aceita. O cartão ainda não está na base.'); telaBase(P, X); }
+  });
+}
+
 
 /* ---------------- cartões do cliente (ficha > Tarefas) ---------------- */
 // onPrimeiro: chamado quando o primeiro cartão é salvo (marca a tarefa da implantação)
@@ -321,7 +572,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       <div class="duas-col">${campo('nb_anu', 'Anuidade cheia (R$/ano)', '', 'number', 'placeholder="0 se não tiver"')}${campo('nb_isen', 'Gasto por mês que isenta (R$)', '', 'number', 'placeholder="em branco se não houver"')}</div>
       <div class="duas-col">${campo('nb_pts', 'Pontuação', '', 'number', 'placeholder="Ex.: 2,2"')}<label class="fl"><span>Por</span><select name="nb_moeda">${MOEDAS.map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}</select></label></div>
       <div class="duas-col">${campo('nb_prog', 'Programa de pontos', '', 'text', 'placeholder="Ex.: Esfera, Livelo"')}${campo('nb_fonte', 'Fonte (site do banco)', '', 'url', 'placeholder="https://..."')}</div>
-      <div class="sub">Entra na Base de cartões e passa a valer para todos os clientes. Sala VIP e redução parcial você completa em Empresa > Base de cartões.</div>
+      <div class="sub">Entra na Base de cartões e passa a valer para todos os clientes. Sala VIP e redução parcial você completa em Gestão > Base de cartões.</div>
       <button class="zap" type="button" data-cbok style="width:100%;margin-top:8px">Cadastrar na base</button></div>`;
     f.hidden = false;
     f.querySelector('[data-cbok]').onclick = async (e) => {
