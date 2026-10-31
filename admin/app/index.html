@@ -551,7 +551,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
 import * as MKT from '/admin/app/marketing.js?v=21';
 import * as CART from '/admin/app/carteira.js?v=3';
-import * as CARTOES from '/admin/app/cartoes.js?v=8';
+import * as CARTOES from '/admin/app/cartoes.js?v=9';
 import * as ACV from '/admin/app/acervo.js?v=7';
 import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=4';
@@ -1027,7 +1027,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'cartoesbase', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
+const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -1122,11 +1122,11 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1359,7 +1359,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()) });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
-  if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, aba: () => ABA });
+  if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
   if (ABA === 'comissao') return telaComissao(P);
@@ -3650,10 +3650,10 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Gestão de milhas', ['cartoesbase']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['cartoesbase', 'Base de cartões: anuidade, isenção e pontuação'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
@@ -4310,6 +4310,7 @@ function telaGestao(P) {
     </div>
     </details>
     <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>
+    ${podeAba('cartoesbase') ? `<div class="pend" style="margin-top:12px"><button data-g="cartoesbase"><span>Base de cartões<small style="display:block;font-size:13px;color:var(--tinta-3)">Cartões, salas VIP, bancos e correções a revisar</small></span><span><span class="seta">›</span></span></button></div>` : ''}
     ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
   ligarGestao(P);
   autoLiberar().then(n => { if (n && ABA === 'gestao' && !RE_ED && !GE_FUNIL) tela(); });
@@ -4339,7 +4340,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   ['geCiclo', 'kpiCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
