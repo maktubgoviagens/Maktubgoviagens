@@ -1,6 +1,7 @@
 // Maktub Go: importação da planilha da Base de cartões.
 // Abas lidas: regua_ia (números), cartoes e cartoes_novos (textos), salas_vip, bancos_segmentos,
-// beneficios, programas_bandeiras e correcoes_2026 (vira a lista de correções a revisar, nada é aplicado sozinho).
+// beneficios, programas_bandeiras, salas_aeroportos (salas e restaurantes de cada aeroporto) e correcoes_2026
+// (vira a lista de correções a revisar, nada é aplicado sozinho).
 // Nada é gravado antes de "Importar". Cartão que já existe só ganha o que está vazio; um valor
 // diferente do que a equipe já preencheu só muda se for marcado na lista de diferenças.
 
@@ -22,6 +23,8 @@ const primeiraUrl = (v) => (String(v ?? '').match(/https?:\/\/[^\s;]+/) || [])[0
 const programaCurto = (d) => { const s = String(d ?? '').split(/[;(]/)[0].trim(); return s || null; };
 const FORA = /fora de linha|nao e mais comercializado|nao e mais vendido/;
 const TIPOS_SALA = ['rede_global', 'sala_banco', 'sala_bandeira', 'sala_companhia'];
+const TIPOS_AERO = ['independente', 'companhia', 'banco', 'bandeira', 'aeroporto', 'restaurante', 'outro'];
+const simNao = (v) => { const t = semAc(v).trim(); return t === 'sim' ? true : t === 'nao' ? false : null; };
 
 // nome do cartão sem o nome do banco (a base mostra "banco nome"): "Itaú Platinum" vira "Platinum"
 function limparNome(nome, banco) {
@@ -75,7 +78,8 @@ function lerPlanilha(wb, XLSX) {
   const VIP = {}; salas.forEach(s => (VIP[chave(s.banco, s.nome_cartao)] ||= []).push(s));
   const P = regua.map(r => { const k = chave(r.banco, r.nome_cartao); return { r, k, row: linhaCatalogo(r, T[k] || {}, VIP[k] || []) }; });
   return { P, salas, segs: aba('bancos_segmentos').filter(s => s.banco && s.segmento), benef: aba('beneficios').filter(b => b.beneficio),
-    progs: aba('programas_bandeiras').filter(b => b.beneficio), corr: aba('correcoes_2026').filter(c => c.banco && c.nome_cartao && c.campo) };
+    progs: aba('programas_bandeiras').filter(b => b.beneficio), corr: aba('correcoes_2026').filter(c => c.banco && c.nome_cartao && c.campo),
+    aero: aba('salas_aeroportos').filter(a => /^[a-z]{3}$/i.test(String(a.aeroporto_iata || '').trim()) && a.sala) };
 }
 
 // cartões ativos do app x linhas da planilha. Sugestão automática só quando um nome contém o outro.
@@ -192,7 +196,7 @@ export async function telaImportar(P, X, { base, voltar, recarregar }) {
       <div class="num"><div class="l">Cartões novos</div><div class="v">${novos.length}</div><div class="d">entram completos</div></div>
       <div class="num"><div class="l">Já no app</div><div class="v">${ids.length - semPar.length}</div><div class="d">só preenche o que está vazio</div></div>
     </div>
-    <div class="sub" style="font-size:13px">Também entram: ${n(PLAN.salas, 'sala VIP', 'salas VIP')}, ${n(PLAN.segs, 'segmento de banco', 'segmentos de bancos')}, ${PLAN.benef.length + PLAN.progs.length} benefícios e ${n(PLAN.corr, 'correção para revisar', 'correções para revisar')}. O que já estiver no app não entra de novo.</div>
+    <div class="sub" style="font-size:13px">Também entram: ${n(PLAN.salas, 'sala VIP', 'salas VIP')}, ${n(PLAN.segs, 'segmento de banco', 'segmentos de bancos')}, ${PLAN.benef.length + PLAN.progs.length} benefícios, ${PLAN.aero.length ? `${PLAN.aero.length} salas e restaurantes em ${new Set(PLAN.aero.map(a => String(a.aeroporto_iata).trim().toUpperCase())).size} aeroportos, ` : ''}e ${n(PLAN.corr, 'correção para revisar', 'correções para revisar')}. O que já estiver no app não entra de novo.</div>
     ${escolher.length ? `<div class="secao">Escolha a versão (${escolher.length})</div><section class="bloco" style="margin-top:0"><div class="sub" style="font-size:13px;margin-top:0">O cartão do app parece com mais de um da planilha, ou o nome não é igual. Escolha qual é. O que ninguém escolher entra como cartão novo.</div>
       ${escolher.map(id => `<label class="fl"><span><b style="font-weight:600">${esc(nomeApp(appPorId[id]))}</b>${CAS[id].tipo === 'confira' ? ' (sugestão, confira)' : ''}</span>${sel(id)}</label>`).join('')}</section>` : ''}
     ${DIF.length ? `<div class="secao">Diferenças (${DIF.reduce((s, x) => s + x.dif.length, 0)})</div><section class="bloco" style="margin-top:0"><div class="sub" style="font-size:13px;margin-top:0">O app já tem um valor e a planilha traz outro. Fica o do app, a não ser que você marque "usar a planilha".</div>
@@ -279,7 +283,18 @@ async function gravar(X, base, porRegua, novos, msg) {
     como_usar: txt(b.como_usar), condicao: txt(b.condicao), fonte: txt(b.fonte_url), conferido_em: data(b.data_verificacao), a_confirmar: sim(b.a_confirmar) }));
   const vistoB = new Set();
   await inserirEmLotes(sb, 'cartoes_beneficios', ben.filter(b => { const k = kB(b); if (jaBen.has(k) || vistoB.has(k)) return false; vistoB.add(k); return true; }), msg, 'Benefícios');
-  // 6. correções da planilha: entram como pendentes, para a equipe aceitar ou recusar
+  // 6. salas, restaurantes e experiências de cada aeroporto
+  if (PLAN.aero.length) {
+    msg('Conferindo salas por aeroporto...');
+    const kA = (a) => semAc([a.aeroporto_iata, a.terminal, a.sala].map(x => String(x ?? '').trim()).join('|'));
+    const jaA = new Set((await todos(sb, 'salas_aeroportos', 'aeroporto_iata,terminal,sala')).map(kA)), vistoA = new Set();
+    const aero = PLAN.aero.map(a => ({ aeroporto_iata: String(a.aeroporto_iata).trim().toUpperCase(), aeroporto_nome: txt(a.aeroporto_nome), cidade: txt(a.cidade), pais: txt(a.pais), terminal: txt(a.terminal),
+      sala: txt(a.sala), tipo: TIPOS_AERO.includes(semAc(a.tipo).trim()) ? semAc(a.tipo).trim() : null, area: txt(a.area), priority_pass: simNao(a.priority_pass), loungekey: simNao(a.loungekey), dragonpass: simNao(a.dragonpass),
+      outras_formas_acesso: txt(a.outras_formas_acesso), localizacao: txt(a.localizacao), horario: txt(a.horario), observacao: txt(a.observacao), fonte: txt(a.fonte_url), conferido_em: data(a.data_verificacao),
+      a_confirmar: !semAc(a.a_confirmar).startsWith('nao') })).filter(a => { const k = kA(a); if (jaA.has(k) || vistoA.has(k)) return false; vistoA.add(k); return true; });
+    await inserirEmLotes(sb, 'salas_aeroportos', aero, msg, 'Salas por aeroporto');
+  }
+  // 7. correções da planilha: entram como pendentes, para a equipe aceitar ou recusar
   msg('Conferindo correções...');
   const kC = (c) => semAc([c.banco, c.nome_cartao, c.campo, c.valor_atual, c.origem].map(x => x ?? '').join('|'));
   const jaC = new Set((await todos(sb, 'cartoes_correcoes', 'banco,nome_cartao,campo,valor_atual,origem')).map(kC));
