@@ -10,6 +10,7 @@ let SALAS = null, SEGS = null, CORR = null, NPEND = null, AERO = null;
 const SV = { modo: 'aeroporto', filtro: 'todas', rede: '', aero: '', gasto: 'todos' };
 const SA = { busca: '', tipo: 'todos', rede: 'todas' };
 let BUSCA_BANCO = '', CORR_ST = 'pendente';
+let REGRAS = null, REG_FILTRO = 'ativas', REG_ED = null;
 
 export async function carregarBase(sb, forcar) {
   if (BASE && !forcar) return BASE;
@@ -34,7 +35,7 @@ const conferido = (d) => `<span${velho(d) ? ' style="color:var(--alerta)"' : ''}
 const avisoVelhos = (L, X) => { const v = L.filter(x => velho(x.conferido_em)).length; return v ? `<div class="sub" style="margin-top:8px;font-size:13px">${X.num(v)} ${v === 1 ? 'item conferido' : 'itens conferidos'} há mais de 90 dias ou sem data, em laranja: vale revisar no site do banco.</div>` : ''; };
 
 // ao entrar pelo menu, abre a lista (e não o cartão que ficou aberto da última vez)
-export function inicio() { ED = null; ABA_B = 'cartoes'; IMP = false; LIN_ED = null; CORR_ED = null; SALAS = SEGS = CORR = NPEND = AERO = null; IMPORTAR.limpar(); }
+export function inicio() { ED = null; ABA_B = 'cartoes'; IMP = false; LIN_ED = null; CORR_ED = null; REG_ED = null; SALAS = SEGS = CORR = NPEND = AERO = REGRAS = null; IMPORTAR.limpar(); }
 // Contas de um cartão do cliente. cat: cartão da base (ou null); refs: valor do milheiro por programa.
 export function calc(cart, cat, cotacao, refs, normProg) {
   const gasto = n(cart.gasto_medio_mes) || 0, cheia = cat ? n(cat.anuidade_anual) : null, minimo = cat ? n(cat.isencao_gasto_mes) : null;
@@ -68,7 +69,7 @@ function textosPainel(cart, cat, k) {
 }
 
 /* ---------------- Base de cartões (aba Gestão): Cartões, Salas VIP, Bancos e Correções ---------------- */
-const ABAS_B = [['cartoes', 'Cartões'], ['salas', 'Salas VIP'], ['bancos', 'Bancos'], ['correcoes', 'Correções']];
+const ABAS_B = [['cartoes', 'Cartões'], ['salas', 'Salas VIP'], ['bancos', 'Bancos'], ['correcoes', 'Correções'], ['regras', 'Regras']];
 const rotuloAba = (k, l) => k === 'correcoes' && NPEND ? `${l} (${NPEND})` : l;
 const TIPO_SALA = { rede_global: 'rede global', sala_banco: 'sala do banco', sala_bandeira: 'sala da bandeira', sala_companhia: 'sala da companhia' };
 async function contarPendentes(sb) {
@@ -81,7 +82,7 @@ async function carregar(X, P, tabela, ordem, guardar) {
   ordem.forEach(o => { q = q.order(o); });
   const r = await q;
   guardar(r.error ? false : (r.data || []));
-  if (X.aba() === 'cartoesbase' && !ED && !IMP && !LIN_ED) telaBase(P, X);
+  if (X.aba() === 'cartoesbase' && !ED && !IMP && !LIN_ED && !REG_ED) telaBase(P, X);
 }
 
 export async function telaBase(P, X) {
@@ -97,6 +98,7 @@ export async function telaBase(P, X) {
     recarregar: async () => { await carregarBase(sb, true); SALAS = SEGS = CORR = NPEND = AERO = null; } });
   if (ED) return formBase(P, X);
   if (LIN_ED) return formLinha(P, X);
+  if (REG_ED) return formRegra(P, X);
   if (TEM_NOVAS() && NPEND === null) { NPEND = 0; contarPendentes(sb).then(c => { NPEND = c; const b = P.querySelector('[data-ab="correcoes"]'); if (b) b.textContent = rotuloAba('correcoes', 'Correções'); }); }
   P.innerHTML = `<button class="voltar" id="voltar">‹ Gestão</button>
     <h1 class="titulo" style="margin-top:6px">Base de <em>cartões</em></h1>
@@ -104,11 +106,13 @@ export async function telaBase(P, X) {
     <div id="corpoB"></div>`;
   $('voltar').onclick = voltar;
   P.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { ABA_B = b.dataset.ab; telaBase(P, X); });
+  { const ab = $('abasB'), on = ab && ab.querySelector('.on'); if (on) ab.scrollLeft = Math.max(0, on.offsetLeft - ab.offsetLeft - 16); }
   const corpo = $('corpoB');
   corpo.onclick = (e) => { if (e.target.closest('[data-irimp]')) { ABA_B = 'cartoes'; IMP = true; telaBase(P, X); scrollTo(0, 0); } };
   if (ABA_B === 'salas' && TEM_NOVAS()) return SV.modo === 'aeroporto' ? abaAeroportos(corpo, P, X) : abaSalas(corpo, P, X);
   if (ABA_B === 'bancos' && TEM_NOVAS()) return abaBancos(corpo, P, X);
   if (ABA_B === 'correcoes' && TEM_NOVAS()) return abaCorrecoes(corpo, P, X);
+  if (ABA_B === 'regras' && TEM_NOVAS()) return abaRegras(corpo, P, X);
   return abaCartoes(corpo, P, X);
 }
 
@@ -875,5 +879,66 @@ function desenharPerfil(ctx) {
     const r = await X.sb.from('cliente_perfil').upsert(row).select().single();
     if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return; }
     ctx.perfil = r.data; X.aviso('Perfil salvo.'); desenharPerfil(ctx); desenharFalta(ctx);
+  };
+}
+
+/* ---------- Regras da casa: o conhecimento de campo da equipe que orienta o estudo ---------- */
+const TIPO_REGRA = [['rota_preferida', 'rota preferida'], ['criterio_de_campo', 'critério de campo'], ['corte_de_anuidade', 'corte de anuidade'], ['transferencia', 'transferência'], ['outro', 'outro']];
+const APLICA = [['geral', 'Geral'], ['banco', 'Banco'], ['cartao', 'Cartão'], ['programa', 'Programa']];
+const rotL = (L, v) => (L.find(x => x[0] === v) || [])[1] || v || '';
+function abaRegras(corpo, P, X) {
+  const { esc, num } = X;
+  if (REGRAS === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'regras_estrategia', ['titulo'], d => { REGRAS = d; }); return; }
+  if (REGRAS === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 66-regras-da-casa.sql para ativar as regras da casa.</div>'); return; }
+  const filtros = [['ativas', 'Ativas'], ['validada', 'Validadas'], ['criterio_de_campo', 'Critério de campo'], ['desativadas', 'Desativadas']];
+  const L = REGRAS.filter(r => REG_FILTRO === 'ativas' ? r.ativa : REG_FILTRO === 'desativadas' ? !r.ativa : r.ativa && r.status === REG_FILTRO);
+  corpo.innerHTML = `<div class="sub">O que a equipe aprendeu em campo. Só as regras ativas vão para o estudo de cartões. Para tirar uma regra do estudo sem perder, desative.</div>
+    <div class="chips" style="margin-top:8px">${filtros.map(([k, l]) => `<button data-rf="${k}" class="${REG_FILTRO === k ? 'on' : ''}">${l} (${REGRAS.filter(r => k === 'ativas' ? r.ativa : k === 'desativadas' ? !r.ativa : r.ativa && r.status === k).length})</button>`).join('')}</div>
+    <button class="zap" id="rgNova" style="width:100%;margin-top:10px">+ Nova regra</button>
+    ${L.length ? L.map(r => `<section class="bloco" style="padding:12px 14px">
+      <div><b style="font-weight:600">${esc(r.titulo)}</b> ${r.status === 'validada' ? '<span class="tag ok">validada</span>' : '<span class="tag ouro">critério de campo</span>'}${r.ativa ? '' : ' <span class="tag">desativada</span>'}</div>
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">${esc([rotL(TIPO_REGRA, r.tipo), r.aplica_tipo === 'geral' ? 'vale para todos' : rotL(APLICA, r.aplica_tipo) + ': ' + (r.aplica_a || 'não informado'), r.valor !== null && r.valor !== undefined ? 'número: ' + Number(r.valor).toLocaleString('pt-BR') : '', `${num(r.casos || 0)} ${Number(r.casos) === 1 ? 'caso' : 'casos'}`].filter(Boolean).join(' · '))}</div>
+      <div style="font-size:14px;margin-top:6px;line-height:1.5">${esc(r.regra)}</div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="sec" data-re="${r.id}" style="flex:1">Editar</button><button class="sec" data-ra="${r.id}" style="flex:1">${r.ativa ? 'Desativar' : 'Ativar'}</button></div></section>`).join('')
+      : '<div class="vazio">Nenhuma regra nesta lista.</div>'}
+    <div class="sub" style="margin-top:8px;font-size:13px">"Casos" é quantos resultados de clientes sustentam a regra. A partir da Etapa 8, conta sozinho com os resultados validados pela equipe.</div>`;
+  corpo.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { REG_FILTRO = b.dataset.rf; telaBase(P, X); });
+  corpo.querySelector('#rgNova').onclick = () => { REG_ED = 'nova'; telaBase(P, X); scrollTo(0, 0); };
+  corpo.querySelectorAll('[data-re]').forEach(b => b.onclick = () => { REG_ED = b.dataset.re; telaBase(P, X); scrollTo(0, 0); });
+  corpo.querySelectorAll('[data-ra]').forEach(b => b.onclick = async () => {
+    const r = REGRAS.find(x => x.id === b.dataset.ra), up = { ativa: !r.ativa, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null };
+    const { error } = await X.sb.from('regras_estrategia').update(up).eq('id', r.id);
+    if (error) { X.aviso('Não salvou: ' + X.limparTec(error.message)); return; }
+    Object.assign(r, up); X.aviso(r.ativa ? 'Regra ativada.' : 'Regra desativada.'); telaBase(P, X);
+  });
+}
+function formRegra(P, X) {
+  const { sb, $, esc, aviso, campo } = X;
+  const r = REG_ED === 'nova' ? { aplica_tipo: 'geral', tipo: 'criterio_de_campo', status: 'criterio_de_campo', ativa: true, casos: 0 } : (REGRAS || []).find(x => x.id === REG_ED);
+  const voltar = () => { REG_ED = null; telaBase(P, X); };
+  if (!r) return voltar();
+  const sel = (nome, rot, L, v) => `<label class="fl"><span>${rot}</span><select name="${nome}">${L.map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Regras da casa</button><h1 class="titulo" style="margin-top:6px">${REG_ED === 'nova' ? 'Nova <em>regra</em>' : esc(r.titulo)}</h1>
+    <form class="bloco form" id="fRegra">
+      ${campo('titulo', 'Título *', r.titulo || '', 'text', 'required placeholder="Ex.: Santander Unlimited para sala VIP ilimitada"')}
+      <label class="fl"><span>Regra *</span><textarea name="regra" rows="5" required placeholder="Escreva a regra como a equipe explicaria a um colega novo.">${esc(r.regra || '')}</textarea></label>
+      <div class="duas-col">${sel('aplica_tipo', 'Vale para', APLICA, r.aplica_tipo)}${campo('aplica_a', 'Qual (banco, cartão ou programa)', r.aplica_a || '', 'text', 'placeholder="em branco se for geral"')}</div>
+      <div class="duas-col">${sel('tipo', 'Tipo', TIPO_REGRA, r.tipo)}${sel('status', 'Status', [['criterio_de_campo', 'Critério de campo'], ['validada', 'Validada']], r.status)}</div>
+      <div class="duas-col">${campo('valor', 'Número da regra (opcional)', r.valor ?? '', 'number', 'placeholder="ex.: bônus médio em %"')}${campo('casos', 'Casos que sustentam', r.casos ?? 0, 'number')}</div>
+      <div class="sub" style="font-size:13px">Use o número quando a simulação precisa dele. Ex.: na regra de transferência, o bônus médio que a equipe considera (80 = 80%).</div>
+      <label class="fc"><input type="checkbox" name="ativa" ${r.ativa !== false ? 'checked' : ''}><span>Ativa: vai para o estudo de cartões</span></label>
+      <button class="zap" type="submit" style="width:100%;margin-top:12px">Salvar regra</button></form>`;
+  $('voltar').onclick = voltar;
+  $('fRegra').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, v = (k) => f.elements[k].value.trim(), nv = (k) => v(k) === '' ? null : Number(v(k).replace(',', '.'));
+    const row = { titulo: v('titulo'), regra: v('regra'), aplica_tipo: v('aplica_tipo'), aplica_a: v('aplica_a') || null, tipo: v('tipo'), status: v('status'),
+      valor: nv('valor'), casos: Math.max(0, Math.round(nv('casos') || 0)), ativa: f.elements.ativa.checked, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null };
+    if (!row.titulo || !row.regra) { aviso('Preencha o título e a regra.'); return; }
+    if (row.valor !== null && !isFinite(row.valor)) { aviso('Confira o número da regra.'); return; }
+    const r2 = REG_ED === 'nova' ? await sb.from('regras_estrategia').insert(row).select().single() : await sb.from('regras_estrategia').update(row).eq('id', r.id).select().single();
+    if (r2.error) { aviso(/duplicate|unique/i.test(r2.error.message) ? 'Já existe uma regra com esse título.' : 'Não salvou: ' + X.limparTec(r2.error.message)); return; }
+    if (REG_ED === 'nova') REGRAS.push(r2.data); else Object.assign(r, r2.data);
+    REGRAS.sort((a, b) => a.titulo.localeCompare(b.titulo)); aviso('Regra salva.'); voltar();
   };
 }
