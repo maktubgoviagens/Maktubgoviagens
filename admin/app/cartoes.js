@@ -701,3 +701,141 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
     secaoCliente(box, c, X, onPrimeiro);
   });
 }
+
+/* ---------------- dados do cliente para o estudo de cartões (ficha > Cartões) ---------------- */
+// Bancos do cliente e perfil de viagem e gastos. Só a equipe lê (renda, investimento, gerente e observação nunca vão ao painel).
+const FAIXA_INV = [['', 'Não informado'], ['ate_50k', 'Até R$ 50 mil'], ['50k_250k', 'De R$ 50 mil a R$ 250 mil'], ['250k_1m', 'De R$ 250 mil a R$ 1 milhão'], ['1m_5m', 'De R$ 1 milhão a R$ 5 milhões'], ['acima_5m', 'Acima de R$ 5 milhões']];
+const FAIXA_RENDA = [['', 'Não informada'], ['ate_15k', 'Até R$ 15 mil'], ['15k_30k', 'De R$ 15 mil a R$ 30 mil'], ['30k_50k', 'De R$ 30 mil a R$ 50 mil'], ['50k_100k', 'De R$ 50 mil a R$ 100 mil'], ['acima_100k', 'Acima de R$ 100 mil']];
+const rotFaixa = (L, v) => (L.find(x => x[0] === v) || [])[1] || '';
+// "45000", "45.000", "R$ 45.000,00", "45 mil" viram número; faixas ("de 20 a 50 mil") ficam só como dica
+function numeroSolto(t) {
+  const s = String(t || '').toLowerCase().replace(/r\$/g, '').trim();
+  let m = s.match(/^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?$/); if (m) return Number(m[1].replace(/\./g, '') + (m[2] ? '.' + m[2] : ''));
+  m = s.match(/^(\d+(?:,\d+)?)\s*mil$/); return m ? Number(m[1].replace(',', '.')) * 1000 : null;
+}
+let CB_ED = null; // banco do cliente em edição: null, 'novo' ou o id
+export async function abaCartoesCliente(el, c, X, onPrimeiro) {
+  const { sb, esc } = X;
+  el.innerHTML = '<div id="cxFalta"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
+    + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
+    + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>';
+  secaoCliente(el.querySelector('#gtCartBox'), c, X, onPrimeiro);
+  const [p, bs, sg, ct] = await Promise.all([sb.from('cliente_perfil').select('*').eq('cliente_id', c.id).maybeSingle(), sb.from('cliente_bancos').select('*').eq('cliente_id', c.id).order('criado_em'),
+    sb.from('bancos_segmentos').select('id,banco,segmento,posicao_regua').order('banco').order('posicao_regua'), sb.from('cartoes').select('id,catalogo_id,gasto_medio_mes,banco,categoria').eq('cliente_id', c.id)]);
+  try { await carregarBase(sb); } catch (_) { BASE = BASE || []; }
+  if (!el.isConnected) return;
+  if (p.error || bs.error) { el.querySelector('#cxBancos').innerHTML = X.tec('<div class="config">Rode no Supabase o 64-ia-cartoes-dados-cliente.sql para ativar os bancos e o perfil do cliente.</div>'); el.querySelector('#cxPerfil').innerHTML = ''; return; }
+  const ctx = { c, X, el, perfil: p.data || null, bancos: bs.data || [], segs: sg.error ? [] : (sg.data || []), cartoes: ct.error ? [] : (ct.data || []), diag: (X.dadosDiag && X.dadosDiag(c)) || {} };
+  CB_ED = null;
+  desenharFalta(ctx); desenharBancos(ctx); desenharPerfil(ctx);
+}
+// o que falta para gerar o estudo de cartões
+function faltaEstudo(ctx) {
+  const p = ctx.perfil || {}, porId = Object.fromEntries((BASE || []).map(b => [b.id, b])), F = [];
+  if (!p.aeroporto_saida) F.push('aeroporto de saída');
+  if (!p.companhia_preferida && !p.programa_preferido) F.push('companhia ou programa preferido');
+  if (!(n(p.gasto_cartao_mes) > 0)) F.push('gasto total no cartão por mês');
+  const semGasto = ctx.cartoes.filter(k => { const b = porId[k.catalogo_id]; return b && n(b.anuidade_anual) > 0 && !(n(k.gasto_medio_mes) >= 0 && k.gasto_medio_mes !== null); });
+  if (semGasto.length) F.push(`gasto médio de ${semGasto.length === 1 ? '1 cartão com anuidade' : semGasto.length + ' cartões com anuidade'} (${semGasto.map(k => [k.banco, k.categoria].filter(Boolean).join(' ')).join(', ')})`);
+  if (!ctx.bancos.some(b => b.segmento_id || b.segmento_txt)) F.push('pelo menos um banco com o segmento');
+  return F;
+}
+function desenharFalta(ctx) {
+  const { esc } = ctx.X, F = faltaEstudo(ctx), box = ctx.el.querySelector('#cxFalta');
+  box.innerHTML = F.length ? `<div class="config" style="margin-top:14px"><b>Para gerar o estudo de cartões, falta:</b><br>${F.map(f => '· ' + esc(f)).join('<br>')}</div>`
+    : '<div class="config" style="margin-top:14px"><b>Ficha pronta para o estudo de cartões.</b></div>';
+}
+function desenharBancos(ctx) {
+  const { X, bancos, segs } = ctx, { esc, campo } = X, box = ctx.el.querySelector('#cxBancos');
+  const segNome = (b) => (segs.find(s => s.id === b.segmento_id) || {}).segmento || b.segmento_txt || 'segmento não informado';
+  const linha = (b) => `<div class="lin" style="align-items:flex-start"><span><b style="font-weight:600">${esc(b.banco)}</b> · ${esc(segNome(b))}
+      <small style="display:block;color:var(--tinta-3);font-size:13px">${esc([b.correntista_desde ? 'correntista desde ' + dataBR(b.correntista_desde).slice(3) : '', rotFaixa(FAIXA_INV, b.faixa_investimento) ? 'investe ' + rotFaixa(FAIXA_INV, b.faixa_investimento).toLowerCase() : '', b.recebe_salario ? 'recebe salário' : '', b.movimenta_pj ? 'movimenta PJ' : ''].filter(Boolean).join(' · '))}</small>
+      ${b.gerente_nome || b.gerente_contato ? `<small style="display:block;color:var(--tinta-3);font-size:13px">Gerente: ${esc([b.gerente_nome, b.gerente_contato].filter(Boolean).join(', '))}</small>` : ''}
+      ${b.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:13px">${esc(b.observacao_interna)}</small>` : ''}</span>
+      <span><button class="mini" data-cbe="${b.id}">editar</button><button class="mini" data-cbx="${b.id}">excluir</button></span></div>`;
+  const ed = CB_ED === 'novo' ? {} : bancos.find(b => b.id === CB_ED);
+  const nomesBancos = [...new Set(segs.map(s => s.banco))];
+  const formB = (b) => {
+    const banco = b.banco || '', outro = banco && !nomesBancos.includes(banco);
+    return `<div class="bloco" style="padding:10px 12px;margin-top:10px" id="cbForm">
+      <label class="fl"><span>Banco</span><select name="cb_banco"><option value="">Escolha</option>${nomesBancos.map(x => `<option${x === banco ? ' selected' : ''}>${esc(x)}</option>`).join('')}<option value="__outro"${outro ? ' selected' : ''}>Outro banco</option></select></label>
+      <div id="cbOutro" ${outro ? '' : 'hidden'}>${campo('cb_outro', 'Nome do banco', outro ? banco : '')}</div>
+      <label class="fl"><span>Segmento atual</span><select name="cb_seg"></select></label>
+      <div id="cbSegTxt" hidden>${campo('cb_seg_txt', 'Segmento, como o cliente diz', b.segmento_txt || '')}</div>
+      <div class="duas-col">${campo('cb_desde', 'Correntista desde', b.correntista_desde ? String(b.correntista_desde).slice(0, 7) : '', 'month')}<label class="fl"><span>Investimento no banco</span><select name="cb_inv">${FAIXA_INV.map(([k, l]) => `<option value="${k}"${(b.faixa_investimento || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <label class="fc"><input type="checkbox" name="cb_sal" ${b.recebe_salario ? 'checked' : ''}><span>Recebe salário neste banco</span></label>
+      <label class="fc"><input type="checkbox" name="cb_pj" ${b.movimenta_pj ? 'checked' : ''}><span>Movimenta a empresa (PJ) neste banco</span></label>
+      <div class="duas-col">${campo('cb_ger', 'Gerente', b.gerente_nome || '')}${campo('cb_gerc', 'Contato do gerente', b.gerente_contato || '', 'text', 'placeholder="WhatsApp ou e-mail"')}</div>
+      ${campo('cb_obs', 'Observação interna', b.observacao_interna || '')}
+      <div class="sub" style="font-size:13px">Só a equipe vê estes dados. O cliente não vê gerente, investimento nem observação.</div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="button" id="cbSalvar" style="flex:2">Salvar banco</button><button class="sec" type="button" id="cbCanc" style="flex:1">Cancelar</button></div></div>`;
+  };
+  box.innerHTML = (bancos.length ? bancos.map(linha).join('') : '<div class="vazio">Nenhum banco lançado. Os bancos e o segmento dizem que cartões o cliente consegue aprovar hoje e o que falta para subir.</div>')
+    + (ed ? formB(ed) : '<button class="sec" id="cbNovo" style="width:100%;margin-top:8px">+ Adicionar banco</button>');
+  const redesenhar = () => { desenharBancos(ctx); desenharFalta(ctx); };
+  if (box.querySelector('#cbNovo')) box.querySelector('#cbNovo').onclick = () => { CB_ED = 'novo'; redesenhar(); };
+  box.querySelectorAll('[data-cbe]').forEach(b => b.onclick = () => { CB_ED = b.dataset.cbe; redesenhar(); });
+  box.querySelectorAll('[data-cbx]').forEach(b => b.onclick = async () => {
+    if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
+    const { error } = await X.sb.from('cliente_bancos').delete().eq('id', b.dataset.cbx);
+    if (error) { X.aviso('Não excluiu: ' + X.limparTec(error.message)); return; }
+    ctx.bancos = ctx.bancos.filter(x => x.id !== b.dataset.cbx); redesenhar();
+  });
+  if (!ed) return;
+  const q = (k) => box.querySelector(`[name=${k}]`);
+  const opcoesSeg = () => {
+    const bn = q('cb_banco').value, L = segs.filter(s => s.banco === bn);
+    q('cb_seg').innerHTML = `<option value="">Não sei</option>${L.map(s => `<option value="${s.id}"${s.id === ed.segmento_id ? ' selected' : ''}>${s.posicao_regua ? s.posicao_regua + '. ' : ''}${esc(s.segmento)}</option>`).join('')}<option value="__txt"${!ed.segmento_id && ed.segmento_txt ? ' selected' : ''}>Outro, escrever</option>`;
+    box.querySelector('#cbOutro').hidden = bn !== '__outro';
+    box.querySelector('#cbSegTxt').hidden = q('cb_seg').value !== '__txt';
+  };
+  opcoesSeg();
+  q('cb_banco').onchange = opcoesSeg;
+  q('cb_seg').onchange = () => { box.querySelector('#cbSegTxt').hidden = q('cb_seg').value !== '__txt'; };
+  box.querySelector('#cbCanc').onclick = () => { CB_ED = null; redesenhar(); };
+  box.querySelector('#cbSalvar').onclick = async () => {
+    const t = (k) => q(k).value.trim(), banco = t('cb_banco') === '__outro' ? t('cb_outro') : t('cb_banco');
+    if (!banco) { X.aviso('Escolha o banco.'); return; }
+    const seg = t('cb_seg');
+    const row = { banco, segmento_id: seg && seg !== '__txt' ? seg : null, segmento_txt: seg === '__txt' ? (t('cb_seg_txt') || null) : null,
+      correntista_desde: t('cb_desde') ? t('cb_desde') + '-01' : null, faixa_investimento: t('cb_inv') || null, recebe_salario: q('cb_sal').checked, movimenta_pj: q('cb_pj').checked,
+      gerente_nome: t('cb_ger') || null, gerente_contato: t('cb_gerc') || null, observacao_interna: t('cb_obs') || null, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null };
+    const r = CB_ED === 'novo' ? await X.sb.from('cliente_bancos').insert({ ...row, cliente_id: ctx.c.id }).select().single() : await X.sb.from('cliente_bancos').update(row).eq('id', CB_ED).select().single();
+    if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return; }
+    if (CB_ED === 'novo') ctx.bancos.push(r.data); else Object.assign(ctx.bancos.find(x => x.id === CB_ED), r.data);
+    CB_ED = null; X.aviso('Banco salvo.'); redesenhar();
+  };
+}
+function desenharPerfil(ctx) {
+  const { X, diag } = ctx, { esc, campo, brl } = X, p = ctx.perfil || {}, box = ctx.el.querySelector('#cxPerfil');
+  // gasto do diagnóstico só entra sozinho quando é um número; faixa fica como dica para a equipe conferir
+  const gastoDiag = numeroSolto(diag.gasto), pixDiag = numeroSolto(diag.pix);
+  const dica = (t) => t ? `<div class="sub" style="font-size:13px;margin-top:2px">No diagnóstico: ${esc(t)}</div>` : '';
+  const vazioP = !ctx.perfil;
+  box.innerHTML = `${vazioP && (diag.gasto || diag.programas || diag.viagens) ? '<div class="sub" style="font-size:13px;margin-top:0">Ainda não salvo. Abaixo, o que o cliente informou no diagnóstico e na qualificação: confira e complete.</div>' : ''}
+    <form id="fPerfil">
+      <div class="duas-col">${campo('pf_aero', 'Aeroporto de saída', p.aeroporto_saida || '', 'text', 'maxlength="40" data-aero="cod" autocomplete="off" placeholder="Digite a cidade"')}${campo('pf_cia', 'Companhia preferida', p.companhia_preferida || '', 'text', 'placeholder="LATAM, GOL, Azul..."')}</div>
+      ${campo('pf_prog', 'Programa de pontos preferido', p.programa_preferido || '', 'text', 'placeholder="Livelo, Esfera, Smiles, LATAM Pass..."')}${dica(diag.programas)}
+      <div class="duas-col">${campo('pf_vnac', 'Viagens nacionais por ano', p.viagens_nacionais_ano ?? '', 'number')}${campo('pf_vint', 'Viagens internacionais por ano', p.viagens_internacionais_ano ?? '', 'number')}</div>${dica(diag.viagens)}
+      <div class="duas-col">${campo('pf_pessoas', 'Pessoas que viajam junto (com o cliente)', p.pessoas_viagem ?? '', 'number')}<label class="fl"><span>Quer viajar de executiva</span><select name="pf_exec">${[['', 'Não informado'], ['true', 'Sim'], ['false', 'Não']].map(([k, l]) => `<option value="${k}"${String(p.quer_executiva ?? '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="duas-col">${campo('pf_gasto', 'Gasto total no cartão por mês (R$)', p.gasto_cartao_mes ?? (vazioP && gastoDiag !== null ? gastoDiag : ''), 'number')}${campo('pf_pix', 'Pix que poderia ir para o crédito (R$/mês)', p.pix_credito_mes ?? (vazioP && pixDiag !== null ? pixDiag : ''), 'number')}</div>
+      ${diag.gasto || diag.pix ? `<div class="sub" style="font-size:13px;margin-top:2px">No diagnóstico: ${esc([diag.gasto ? 'cartões ' + diag.gasto : '', diag.pix ? 'Pix ' + diag.pix : ''].filter(Boolean).join(' · '))}</div>` : ''}
+      <label class="fl"><span>Renda mensal</span><select name="pf_renda">${FAIXA_RENDA.map(([k, l]) => `<option value="${k}"${(p.faixa_renda || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      ${campo('pf_obs', 'Observação interna', p.observacao_interna || '')}
+      <div class="sub" style="font-size:13px">Renda e observação são só da equipe. ${p.atualizado_em ? 'Atualizado em ' + new Date(p.atualizado_em).toLocaleDateString('pt-BR') + '.' : ''}</div>
+      <button class="zap" type="submit" style="width:100%;margin-top:10px">Salvar perfil</button></form>`;
+  box.querySelector('#fPerfil').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, t = (k) => f.elements[k].value.trim(), nv = (k) => t(k) === '' ? null : Number(t(k).replace(',', '.'));
+    const aero = t('pf_aero').toUpperCase();
+    if (aero && !/^[A-Z]{3}$/.test(aero)) { X.aviso('No aeroporto, escolha da lista ou digite o código de 3 letras (ex.: GRU).'); return; }
+    const row = { cliente_id: ctx.c.id, aeroporto_saida: aero || null, companhia_preferida: t('pf_cia') || null, programa_preferido: t('pf_prog') || null,
+      viagens_nacionais_ano: nv('pf_vnac'), viagens_internacionais_ano: nv('pf_vint'), pessoas_viagem: nv('pf_pessoas'), quer_executiva: t('pf_exec') === '' ? null : t('pf_exec') === 'true',
+      gasto_cartao_mes: nv('pf_gasto'), pix_credito_mes: nv('pf_pix'), faixa_renda: t('pf_renda') || null, observacao_interna: t('pf_obs') || null, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null };
+    if (['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem', 'gasto_cartao_mes', 'pix_credito_mes'].some(k => row[k] !== null && !(row[k] >= 0))) { X.aviso('Confira os números.'); return; }
+    ['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem'].forEach(k => { if (row[k] !== null) row[k] = Math.round(row[k]); });
+    const r = await X.sb.from('cliente_perfil').upsert(row).select().single();
+    if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return; }
+    ctx.perfil = r.data; X.aviso('Perfil salvo.'); desenharPerfil(ctx); desenharFalta(ctx);
+  };
+}
