@@ -41,12 +41,15 @@ function gastoMinimo(t) {
   const f = /3 ultimas faturas|tres ultimas|trimestre/.test(s) ? 3 : /fatura|por mes|mensal|no mes/.test(s) ? 1 : null;
   return [v > 0 ? v : null, f];
 }
-// resumo de sala VIP que fica no próprio cartão (as contas e o painel usam), a partir da aba salas_vip
+// resumo de sala VIP que fica no próprio cartão (as contas e o painel usam), a partir da aba salas_vip.
+// Vale só a rede global (Priority Pass, LoungeKey, DragonPass/Visa Airport Companion): "ilimitada" é ilimitada
+// em qualquer sala da rede. Salas próprias de banco, bandeira ou companhia ficam na aba Salas VIP, com a regra delas.
 function resumoVip(r, S) {
   if (S.length) {
-    const ilim = S.some(s => num(s.acessos_titular_ano) === -1 && s.tipo !== 'sala_companhia');
-    const ns = S.map(s => num(s.acessos_titular_ano)).filter(n => n > 0);
-    const redes = [...new Set(S.map(s => txt(s.rede_ou_sala)).filter(Boolean))].join(' + ');
+    const G = S.filter(s => s.tipo === 'rede_global');
+    const ilim = G.some(s => num(s.acessos_titular_ano) === -1);
+    const ns = G.map(s => num(s.acessos_titular_ano)).filter(n => n > 0);
+    const redes = [...new Set(G.map(s => txt(s.rede_ou_sala)).filter(Boolean))].join(' + ');
     return { salas_vip_ilimitado: ilim, salas_vip_ano: ilim || !ns.length ? null : Math.round(Math.max(...ns)), salas_vip_programa: redes ? redes.slice(0, 160) : null };
   }
   const a = num(r.vip_acessos_ano);
@@ -154,8 +157,9 @@ async function inserirEmLotes(sb, tabela, linhas, msg, rot) {
   }
 }
 
-let PLAN = null, CAS = null, MARC = new Set(), ARQ = '';
-export function limpar() { PLAN = null; CAS = null; MARC = new Set(); ARQ = ''; }
+let PLAN = null, CAS = null, MARC = new Set(), TOCADAS = new Set(), ARQ = '';
+export function limpar() { PLAN = null; CAS = null; MARC = new Set(); TOCADAS = new Set(); ARQ = ''; }
+const FICA_APP = ['nome', 'programa'];
 
 export async function telaImportar(P, X, { base, voltar, recarregar }) {
   const { $, esc } = X;
@@ -171,7 +175,7 @@ export async function telaImportar(P, X, { base, voltar, recarregar }) {
         const XLSX = await import('https://esm.sh/xlsx@0.18.5');
         const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: false });
         if (!wb.Sheets.regua_ia) { $('impMsg').textContent = 'A planilha não tem a aba regua_ia. Use a planilha da base de cartões.'; return; }
-        PLAN = lerPlanilha(wb, XLSX); CAS = casar(base, PLAN.P); MARC = new Set(); ARQ = f.name;
+        PLAN = lerPlanilha(wb, XLSX); CAS = casar(base, PLAN.P); MARC = new Set(); TOCADAS = new Set(); ARQ = f.name;
         telaImportar(P, X, { base, voltar, recarregar });
       } catch (err) { console.error(err); $('impMsg').textContent = 'Não consegui ler o arquivo: ' + (err.message || err); }
     };
@@ -188,6 +192,7 @@ export async function telaImportar(P, X, { base, voltar, recarregar }) {
   const ligados = ids.filter(id => CAS[id].tipo === 'ligado');
   const semPar = ids.filter(id => CAS[id].tipo === 'sempar');
   const DIF = ids.filter(id => CAS[id].escolha).map(id => ({ a: appPorId[id], ...atualizacao(appPorId[id], porRegua[CAS[id].escolha].row, MARC) })).filter(x => x.dif.length);
+  DIF.forEach(({ a, dif }) => dif.forEach(d => { const k = a.id + '|' + d.k; if (!TOCADAS.has(k) && !FICA_APP.includes(d.k)) MARC.add(k); }));
   const sel = (id) => { const x = CAS[id]; return `<select data-esc="${id}"><option value="">Nenhum: o cartão do app fica como está</option>${x.cands.map(c => `<option value="${c.p.row.regua_id}"${c.p.row.regua_id === x.escolha ? ' selected' : ''}>${esc(nomePl(c.p))}</option>`).join('')}</select>`; };
   const fmt = (v) => v === true ? 'sim' : v === false ? 'não' : typeof v === 'number' ? v.toLocaleString('pt-BR') : esc(v);
   const n = (L, s, p) => `${L.length} ${L.length === 1 ? s : p}`;
@@ -199,7 +204,7 @@ export async function telaImportar(P, X, { base, voltar, recarregar }) {
     <div class="sub" style="font-size:13px">Também entram: ${n(PLAN.salas, 'sala VIP', 'salas VIP')}, ${n(PLAN.segs, 'segmento de banco', 'segmentos de bancos')}, ${PLAN.benef.length + PLAN.progs.length} benefícios, ${PLAN.aero.length ? `${PLAN.aero.length} salas e restaurantes em ${new Set(PLAN.aero.map(a => String(a.aeroporto_iata).trim().toUpperCase())).size} aeroportos, ` : ''}e ${n(PLAN.corr, 'correção para revisar', 'correções para revisar')}. O que já estiver no app não entra de novo.</div>
     ${escolher.length ? `<div class="secao">Escolha a versão (${escolher.length})</div><section class="bloco" style="margin-top:0"><div class="sub" style="font-size:13px;margin-top:0">O cartão do app parece com mais de um da planilha, ou o nome não é igual. Escolha qual é. O que ninguém escolher entra como cartão novo.</div>
       ${escolher.map(id => `<label class="fl"><span><b style="font-weight:600">${esc(nomeApp(appPorId[id]))}</b>${CAS[id].tipo === 'confira' ? ' (sugestão, confira)' : ''}</span>${sel(id)}</label>`).join('')}</section>` : ''}
-    ${DIF.length ? `<div class="secao">Diferenças (${DIF.reduce((s, x) => s + x.dif.length, 0)})</div><section class="bloco" style="margin-top:0"><div class="sub" style="font-size:13px;margin-top:0">O app já tem um valor e a planilha traz outro. Fica o do app, a não ser que você marque "usar a planilha".</div>
+    ${DIF.length ? `<div class="secao">Diferenças (${DIF.reduce((s, x) => s + x.dif.length, 0)})</div><section class="bloco" style="margin-top:0"><div class="sub" style="font-size:13px;margin-top:0">O app já tem um valor e a planilha traz outro. Os números (anuidade, isenção, pontos e sala VIP) já vêm marcados para usar a planilha, que é mais nova e tem fonte; nome e programa ficam como no app. Só mexa se quiser trocar algum.</div>
       ${DIF.map(({ a, dif }) => `<div style="margin-top:12px"><b style="font-weight:600">${esc(nomeApp(a))}</b>${dif.map(d => `<label class="fc" style="align-items:flex-start"><input type="checkbox" data-dif="${a.id}|${d.k}" ${MARC.has(a.id + '|' + d.k) ? 'checked' : ''}><span style="font-size:13px">${d.rot}: no app <b>${fmt(d.app)}</b>, na planilha <b>${fmt(d.plan)}</b>. Usar a planilha</span></label>`).join('')}</div>`).join('')}</section>` : ''}
     <details class="gsec"><summary><span>Ligados automaticamente (${ligados.length})<small>Mesmo nome no app e na planilha</small></span></summary>${ligados.map(id => `<label class="fl"><span>${esc(nomeApp(appPorId[id]))}</span>${sel(id)}</label>`).join('') || '<div class="vazio">Nenhum.</div>'}<div style="height:12px"></div></details>
     <details class="gsec"><summary><span>Cartões novos (${novos.length})<small>Não existem no app e entram completos</small></span></summary><div style="font-size:13px;padding-bottom:12px">${novos.map(p => esc(nomePl(p))).join('<br>') || 'Nenhum.'}</div></details>
@@ -213,7 +218,7 @@ export async function telaImportar(P, X, { base, voltar, recarregar }) {
     CAS[id].escolha = v; if (CAS[id].tipo === 'sempar' && v !== '') CAS[id].tipo = 'confira';
     redesenhar();
   });
-  P.querySelectorAll('[data-dif]').forEach(c => c.onchange = () => { c.checked ? MARC.add(c.dataset.dif) : MARC.delete(c.dataset.dif); });
+  P.querySelectorAll('[data-dif]').forEach(c => c.onchange = () => { TOCADAS.add(c.dataset.dif); c.checked ? MARC.add(c.dataset.dif) : MARC.delete(c.dataset.dif); });
   $('impOk').onclick = async () => {
     const bt = $('impOk'), msg = (t) => { $('impMsg').textContent = t; };
     bt.disabled = true;
