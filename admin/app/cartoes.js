@@ -1,6 +1,7 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=3';
+import { simular } from '/admin/app/cartoes-simulacao.js?v=1';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -720,13 +721,13 @@ function numeroSolto(t) {
 let CB_ED = null; // banco do cliente em edição: null, 'novo' ou o id
 export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   const { sb, esc } = X;
-  el.innerHTML = '<div id="cxFalta"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
+  el.innerHTML = '<div id="cxFalta"></div><div id="cxSim"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>'
     + '<div class="secao">Uso de salas VIP</div><section class="bloco" style="margin-top:0" id="cxUso"><div class="vazio">Carregando...</div></section>';
   secaoCliente(el.querySelector('#gtCartBox'), c, X, onPrimeiro);
   const [p, bs, sg, ct] = await Promise.all([sb.from('cliente_perfil').select('*').eq('cliente_id', c.id).maybeSingle(), sb.from('cliente_bancos').select('*').eq('cliente_id', c.id).order('criado_em'),
-    sb.from('bancos_segmentos').select('id,banco,segmento,posicao_regua').order('banco').order('posicao_regua'), sb.from('cartoes').select('id,catalogo_id,gasto_medio_mes,banco,categoria').eq('cliente_id', c.id)]);
+    sb.from('bancos_segmentos').select('*').order('banco').order('posicao_regua'), sb.from('cartoes').select('id,catalogo_id,gasto_medio_mes,banco,categoria').eq('cliente_id', c.id)]);
   try { await carregarBase(sb); } catch (_) { BASE = BASE || []; }
   if (!el.isConnected) return;
   if (p.error || bs.error) { el.querySelector('#cxBancos').innerHTML = X.tec('<div class="config">Rode no Supabase o 64-ia-cartoes-dados-cliente.sql para ativar os bancos e o perfil do cliente.</div>'); el.querySelector('#cxPerfil').innerHTML = ''; return; }
@@ -734,6 +735,42 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   CB_ED = null;
   desenharFalta(ctx); desenharBancos(ctx); desenharPerfil(ctx);
   usoSalas(ctx);
+  desenharSimulacao(ctx);
+}
+// simulação de caminhos (Etapa 5): só fórmulas, a partir da base, das regras da casa e do milheiro
+async function desenharSimulacao(ctx) {
+  const { X } = ctx, { sb, esc, num } = X, box = ctx.el.querySelector('#cxSim');
+  if (!box) return;
+  if (faltaEstudo(ctx).length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0"><div class="vazio">Calculando...</div></section>';
+  const aero = (ctx.perfil || {}).aeroporto_saida;
+  if (!ctx.simDados) {
+    const [sv, sa, rg, refs] = await Promise.all([sb.from('cartoes_salas_vip').select('catalogo_id,rede_ou_sala,tipo,acessos_titular_ano,gasto_minimo_rs,gasto_minimo_faturas'),
+      aero ? sb.from('salas_aeroportos').select('*').eq('aeroporto_iata', aero) : Promise.resolve({ data: [] }), sb.from('regras_estrategia').select('*').eq('ativa', true), X.CART.valoresRef()]);
+    ctx.simDados = { salas: sv.data || [], salasAero: sa.data || [], regras: rg.data || [], refs, aero };
+  }
+  if (ctx.simDados.aero !== aero) { ctx.simDados = null; return desenharSimulacao(ctx); }
+  if (!box.isConnected) return;
+  const R = simular({ perfil: ctx.perfil, cartoesCli: ctx.cartoes, base: BASE || [], salas: ctx.simDados.salas, salasAero: ctx.simDados.salasAero, bancosCli: ctx.bancos, segmentos: ctx.segs,
+    regras: ctx.simDados.regras, refs: ctx.simDados.refs, cotacao: X.D.cfg && n(X.D.cfg.cotacao_dolar), calc, normProg: X.CART.normProg });
+  const brl = (v) => v === null || v === undefined ? 'não calculado' : (v < 0 ? '−' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
+  const tagPedir = (p) => p.r === 'já tem' ? '<span class="tag ok">já tem</span>' : p.r === 'sim' ? '<span class="tag ok">dá para pedir</span>' : p.r === 'não' ? '<span class="tag alerta">ainda não dá</span>' : '<span class="tag ouro">depende do banco</span>';
+  const salaTxt = (s) => !s.redes.length ? 'sem rede de sala VIP' : s.redes.map(r => `${r.rede} ${r.acessos === -1 ? 'ilimitado' : r.acessos ? r.acessos + '/ano' : 'pago'}${R.aeroporto ? ` (${r.salas} ${r.salas === 1 ? 'sala' : 'salas'} em ${R.aeroporto})` : ''}`).join(' · ');
+  const linha = (c) => `<details style="border-top:1px solid var(--linha);padding:10px 0"><summary style="cursor:pointer;list-style:none">
+      <b style="font-weight:600">${esc(c.cartao)}</b> ${tagPedir(c.pedir)}${c.somente_convite ? ' <span class="tag">convite</span>' : ''}${c.fora_dos_bancos ? ' <span class="tag">fora dos bancos do cliente</span>' : ''}
+      <div style="font-size:14px;margin-top:4px">${num(c.milhas)} milhas/ano · anuidade ${c.anuidade === 0 ? (c.isenta ? 'isenta pelo gasto' : 'grátis') : brl(c.anuidade)} · vale ${brl(c.valor)} · <b style="font-weight:600;color:${(c.saldo ?? 0) >= 0 ? 'var(--verde)' : 'var(--alerta)'}">saldo ${brl(c.saldo)}</b></div>
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc(salaTxt(c.sala))}${c.sala.gasto_minimo.length ? ' · ' + esc(c.sala.gasto_minimo.map(g => `${g.sala}: pede ${brl(g.pede_mes)}/mês, ${g.cumpre ? 'cumpre' : 'não cumpre'}`).join('; ')) : ''}</div></summary>
+      <div style="font-size:13px;color:var(--tinta-2);margin-top:6px;line-height:1.5">${[c.pedir.motivo ? 'Para pedir: ' + c.pedir.motivo : '', c.degrau ? 'Degrau: ' + c.degrau : '', ...c.notas].filter(Boolean).map(esc).join('<br>')}<br><span style="color:var(--tinta-3)">Fontes: ${esc([...new Set(c.fontes)].join(', '))}</span></div></details>`;
+  const top = R.caminhos.slice(0, 12), resto = R.caminhos.slice(12);
+  box.innerHTML = `<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0">
+    <div class="sub" style="margin-top:0;font-size:13px">Concentrando ${brl(R.gasto_mes)} por mês (gasto nacional) em cada cartão, com as milhas contadas em ${esc(R.programa || 'programa não informado')}${R.bonus_transferencia ? ` e bônus de transferência de ${num(R.bonus_transferencia)}%` : ''}${R.milheiro !== null ? `, milheiro de R$ ${String(R.milheiro).replace('.', ',')}` : ''}. Contas por fórmula, sem IA. Só a equipe vê.</div>
+    ${R.avisos.map(a => `<div class="sub" style="color:var(--alerta);font-size:13px">${esc(a)}</div>`).join('')}
+    <div style="margin-top:10px;padding:10px 12px;background:var(--creme-2)"><b style="font-weight:600">Hoje, como está</b>
+      <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · vale ${brl(R.atual.valor)} · saldo ${brl(R.atual.saldo)}</div>
+      <div style="font-size:13px;color:var(--tinta-3)">Com o gasto médio lançado em cada cartão.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
+    ${top.map(linha).join('')}
+    ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
+    <div class="sub" style="font-size:13px;margin-top:8px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. "Dá para pedir" é só uma indicação pelas faixas do perfil: a aprovação de cartão, limite e upgrade depende do banco.</div></section>`;
 }
 // visitas a salas VIP que a equipe lança: o painel mostra usadas e restantes no ano
 async function usoSalas(ctx) {
@@ -814,7 +851,7 @@ function desenharBancos(ctx) {
   };
   box.innerHTML = (bancos.length ? bancos.map(linha).join('') : '<div class="vazio">Nenhum banco lançado. Os bancos e o segmento dizem que cartões o cliente consegue aprovar hoje e o que falta para subir.</div>')
     + (ed ? formB(ed) : '<button class="sec" id="cbNovo" style="width:100%;margin-top:8px">+ Adicionar banco</button>');
-  const redesenhar = () => { desenharBancos(ctx); desenharFalta(ctx); };
+  const redesenhar = () => { desenharBancos(ctx); desenharFalta(ctx); desenharSimulacao(ctx); };
   if (box.querySelector('#cbNovo')) box.querySelector('#cbNovo').onclick = () => { CB_ED = 'novo'; redesenhar(); };
   box.querySelectorAll('[data-cbe]').forEach(b => b.onclick = () => { CB_ED = b.dataset.cbe; redesenhar(); });
   box.querySelectorAll('[data-cbx]').forEach(b => b.onclick = async () => {
@@ -878,7 +915,7 @@ function desenharPerfil(ctx) {
     ['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem'].forEach(k => { if (row[k] !== null) row[k] = Math.round(row[k]); });
     const r = await X.sb.from('cliente_perfil').upsert(row).select().single();
     if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return; }
-    ctx.perfil = r.data; X.aviso('Perfil salvo.'); desenharPerfil(ctx); desenharFalta(ctx);
+    ctx.perfil = r.data; X.aviso('Perfil salvo.'); desenharPerfil(ctx); desenharFalta(ctx); desenharSimulacao(ctx);
   };
 }
 
