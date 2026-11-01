@@ -1,13 +1,14 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
-import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=1';
+import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=2';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
 // abas da Base de cartões (Cartões, Salas VIP, Bancos, Correções) e o que cada uma guarda
 let ABA_B = 'cartoes', IMP = false, LIN_ED = null, CORR_ED = null;
-let SALAS = null, SEGS = null, CORR = null, NPEND = null;
-const SV = { filtro: 'todas', rede: '', aero: '', gasto: 'todos' };
+let SALAS = null, SEGS = null, CORR = null, NPEND = null, AERO = null;
+const SV = { modo: 'aeroporto', filtro: 'todas', rede: '', aero: '', gasto: 'todos' };
+const SA = { busca: '', tipo: 'todos', rede: 'todas' };
 let BUSCA_BANCO = '', CORR_ST = 'pendente';
 
 export async function carregarBase(sb, forcar) {
@@ -33,7 +34,7 @@ const conferido = (d) => `<span${velho(d) ? ' style="color:var(--alerta)"' : ''}
 const avisoVelhos = (L, X) => { const v = L.filter(x => velho(x.conferido_em)).length; return v ? `<div class="sub" style="margin-top:8px;font-size:13px">${X.num(v)} ${v === 1 ? 'item conferido' : 'itens conferidos'} há mais de 90 dias ou sem data, em laranja: vale revisar no site do banco.</div>` : ''; };
 
 // ao entrar pelo menu, abre a lista (e não o cartão que ficou aberto da última vez)
-export function inicio() { ED = null; ABA_B = 'cartoes'; IMP = false; LIN_ED = null; CORR_ED = null; SALAS = SEGS = CORR = NPEND = null; IMPORTAR.limpar(); }
+export function inicio() { ED = null; ABA_B = 'cartoes'; IMP = false; LIN_ED = null; CORR_ED = null; SALAS = SEGS = CORR = NPEND = AERO = null; IMPORTAR.limpar(); }
 // Contas de um cartão do cliente. cat: cartão da base (ou null); refs: valor do milheiro por programa.
 export function calc(cart, cat, cotacao, refs, normProg) {
   const gasto = n(cart.gasto_medio_mes) || 0, cheia = cat ? n(cat.anuidade_anual) : null, minimo = cat ? n(cat.isencao_gasto_mes) : null;
@@ -93,7 +94,7 @@ export async function telaBase(P, X) {
     if (X.aba() !== 'cartoesbase') return;
   }
   if (IMP) return IMPORTAR.telaImportar(P, X, { base: BASE, voltar: () => { IMP = false; telaBase(P, X); scrollTo(0, 0); },
-    recarregar: async () => { await carregarBase(sb, true); SALAS = SEGS = CORR = NPEND = null; } });
+    recarregar: async () => { await carregarBase(sb, true); SALAS = SEGS = CORR = NPEND = AERO = null; } });
   if (ED) return formBase(P, X);
   if (LIN_ED) return formLinha(P, X);
   if (TEM_NOVAS() && NPEND === null) { NPEND = 0; contarPendentes(sb).then(c => { NPEND = c; const b = P.querySelector('[data-ab="correcoes"]'); if (b) b.textContent = rotuloAba('correcoes', 'Correções'); }); }
@@ -104,7 +105,8 @@ export async function telaBase(P, X) {
   $('voltar').onclick = voltar;
   P.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { ABA_B = b.dataset.ab; telaBase(P, X); });
   const corpo = $('corpoB');
-  if (ABA_B === 'salas' && TEM_NOVAS()) return abaSalas(corpo, P, X);
+  corpo.onclick = (e) => { if (e.target.closest('[data-irimp]')) { ABA_B = 'cartoes'; IMP = true; telaBase(P, X); scrollTo(0, 0); } };
+  if (ABA_B === 'salas' && TEM_NOVAS()) return SV.modo === 'aeroporto' ? abaAeroportos(corpo, P, X) : abaSalas(corpo, P, X);
   if (ABA_B === 'bancos' && TEM_NOVAS()) return abaBancos(corpo, P, X);
   if (ABA_B === 'correcoes' && TEM_NOVAS()) return abaCorrecoes(corpo, P, X);
   return abaCartoes(corpo, P, X);
@@ -124,6 +126,7 @@ function abaCartoes(corpo, P, X) {
   const passa = (b) => FILTRO_C === 'ilim' ? b.salas_vip_ilimitado : FILTRO_C === 'conf' ? b.a_confirmar : FILTRO_C === 'fora' ? b.vendido_hoje === false || b.ativo === false : true;
   const L = BASE.filter(b => passa(b) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
   corpo.innerHTML = `<div class="sub">Anuidade, isenção e pontuação de cada cartão do mercado. Os cartões dos clientes usam estes dados nas contas.</div>
+    ${X.admin && TEM_NOVAS() ? '<button class="sec" id="bImp" style="width:100%;margin-top:10px">Importar planilha da base</button>' : ''}
     <section class="bloco">
       <div class="duas-col" style="align-items:end">${campo('cot', 'Cotação de referência do dólar (R$)', cot ?? '', 'number', 'placeholder="Ex.: 5,40"')}<button class="sec" id="cotOk" style="height:44px">Salvar cotação</button></div>
       <div class="sub">Usada para converter os gastos dos cartões que pontuam por dólar.</div>
@@ -137,7 +140,7 @@ function abaCartoes(corpo, P, X) {
         ${conferido(b.conferido_em)}</button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
     <div class="sub" style="margin-top:8px">${num(L.length)} de ${num(BASE.length)} cartões. Em laranja, os conferidos há mais de 90 dias: vale revisar no site do banco.</div>
-    ${X.admin ? (TEM_NOVAS() ? '<button class="sec" id="bImp" style="width:100%;margin-top:14px">Importar planilha da base</button>' : X.tec('<div class="config" style="margin-top:14px">Para salas VIP, bancos, correções e a importação da planilha, rode no Supabase o 62-ia-cartoes-bases.sql.</div>')) : ''}`;
+    ${X.admin && !TEM_NOVAS() ? X.tec('<div class="config" style="margin-top:14px">Para salas VIP, bancos, correções e a importação da planilha, rode no Supabase o 62-ia-cartoes-bases.sql.</div>') : ''}`;
   $('bBusca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
   $('bNovo').onclick = () => { ED = 'novo'; telaBase(P, X); };
   if ($('bIlim')) $('bIlim').onchange = (e) => { FILTRO_C = e.target.checked ? 'ilim' : 'todos'; telaBase(P, X); };
@@ -230,6 +233,11 @@ function formBase(P, X) {
   };
 }
 
+// aba sem nada ainda: o caminho é importar a planilha
+const vazioImportar = (X) => `<div class="config" style="margin-top:12px">Ainda não há dados. Importe a planilha na aba Cartões.${X.admin ? '<br><button class="sec" data-irimp style="margin-top:10px">Importar planilha</button>' : ''}</div>`;
+const modoSalas = () => `<div class="chips" style="margin-top:8px">${[['aeroporto', 'Por aeroporto'], ['cartao', 'Por cartão']].map(([k, l]) => `<button data-sm="${k}" class="${SV.modo === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+const ligarModo = (corpo, P, X) => corpo.querySelectorAll('[data-sm]').forEach(b => b.onclick = () => { SV.modo = b.dataset.sm; telaBase(P, X); });
+
 /* ---------- Salas VIP: uma linha por cartão e por rede ou sala ---------- */
 const acessosTxt = (a) => a === null || a === undefined ? 'acessos não informados' : Number(a) === -1 ? 'ilimitado' : Number(a) === 0 ? 'sem acesso grátis' : `${a} ${Number(a) === 1 ? 'acesso' : 'acessos'} por ano`;
 const temGastoMin = (s) => n(s.gasto_minimo_rs) > 0 || /r\$\s*\d/i.test(s.gasto_minimo || '');
@@ -238,6 +246,7 @@ function abaSalas(corpo, P, X) {
   const { $, esc, num, brl } = X;
   if (SALAS === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'cartoes_salas_vip', ['banco', 'nome_cartao'], d => { SALAS = d; }); return; }
   if (SALAS === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar as salas VIP.</div>'); return; }
+  if (!SALAS.length) { corpo.innerHTML = modoSalas() + vazioImportar(X); ligarModo(corpo, P, X); return; }
   const filtros = [['todas', 'Todas'], ['ilim', 'Ilimitadas'], ['mudou', 'Mudou em 2026'], ['conf', 'Só conferidas']];
   const t = (x) => String(x || '').toLowerCase();
   const L = SALAS.filter(s => (SV.filtro !== 'ilim' || Number(s.acessos_titular_ano) === -1) && (SV.filtro !== 'mudou' || s.mudou_em_2026) && (SV.filtro !== 'conf' || !s.a_confirmar)
@@ -252,13 +261,14 @@ function abaSalas(corpo, P, X) {
       ${s.como_acessar || s.condicao_extra ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc([s.como_acessar, s.condicao_extra].filter(Boolean).join(' · '))}</div>` : ''}
       ${s.mudou_em_2026 ? `<div style="font-size:13px;color:var(--alerta);margin-top:2px">Mudou em 2026: ${esc(s.mudou_em_2026)}</div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px">${conferido(s.conferido_em)}<span><button class="mini" data-se="${s.id}">editar</button>${s.a_confirmar ? `<button class="mini" data-sc="${s.id}">conferida</button>` : ''}</span></div></div>`;
-  corpo.innerHTML = `<div class="sub">Uma linha por cartão e por rede ou sala. No painel do cliente só aparecem as já conferidas.</div>
+  corpo.innerHTML = `${modoSalas()}<div class="sub">Uma linha por cartão e por rede ou sala. No painel do cliente só aparecem as já conferidas.</div>
     <div class="chips" style="margin-top:8px">${filtros.map(([k, l]) => `<button data-sf="${k}" class="${SV.filtro === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="duas-col"><label class="fl"><span>Rede ou sala</span><input id="svRede" value="${esc(SV.rede)}" placeholder="LoungeKey, Priority..."></label><label class="fl"><span>Aeroporto</span><input id="svAero" value="${esc(SV.aero)}" placeholder="Ex.: GRU"></label></div>
     <label class="fl"><span>Gasto mínimo para liberar</span><select id="svGasto">${[['todos', 'Todos'], ['sem', 'Sem gasto mínimo'], ['com', 'Com gasto mínimo']].map(([k, l]) => `<option value="${k}"${SV.gasto === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-    ${SV.aero ? '<div class="sub" style="font-size:13px">Redes globais (LoungeKey, DragonPass, Priority Pass) atendem muitos aeroportos e só entram aqui quando a planilha cita o aeroporto. A lista de salas de cada aeroporto fica no app da rede.</div>' : ''}
+    ${SV.aero ? '<div class="sub" style="font-size:13px">Aqui o aeroporto só aparece quando a regra do cartão cita o aeroporto. Para ver tudo o que existe num aeroporto, use "Por aeroporto".</div>' : ''}
     ${grupos.length ? grupos.map(g => `<section class="bloco"><h2 style="margin-bottom:4px">${esc(g.k)}</h2>${g.L.map(linha).join('')}</section>`).join('') : '<div class="vazio">Nenhuma sala com esses filtros.</div>'}
     <div class="sub" style="margin-top:8px;font-size:13px">${num(L.length)} de ${num(SALAS.length)} linhas.</div>${avisoVelhos(L, X)}`;
+  ligarModo(corpo, P, X);
   corpo.querySelectorAll('[data-sf]').forEach(b => b.onclick = () => { SV.filtro = b.dataset.sf; telaBase(P, X); });
   const texto = (id, k) => { $(id).oninput = (e) => { SV[k] = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const el = $(id); el.focus(); el.setSelectionRange(pos, pos); }; };
   texto('svRede', 'rede'); texto('svAero', 'aero');
@@ -267,11 +277,85 @@ function abaSalas(corpo, P, X) {
   corpo.querySelectorAll('[data-sc]').forEach(b => b.onclick = () => marcarConferido(X, P, 'cartoes_salas_vip', SALAS, b.dataset.sc));
 }
 
+/* ---------- Salas, restaurantes e experiências de cada aeroporto ---------- */
+const TIPO_AERO = { independente: 'sala independente', companhia: 'sala da companhia', banco: 'sala do banco', bandeira: 'sala da bandeira', aeroporto: 'sala do aeroporto', restaurante: 'restaurante', outro: 'experiência' };
+const AREA_TXT = { domestico: 'embarque doméstico', internacional: 'embarque internacional', schengen: 'área Schengen', nao_schengen: 'fora do Schengen', ambos: 'doméstico e internacional' };
+const REDES = [['priority_pass', 'Priority Pass', /priority/i], ['loungekey', 'LoungeKey', /loungekey|airport experiences/i], ['dragonpass', 'DragonPass', /dragon|airport companion/i]];
+const ehSala = (a) => !['restaurante', 'outro'].includes(a.tipo);
+// cartões da base que entram em cada rede, pela aba de salas de cada cartão (fica o acesso mais amplo)
+function cartoesPorRede() {
+  const m = Object.fromEntries(REDES.map(([k]) => [k, new Map()]));
+  (SALAS || []).forEach(s => REDES.forEach(([k, , re]) => {
+    if (!re.test(s.rede_ou_sala || '')) return;
+    const c = s.catalogo_id && (BASE || []).find(b => b.id === s.catalogo_id), nome = c ? nomeBase(c) : `${s.banco} ${s.nome_cartao}`;
+    const antes = m[k].get(nome), a = n(s.acessos_titular_ano);
+    if (!antes || a === -1 || (n(antes.acessos_titular_ano) !== -1 && a > n(antes.acessos_titular_ano))) m[k].set(nome, s);
+  }));
+  return m;
+}
+function abaAeroportos(corpo, P, X) {
+  const { $, esc, num } = X;
+  if (AERO === null || SALAS === null) {
+    corpo.innerHTML = modoSalas() + '<div class="vazio">Carregando...</div>'; ligarModo(corpo, P, X);
+    const ler = (t, o) => { let q = X.sb.from(t).select('*'); o.forEach(c => { q = q.order(c); }); return q; };
+    Promise.all([AERO === null ? ler('salas_aeroportos', ['aeroporto_iata', 'terminal', 'sala']) : null, SALAS === null ? ler('cartoes_salas_vip', ['banco', 'nome_cartao']) : null]).then(([a, s]) => {
+      if (a) AERO = a.error ? false : (a.data || []);
+      if (s) SALAS = s.error ? false : (s.data || []);
+      if (X.aba() === 'cartoesbase' && !ED && !IMP && !LIN_ED) telaBase(P, X);
+    });
+    return;
+  }
+  if (AERO === false) { corpo.innerHTML = modoSalas() + X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 63-salas-por-aeroporto.sql para ativar as salas por aeroporto.</div>'); ligarModo(corpo, P, X); return; }
+  if (!AERO.length) { corpo.innerHTML = modoSalas() + vazioImportar(X); ligarModo(corpo, P, X); return; }
+  const q = semAc(SA.busca.trim());
+  const porIata = new Map(); AERO.forEach(a => { if (!porIata.has(a.aeroporto_iata)) porIata.set(a.aeroporto_iata, { a, L: [] }); porIata.get(a.aeroporto_iata).L.push(a); });
+  const casa = ({ a }) => semAc(a.aeroporto_iata) === q || (q.length >= 3 && semAc([a.aeroporto_nome, a.cidade, a.pais].join(' ')).includes(q));
+  const achados = q ? [...porIata.values()].filter(casa) : [];
+  const redeOk = (a) => SA.rede === 'todas' || a[SA.rede] === true || a[SA.rede] === null;
+  const tipoOk = (a) => SA.tipo === 'todos' || (SA.tipo === 'salas' ? ehSala(a) : !ehSala(a));
+  const CR = cartoesPorRede();
+  const acessoCurto = (s) => { const v = n(s.acessos_titular_ano); return v === -1 ? 'ilimitado' : v > 0 ? `${v}/ano` : 'acesso pago ou não informado'; };
+  const selos = (a) => REDES.map(([k, rot]) => a[k] === true ? `<span class="tag ok">${rot}</span>` : a[k] === null || a[k] === undefined ? `<span class="tag" style="opacity:.7">${rot}?</span>` : '').join(' ');
+  const item = (a) => `<div style="border-top:1px solid var(--linha);padding:10px 0">
+      <div><b style="font-weight:600">${esc(a.sala)}</b> <span class="tag">${esc(TIPO_AERO[a.tipo] || a.tipo || 'sala')}</span>${a.a_confirmar ? ' <span class="tag alerta">a confirmar</span>' : ''}</div>
+      ${a.sala === 'sem sala VIP' ? '' : `<div style="margin-top:6px">${selos(a)}</div>`}
+      ${a.outras_formas_acesso ? `<div style="font-size:13px;color:var(--tinta-2);margin-top:4px">${esc(a.outras_formas_acesso)}</div>` : ''}
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc([AREA_TXT[a.area] || '', a.localizacao, a.horario].filter(Boolean).join(' · '))}</div>
+      ${a.observacao ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc(a.observacao)}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;gap:8px">${conferido(a.conferido_em)}<span>${a.fonte && /^https?:\/\//.test(a.fonte) ? `<a class="mini" href="${esc(a.fonte)}" target="_blank" rel="noopener">fonte</a>` : ''}<button class="mini" data-ae-ed="${a.id}">editar</button>${a.a_confirmar ? `<button class="mini" data-ae-ok="${a.id}">conferida</button>` : ''}</span></div></div>`;
+  const quemEntra = (L) => REDES.filter(([k]) => L.some(a => a[k] === true || a[k] === null)).map(([k, rot]) => { const C = [...CR[k].entries()].sort((x, y) => x[0].localeCompare(y[0]));
+    return `<details style="border-top:1px solid var(--linha);padding:8px 0"><summary style="cursor:pointer;font-size:14px"><b style="font-weight:600">${rot}</b>: ${C.length ? num(C.length) + (C.length === 1 ? ' cartão da base' : ' cartões da base') : 'nenhum cartão da base'}</summary>
+      <div style="font-size:13px;color:var(--tinta-2);margin-top:6px">${C.map(([nm, s]) => `${esc(nm)} (${acessoCurto(s)})`).join('<br>') || 'Nenhum.'}</div></details>`; }).join('');
+  const bloco = ({ a, L }) => {
+    const F = L.filter(x => redeOk(x) && tipoOk(x)), ters = [...new Set(F.map(x => x.terminal || 'Terminal não informado'))];
+    return `<section class="bloco"><h2 style="margin-bottom:2px">${esc(a.aeroporto_iata)} · ${esc(a.cidade || a.aeroporto_nome || '')}</h2><div class="sub" style="margin-top:0;font-size:13px">${esc([a.aeroporto_nome, a.pais].filter(Boolean).join(', '))} · ${num(L.filter(ehSala).length)} salas e ${num(L.filter(x => !ehSala(x)).length)} restaurantes ou experiências</div>
+      ${quemEntra(L) ? `<div style="margin-top:10px"><div style="font-size:13px;color:var(--tinta-3)">Quem entra pelas redes (cartões da base de cartões):</div>${quemEntra(L)}</div>` : ''}
+      ${ters.length ? ters.map(t => `<div class="secao" style="margin:16px 0 0">${esc(t)}</div>${F.filter(x => (x.terminal || 'Terminal não informado') === t).sort((x, y) => Number(!ehSala(x)) - Number(!ehSala(y)) || String(x.sala).localeCompare(String(y.sala))).map(item).join('')}`).join('') : '<div class="vazio">Nada com esses filtros.</div>'}</section>`;
+  };
+  const paises = [...new Set([...porIata.values()].map(x => x.a.pais || 'Outros'))].sort((x, y) => (x === 'Brasil' ? -1 : y === 'Brasil' ? 1 : x.localeCompare(y)));
+  corpo.innerHTML = `${modoSalas()}<div class="sub">Digite o aeroporto e veja as salas, os restaurantes e o que aceita cada programa. A regra de cada cartão (acessos, acompanhantes, gasto mínimo) fica em "Por cartão".</div>
+    <label class="fl"><span>Aeroporto</span><input id="saBusca" value="${esc(SA.busca)}" placeholder="Código ou cidade: GRU, Miami, Lisboa" autocomplete="off"></label>
+    ${q ? `<div class="chips" style="margin-top:8px">${[['todos', 'Tudo'], ['salas', 'Salas'], ['rest', 'Restaurantes e experiências']].map(([k, l]) => `<button data-sat="${k}" class="${SA.tipo === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="chips">${[['todas', 'Qualquer programa'], ...REDES.map(([k, l]) => [k, l])].map(([k, l]) => `<button data-sar="${k}" class="${SA.rede === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      ${achados.length ? achados.map(bloco).join('') : '<div class="vazio">Nenhum aeroporto com esse nome na base.</div>'}
+      <div class="sub" style="margin-top:8px;font-size:13px">"Priority Pass?" quer dizer que a fonte não confirma: vale olhar o app da rede antes de indicar ao cliente.</div>`
+    : paises.map(pa => `<div class="secao" style="margin:16px 0 6px">${esc(pa)}</div><div class="chips" style="flex-wrap:wrap">${[...porIata.values()].filter(x => (x.a.pais || 'Outros') === pa).map(({ a, L }) => `<button data-sae="${esc(a.aeroporto_iata)}">${esc(a.aeroporto_iata)} · ${esc(a.cidade || '')} (${L.length})</button>`).join('')}</div>`).join('')}
+    ${avisoVelhos(q ? achados.flatMap(x => x.L) : AERO, X)}`;
+  ligarModo(corpo, P, X);
+  $('saBusca').oninput = (e) => { SA.busca = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const el = $('saBusca'); el.focus(); el.setSelectionRange(pos, pos); };
+  corpo.querySelectorAll('[data-sae]').forEach(b => b.onclick = () => { SA.busca = b.dataset.sae; telaBase(P, X); });
+  corpo.querySelectorAll('[data-sat]').forEach(b => b.onclick = () => { SA.tipo = b.dataset.sat; telaBase(P, X); });
+  corpo.querySelectorAll('[data-sar]').forEach(b => b.onclick = () => { SA.rede = b.dataset.sar; telaBase(P, X); });
+  corpo.querySelectorAll('[data-ae-ed]').forEach(b => b.onclick = () => { LIN_ED = { tabela: 'salas_aeroportos', id: b.dataset.aeEd }; telaBase(P, X); scrollTo(0, 0); });
+  corpo.querySelectorAll('[data-ae-ok]').forEach(b => b.onclick = () => marcarConferido(X, P, 'salas_aeroportos', AERO, b.dataset.aeOk));
+}
+
 /* ---------- Bancos: segmentos em ordem, da entrada ao topo ---------- */
 function abaBancos(corpo, P, X) {
   const { $, esc, num, brl } = X;
   if (SEGS === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'bancos_segmentos', ['banco', 'posicao_regua'], d => { SEGS = d; }); return; }
   if (SEGS === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar a base de bancos.</div>'); return; }
+  if (!SEGS.length) { corpo.innerHTML = vazioImportar(X); return; }
   const L = SEGS.filter(s => !BUSCA_BANCO || (s.banco + ' ' + s.segmento).toLowerCase().includes(BUSCA_BANCO.toLowerCase()));
   const bancos = [...new Set(L.map(s => s.banco))];
   const valor = (v, t) => n(v) ? brl(v) : t || 'não informado';
@@ -298,6 +382,11 @@ async function marcarConferido(X, P, tabela, lista, id) {
 
 // edição de uma sala VIP ou de um segmento de banco
 const CAMPOS_LIN = {
+  salas_aeroportos: [['sala', 'Nome da sala, do restaurante ou da experiência', 'text'], ['aeroporto_iata', 'Aeroporto (código de 3 letras)', 'text'], ['terminal', 'Terminal', 'text'],
+    ['tipo', 'Tipo', 'select', [['', ''], ...Object.entries(TIPO_AERO)]], ['area', 'Área', 'select', [['', ''], ...Object.entries(AREA_TXT), ['outro', 'outra']]],
+    ['priority_pass', 'Aceita Priority Pass', 'tri'], ['loungekey', 'Aceita LoungeKey (Mastercard)', 'tri'], ['dragonpass', 'Aceita DragonPass (Visa Airport Companion)', 'tri'],
+    ['outras_formas_acesso', 'Outras formas de entrar ou benefício', 'area'], ['localizacao', 'Localização', 'text'], ['horario', 'Horário', 'text'], ['observacao', 'Observação', 'area'],
+    ['fonte', 'Fonte', 'text'], ['conferido_em', 'Conferido em', 'date'], ['a_confirmar', 'Falta conferir na fonte oficial', 'bool']],
   cartoes_salas_vip: [['rede_ou_sala', 'Rede ou sala', 'text'], ['tipo', 'Tipo', 'select', [['', ''], ...Object.entries(TIPO_SALA)]], ['acessos_titular_ano', 'Acessos do titular por ano (-1 = ilimitado)', 'int'],
     ['acompanhantes', 'Acompanhantes', 'text'], ['adicionais', 'Adicionais', 'text'], ['gasto_minimo', 'Gasto mínimo, como o banco descreve', 'text'], ['gasto_minimo_rs', 'Gasto mínimo para liberar (R$)', 'num'],
     ['gasto_minimo_faturas', 'Em quantas faturas (1 = no mês, 3 = últimas 3)', 'int'], ['aeroportos', 'Aeroportos', 'text'], ['como_acessar', 'Como acessar', 'text'], ['condicao_extra', 'Condição extra', 'text'],
@@ -309,14 +398,15 @@ const CAMPOS_LIN = {
 };
 function formLinha(P, X) {
   const { sb, $, esc, aviso, campo } = X;
-  const lista = LIN_ED.tabela === 'cartoes_salas_vip' ? SALAS : SEGS, x = (lista || []).find(y => y.id === LIN_ED.id);
+  const lista = { cartoes_salas_vip: SALAS, bancos_segmentos: SEGS, salas_aeroportos: AERO }[LIN_ED.tabela], x = (lista || []).find(y => y.id === LIN_ED.id);
   const voltar = () => { LIN_ED = null; telaBase(P, X); };
   if (!x) return voltar();
   const C = CAMPOS_LIN[LIN_ED.tabela];
-  const titulo = LIN_ED.tabela === 'cartoes_salas_vip' ? `${esc(x.banco)} · ${esc(x.nome_cartao)}` : `${esc(x.banco)}`;
+  const titulo = LIN_ED.tabela === 'cartoes_salas_vip' ? `${esc(x.banco)} · ${esc(x.nome_cartao)}` : LIN_ED.tabela === 'salas_aeroportos' ? `${esc(x.aeroporto_iata)} · ${esc(x.sala)}` : `${esc(x.banco)}`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Base de cartões</button><h1 class="titulo" style="margin-top:6px">${titulo}</h1>
     <form class="bloco form" id="fLin">${C.map(([k, rot, tipo, ops]) => tipo === 'bool' ? `<label class="fc"><input type="checkbox" name="${k}" ${x[k] ? 'checked' : ''}><span>${rot}</span></label>`
       : tipo === 'select' ? `<label class="fl"><span>${rot}</span><select name="${k}">${ops.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(x[k] ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`
+      : tipo === 'tri' ? `<label class="fl"><span>${rot}</span><select name="${k}">${[['', 'a confirmar'], ['true', 'sim'], ['false', 'não']].map(([v, l]) => `<option value="${v}"${String(x[k] ?? '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`
       : tipo === 'area' ? `<label class="fl"><span>${rot}</span><textarea name="${k}" rows="3">${esc(x[k] ?? '')}</textarea></label>`
       : campo(k, rot, x[k], tipo === 'int' || tipo === 'num' ? 'number' : tipo === 'date' ? 'date' : 'text')).join('')}
       <button class="zap" type="submit" style="width:100%;margin-top:12px">Salvar</button></form>`;
@@ -326,11 +416,13 @@ function formLinha(P, X) {
     const f = e.target, up = { atualizado_em: new Date().toISOString() };
     for (const [k, , tipo] of C) {
       if (tipo === 'bool') { up[k] = f.elements[k].checked; continue; }
+      if (tipo === 'tri') { const v = f.elements[k].value; up[k] = v === '' ? null : v === 'true'; continue; }
       const v = f.elements[k].value.trim();
       if (tipo === 'int' || tipo === 'num') { const num = v === '' ? null : Number(v.replace(',', '.')); if (num !== null && !isFinite(num)) { aviso('Confira os números.'); return; } up[k] = num === null ? null : tipo === 'int' ? Math.round(num) : num; }
       else up[k] = v || null;
     }
     if (!up[C[0][0]]) { aviso('Preencha ' + C[0][1].toLowerCase() + '.'); return; }
+    if (up.aeroporto_iata !== undefined) { up.aeroporto_iata = String(up.aeroporto_iata || '').toUpperCase(); if (!/^[A-Z]{3}$/.test(up.aeroporto_iata)) { aviso('O aeroporto é o código de 3 letras, ex.: GRU.'); return; } }
     const { error } = await sb.from(LIN_ED.tabela).update(up).eq('id', x.id);
     if (error) { aviso('Não salvou: ' + X.limparTec(error.message)); return; }
     Object.assign(x, up); aviso('Salvo.'); voltar();
@@ -360,6 +452,7 @@ function abaCorrecoes(corpo, P, X) {
   const { sb, esc, aviso, num } = X;
   if (CORR === null) { corpo.innerHTML = '<div class="vazio">Carregando...</div>'; carregar(X, P, 'cartoes_correcoes', ['banco', 'nome_cartao'], d => { CORR = d; }); return; }
   if (CORR === false) { corpo.innerHTML = X.tec('<div class="config" style="margin-top:12px">Rode no Supabase o 62-ia-cartoes-bases.sql para ativar as correções.</div>'); return; }
+  if (!CORR.length) { corpo.innerHTML = vazioImportar(X); return; }
   const L = CORR.filter(c => c.status === CORR_ST);
   const st = [['pendente', 'Pendentes'], ['aceita', 'Aceitas'], ['recusada', 'Recusadas']];
   const cat = (c) => c.catalogo_id && BASE.find(b => b.id === c.catalogo_id);
