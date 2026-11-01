@@ -551,7 +551,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
 import * as MKT from '/admin/app/marketing.js?v=21';
 import * as CART from '/admin/app/carteira.js?v=3';
-import * as CARTOES from '/admin/app/cartoes.js?v=11';
+import * as CARTOES from '/admin/app/cartoes.js?v=12';
 import * as ACV from '/admin/app/acervo.js?v=7';
 import * as CRM from '/admin/app/crm.js?v=18';
 import * as CTR from '/admin/app/contrato.js?v=4';
@@ -5292,9 +5292,17 @@ async function fiTarefas(el, c) {
 let FI_ONB = false;
 
 // cartões do cliente: ligados à base de cartões, com as contas de anuidade e pontos
+// o que o cliente informou no diagnóstico (formulário do site) e na qualificação do SDR: a ficha da Gestão parte disso
+function dadosDiag(c) {
+  const pfs = (D.pessoas || []).filter(p => p.cliente_id === c.id).map(p => p.id);
+  const cards = (D.reunioes || []).filter(r => ehGestao(r) && (pfs.includes(r.pessoa_id) || (clienteGestaoDe(r) || {}).id === c.id));
+  const r = cards.find(x => x.resultado === 'Fechou') || cards[0];
+  if (!r) return {};
+  const q = r.qualificacao || {}, so = solDoCard(r) || {};
+  return { gasto: q.gasto || so.gasto_mensal || '', pix: so.movimentacao_pix || '', programas: q.programas || so.programas || '', viagens: q.viagens || so.viagens_ano || '' };
+}
 function fiCartoes(el, c) {
-  el.innerHTML = '<section class="bloco" style="margin-top:14px" id="gtCartBox"></section>';
-  CARTOES.secaoCliente($('gtCartBox'), c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec }, async () => {
+  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag }, async () => {
     if ((D.gtar || []).some(t => String(t.cliente_id) === String(c.id) && t.chave === 'cartoes' && !t.feito)) await gtMarcarChave(c, 'cartoes');
   });
 }
