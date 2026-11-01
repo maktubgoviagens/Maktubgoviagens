@@ -718,7 +718,8 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   const { sb, esc } = X;
   el.innerHTML = '<div id="cxFalta"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
-    + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>';
+    + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>'
+    + '<div class="secao">Uso de salas VIP</div><section class="bloco" style="margin-top:0" id="cxUso"><div class="vazio">Carregando...</div></section>';
   secaoCliente(el.querySelector('#gtCartBox'), c, X, onPrimeiro);
   const [p, bs, sg, ct] = await Promise.all([sb.from('cliente_perfil').select('*').eq('cliente_id', c.id).maybeSingle(), sb.from('cliente_bancos').select('*').eq('cliente_id', c.id).order('criado_em'),
     sb.from('bancos_segmentos').select('id,banco,segmento,posicao_regua').order('banco').order('posicao_regua'), sb.from('cartoes').select('id,catalogo_id,gasto_medio_mes,banco,categoria').eq('cliente_id', c.id)]);
@@ -728,6 +729,43 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   const ctx = { c, X, el, perfil: p.data || null, bancos: bs.data || [], segs: sg.error ? [] : (sg.data || []), cartoes: ct.error ? [] : (ct.data || []), diag: (X.dadosDiag && X.dadosDiag(c)) || {} };
   CB_ED = null;
   desenharFalta(ctx); desenharBancos(ctx); desenharPerfil(ctx);
+  usoSalas(ctx);
+}
+// visitas a salas VIP que a equipe lança: o painel mostra usadas e restantes no ano
+async function usoSalas(ctx) {
+  const { X, c } = ctx, { sb, esc, campo } = X, box = ctx.el.querySelector('#cxUso');
+  const ano = new Date().getFullYear() + '-01-01', cats = [...new Set(ctx.cartoes.map(k => k.catalogo_id).filter(Boolean))];
+  const [u, sv] = await Promise.all([sb.from('cliente_salas_uso').select('*').eq('cliente_id', c.id).gte('data', ano).order('data', { ascending: false }),
+    cats.length ? sb.from('cartoes_salas_vip').select('catalogo_id,rede_ou_sala').in('catalogo_id', cats) : Promise.resolve({ data: [] })]);
+  if (!box.isConnected) return;
+  if (u.error) { box.innerHTML = X.tec('<div class="config">Rode no Supabase o 65-salas-vip-painel.sql para lançar o uso de salas.</div>'); return; }
+  const L = u.data || [], salasDe = (cat) => [...new Set((sv.data || []).filter(s => s.catalogo_id === cat).map(s => s.rede_ou_sala))];
+  const nomeK = (id) => { const k = ctx.cartoes.find(x => x.id === id); return k ? [k.banco, k.categoria].filter(Boolean).join(' ') : 'cartão removido'; };
+  box.innerHTML = `${L.length ? L.map(x => `<div class="lin"><span>${dataBR(x.data)} · <b style="font-weight:600">${esc(x.rede_ou_sala)}</b> · ${x.pessoas} ${x.pessoas === 1 ? 'visita' : 'visitas'}
+      <small style="display:block;color:var(--tinta-3);font-size:13px">${esc([nomeK(x.cartao_id), x.observacao].filter(Boolean).join(' · '))}</small></span><span><button class="mini" data-usx="${x.id}">excluir</button></span></div>`).join('')
+      : '<div class="vazio">Nenhuma visita lançada neste ano. O que entrar aqui aparece no painel como visitas usadas e restantes.</div>'}
+    <details style="margin-top:8px"><summary class="sub" style="cursor:pointer">+ Lançar visita</summary>
+      <div class="duas-col">${campo('us_data', 'Data', new Date().toLocaleDateString('sv-SE'), 'date')}${campo('us_pessoas', 'Visitas que contam (titular e acompanhantes)', 1, 'number')}</div>
+      <label class="fl"><span>Cartão</span><select name="us_cartao"><option value="">Escolha</option>${ctx.cartoes.map(k => `<option value="${k.id}">${esc([k.banco, k.categoria].filter(Boolean).join(' '))}</option>`).join('')}</select></label>
+      <label class="fl"><span>Rede ou sala</span><input name="us_rede" list="usRedes" placeholder="Use o mesmo nome da sala do cartão"><datalist id="usRedes"></datalist></label>
+      ${campo('us_obs', 'Observação (opcional)', '')}
+      <button class="zap" type="button" id="usSalvar" style="width:100%;margin-top:10px">Lançar visita</button></details>`;
+  const q = (k) => box.querySelector(`[name=${k}]`);
+  q('us_cartao').onchange = () => { const k = ctx.cartoes.find(x => x.id === q('us_cartao').value); box.querySelector('#usRedes').innerHTML = (k ? salasDe(k.catalogo_id) : []).map(r => `<option value="${esc(r)}">`).join(''); };
+  box.querySelectorAll('[data-usx]').forEach(b => b.onclick = async () => {
+    if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
+    const { error } = await sb.from('cliente_salas_uso').delete().eq('id', b.dataset.usx);
+    if (error) { X.aviso('Não excluiu: ' + X.limparTec(error.message)); return; }
+    usoSalas(ctx);
+  });
+  box.querySelector('#usSalvar').onclick = async () => {
+    const pessoas = Math.round(Number(q('us_pessoas').value)), rede = q('us_rede').value.trim();
+    if (!q('us_cartao').value || !rede) { X.aviso('Escolha o cartão e a rede ou sala.'); return; }
+    if (!(pessoas > 0)) { X.aviso('Informe quantas visitas contam.'); return; }
+    const { error } = await sb.from('cliente_salas_uso').insert({ cliente_id: c.id, cartao_id: q('us_cartao').value, rede_ou_sala: rede, data: q('us_data').value || null, pessoas, observacao: q('us_obs').value.trim() || null, criado_por: X.D.meuId || null });
+    if (error) { X.aviso('Não salvou: ' + X.limparTec(error.message)); return; }
+    X.aviso('Visita lançada.'); usoSalas(ctx);
+  };
 }
 // o que falta para gerar o estudo de cartões
 function faltaEstudo(ctx) {

@@ -195,6 +195,20 @@
 .mc-in input{flex:1;min-width:0;border:0;background:transparent;padding:9px 10px 9px 4px;font-family:inherit;font-size:16px;color:var(--text)}
 .mc-in:focus-within{border-color:var(--gold)}
 .mc-nota{font-size:12.5px;color:var(--text-light);margin-top:12px}
+.sv-intro{font-size:16px;color:var(--text);line-height:1.6;margin:-8px 0 18px}
+.sv-list{background:var(--white);border:1px solid var(--border)}
+.sv-card{padding:18px 22px;border-top:1px solid var(--border)}
+.sv-card:first-child{border-top:0}
+.sv-card h4{font-family:'Jost',sans-serif;font-weight:500;color:var(--green);font-size:16px;margin:0 0 8px}
+.sv-item{font-size:16px;color:var(--text);line-height:1.55;margin-top:6px}
+.sv-item b{font-weight:500;color:var(--green)}
+.sv-item small{display:block;font-size:13px;color:var(--text-light);margin-top:2px}
+.sv-gasto{font-size:16px;line-height:1.55;margin-top:8px;padding:10px 14px;background:var(--cream);border-left:2px solid var(--gold)}
+.sv-gasto small{display:block;font-size:13px;color:var(--text-light);margin-top:2px}
+.sv-uso{color:var(--gold);font-weight:500}
+.sv-aero{margin-top:22px}
+.sv-aero .blk-sub{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--green);margin-bottom:10px}
+.sv-ressalva{font-size:13px;color:var(--text-light);margin-top:14px;font-style:italic}
 .kpis.k3{grid-template-columns:repeat(3,1fr)}
 @media(max-width:1100px){.kpis.k3{grid-template-columns:1fr 1fr}.kpis.k3 .kpi:first-child{grid-column:1/-1}}
 @media(max-width:700px){.mc{grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px}.mc-nome{grid-column:1/-1}}
@@ -912,6 +926,10 @@
         <div class="blk-title">Meus Cartões</div>
         <div id="meusCartoes"><div class="empty-cards">Carregando cartões</div></div>
       </section>
+      <section class="sec" id="salasSec" hidden>
+        <div class="blk-title">Suas salas VIP</div>
+        <div id="minhasSalas"></div>
+      </section>
     </div>
 
     <div class="view" id="view-viagens" hidden>
@@ -1338,6 +1356,47 @@
       inp.addEventListener('change', salvar);
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
     });
+  }
+
+  // ----- Suas salas VIP: só o que a equipe conferiu (função minhas_salas_vip) -----
+  const svSemInfo = (t) => !t || /confirmar|n[aã]o informad/i.test(t);
+  const svAcessos = (a, tipo) => a === null || a === undefined ? '' : Number(a) === -1 ? (tipo === 'rede_global' ? 'ilimitado' : 'ilimitada') : Number(a) > 0 ? `${a} ${Number(a) === 1 ? 'visita' : 'visitas'} por ano` : 'sem visitas grátis incluídas';
+  const svRedes = [['priority_pass', 'Priority Pass', /priority/i], ['loungekey', 'LoungeKey', /loungekey|airport experiences/i], ['dragonpass', 'DragonPass', /dragon|airport companion/i]];
+  async function renderSalasVip() {
+    let d;
+    try { const r = await supabase.rpc('minhas_salas_vip'); if (r.error) return; d = r.data || {}; } catch (_) { return; }
+    const cartoes = (d.cartoes || []).filter(k => (k.salas || []).length), aero = (d.salas_aeroporto || []).filter(a => !['restaurante', 'outro'].includes(a.tipo)), uso = d.uso_ano || [];
+    if (!cartoes.length && !aero.length) return;
+    const usadas = (k, s) => uso.filter(u => u.cartao_id === k.cartao_id && u.rede_ou_sala === s.rede_ou_sala).reduce((t, u) => t + Number(u.visitas || 0), 0);
+    const item = (k, s) => {
+      const a = Number(s.acessos_titular_ano), u = usadas(k, s);
+      const partes = [svAcessos(s.acessos_titular_ano, s.tipo)];
+      if (a > 0 && u) partes.push(`<span class="sv-uso">usadas ${u}, ${a - u > 0 ? 'restam ' + (a - u) : 'nenhuma restante'}</span>`);
+      else if (a === -1 && u) partes.push(`<span class="sv-uso">${u} ${u === 1 ? 'visita' : 'visitas'} neste ano</span>`);
+      const extra = [svSemInfo(s.acompanhantes) ? '' : 'Acompanhantes: ' + s.acompanhantes, svSemInfo(s.adicionais) ? '' : 'Adicionais: ' + s.adicionais, svSemInfo(s.como_acessar) ? '' : s.como_acessar, svSemInfo(s.condicao_extra) ? '' : s.condicao_extra].filter(Boolean);
+      let gasto = '';
+      if (Number(s.gasto_minimo_rs) > 0) {
+        const f = Number(s.gasto_minimo_faturas) || 1, mes = Number(s.gasto_minimo_rs) / f, g = Number(k.gasto_medio_mes);
+        const regra = `Para a sala ficar liberada, o banco pede R$ ${fmtMoney(s.gasto_minimo_rs)}${f > 1 ? ` somando as ${f} últimas faturas` : ' na fatura'}.`;
+        const situacao = g > 0 ? (g >= mes ? 'Pelo gasto que temos registrado, a regra está sendo cumprida.' : `Pelo gasto que temos registrado, faltam cerca de R$ ${fmtMoney(Math.ceil(mes - g))} por mês.`) : '';
+        gasto = `<div class="sv-gasto">${regra}${situacao ? `<small>${situacao}</small>` : ''}</div>`;
+      }
+      return `<div class="sv-item"><b>${escapeHtml(s.rede_ou_sala)}</b>${partes.filter(Boolean).length ? ': ' + partes.filter(Boolean).join(' · ') : ''}${extra.length ? `<small>${escapeHtml(extra.join(' · '))}</small>` : ''}</div>${gasto}`;
+    };
+    // redes que cada cartão do cliente dá, para cruzar com as salas do aeroporto
+    const minhas = {}; svRedes.forEach(([k, , re]) => { minhas[k] = cartoes.filter(c => c.salas.some(s => s.tipo === 'rede_global' && re.test(s.rede_ou_sala || ''))).map(c => c.cartao); });
+    const quem = (a) => { const L = []; svRedes.forEach(([k, rot]) => { if (a[k] === true) minhas[k].forEach(c => L.push(`${c} (${rot})`)); }); return L; };
+    const linhaAero = (a) => {
+      const L = quem(a), alt = svSemInfo(a.outras_formas_acesso) ? '' : a.outras_formas_acesso;
+      const onde = [a.terminal, a.localizacao].filter(x => !svSemInfo(x)).join(', ');
+      const acesso = L.length ? 'Entra com: ' + L.join(', ') : ['independente', 'aeroporto'].includes(a.tipo) ? 'Nenhum dos seus cartões dá acesso hoje' : '';
+      return `<div class="sv-item"><b>${escapeHtml(a.sala)}</b>${onde ? ' · ' + escapeHtml(onde) : ''}<small>${escapeHtml([acesso, alt].filter(Boolean).join(' · '))}</small></div>`;
+    };
+    $('minhasSalas').innerHTML = `<p class="sv-intro">Onde os seus cartões dão acesso a salas VIP. As regras são de cada banco e podem mudar. Antes de cada viagem, a equipe confere para você.</p>
+      ${cartoes.length ? `<div class="sv-list">${cartoes.map(k => `<div class="sv-card"><h4>${escapeHtml(k.cartao)}</h4>${k.salas.map(s => item(k, s)).join('')}</div>`).join('')}</div>` : ''}
+      ${aero.length ? `<div class="sv-aero"><div class="blk-sub">No seu aeroporto: ${escapeHtml(d.aeroporto || '')}</div><div class="sv-list"><div class="sv-card">${aero.map(linhaAero).join('')}</div></div></div>` : ''}
+      <div class="sv-ressalva">A regra de acesso é do banco e pode mudar sem aviso.</div>`;
+    $('salasSec').hidden = false;
   }
 
   function renderViagens(viagens) {
@@ -2426,6 +2485,7 @@
       renderProgramas(programas);
       renderCartoes(cartoes);
       renderMeusCartoes(cartoes);
+      renderSalasVip();
       renderViagens(viagens);
       renderMovimentos(movimentos);
       renderReunioes(reunioes);
