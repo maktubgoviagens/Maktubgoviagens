@@ -27,7 +27,7 @@ export function montarEntrada(ctx, R) {
       prioridades_em_ordem: R.objetivos.map(o => o.nome) },
     bancos: (ctx.bancos || []).map(b => ({ banco: b.banco, segmento: (segPorId[b.segmento_id] || {}).segmento || b.segmento_txt || null, correntista_desde: b.correntista_desde,
       faixa_investimento: b.faixa_investimento, recebe_salario: b.recebe_salario, movimenta_pj: b.movimenta_pj, observacao_interna: b.observacao_interna || null })),
-    carteira: R.atual.cartoes.map(k => ({ cartao: k.cartao, fora_da_base: !!k.fora_da_base, gasto_mes: k.gasto ?? null, limite: k.limite ?? null, milhas_ano: k.milhas ?? null,
+    carteira: R.atual.cartoes.map(k => ({ cartao: k.cartao, fora_da_base: !!k.fora_da_base, gasto_mes: k.gasto ?? null, gasto_estimado_pelo_limite: !!k.gasto_estimado, limite: k.limite ?? null, milhas_ano: k.milhas ?? null,
       pontos_em_outro_programa: k.outro ? { programa: k.outro.programa, pontos: k.outro.pontos } : null, valor_pontos: k.valor ?? null, beneficios_usados: (k.beneficios || []).map(b => ({ beneficio: b.descricao, valor_ano: b.valor })),
       retorno: k.retorno ?? null, anuidade: k.anuidade ?? null, anuidade_cheia: k.cheia ?? null, economia_ano: k.economia ?? null, anuidade_maior_que_retorno: !!k.anuidade_maior_que_retorno,
       situacao_anuidade: k.situacao || null, mes_renovacao: k.renovacao || null, negociacao: k.negociacao || null })),

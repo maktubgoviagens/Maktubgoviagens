@@ -1,8 +1,8 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=2';
-import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=2';
+import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=3';
+import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=3';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -878,8 +878,8 @@ async function desenharSimulacao(ctx) {
       ${porId[R.escada.a_confirmar] ? `<div style="margin-top:8px;font-size:13px;color:var(--alerta)">Pelas prioridades, o melhor seria <b style="font-weight:600">${esc(porId[R.escada.a_confirmar].principal.cartao)}</b>, mas ele tem dados a confirmar na base e não pode ser o recomendado. Confira o cartão em Base de cartões e desmarque "a confirmar" para ele entrar no foco.</div>` : ''}</div>` : ''}
     <div style="margin-top:10px;padding:10px 12px;background:var(--creme-2)"><b style="font-weight:600">Hoje, como está</b>
       <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · pontos valem ${brl(R.atual.valor)}${R.atual.beneficios ? ` · benefícios usados ${brl(R.atual.beneficios)}` : ''} · saldo ${brl(R.atual.saldo)}${R.atual.economia ? ` · economia de anuidade no ano ${brl(R.atual.economia)}` : ''}</div>
-      ${hojeL.map(x => `<div style="font-size:13px;margin-top:4px;color:var(--tinta-2)"><b style="font-weight:600">${esc(x.cartao)}</b>: gasto ${brl(x.gasto)}/mês · ${x.outro ? `${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : num(x.milhas) + ' milhas'} · retorno ${brl(x.retorno)}${x.valor_beneficios ? ` (com ${brl(x.valor_beneficios)} de benefícios)` : ''} · anuidade ${brl(x.anuidade)}${x.economia ? ` · economia ${brl(x.economia)}` : ''}${x.anuidade_maior_que_retorno ? ' · <span style="color:var(--alerta)">anuidade maior que o retorno: negociar</span>' : ''}</div>`).join('')}
-      <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Com o gasto médio lançado em cada cartão.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
+      ${hojeL.map(x => `<div style="font-size:13px;margin-top:4px;color:var(--tinta-2)"><b style="font-weight:600">${esc(x.cartao)}</b>: gasto ${brl(x.gasto)}/mês${x.gasto_estimado ? ' (estimado)' : ''} · ${x.outro ? `${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : num(x.milhas) + ' milhas'} · retorno ${brl(x.retorno)}${x.valor_beneficios ? ` (com ${brl(x.valor_beneficios)} de benefícios)` : ''} · anuidade ${brl(x.anuidade)}${x.economia ? ` · economia ${brl(x.economia)}` : ''}${x.anuidade_maior_que_retorno ? ' · <span style="color:var(--alerta)">anuidade maior que o retorno: negociar</span>' : ''}</div>`).join('')}
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Com o gasto médio lançado em cada cartão${hojeL.some(x => x.gasto_estimado) ? '; onde ele falta, o gasto total dividido pelos limites' : ''}.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
     ${R.realizado.length ? `<div style="margin-top:10px;font-size:13px"><b style="font-weight:600">Previsto e realizado nos últimos 12 meses</b>${R.realizado.map(r => `<div>${esc(r.programa)}: previsto ${r.previsto !== null ? num(r.previsto) : '·'} pts, entrou ${r.realizado !== null ? num(r.realizado) : '·'} pts</div>`).join('')}<div style="color:var(--tinta-3)">Entrou: acúmulo, clube e bônus lançados no extrato. Visitas a sala VIP no ano: ${num(R.visitas_sala_ano)}.</div></div>` : ''}
     ${top.map(linha).join('')}
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
@@ -924,12 +924,10 @@ async function usoSalas(ctx) {
 }
 // o que falta para gerar o estudo de cartões
 function faltaEstudo(ctx) {
-  const p = ctx.perfil || {}, porId = Object.fromEntries((BASE || []).map(b => [b.id, b])), F = [];
+  const p = ctx.perfil || {}, F = [];
   if (!p.aeroporto_saida) F.push('aeroporto de saída');
   if (!p.companhia_preferida && !p.programa_preferido) F.push('companhia ou programa preferido');
   if (!(n(p.gasto_cartao_mes) > 0)) F.push('gasto total no cartão por mês');
-  const semGasto = ctx.cartoes.filter(k => { const b = porId[k.catalogo_id]; return b && n(b.anuidade_anual) > 0 && !(n(k.gasto_medio_mes) >= 0 && k.gasto_medio_mes !== null); });
-  if (semGasto.length) F.push(`gasto médio de ${semGasto.length === 1 ? '1 cartão com anuidade' : semGasto.length + ' cartões com anuidade'} (${semGasto.map(k => [k.banco, k.categoria].filter(Boolean).join(' ')).join(', ')})`);
   if (!ctx.bancos.some(b => b.segmento_id || b.segmento_txt)) F.push('pelo menos um banco com o segmento');
   return F;
 }
