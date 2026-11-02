@@ -585,6 +585,8 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
   };
 }
 
+// filtro dos quadros da seção Cartões (fica ao salvar ou editar um cartão do mesmo cliente)
+const FILTRO_CX = { cliente: null, modo: null, anu: 'real' };
 export async function secaoCliente(box, c, X, onPrimeiro) {
   const { sb, esc, aviso, campo, brl, num, D, CART } = X;
   box.innerHTML = '<div class="vazio">Carregando...</div>';
@@ -614,10 +616,10 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   };
   box.innerHTML = (C.length ? `<div class="numeros" style="margin:0 0 6px">
         <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${C.length === 1 ? '1 cartão' : num(C.length) + ' cartões'}</div></div>
-        <div class="num"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}</div></div>
+        <div class="num" data-fx="anu" role="button" tabindex="0" style="cursor:pointer"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}</div></div>
         <div class="num"><div class="l">Valor dos pontos no ano</div><div class="v">${brl(tot.valor)}</div><div class="d">${num(Math.round(tot.pontos))} pts pelo gasto informado</div></div>
-        <div class="num"><div class="l">Sala VIP</div><div class="v">${tot.vipIlim.length ? 'Ilimitada' : num(tot.vip) + ' acessos'}</div><div class="d">${tot.vipIlim.length ? esc(tot.vipIlim.join(', ')) : 'por ano, somando os cartões; nenhum ilimitado'}</div></div>
-      </div>${K.some(o => !o.cat) ? `<div class="sub" style="color:var(--alerta);margin:4px 0">${K.filter(o => !o.cat).length === 1 ? '1 cartão fora da base' : K.filter(o => !o.cat).length + ' cartões fora da base'}: confira a anuidade no site do banco e toque em "cadastrar na base" para entrar nas contas.</div>` : ''}${K.map(linha).join('')}` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
+        <div class="num" data-fx="vip" role="button" tabindex="0" style="cursor:pointer"><div class="l">Sala VIP</div><div class="v">${tot.vipIlim.length ? 'Ilimitada' : num(tot.vip) + ' acessos'}</div><div class="d">${tot.vipIlim.length ? esc(tot.vipIlim.join(', ')) : 'por ano, somando os cartões; nenhum ilimitado'}</div></div>
+      </div>${K.some(o => !o.cat) ? `<div class="sub" style="color:var(--alerta);margin:4px 0">${K.filter(o => !o.cat).length === 1 ? '1 cartão fora da base' : K.filter(o => !o.cat).length + ' cartões fora da base'}: confira a anuidade no site do banco e toque em "cadastrar na base" para entrar nas contas.</div>` : ''}<div id="cxFiltro"></div><div id="cxLinhas">${K.map((o, i) => `<div data-lin="${i}">${linha(o)}<small data-anu hidden style="display:block;font-size:13px;color:var(--tinta-2);margin:-4px 0 8px"></small></div>`).join('')}</div>` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
     + `<details style="margin-top:8px" id="cxForm"${C.length ? '' : ' open'}><summary class="sub" style="cursor:pointer">+ Adicionar cartão</summary><div id="cxCampos"></div></details>`
     + `<details style="margin-top:8px" id="cxLista"><summary class="sub" style="cursor:pointer">+ Colar lista de cartões</summary>
         <div class="sub" style="margin-top:6px">Uma linha por cartão: o nome e o limite (ou "pendente"). Ex.: Inter Prime 50.000. O app procura cada um na base e puxa a anuidade.</div>
@@ -657,6 +659,42 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       secaoCliente(box, c, X, onPrimeiro);
     };
   };
+  // quadros "Anuidades no ano" e "Sala VIP": ao tocar, a lista abaixo mostra só o que interessa
+  const ehVip = (cat) => !!cat && (!!cat.salas_vip_ilimitado || (n(cat.salas_vip_ano) || 0) > 0);
+  const aplicarFiltro = () => {
+    const F = FILTRO_CX, lin = box.querySelector('#cxLinhas'), topo = box.querySelector('#cxFiltro');
+    if (!lin) return;
+    box.querySelectorAll('[data-fx]').forEach(t => { t.style.borderColor = t.dataset.fx === F.modo ? 'var(--dourado)' : ''; t.style.borderWidth = t.dataset.fx === F.modo ? '2px' : ''; t.setAttribute('aria-pressed', t.dataset.fx === F.modo ? 'true' : 'false'); });
+    let ordem = K.map((o, i) => i), vis = ordem;
+    const valAnu = (o) => F.anu === 'cheia' ? o.k.cheia : o.k.custo;
+    if (F.modo === 'vip') {
+      vis = ordem.filter(i => ehVip(K[i].cat));
+      const peso = (i) => K[i].cat.salas_vip_ilimitado ? Infinity : n(K[i].cat.salas_vip_ano) || 0;
+      vis.sort((a, b) => peso(b) - peso(a));
+    } else if (F.modo === 'anu') {
+      vis = ordem.slice().sort((a, b) => { const va = valAnu(K[a]), vb = valAnu(K[b]); if (va === null && vb === null) return 0; if (va === null) return 1; if (vb === null) return -1; return vb - va; });
+    }
+    const voltar = '<button class="mini" type="button" data-fxsair>Mostrar todos os cartões</button>';
+    if (F.modo === 'vip') topo.innerHTML = `<div class="lin" style="align-items:center"><span class="sub" style="margin:0">${vis.length ? `${vis.length === 1 ? '1 cartão dá' : num(vis.length) + ' cartões dão'} sala VIP, de ${num(K.length)}` : 'Nenhum cartão do cliente dá sala VIP pela base.'}</span><span>${voltar}</span></div>`;
+    else if (F.modo === 'anu') {
+      const tot2 = K.reduce((s2, o) => s2 + (valAnu(o) || 0), 0), sem = K.filter(o => valAnu(o) === null).length;
+      const bt = (k, t) => `<button class="mini" type="button" data-fxanu="${k}" aria-pressed="${F.anu === k}" style="${F.anu === k ? 'background:var(--verde);color:#fff;border-color:var(--verde)' : ''}">${t}</button>`;
+      topo.innerHTML = `<div class="lin" style="align-items:center;flex-wrap:wrap;gap:6px"><span>${bt('real', 'O que paga hoje')}${bt('cheia', 'Anuidade cheia')}</span><span>${voltar}</span></div>
+        <div class="sub" style="margin:2px 0 6px">${F.anu === 'cheia' ? 'Anuidade cheia do banco, sem isenção' : 'Com a isenção pelo gasto e a anuidade negociada'}: ${brl(tot2)} no ano, ${brl(Math.round(tot2 / 12))} por mês, da maior para a menor${sem ? ` · ${sem === 1 ? '1 cartão' : sem + ' cartões'} sem anuidade conhecida no fim` : ''}.</div>`;
+    } else topo.innerHTML = '';
+    ordem.forEach(i => { const el = lin.querySelector(`[data-lin="${i}"]`); el.hidden = !vis.includes(i); const a = el.querySelector('[data-anu]');
+      if (F.modo === 'anu') { const o = K[i]; a.hidden = false; const anoMes = (v) => `${brl(v)}/ano (${brl(Math.round(v / 12))}/mês)`;
+        a.textContent = `Paga hoje: ${o.k.custo === null ? 'não informada' : o.k.custo === 0 ? 'isenta' : anoMes(o.k.custo)} · Cheia: ${o.k.cheia === null ? 'não informada' : o.k.cheia === 0 ? 'sem anuidade' : anoMes(o.k.cheia)}`; } else a.hidden = true; });
+    vis.forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
+    ordem.filter(i => !vis.includes(i)).forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
+    if (!F.modo) ordem.forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
+    const sair = topo.querySelector('[data-fxsair]'); if (sair) sair.onclick = () => { F.modo = null; aplicarFiltro(); };
+    topo.querySelectorAll('[data-fxanu]').forEach(b => b.onclick = () => { F.anu = b.dataset.fxanu; aplicarFiltro(); });
+  };
+  box.querySelectorAll('[data-fx]').forEach(t => { const ir = () => { FILTRO_CX.modo = FILTRO_CX.modo === t.dataset.fx ? null : t.dataset.fx; aplicarFiltro(); if (FILTRO_CX.modo) box.querySelector('#cxFiltro').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); };
+    t.onclick = ir; t.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } }; });
+  if (FILTRO_CX.cliente !== c.id) Object.assign(FILTRO_CX, { cliente: c.id, modo: null, anu: 'real' });
+  aplicarFiltro();
   desenharForm(null);
   ligarLista(box, c, X, onPrimeiro, C, cot, refs);
   // cartão fora da base: cadastra na Base de cartões depois de conferir a anuidade e liga este cartão
