@@ -13,21 +13,34 @@ const dataHora = (s) => { const d = new Date(s); return isNaN(d) ? '' : d.toLoca
 // o que vai para a IA: a simulação já calculada (com códigos C1, C2...), sem nome do cliente nem dados do gerente
 export function montarEntrada(ctx, R) {
   const p = ctx.perfil || {}, segPorId = Object.fromEntries((ctx.segs || []).map(s => [s.id, s]));
-  const salaTxt = (s) => (s.redes || []).map(r => `${r.rede} ${r.acessos === -1 ? 'ilimitado' : r.acessos ? r.acessos + ' por ano' : 'pago'}${R.aeroporto ? ` (${r.salas} em ${R.aeroporto})` : ''}`).join('; ');
+  const salaTxt = (s) => !s.redes.length ? 'sem rede de sala VIP' : s.redes.map(r => `${r.rede} ${r.acessos === -1 ? 'ilimitado' : r.acessos ? r.acessos + ' por ano' : 'pago'} (${r.por.map(x => `${x.salas} em ${x.aeroporto}${x.a_confirmar ? `, ${x.a_confirmar} a confirmar` : ''}`).join('; ')})`).join('; ');
+  const parte = (x) => x && ({ cartao: x.cartao, gasto_mes: Math.round(x.gasto_mes), limite: x.limite, limite_estimado: !!x.limite_estimado, milhas_ano: x.milhas, anuidade: x.anuidade, anuidade_isenta_pelo_gasto: !!x.isenta,
+    pontos_em_outro_programa: x.outro ? { programa: x.outro.programa, pontos: x.outro.pontos, valor: x.outro.valor } : null, salas_vip: salaTxt(x.sala), gasto_minimo_sala: (x.sala.gasto_minimo || []).map(g => ({ sala: g.sala, pede_por_mes: Math.round(g.pede_mes), cumpre: g.cumpre })) });
+  // os 20 primeiros pela ordem das prioridades, mais os degraus "agora" e "foco" da escada se ficarem de fora
+  const L = R.caminhos.slice(0, 20); [R.escada.agora, R.escada.foco, R.escada.a_confirmar].forEach(id => { const c = R.caminhos.find(x => x.id === id); if (c && !L.includes(c)) L.push(c); });
+  const cod = Object.fromEntries(L.map((c, i) => [c.id, 'C' + (i + 1)]));
   return {
     hoje: new Date().toLocaleDateString('sv-SE'),
-    perfil: { aeroporto_saida: p.aeroporto_saida, companhia_preferida: p.companhia_preferida, programa_preferido: p.programa_preferido, viagens_nacionais_ano: p.viagens_nacionais_ano,
-      viagens_internacionais_ano: p.viagens_internacionais_ano, pessoas_viagem: p.pessoas_viagem, quer_executiva: p.quer_executiva, gasto_cartao_mes: p.gasto_cartao_mes,
-      pix_credito_mes: p.pix_credito_mes, faixa_renda: p.faixa_renda, observacao_interna: p.observacao_interna || null },
+    perfil: { aeroporto_saida: p.aeroporto_saida, aeroportos_frequentes: p.aeroportos_frequentes || [], companhia_preferida: p.companhia_preferida, programa_preferido: p.programa_preferido,
+      viagens_nacionais_ano: p.viagens_nacionais_ano, viagens_internacionais_ano: p.viagens_internacionais_ano, pessoas_viagem: p.pessoas_viagem, pessoas_sala: p.pessoas_sala, pessoas_adicionais: p.pessoas_adicionais,
+      quer_executiva: p.quer_executiva, gasto_cartao_mes: p.gasto_cartao_mes, pix_credito_mes: p.pix_credito_mes, faixa_renda: p.faixa_renda, observacao_interna: p.observacao_interna || null,
+      prioridades_em_ordem: R.objetivos.map(o => o.nome) },
     bancos: (ctx.bancos || []).map(b => ({ banco: b.banco, segmento: (segPorId[b.segmento_id] || {}).segmento || b.segmento_txt || null, correntista_desde: b.correntista_desde,
       faixa_investimento: b.faixa_investimento, recebe_salario: b.recebe_salario, movimenta_pj: b.movimenta_pj, observacao_interna: b.observacao_interna || null })),
-    carteira: R.atual.cartoes.map(k => ({ cartao: k.cartao, fora_da_base: !!k.fora_da_base, gasto_mes: k.gasto ?? null, milhas_ano: k.milhas ?? null, anuidade: k.anuidade ?? null, valor: k.valor ?? null, saldo: k.saldo ?? null })),
-    carteira_total: { milhas_ano: R.atual.milhas, anuidade: R.atual.anuidade, valor: R.atual.valor, saldo: R.atual.saldo },
-    premissas: { programa: R.programa, gasto_mes_nacional: R.gasto_mes, bonus_transferencia_pct: R.bonus_transferencia, milheiro_referencia: R.milheiro, aeroporto: R.aeroporto, avisos: R.avisos },
-    caminhos: R.caminhos.slice(0, 20).map((c, i) => ({ codigo: 'C' + (i + 1), catalogo_id: c.id, cartao: c.cartao, ja_tem: c.ja_tem, da_para_pedir: c.pedir.r, motivo_pedir: c.pedir.motivo || null,
-      somente_convite: c.somente_convite, fora_dos_bancos_do_cliente: c.fora_dos_bancos, milhas_ano: c.milhas, anuidade: c.anuidade, anuidade_isenta_pelo_gasto: !!c.isenta,
-      valor: c.valor, saldo: c.saldo, salas_vip: salaTxt(c.sala) || 'sem rede de sala VIP', sala_ilimitada_no_aeroporto: !!c.sala.ilimitado,
-      gasto_minimo_sala: (c.sala.gasto_minimo || []).map(g => ({ sala: g.sala, pede_por_mes: Math.round(g.pede_mes), cumpre: g.cumpre })), degrau: c.degrau || null, notas: c.notas, fontes: [...new Set(c.fontes)] })),
+    carteira: R.atual.cartoes.map(k => ({ cartao: k.cartao, fora_da_base: !!k.fora_da_base, gasto_mes: k.gasto ?? null, limite: k.limite ?? null, milhas_ano: k.milhas ?? null,
+      pontos_em_outro_programa: k.outro ? { programa: k.outro.programa, pontos: k.outro.pontos } : null, valor_pontos: k.valor ?? null, beneficios_usados: (k.beneficios || []).map(b => ({ beneficio: b.descricao, valor_ano: b.valor })),
+      retorno: k.retorno ?? null, anuidade: k.anuidade ?? null, anuidade_cheia: k.cheia ?? null, economia_ano: k.economia ?? null, anuidade_maior_que_retorno: !!k.anuidade_maior_que_retorno,
+      situacao_anuidade: k.situacao || null, mes_renovacao: k.renovacao || null, negociacao: k.negociacao || null })),
+    carteira_total: { milhas_ano: R.atual.milhas, anuidade: R.atual.anuidade, valor_pontos: R.atual.valor, beneficios: R.atual.beneficios, saldo: R.atual.saldo, economia_ano: R.atual.economia },
+    previsto_e_realizado_12_meses: R.realizado, visitas_sala_vip_no_ano: R.visitas_sala_ano,
+    premissas: { programa: R.programa, gasto_mes_nacional: R.gasto_mes, bonus_transferencia_pct: R.bonus_transferencia, milheiro_referencia: R.milheiro, aeroportos: R.aeroportos, avisos: R.avisos },
+    falta_para_escolher_bem: R.falta,
+    escada: { agora: cod[R.escada.agora] || null, foco: cod[R.escada.foco] || null, melhor_mas_com_dados_a_confirmar: cod[R.escada.a_confirmar] || null, proximo_passo: R.escada.passos },
+    caminhos: L.map(c => ({ codigo: cod[c.id], cartao: c.principal.cartao + (c.apoio ? ' + ' + c.apoio.cartao : ''), principal: parte(c.principal), apoio: parte(c.apoio), gasto_sem_cartao_mes: Math.round(c.sem_cartao),
+      ja_tem: c.ja_tem, da_para_pedir: c.pedir.r, motivo_pedir: c.pedir.motivo || null, somente_convite: c.somente_convite, fora_dos_bancos_do_cliente: c.fora_dos_bancos, dados_a_confirmar: c.dados_a_confirmar,
+      milhas_ano: c.milhas, anuidade: c.anuidade, anuidade_isenta_pelo_gasto: c.anuidade === 0 && !!c.principal.isenta, valor: c.valor, saldo: c.saldo,
+      salas_vip: salaTxt(c.sala), sala_ilimitada_com_gasto_minimo_cumprido: !!(c.sala.ilimitado && c.sala.cumpre), adicionais_com_acesso_proprio: c.sala.adicionais, convidados_por_ano: c.sala.convidados,
+      nota_pelas_prioridades: c.nota ?? null, avisos: c.avisos, degrau: c.degrau || null, notas: c.notas, fontes: c.fontes })),
     regras: (ctx.simDados.regras || []).filter(r => r.ativa !== false).map(r => ({ titulo: r.titulo, regra: r.regra, tipo: r.tipo, status: r.status, aplica_tipo: r.aplica_tipo, aplica_a: r.aplica_a, valor: r.valor })),
     diagnostico: ctx.diag && Object.values(ctx.diag).some(Boolean) ? ctx.diag : null,
   };
@@ -79,8 +92,10 @@ function corpo(e, esc) {
   const s = e.saida || {}, E = e.entrada || {}, cam = Object.fromEntries((E.caminhos || []).map(c => [c.codigo, c]));
   // se a IA citar um código de caminho no texto, mostra o nome do cartão
   const esc0 = esc; esc = (t) => esc0(String(t ?? '').replace(/\bC(\d{1,2})\b/g, (m) => cam[m] ? cam[m].cartao : m));
+  const parteTxt = (x, rot) => x ? `<div style="font-size:13px;color:var(--tinta-2)">${rot}: ${esc(x.cartao)} com ${brl(x.gasto_mes)}/mês${x.limite !== null && x.limite !== undefined ? ` (limite ${brl(x.limite)}${x.limite_estimado ? ', estimado' : ''})` : ''}</div>` : '';
   const nums = (c) => !c ? '' : `<div style="font-size:14px;margin-top:2px">${(c.milhas_ano || 0).toLocaleString('pt-BR')} milhas/ano · anuidade ${c.anuidade === 0 ? (c.anuidade_isenta_pelo_gasto ? 'isenta pelo gasto' : 'grátis') : brl(c.anuidade)} · vale ${brl(c.valor)} · <b style="font-weight:600">saldo ${brl(c.saldo)}</b></div>
-    <div style="font-size:13px;color:var(--tinta-3)">${esc(c.salas_vip)}</div>`;
+    ${c.principal ? parteTxt(c.principal, 'Principal') + parteTxt(c.apoio, 'Apoio') : ''}${c.gasto_sem_cartao_mes ? `<div style="font-size:13px;color:var(--alerta)">Sem cartão: ${brl(c.gasto_sem_cartao_mes)}/mês</div>` : ''}
+    <div style="font-size:13px;color:var(--tinta-3)">${esc(c.salas_vip)}</div>${(c.avisos || []).length ? `<div style="font-size:13px;color:var(--alerta);line-height:1.5">${c.avisos.map(esc).join('<br>')}</div>` : ''}`;
   const fontes = (f) => f && f.length ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:2px">Fontes: ${esc(f.join(', '))}</div>` : '';
   const lista = (t, L) => L && L.length ? `<div style="margin-top:12px"><b style="font-weight:600">${t}</b><ul style="margin:4px 0 0 18px;padding:0;font-size:16px;line-height:1.5">${L.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const rec = cam[(s.recomendado || {}).caminho];

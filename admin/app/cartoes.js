@@ -1,8 +1,8 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
-import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=3';
-import { simular } from '/admin/app/cartoes-simulacao.js?v=1';
-import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=1';
+import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
+import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=2';
+import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=2';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -587,6 +587,8 @@ function ligarLista(box, c, X, onPrimeiro, C, cot, refs) {
 
 // filtro dos quadros da seção Cartões (fica ao salvar ou editar um cartão do mesmo cliente)
 const FILTRO_CX = { cliente: null, modo: null, anu: 'real' };
+const SIT_ANU = [['', 'Não informada'], ['cobrando', 'Cobrando'], ['isenta_gasto', 'Isenta pelo gasto'], ['isenta_negociada', 'Isenta negociada'], ['desconto_negociado', 'Desconto negociado']];
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 export async function secaoCliente(box, c, X, onPrimeiro) {
   const { sb, esc, aviso, campo, brl, num, D, CART } = X;
   box.innerHTML = '<div class="vazio">Carregando...</div>';
@@ -600,6 +602,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   K.forEach(({ x, cat, k }) => { const t = textosPainel(x, cat, k); if (t.anuidade !== (x.anuidade ?? null) || t.pontuacao !== (x.pontuacao ?? null)) sb.from('cartoes').update(t).eq('id', x.id).then(({ error }) => { if (!error) Object.assign(x, t); }); });
   const soma = (f) => K.reduce((s, o) => s + (f(o) || 0), 0);
   const tot = { limite: soma(o => n(o.x.limite)), custo: soma(o => o.k.custo), valor: soma(o => o.k.valor), pontos: soma(o => o.k.pontos), semAnu: K.filter(o => o.k.custo === null).length,
+    economia: soma(o => o.cat && n(o.cat.anuidade_anual) > 0 && o.k.custo !== null ? Math.max(0, n(o.cat.anuidade_anual) - o.k.custo) : 0),
     vip: soma(o => o.cat && !o.cat.salas_vip_ilimitado ? n(o.cat.salas_vip_ano) : 0), vipIlim: K.filter(o => o.cat && o.cat.salas_vip_ilimitado).map(o => nomeBase(o.cat)) };
   const data = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') : '';
   const linha = ({ x, cat, k }) => {
@@ -611,13 +614,14 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
     return `<div class="lin" style="align-items:flex-start"><span><b style="font-weight:600">${esc(cat ? nomeBase(cat) : [x.banco, x.categoria].filter(Boolean).join(' '))}</b>${!cat ? ' <small style="color:var(--alerta)">(fora da base)</small>' : ''}
         <small style="display:block;color:var(--tinta-3);font-size:12px">${esc(det)}</small>
         ${x.disponivel !== null && x.disponivel !== undefined ? `<small style="display:block;color:var(--tinta-3);font-size:12px">disponível ${brl(x.disponivel)}, informado pelo cliente em ${data(x.disponivel_em)}</small>` : ''}
+        ${x.anuidade_situacao || (cat && n(cat.anuidade_anual) > 0 && k.custo !== null && n(cat.anuidade_anual) > k.custo) ? `<small style="display:block;color:var(--tinta-3);font-size:13px">${esc([(SIT_ANU.find(s => s[0] === x.anuidade_situacao) || [])[1], cat && n(cat.anuidade_anual) > 0 && k.custo !== null && n(cat.anuidade_anual) > k.custo ? `economia de ${brl(n(cat.anuidade_anual) - k.custo)} no ano sobre a anuidade cheia` : '', x.anuidade_mes_renovacao ? 'renova em ' + MESES[x.anuidade_mes_renovacao - 1].toLowerCase() : ''].filter(Boolean).join(' · '))}</small>` : ''}
         ${x.dia_vencimento ? `<small style="display:block;color:var(--tinta-3);font-size:13px">fatura vence todo dia ${x.dia_vencimento}, informado pelo cliente em ${data(x.vencimento_em)}</small>` : ''}
         ${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span>
       <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br>${!cat ? `<button class="mini" data-cb="${x.id}">cadastrar na base</button>` : ''}<button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>${!cat ? `<div data-cbf="${x.id}" hidden></div>` : ''}`;
   };
   box.innerHTML = (C.length ? `<div class="numeros" style="margin:0 0 6px">
         <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${C.length === 1 ? '1 cartão' : num(C.length) + ' cartões'}</div></div>
-        <div class="num" data-fx="anu" role="button" tabindex="0" style="cursor:pointer"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}</div></div>
+        <div class="num" data-fx="anu" role="button" tabindex="0" style="cursor:pointer"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}${tot.economia ? ` · economia de ${brl(tot.economia)} no ano` : ''}</div></div>
         <div class="num"><div class="l">Valor dos pontos no ano</div><div class="v">${brl(tot.valor)}</div><div class="d">${num(Math.round(tot.pontos))} pts pelo gasto informado</div></div>
         <div class="num" data-fx="vip" role="button" tabindex="0" style="cursor:pointer"><div class="l">Sala VIP</div><div class="v">${tot.vipIlim.length ? 'Ilimitada' : num(tot.vip) + ' acessos'}</div><div class="d">${tot.vipIlim.length ? esc(tot.vipIlim.join(', ')) : 'por ano, somando os cartões; nenhum ilimitado'}</div></div>
       </div>${K.some(o => !o.cat) ? `<div class="sub" style="color:var(--alerta);margin:4px 0">${K.filter(o => !o.cat).length === 1 ? '1 cartão fora da base' : K.filter(o => !o.cat).length + ' cartões fora da base'}: confira a anuidade no site do banco e toque em "cadastrar na base" para entrar nas contas.</div>` : ''}<div id="cxFiltro"></div><div id="cxLinhas">${K.map((o, i) => `<div data-lin="${i}">${linha(o)}<small data-anu hidden style="display:block;font-size:13px;color:var(--tinta-2);margin:-4px 0 8px"></small></div>`).join('')}</div>` : '<div class="vazio">Nenhum cartão lançado. Eles chegam pelo checklist pré-onboard.</div>')
@@ -635,7 +639,9 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       <label class="fl"><span>Cartão</span><select name="cx_base">${ops.map(([k, l]) => `<option value="${esc(k)}"${k === atual ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <div id="cxOutro" ${atual === 'outro' ? '' : 'hidden'}><div class="duas-col">${campo('cx_banco', 'Banco', x ? x.banco : '', 'text', 'placeholder="Ex.: Sicoob"')}${campo('cx_cartao', 'Cartão', x ? x.categoria : '', 'text', 'placeholder="Ex.: Sicoobcard Gold"')}</div></div>
       <div class="duas-col">${campo('cx_limite', 'Limite (R$)', x ? x.limite : '', 'number', 'placeholder="em branco se a confirmar"')}<span></span></div>
-      <div class="duas-col">${campo('cx_gasto', 'Gasto médio por mês (R$)', x ? x.gasto_medio_mes : '', 'number')}${campo('cx_paga', 'Anuidade que paga hoje (R$/ano)', x ? x.anuidade_paga : '', 'number', 'placeholder="só se negociou"')}</div>
+      <div class="duas-col">${campo('cx_gasto', 'Gasto médio por mês (R$)', x ? x.gasto_medio_mes : '', 'number')}<label class="fl"><span>Situação da anuidade</span><select name="cx_sit">${SIT_ANU.map(([k, l]) => `<option value="${k}"${((x && x.anuidade_situacao) || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="duas-col">${campo('cx_paga', 'Valor que paga de anuidade (R$)', x && n(x.anuidade_paga) !== null ? (x.anuidade_cobranca === 'mensal' ? Math.round(x.anuidade_paga / 12 * 100) / 100 : x.anuidade_paga) : '', 'number', 'placeholder="em branco: a regra da base"')}<label class="fl"><span>Cobrança</span><select name="cx_cob">${[['', 'Não informada'], ['mensal', 'Por mês'], ['anual', 'Por ano']].map(([k, l]) => `<option value="${k}"${((x && x.anuidade_cobranca) || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="duas-col"><label class="fl"><span>Mês da renovação</span><select name="cx_ren"><option value="">Não informado</option>${MESES.map((m, i) => `<option value="${i + 1}"${x && n(x.anuidade_mes_renovacao) === i + 1 ? ' selected' : ''}>${m}</option>`).join('')}</select></label>${campo('cx_neg', 'Negociação (com quem falou, o que ofereceram)', x ? x.anuidade_negociacao || '' : '')}</div>
       ${campo('cx_obs', 'Observação (opcional)', x ? x.observacao_interna : '', 'text', 'placeholder="Ex.: titular, adicional da esposa"')}
       <div class="sub">A Maktub não guarda número nem final do cartão, nem senha. O cliente vê no painel o cartão, o limite e a anuidade.</div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="button" id="cxSalvar" style="flex:2">${x ? 'Salvar alterações' : 'Salvar cartão'}</button>${x ? '<button class="sec" type="button" id="cxCanc" style="flex:1">Cancelar</button>' : ''}</div>`;
@@ -648,10 +654,14 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       if (!id) { aviso('Escolha o cartão na base ou "Outro, fora da base".'); return; }
       if (id === 'outro' && !t('cx_banco')) { aviso('Informe o banco.'); return; }
       if (/\d{12,}/.test((t('cx_cartao') + t('cx_obs')).replace(/\s/g, ''))) { aviso('Parece um número de cartão. Não guarde o número aqui.'); return; }
-      const lim = num2('cx_limite'), gasto = num2('cx_gasto'), paga = num2('cx_paga');
+      const lim = num2('cx_limite'), gasto = num2('cx_gasto'), sit = t('cx_sit') || null, cob = t('cx_cob') || null;
+      let paga = num2('cx_paga');
       if ([lim, gasto, paga].some(v => v !== null && !(v >= 0))) { aviso('Confira os valores.'); return; }
+      if (paga !== null && cob === 'mensal') paga = Math.round(paga * 12 * 100) / 100;
+      if (paga === null && (sit === 'isenta_negociada' || sit === 'isenta_gasto')) paga = 0;
       const row = { catalogo_id: cat ? cat.id : null, banco: cat ? cat.banco : t('cx_banco'), categoria: cat ? cat.nome : (t('cx_cartao') || null), limite: lim, final_cartao: null,
-        gasto_medio_mes: gasto, anuidade_paga: paga, observacao_interna: t('cx_obs') || null };
+        gasto_medio_mes: gasto, anuidade_paga: paga, observacao_interna: t('cx_obs') || null,
+        anuidade_situacao: sit, anuidade_cobranca: cob, anuidade_mes_renovacao: t('cx_ren') ? Number(t('cx_ren')) : null, anuidade_negociacao: t('cx_neg') || null };
       Object.assign(row, textosPainel(row, cat, calc(row, cat, cot, refs, CART.normProg)));
       const r2 = ED_C.id ? await sb.from('cartoes').update(row).eq('id', ED_C.id) : await sb.from('cartoes').insert({ ...row, cliente_id: c.id, ordem: C.length + 1 });
       if (r2.error) { aviso(/catalogo_id|anuidade_paga/.test(r2.error.message) ? X.tec('Rode no Supabase o SQL da base de cartões.') : 'Não salvou: ' + r2.error.message); return; }
@@ -764,10 +774,11 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   el.innerHTML = '<div id="cxFalta"></div><div id="cxSim"></div><div id="cxEstudo"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>'
+    + '<div class="secao">Benefícios que o cliente usa</div><section class="bloco" style="margin-top:0" id="cxBen"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Uso de salas VIP</div><section class="bloco" style="margin-top:0" id="cxUso"><div class="vazio">Carregando...</div></section>';
   secaoCliente(el.querySelector('#gtCartBox'), c, X, onPrimeiro);
   const [p, bs, sg, ct] = await Promise.all([sb.from('cliente_perfil').select('*').eq('cliente_id', c.id).maybeSingle(), sb.from('cliente_bancos').select('*').eq('cliente_id', c.id).order('criado_em'),
-    sb.from('bancos_segmentos').select('*').order('banco').order('posicao_regua'), sb.from('cartoes').select('id,catalogo_id,gasto_medio_mes,banco,categoria').eq('cliente_id', c.id)]);
+    sb.from('bancos_segmentos').select('*').order('banco').order('posicao_regua'), sb.from('cartoes').select('*').eq('cliente_id', c.id).order('ordem')]);
   try { await carregarBase(sb); } catch (_) { BASE = BASE || []; }
   if (!el.isConnected) return;
   if (p.error || bs.error) { el.querySelector('#cxBancos').innerHTML = X.tec('<div class="config">Rode no Supabase o 64-ia-cartoes-dados-cliente.sql para ativar os bancos e o perfil do cliente.</div>'); el.querySelector('#cxPerfil').innerHTML = ''; return; }
@@ -775,39 +786,101 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   CB_ED = null;
   desenharFalta(ctx); desenharBancos(ctx); desenharPerfil(ctx);
   usoSalas(ctx);
+  beneficiosUsados(ctx);
   desenharSimulacao(ctx);
 }
-// simulação de caminhos (Etapa 5): só fórmulas, a partir da base, das regras da casa e do milheiro
+// benefícios que o cliente usa, cartão a cartão: entram no retorno do cartão (e na regra de negociar antes de cancelar)
+async function beneficiosUsados(ctx) {
+  const { X, c } = ctx, { sb, esc } = X, box = ctx.el.querySelector('#cxBen');
+  const meus = ctx.cartoes.filter(k => k.catalogo_id), cats = [...new Set(meus.map(k => k.catalogo_id))];
+  const [bb, bu] = await Promise.all([cats.length ? sb.from('cartoes_beneficios').select('id,catalogo_id,categoria,beneficio,condicao').in('catalogo_id', cats) : Promise.resolve({ data: [] }),
+    sb.from('cliente_beneficios_uso').select('*').eq('cliente_id', c.id)]);
+  if (!box.isConnected) return;
+  if (bu.error) { box.innerHTML = X.tec('<div class="config">Rode no Supabase o 70-ajuste-simulacao-cartoes.sql para marcar os benefícios usados.</div>'); return; }
+  const U = bu.data || [], B = bb.data || [];
+  const nomeK = (k) => { const b = (BASE || []).find(x => x.id === k.catalogo_id); return b ? nomeBase(b) : [k.banco, k.categoria].filter(Boolean).join(' '); };
+  const valor = (u) => u && n(u.valor_ano) !== null ? u.valor_ano : '';
+  box.innerHTML = meus.length ? `<div class="sub" style="margin-top:0;font-size:13px">Marque o que o cliente usa de verdade. Sala VIP vale pelas visitas lançadas e seguro viagem pelas viagens internacionais do perfil, pelos valores de referência das Regras. Nos outros, informe o valor por ano.</div>
+    ${meus.map(k => { const L = B.filter(b => b.catalogo_id === k.catalogo_id), usados = U.filter(u => u.cartao_id === k.id && u.usa !== false).length;
+      return `<details style="border-top:1px solid var(--linha);padding:8px 0"><summary style="cursor:pointer"><b style="font-weight:600">${esc(nomeK(k))}</b> <span style="font-size:13px;color:var(--tinta-3)">${usados ? usados + (usados === 1 ? ' benefício usado' : ' benefícios usados') : 'nenhum marcado'} · ${L.length} na base</span></summary>
+        ${L.length ? L.map(b => { const u = U.find(x => x.cartao_id === k.id && x.beneficio_id === b.id), on = u && u.usa !== false;
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px dashed var(--linha)"><label class="fc" style="flex:1;margin:0"><input type="checkbox" data-bu="${k.id}|${b.id}" ${on ? 'checked' : ''}><span style="font-size:14px">${esc(b.beneficio)}<small style="display:block;font-size:13px;color:var(--tinta-3)">${esc([b.categoria, b.condicao].filter(Boolean).join(' · '))}</small></span></label>
+            <input type="number" inputmode="decimal" step="any" data-buv="${k.id}|${b.id}" value="${esc(valor(u))}" placeholder="R$/ano" aria-label="Valor por ano" style="width:110px;font-size:16px" ${on ? '' : 'hidden'}></div>`; }).join('')
+        : '<div class="vazio" style="font-size:14px">A base não tem benefícios deste cartão.</div>'}</details>`; }).join('')}`
+    : '<div class="vazio">Lance os cartões do cliente para marcar os benefícios que ele usa.</div>';
+  const achar = (kid, bid) => U.find(x => x.cartao_id === kid && x.beneficio_id === bid);
+  const salvar = async (kid, bid, campos) => {
+    const u = achar(kid, bid), b = B.find(x => x.id === bid);
+    const r = u ? await sb.from('cliente_beneficios_uso').update({ ...campos, atualizado_em: new Date().toISOString() }).eq('id', u.id).select().single()
+      : await sb.from('cliente_beneficios_uso').insert({ cliente_id: c.id, cartao_id: kid, beneficio_id: bid, categoria: b.categoria, descricao: b.beneficio, criado_por: X.D.meuId || null, ...campos }).select().single();
+    if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return false; }
+    if (u) Object.assign(u, r.data); else U.push(r.data);
+    ctx.simDados = null; desenharSimulacao(ctx); return true;
+  };
+  box.querySelectorAll('[data-bu]').forEach(cb => cb.onchange = async () => {
+    const [kid, bid] = cb.dataset.bu.split('|'), v = box.querySelector(`[data-buv="${cb.dataset.bu}"]`);
+    if (!(await salvar(kid, bid, { usa: cb.checked }))) { cb.checked = !cb.checked; return; }
+    v.hidden = !cb.checked;
+  });
+  box.querySelectorAll('[data-buv]').forEach(inp => inp.onchange = async () => {
+    const [kid, bid] = inp.dataset.buv.split('|'), t = inp.value.trim(), v = t === '' ? null : Number(t.replace(',', '.'));
+    if (v !== null && !(v >= 0)) { X.aviso('Confira o valor.'); return; }
+    if (await salvar(kid, bid, { valor_ano: v })) X.aviso('Valor salvo.');
+  });
+}
+// simulação de caminhos: só fórmulas, a partir da base, das regras da casa e do milheiro
 async function desenharSimulacao(ctx) {
   const { X } = ctx, { sb, esc, num } = X, box = ctx.el.querySelector('#cxSim');
   if (!box) return;
   if (faltaEstudo(ctx).length) { box.innerHTML = ''; desenharEstudo(ctx, null); return; }
   box.innerHTML = '<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0"><div class="vazio">Calculando...</div></section>';
-  const aero = (ctx.perfil || {}).aeroporto_saida;
-  if (!ctx.simDados) {
-    const [sv, sa, rg, refs] = await Promise.all([sb.from('cartoes_salas_vip').select('catalogo_id,rede_ou_sala,tipo,acessos_titular_ano,gasto_minimo_rs,gasto_minimo_faturas'),
-      aero ? sb.from('salas_aeroportos').select('*').eq('aeroporto_iata', aero) : Promise.resolve({ data: [] }), sb.from('regras_estrategia').select('*').eq('ativa', true), X.CART.valoresRef()]);
-    ctx.simDados = { salas: sv.data || [], salasAero: sa.data || [], regras: rg.data || [], refs, aero };
+  const p = ctx.perfil || {}, aeros = [...new Set([p.aeroporto_saida, ...(p.aeroportos_frequentes || [])].filter(Boolean))], chaveA = aeros.join(',');
+  if (!ctx.simDados || ctx.simDados.aero !== chaveA) {
+    const desde = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10), ano = new Date().getFullYear() + '-01-01';
+    const [sv, sa, rg, refs, bu, us, ex] = await Promise.all([sb.from('cartoes_salas_vip').select('catalogo_id,rede_ou_sala,tipo,acessos_titular_ano,gasto_minimo_rs,gasto_minimo_faturas'),
+      aeros.length ? sb.from('salas_aeroportos').select('*').in('aeroporto_iata', aeros) : Promise.resolve({ data: [] }), sb.from('regras_estrategia').select('*').eq('ativa', true), X.CART.valoresRef(),
+      sb.from('cliente_beneficios_uso').select('*').eq('cliente_id', ctx.c.id), sb.from('cliente_salas_uso').select('cartao_id,pessoas,data').eq('cliente_id', ctx.c.id).gte('data', ano),
+      sb.from('extrato_milhas').select('data,programa,tipo,quantidade').eq('cliente_id', ctx.c.id).gte('data', desde)]);
+    ctx.simDados = { salas: sv.data || [], salasAero: sa.data || [], regras: rg.data || [], refs, aero: chaveA, beneficiosUso: bu.error ? [] : (bu.data || []), usoSalas: us.data || [], extrato: ex.data || [] };
   }
-  if (ctx.simDados.aero !== aero) { ctx.simDados = null; return desenharSimulacao(ctx); }
   if (!box.isConnected) return;
-  const R = simular({ perfil: ctx.perfil, cartoesCli: ctx.cartoes, base: BASE || [], salas: ctx.simDados.salas, salasAero: ctx.simDados.salasAero, bancosCli: ctx.bancos, segmentos: ctx.segs,
-    regras: ctx.simDados.regras, refs: ctx.simDados.refs, cotacao: X.D.cfg && n(X.D.cfg.cotacao_dolar), calc, normProg: X.CART.normProg });
+  const D2 = ctx.simDados;
+  const R = simular({ perfil: p, cartoesCli: ctx.cartoes, base: BASE || [], salas: D2.salas, salasAero: D2.salasAero, bancosCli: ctx.bancos, segmentos: ctx.segs,
+    regras: D2.regras, refs: D2.refs, cotacao: X.D.cfg && n(X.D.cfg.cotacao_dolar), calc, normProg: X.CART.normProg, beneficiosUso: D2.beneficiosUso, usoSalas: D2.usoSalas, extrato: D2.extrato });
+  ctx.simR = R;
   const brl = (v) => v === null || v === undefined ? 'não calculado' : (v < 0 ? '−' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
-  const tagPedir = (p) => p.r === 'já tem' ? '<span class="tag ok">já tem</span>' : p.r === 'sim' ? '<span class="tag ok">dá para pedir</span>' : p.r === 'não' ? '<span class="tag alerta">ainda não dá</span>' : '<span class="tag ouro">depende do banco</span>';
-  const salaTxt = (s) => !s.redes.length ? 'sem rede de sala VIP' : s.redes.map(r => `${r.rede} ${r.acessos === -1 ? 'ilimitado' : r.acessos ? r.acessos + '/ano' : 'pago'}${R.aeroporto ? ` (${r.salas} ${r.salas === 1 ? 'sala' : 'salas'} em ${R.aeroporto})` : ''}`).join(' · ');
+  const tagPedir = (pd) => pd.r === 'já tem' ? '<span class="tag ok">já tem</span>' : pd.r === 'sim' ? '<span class="tag ok">dá para pedir</span>' : pd.r === 'não' ? '<span class="tag alerta">ainda não dá</span>' : '<span class="tag ouro">depende do banco</span>';
+  const anuTxt = (c) => c.anuidade === 0 ? (c.isenta ? 'isenta pelo gasto' : 'grátis') : brl(c.anuidade);
+  const salaTxt = (s) => !s.redes.length ? 'sem rede de sala VIP' : s.redes.map(r => `${r.rede} ${r.acessos === -1 ? 'ilimitado' : r.acessos ? r.acessos + '/ano' : 'pago'} (${r.por.map(x => `${x.salas} em ${x.aeroporto}`).join(', ')})`).join(' · ')
+    + (s.ilimitado && (s.adicionais || s.convidados) ? ` · ${[s.adicionais ? `${s.adicionais} ${s.adicionais === 1 ? 'adicional' : 'adicionais'} com acesso próprio` : '', s.convidados ? `${s.convidados} convidados por ano` : ''].filter(Boolean).join(', ')}` : '');
+  const parte = (x, rot) => `<div style="font-size:14px;margin-top:4px"><span style="color:var(--tinta-3)">${rot}:</span> <b style="font-weight:600">${esc(x.cartao)}</b> com ${brl(x.gasto_mes)}/mês${x.limite !== null ? ` (limite ${brl(x.limite)}${x.limite_estimado ? ', estimado' : ''})` : ''} · ${num(x.milhas)} milhas · anuidade ${anuTxt(x)}${x.outro ? ` · ${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : ''}</div>`;
   const linha = (c) => `<details style="border-top:1px solid var(--linha);padding:10px 0"><summary style="cursor:pointer;list-style:none">
-      <b style="font-weight:600">${esc(c.cartao)}</b> ${tagPedir(c.pedir)}${c.somente_convite ? ' <span class="tag">convite</span>' : ''}${c.fora_dos_bancos ? ' <span class="tag">fora dos bancos do cliente</span>' : ''}
-      <div style="font-size:14px;margin-top:4px">${num(c.milhas)} milhas/ano · anuidade ${c.anuidade === 0 ? (c.isenta ? 'isenta pelo gasto' : 'grátis') : brl(c.anuidade)} · vale ${brl(c.valor)} · <b style="font-weight:600;color:${(c.saldo ?? 0) >= 0 ? 'var(--verde)' : 'var(--alerta)'}">saldo ${brl(c.saldo)}</b></div>
-      <div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc(salaTxt(c.sala))}${c.sala.gasto_minimo.length ? ' · ' + esc(c.sala.gasto_minimo.map(g => `${g.sala}: pede ${brl(g.pede_mes)}/mês, ${g.cumpre ? 'cumpre' : 'não cumpre'}`).join('; ')) : ''}</div></summary>
-      <div style="font-size:13px;color:var(--tinta-2);margin-top:6px;line-height:1.5">${[c.pedir.motivo ? 'Para pedir: ' + c.pedir.motivo : '', c.degrau ? 'Degrau: ' + c.degrau : '', ...c.notas].filter(Boolean).map(esc).join('<br>')}<br><span style="color:var(--tinta-3)">Fontes: ${esc([...new Set(c.fontes)].join(', '))}</span></div></details>`;
+      <b style="font-weight:600">${esc(c.principal.cartao)}</b>${c.apoio ? ` <span style="color:var(--tinta-3)">+ ${esc(c.apoio.cartao)}</span>` : ''} ${tagPedir(c.pedir)}${c.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}${c.somente_convite ? ' <span class="tag">convite</span>' : ''}${c.fora_dos_bancos ? ' <span class="tag">fora dos bancos do cliente</span>' : ''}${c.nota !== undefined ? ` <span class="tag">nota ${c.nota}</span>` : ''}
+      <div style="font-size:14px;margin-top:4px">${num(c.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(c.anuidade)} · vale ${brl(c.valor)} · <b style="font-weight:600;color:${(c.saldo ?? 0) >= 0 ? 'var(--verde)' : 'var(--alerta)'}">saldo ${brl(c.saldo)}</b></div>
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:2px">${esc(salaTxt(c.sala))}</div>
+      ${c.avisos.length ? `<div style="font-size:13px;color:var(--alerta);margin-top:2px">${c.avisos.length === 1 ? '1 aviso' : c.avisos.length + ' avisos'}</div>` : ''}</summary>
+      ${parte(c.principal, 'Principal')}${c.apoio ? parte(c.apoio, 'Apoio') : ''}${c.sem_cartao ? `<div style="font-size:14px;color:var(--alerta);margin-top:4px">Sem cartão: ${brl(c.sem_cartao)}/mês</div>` : ''}
+      ${c.avisos.length ? `<div style="font-size:13px;color:var(--alerta);margin-top:6px;line-height:1.5">${c.avisos.map(esc).join('<br>')}</div>` : ''}
+      <div style="font-size:13px;color:var(--tinta-2);margin-top:6px;line-height:1.5">${[c.pedir.motivo ? 'Para pedir: ' + c.pedir.motivo : '', c.degrau ? 'Degrau: ' + c.degrau : '', ...c.notas,
+        c.notas_objetivos ? 'Notas por prioridade: ' + R.objetivos.map(o => `${o.nome.toLowerCase()} ${Math.round(c.notas_objetivos[o.chave] * 100)}`).join(', ') : ''].filter(Boolean).map(esc).join('<br>')}<br><span style="color:var(--tinta-3)">Fontes: ${esc(c.fontes.join(', '))}</span></div></details>`;
+  const porId = Object.fromEntries(R.caminhos.map(c => [c.id, c]));
+  const degrauBox = (rot, c) => c ? `<div style="margin-top:6px"><span class="tag ${rot === 'Foco' ? 'ok' : 'ouro'}">${rot}</span> <b style="font-weight:600">${esc(c.principal.cartao)}</b>${c.apoio ? ` + ${esc(c.apoio.cartao)}` : ''}
+      <div style="font-size:14px">${num(c.milhas)} milhas/ano · anuidades ${brl(c.anuidade)} · saldo ${brl(c.saldo)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div></div>` : '';
+  const ag = porId[R.escada.agora], fo = porId[R.escada.foco];
+  const hojeL = R.atual.cartoes.filter(x => !x.fora_da_base);
   const top = R.caminhos.slice(0, 12), resto = R.caminhos.slice(12);
   box.innerHTML = `<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0">
-    <div class="sub" style="margin-top:0;font-size:13px">Concentrando ${brl(R.gasto_mes)} por mês (gasto nacional) em cada cartão, com as milhas contadas em ${esc(R.programa || 'programa não informado')}${R.bonus_transferencia ? ` e bônus de transferência de ${num(R.bonus_transferencia)}%` : ''}${R.milheiro !== null ? `, milheiro de R$ ${String(R.milheiro).replace('.', ',')}` : ''}. Contas por fórmula, sem IA. Só a equipe vê.</div>
+    <div class="sub" style="margin-top:0;font-size:13px">Gasto nacional de ${brl(R.gasto_mes)} por mês, com o cartão principal até o limite e o resto no melhor cartão de apoio que o cliente já tem. Milhas contadas em ${esc(R.programa || 'programa não informado')}${R.bonus_transferencia ? ` com bônus de transferência de ${num(R.bonus_transferencia)}%` : ''}${R.milheiro !== null ? `, milheiro de R$ ${String(R.milheiro).replace('.', ',')}` : ''}. Aeroportos: ${esc(R.aeroportos.join(', ') || 'não informado')}. ${R.objetivos.length ? 'Ordem pelas prioridades: ' + esc(R.objetivos.map((o, i) => `${i + 1}. ${o.nome}`).join(', ')) + '.' : 'Sem prioridades: ordem pelo saldo.'} Contas por fórmula, sem IA. Só a equipe vê.</div>
     ${R.avisos.map(a => `<div class="sub" style="color:var(--alerta);font-size:13px">${esc(a)}</div>`).join('')}
+    ${R.falta.length ? `<div class="config" style="margin-top:10px;font-size:14px"><b>Para escolher bem, falta:</b><br>${R.falta.map(f => '· ' + esc(f)).join('<br>')}<div style="font-size:13px;margin-top:4px">Dá para gerar o estudo assim mesmo: o que falta vira pergunta ao cliente.</div></div>` : ''}
+    ${fo ? `<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--dourado)"><b style="font-weight:600">Escada por prazo</b>
+      ${ag && ag.id !== fo.id ? degrauBox('Agora', ag) : ''}${R.escada.passos.length ? `<div style="margin-top:6px"><span class="tag">Próximo passo</span><div style="font-size:14px;line-height:1.5">${R.escada.passos.map(esc).join('<br>')}</div></div>` : ''}${degrauBox(ag && ag.id === fo.id ? 'Agora e foco' : 'Foco', fo)}
+      ${porId[R.escada.a_confirmar] ? `<div style="margin-top:8px;font-size:13px;color:var(--alerta)">Pelas prioridades, o melhor seria <b style="font-weight:600">${esc(porId[R.escada.a_confirmar].principal.cartao)}</b>, mas ele tem dados a confirmar na base e não pode ser o recomendado. Confira o cartão em Base de cartões e desmarque "a confirmar" para ele entrar no foco.</div>` : ''}</div>` : ''}
     <div style="margin-top:10px;padding:10px 12px;background:var(--creme-2)"><b style="font-weight:600">Hoje, como está</b>
-      <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · vale ${brl(R.atual.valor)} · saldo ${brl(R.atual.saldo)}</div>
-      <div style="font-size:13px;color:var(--tinta-3)">Com o gasto médio lançado em cada cartão.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
+      <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · pontos valem ${brl(R.atual.valor)}${R.atual.beneficios ? ` · benefícios usados ${brl(R.atual.beneficios)}` : ''} · saldo ${brl(R.atual.saldo)}${R.atual.economia ? ` · economia de anuidade no ano ${brl(R.atual.economia)}` : ''}</div>
+      ${hojeL.map(x => `<div style="font-size:13px;margin-top:4px;color:var(--tinta-2)"><b style="font-weight:600">${esc(x.cartao)}</b>: gasto ${brl(x.gasto)}/mês · ${x.outro ? `${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : num(x.milhas) + ' milhas'} · retorno ${brl(x.retorno)}${x.valor_beneficios ? ` (com ${brl(x.valor_beneficios)} de benefícios)` : ''} · anuidade ${brl(x.anuidade)}${x.economia ? ` · economia ${brl(x.economia)}` : ''}${x.anuidade_maior_que_retorno ? ' · <span style="color:var(--alerta)">anuidade maior que o retorno: negociar</span>' : ''}</div>`).join('')}
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Com o gasto médio lançado em cada cartão.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
+    ${R.realizado.length ? `<div style="margin-top:10px;font-size:13px"><b style="font-weight:600">Previsto e realizado nos últimos 12 meses</b>${R.realizado.map(r => `<div>${esc(r.programa)}: previsto ${r.previsto !== null ? num(r.previsto) : '·'} pts, entrou ${r.realizado !== null ? num(r.realizado) : '·'} pts</div>`).join('')}<div style="color:var(--tinta-3)">Entrou: acúmulo, clube e bônus lançados no extrato. Visitas a sala VIP no ano: ${num(R.visitas_sala_ano)}.</div></div>` : ''}
     ${top.map(linha).join('')}
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
     <div class="sub" style="font-size:13px;margin-top:8px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. "Dá para pedir" é só uma indicação pelas faixas do perfil: a aprovação de cartão, limite e upgrade depende do banco.</div></section>`;
@@ -938,6 +1011,10 @@ function desenharPerfil(ctx) {
       ${campo('pf_prog', 'Programa de pontos preferido', p.programa_preferido || '', 'text', 'placeholder="Livelo, Esfera, Smiles, LATAM Pass..."')}${dica(diag.programas)}
       <div class="duas-col">${campo('pf_vnac', 'Viagens nacionais por ano', p.viagens_nacionais_ano ?? '', 'number')}${campo('pf_vint', 'Viagens internacionais por ano', p.viagens_internacionais_ano ?? '', 'number')}</div>${dica(diag.viagens)}
       <div class="duas-col">${campo('pf_pessoas', 'Pessoas que viajam junto (com o cliente)', p.pessoas_viagem ?? '', 'number')}<label class="fl"><span>Quer viajar de executiva</span><select name="pf_exec">${[['', 'Não informado'], ['true', 'Sim'], ['false', 'Não']].map(([k, l]) => `<option value="${k}"${String(p.quer_executiva ?? '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="duas-col">${campo('pf_psala', 'Pessoas que usam sala VIP junto (além do cliente)', p.pessoas_sala ?? '', 'number')}${campo('pf_padic', 'Dessas, quantas podem ter cartão adicional', p.pessoas_adicionais ?? '', 'number')}</div>
+      ${campo('pf_aeros', 'Outros aeroportos que usa', (p.aeroportos_frequentes || []).join(', '), 'text', 'placeholder="Ex.: GIG, SDU, CGH"')}
+      <div class="sub" style="font-size:13px;margin-top:6px"><b>Prioridades do cliente</b>, em ordem. A simulação ordena os caminhos por elas.</div>
+      <div class="duas-col">${[0, 1, 2].map(i => `<label class="fl"><span>${i + 1}ª prioridade</span><select name="pf_obj${i}"><option value="">Não definida</option>${OBJETIVOS.map(([k, l]) => `<option value="${k}"${(p.objetivos_ordem || [])[i] === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>
       <div class="duas-col">${campo('pf_gasto', 'Gasto total no cartão por mês (R$)', p.gasto_cartao_mes ?? (vazioP && gastoDiag !== null ? gastoDiag : ''), 'number')}${campo('pf_pix', 'Pix que poderia ir para o crédito (R$/mês)', p.pix_credito_mes ?? (vazioP && pixDiag !== null ? pixDiag : ''), 'number')}</div>
       ${diag.gasto || diag.pix ? `<div class="sub" style="font-size:13px;margin-top:2px">No diagnóstico: ${esc([diag.gasto ? 'cartões ' + diag.gasto : '', diag.pix ? 'Pix ' + diag.pix : ''].filter(Boolean).join(' · '))}</div>` : ''}
       <label class="fl"><span>Renda mensal</span><select name="pf_renda">${FAIXA_RENDA.map(([k, l]) => `<option value="${k}"${(p.faixa_renda || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -949,11 +1026,16 @@ function desenharPerfil(ctx) {
     const f = e.target, t = (k) => f.elements[k].value.trim(), nv = (k) => t(k) === '' ? null : Number(t(k).replace(',', '.'));
     const aero = t('pf_aero').toUpperCase();
     if (aero && !/^[A-Z]{3}$/.test(aero)) { X.aviso('No aeroporto, escolha da lista ou digite o código de 3 letras (ex.: GRU).'); return; }
+    const aeros = [...new Set(t('pf_aeros').toUpperCase().split(/[^A-Z]+/).filter(Boolean))];
+    if (aeros.some(a => a.length !== 3)) { X.aviso('Nos outros aeroportos, use os códigos de 3 letras separados por vírgula (ex.: GIG, SDU).'); return; }
+    const objs = [0, 1, 2].map(i => t('pf_obj' + i)).filter(Boolean);
+    if (new Set(objs).size !== objs.length) { X.aviso('Cada prioridade só pode aparecer uma vez.'); return; }
     const row = { cliente_id: ctx.c.id, aeroporto_saida: aero || null, companhia_preferida: t('pf_cia') || null, programa_preferido: t('pf_prog') || null,
       viagens_nacionais_ano: nv('pf_vnac'), viagens_internacionais_ano: nv('pf_vint'), pessoas_viagem: nv('pf_pessoas'), quer_executiva: t('pf_exec') === '' ? null : t('pf_exec') === 'true',
-      gasto_cartao_mes: nv('pf_gasto'), pix_credito_mes: nv('pf_pix'), faixa_renda: t('pf_renda') || null, observacao_interna: t('pf_obs') || null, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null };
-    if (['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem', 'gasto_cartao_mes', 'pix_credito_mes'].some(k => row[k] !== null && !(row[k] >= 0))) { X.aviso('Confira os números.'); return; }
-    ['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem'].forEach(k => { if (row[k] !== null) row[k] = Math.round(row[k]); });
+      gasto_cartao_mes: nv('pf_gasto'), pix_credito_mes: nv('pf_pix'), faixa_renda: t('pf_renda') || null, observacao_interna: t('pf_obs') || null, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null,
+      pessoas_sala: nv('pf_psala'), pessoas_adicionais: nv('pf_padic'), aeroportos_frequentes: aeros.filter(a => a !== aero).length ? aeros.filter(a => a !== aero) : null, objetivos_ordem: objs.length ? objs : null };
+    if (['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem', 'gasto_cartao_mes', 'pix_credito_mes', 'pessoas_sala', 'pessoas_adicionais'].some(k => row[k] !== null && !(row[k] >= 0))) { X.aviso('Confira os números.'); return; }
+    ['viagens_nacionais_ano', 'viagens_internacionais_ano', 'pessoas_viagem', 'pessoas_sala', 'pessoas_adicionais'].forEach(k => { if (row[k] !== null) row[k] = Math.round(row[k]); });
     const r = await X.sb.from('cliente_perfil').upsert(row).select().single();
     if (r.error) { X.aviso('Não salvou: ' + X.limparTec(r.error.message)); return; }
     ctx.perfil = r.data; X.aviso('Perfil salvo.'); desenharPerfil(ctx); desenharFalta(ctx); desenharSimulacao(ctx);
