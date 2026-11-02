@@ -236,10 +236,16 @@ export function simular(E) {
   const vSala = rSala ? n(rSala.valor) : null, vSeguro = rSeguro ? n(rSeguro.valor) : null;
   const viagensInt = n(perfil.viagens_internacionais_ano) || 0;
   const faltaValor = new Set();
+  // gasto de cada cartão: o lançado; quando falta, o que sobra do gasto total é dividido pelos limites (cartão sem limite pesa a média)
+  const semGasto = cartoesCli.filter(k => n(k.gasto_medio_mes) === null);
+  const sobraGasto = Math.max(0, gasto - cartoesCli.reduce((t, k) => t + (n(k.gasto_medio_mes) || 0), 0));
+  const lims = semGasto.map(k => n(k.limite)).filter(v => v > 0), mediaLim = lims.length ? lims.reduce((t, v) => t + v, 0) / lims.length : 1;
+  const peso = (k) => n(k.limite) > 0 ? n(k.limite) : mediaLim, somaPeso = semGasto.reduce((t, k) => t + peso(k), 0);
+  const gastoDe = (k) => n(k.gasto_medio_mes) !== null ? { g: n(k.gasto_medio_mes), estimado: false } : { g: somaPeso ? Math.round(sobraGasto * peso(k) / somaPeso) : 0, estimado: true };
   const hoje = cartoesCli.map(k => {
     const b = porId[k.catalogo_id], nome = b ? `${b.banco} ${b.nome}`.trim() : [k.banco, k.categoria].filter(Boolean).join(' ');
     if (!b) return { id: k.id, cartao: nome, fora_da_base: true };
-    const g = n(k.gasto_medio_mes) || 0, c = conta(b, g, true);
+    const { g, estimado: gastoEstimado } = gastoDe(k), c = conta(b, g, true);
     const paga = n(k.anuidade_paga), efetiva = paga !== null ? paga : c.anuidade, cheia = n(b.anuidade_anual);
     const BU = beneficiosUso.filter(x => x.cartao_id === k.id && x.usa !== false);
     const visitas = usoSalas.filter(u => u.cartao_id === k.id).reduce((t, u) => t + (n(u.pessoas) || 1), 0);
@@ -250,7 +256,7 @@ export function simular(E) {
       return { descricao: x.descricao, valor: v, como: v === null ? 'sem valor definido' : como };
     });
     const vBen = beneficios.reduce((t, x) => t + (x.valor || 0), 0), retorno = (c.valor || 0) + vBen;
-    return { id: k.id, catalogo_id: b.id, cartao: nome, gasto: g, limite: n(k.limite), milhas: c.milhas, outro: c.outro, valor: c.valor, beneficios, valor_beneficios: vBen, retorno,
+    return { id: k.id, catalogo_id: b.id, cartao: nome, gasto: g, gasto_estimado: gastoEstimado, limite: n(k.limite), milhas: c.milhas, outro: c.outro, valor: c.valor, beneficios, valor_beneficios: vBen, retorno,
       anuidade: efetiva, cheia, economia: cheia !== null && efetiva !== null ? Math.max(0, cheia - efetiva) : null, saldo: efetiva !== null ? retorno - efetiva : null,
       anuidade_maior_que_retorno: efetiva !== null && efetiva > retorno, situacao: k.anuidade_situacao || null, renovacao: n(k.anuidade_mes_renovacao), negociacao: k.anuidade_negociacao || null };
   });
@@ -277,6 +283,7 @@ export function simular(E) {
     else if (pessoasSala > 0 && n(perfil.pessoas_adicionais) === null) falta.push('quantas dessas pessoas podem ter cartão adicional');
   }
   if (objetivos.includes('cortar_anuidade')) { const sem = cartoesCli.filter(k => !k.anuidade_situacao).length; if (sem) falta.push(`situação da anuidade de ${sem === 1 ? '1 cartão' : sem + ' cartões'}`); }
+  if (semGasto.length) falta.push(`gasto por mês de ${semGasto.length === 1 ? '1 cartão' : semGasto.length + ' cartões'} (estimado dividindo o gasto total pelos limites)`);
   faltaValor.forEach(f => falta.push(f));
 
   return { programa: prefNome, gasto_mes: gasto, bonus_transferencia: bonus, milheiro, aeroporto: perfil.aeroporto_saida, aeroportos, objetivos: objetivos.map(o => ({ chave: o, nome: NOME_OBJ[o] })),
