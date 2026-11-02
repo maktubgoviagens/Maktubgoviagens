@@ -680,10 +680,11 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       const tot2 = K.reduce((s2, o) => s2 + (valAnu(o) || 0), 0), sem = K.filter(o => valAnu(o) === null).length;
       const bt = (k, t) => `<button class="mini" type="button" data-fxanu="${k}" aria-pressed="${F.anu === k}" style="${F.anu === k ? 'background:var(--verde);color:#fff;border-color:var(--verde)' : ''}">${t}</button>`;
       topo.innerHTML = `<div class="lin" style="align-items:center;flex-wrap:wrap;gap:6px"><span>${bt('real', 'O que paga hoje')}${bt('cheia', 'Anuidade cheia')}</span><span>${voltar}</span></div>
-        <div class="sub" style="margin:2px 0 6px">${F.anu === 'cheia' ? 'Anuidade cheia do banco, sem isenção' : 'Com a isenção pelo gasto e a anuidade negociada'}: ${brl(tot2)} no ano, da maior para a menor${sem ? ` · ${sem === 1 ? '1 cartão' : sem + ' cartões'} sem anuidade conhecida no fim` : ''}.</div>`;
+        <div class="sub" style="margin:2px 0 6px">${F.anu === 'cheia' ? 'Anuidade cheia do banco, sem isenção' : 'Com a isenção pelo gasto e a anuidade negociada'}: ${brl(tot2)} no ano, ${brl(Math.round(tot2 / 12))} por mês, da maior para a menor${sem ? ` · ${sem === 1 ? '1 cartão' : sem + ' cartões'} sem anuidade conhecida no fim` : ''}.</div>`;
     } else topo.innerHTML = '';
     ordem.forEach(i => { const el = lin.querySelector(`[data-lin="${i}"]`); el.hidden = !vis.includes(i); const a = el.querySelector('[data-anu]');
-      if (F.modo === 'anu') { const o = K[i]; a.hidden = false; a.textContent = `Paga hoje: ${o.k.custo === null ? 'não informada' : o.k.custo === 0 ? 'isenta' : brl(o.k.custo) + '/ano'} · Cheia: ${o.k.cheia === null ? 'não informada' : o.k.cheia === 0 ? 'sem anuidade' : brl(o.k.cheia) + '/ano'}`; } else a.hidden = true; });
+      if (F.modo === 'anu') { const o = K[i]; a.hidden = false; const anoMes = (v) => `${brl(v)}/ano (${brl(Math.round(v / 12))}/mês)`;
+        a.textContent = `Paga hoje: ${o.k.custo === null ? 'não informada' : o.k.custo === 0 ? 'isenta' : anoMes(o.k.custo)} · Cheia: ${o.k.cheia === null ? 'não informada' : o.k.cheia === 0 ? 'sem anuidade' : anoMes(o.k.cheia)}`; } else a.hidden = true; });
     vis.forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
     ordem.filter(i => !vis.includes(i)).forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
     if (!F.modo) ordem.forEach(i => lin.appendChild(lin.querySelector(`[data-lin="${i}"]`)));
