@@ -195,6 +195,19 @@
 .mc-in input{flex:1;min-width:0;border:0;background:transparent;padding:9px 10px 9px 4px;font-family:inherit;font-size:16px;color:var(--text)}
 .mc-in:focus-within{border-color:var(--gold)}
 .mc-nota{font-size:12.5px;color:var(--text-light);margin-top:12px}
+.mc-venc{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding-top:12px;border-top:1px dashed var(--border);font-size:16px;color:var(--text)}
+.mc-venc .l{margin:0;font-size:13px;letter-spacing:.12em}
+.mc-venc b{font-weight:500;color:var(--green)}
+.mc-venc select,.vc-body select{font-family:inherit;font-size:16px;color:var(--text);background:var(--cream);border:1px solid var(--border-strong);padding:8px 10px}
+.mc-venc select:focus,.vc-body select:focus{outline:none;border-color:var(--gold)}
+.mc-venc .btn-sm,.vc-body .btn-sm,.lf .btn-sm{font-size:13px;letter-spacing:.08em}
+.lf{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;padding:14px 18px;margin-bottom:14px;background:var(--cream);border-left:2px solid var(--gold);font-size:16px;line-height:1.5;color:var(--text)}
+.lf span{flex:1;min-width:220px}
+.lf small{display:block;font-size:13px;color:var(--text-light)}
+.lf .lf-off{background:none;border:0;padding:0;font:inherit;font-size:13px;color:var(--text-light);text-decoration:underline;cursor:pointer}
+.vc-body{padding:20px 22px;font-size:16px;line-height:1.55;color:var(--text)}
+.vc-body p{margin:0 0 14px}
+.vc-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 .sv-intro{font-size:16px;color:var(--text);line-height:1.6;margin:-8px 0 18px}
 .sv-list{background:var(--white);border:1px solid var(--border)}
 .sv-card{padding:18px 22px;border-top:1px solid var(--border)}
@@ -1116,6 +1129,12 @@
     <div class="cx-body" id="cxBody"></div>
   </div>
 </div>
+<div class="modal" id="vcModal" hidden role="dialog" aria-modal="true" aria-labelledby="vcTitle">
+  <div class="modal-card sm">
+    <div class="modal-top"><div class="t" id="vcTitle">Mudar o vencimento</div><button type="button" class="modal-x" id="vcClose" aria-label="Fechar">×</button></div>
+    <div class="vc-body" id="vcBody"></div>
+  </div>
+</div>
 <div class="modal" id="docModal" hidden role="dialog" aria-modal="true" aria-labelledby="docTitle">
   <div class="modal-card">
     <div class="modal-top"><div class="t" id="docTitle"></div><button type="button" class="btn-sm" id="docDownload">Baixar</button><button type="button" class="modal-x" id="docClose" aria-label="Fechar">×</button></div>
@@ -1330,7 +1349,7 @@
     const comDisp = cartoes.filter(c => c.disponivel !== null && c.disponivel !== undefined);
     const disp = comDisp.reduce((s, c) => s + Number(c.disponivel), 0);
     const quando = (iso) => iso ? `Atualizado em ${brDate(String(iso).slice(0, 10))}` : 'Ainda não informado';
-    box.innerHTML = `<div class="kpis k3" style="margin-bottom:18px">
+    box.innerHTML = `<div id="lembreteFatura"></div><div class="kpis k3" style="margin-bottom:18px">
         <div class="kpi hl"><div class="l">Cartões</div><div class="v">${fmtNum(cartoes.length)}</div><div class="s">Cadastrados pela sua equipe</div></div>
         <div class="kpi"><div class="l">Limite total</div><div class="v">R$ ${fmtMoney(lim)}</div><div class="s">Somando todos os cartões</div></div>
         <div class="kpi"><div class="l">Disponível</div><div class="v">${comDisp.length ? 'R$ ' + fmtMoney(disp) : '·'}</div><div class="s">${comDisp.length ? `Informado em ${comDisp.length} de ${cartoes.length} cartões` : 'Informe abaixo, cartão a cartão'}</div></div>
@@ -1339,8 +1358,12 @@
         <div class="mc-nome"><b>${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}</b><small>${[c.anuidade ? 'Anuidade: ' + escapeHtml(c.anuidade) : ''].filter(Boolean).join(' · ')}</small></div>
         <div class="mc-lim"><span class="l">Limite</span><span class="v">${c.limite !== null && c.limite !== undefined ? 'R$ ' + fmtMoney(c.limite) : 'A confirmar'}</span></div>
         <div class="mc-disp"><span class="l">Disponível</span><label class="mc-in"><span>R$</span><input type="text" inputmode="decimal" data-disp="${escapeHtml(c.id)}" value="${brInt(c.disponivel)}" placeholder="Informar" aria-label="Disponível em ${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}"></label><small data-dispq="${escapeHtml(c.id)}">${quando(c.disponivel_em)}</small></div>
+        <div class="mc-venc"><span class="l">Vencimento da fatura</span>${c.dia_vencimento
+          ? `<span>Todo dia <b>${Number(c.dia_vencimento)}</b></span><button type="button" class="btn-sm" data-vcalt="${escapeHtml(c.id)}">Alterar</button>`
+          : `<select data-vcdia="${escapeHtml(c.id)}" aria-label="Dia do vencimento da fatura do ${escapeHtml([c.banco, c.categoria].filter(Boolean).join(' '))}">${diasOpcoes(null)}</select><button type="button" class="btn-sm solid" data-vcsalvar="${escapeHtml(c.id)}">Salvar</button>`}</div>
       </div>`).join('')}</div>
       <div class="mc-nota">O disponível ajuda a equipe a escolher o melhor cartão para cada compra.</div>`;
+    ligarVencimentos(cartoes, box);
     box.querySelectorAll('[data-disp]').forEach(inp => {
       const salvar = async () => {
         const c = cartoes.find(x => x.id === inp.dataset.disp); if (!c) return;
@@ -1357,6 +1380,90 @@
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
     });
   }
+
+  // ----- Vencimento da fatura: o cliente marca uma vez; para mudar, confirma -----
+  const diasOpcoes = (sel) => '<option value="">Escolha o dia</option>' + Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}"${sel === i + 1 ? ' selected' : ''}>Dia ${i + 1}</option>`).join('');
+  const nomeCartao = (c) => [c.banco, c.categoria].filter(Boolean).join(' ');
+  async function salvarVencimento(c, dia, cartoes) {
+    const { data, error } = await supabase.rpc('cliente_definir_vencimento', { p_cartao: c.id, p_dia: dia });
+    if (error) { toast('Não conseguimos salvar agora. Tente de novo em instantes.'); return false; }
+    c.dia_vencimento = dia; c.vencimento_em = data || new Date().toISOString();
+    renderMeusCartoes(cartoes); toast('Vencimento salvo.');
+    return true;
+  }
+  function ligarVencimentos(cartoes, box) {
+    box.querySelectorAll('[data-vcsalvar]').forEach(b => b.onclick = async () => {
+      const c = cartoes.find(x => x.id === b.dataset.vcsalvar), sel = box.querySelector(`[data-vcdia="${CSS.escape(b.dataset.vcsalvar)}"]`);
+      const dia = Number(sel && sel.value);
+      if (!c || !(dia >= 1 && dia <= 31)) { toast('Escolha o dia do vencimento.'); return; }
+      b.disabled = true; if (!(await salvarVencimento(c, dia, cartoes))) b.disabled = false;
+    });
+    box.querySelectorAll('[data-vcalt]').forEach(b => b.onclick = () => {
+      const c = cartoes.find(x => x.id === b.dataset.vcalt); if (!c) return;
+      $('vcBody').innerHTML = `<p>Quer mesmo mudar o vencimento da fatura do <b>${escapeHtml(nomeCartao(c))}</b>? Hoje ele vence todo dia ${Number(c.dia_vencimento)}. Os lembretes passam a seguir a nova data.</p>
+        <label>Novo dia do vencimento<br><select id="vcNovo">${diasOpcoes(Number(c.dia_vencimento))}</select></label>
+        <div class="vc-acoes"><button type="button" class="btn-sm" id="vcCancelar">Cancelar</button><button type="button" class="btn-sm solid" id="vcMudar">Mudar</button></div>`;
+      $('vcModal').hidden = false; $('vcNovo').focus();
+      $('vcCancelar').onclick = () => { $('vcModal').hidden = true; };
+      $('vcMudar').onclick = async () => {
+        const dia = Number($('vcNovo').value);
+        if (!(dia >= 1 && dia <= 31)) { toast('Escolha o novo dia.'); return; }
+        if (dia === Number(c.dia_vencimento)) { $('vcModal').hidden = true; return; }
+        $('vcMudar').disabled = true;
+        if (await salvarVencimento(c, dia, cartoes)) $('vcModal').hidden = true; else $('vcMudar').disabled = false;
+      };
+    });
+    lembreteFatura(cartoes);
+  }
+  // Lembrete no celular às 10h do dia do vencimento (mesma chave de notificação do app da equipe)
+  const VAPID = 'BC3X1jCIe3UoWoPDk9q857kykbSiRbJQQZ8gNhf2fmHiCFDlWgzNMzrIXhwRPdytmYqcfLgz7zlsPy27HodS7EQ';
+  const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const aqui = () => /mobi|android|iphone|ipad/i.test(navigator.userAgent) ? 'neste celular' : 'neste computador';
+  const b64u = (t) => { const p = '='.repeat((4 - t.length % 4) % 4), b = atob((t + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...b].map(ch => ch.charCodeAt(0))); };
+  async function inscricaoAtual() {
+    if (!pushOk()) return null;
+    const reg = await navigator.serviceWorker.getRegistration('/painel/');
+    return reg ? reg.pushManager.getSubscription() : null;
+  }
+  async function lembreteFatura(cartoes) {
+    const F = $('lembreteFatura'); if (!F) return;
+    if (!cartoes.some(c => c.dia_vencimento)) { F.innerHTML = ''; return; }
+    let sub = null; try { sub = await inscricaoAtual(); } catch (_) {}
+    if (!F.isConnected) return;
+    if (sub && Notification.permission === 'granted') {
+      F.innerHTML = `<div class="lf"><span>Lembrete da fatura ativo ${aqui()}.<small>Ele chega às 10h do dia do vencimento de cada cartão.</small></span><button type="button" class="lf-off" id="lfOff">Desligar</button></div>`;
+      $('lfOff').onclick = async () => {
+        try { const s2 = await inscricaoAtual(); if (s2) { await supabase.rpc('cliente_push_remover', { p_endpoint: s2.endpoint }); await s2.unsubscribe(); } } catch (_) {}
+        toast('Lembrete desligado ' + aqui() + '.'); lembreteFatura(cartoes);
+      };
+      return;
+    }
+    const txt = ehIOS() && !instalado() ? 'Para receber o lembrete da fatura no iPhone, toque em Compartilhar e depois em <b>Adicionar à Tela de Início</b>. Abra o painel pelo ícone e ative aqui.'
+      : !pushOk() ? 'Este navegador não recebe lembretes. Abra o painel pelo Chrome (Android) ou pelo ícone na tela de início (iPhone).'
+      : Notification.permission === 'denied' ? `Os lembretes estão bloqueados ${aqui()}. Libere as notificações nas configurações do navegador.`
+      : `<b>Receba ${aqui()} o lembrete da fatura.</b><small>Às 10h do dia do vencimento de cada cartão.</small>`;
+    const pode = pushOk() && Notification.permission !== 'denied' && !(ehIOS() && !instalado());
+    F.innerHTML = `<div class="lf"><span>${txt}</span>${pode ? '<button type="button" class="btn-sm solid" id="lfOn">Ativar</button>' : ''}</div>`;
+    if (pode) $('lfOn').onclick = async () => {
+      $('lfOn').disabled = true;
+      try {
+        if (await Notification.requestPermission() !== 'granted') { toast('Notificações não autorizadas ' + aqui() + '.'); lembreteFatura(cartoes); return; }
+        const reg = await navigator.serviceWorker.register('/painel/sw.js', { scope: '/painel/' });
+        await navigator.serviceWorker.ready;
+        const s2 = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+        const j = s2.toJSON();
+        const { error } = await supabase.rpc('cliente_push_inscrever', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_aparelho: navigator.userAgent });
+        if (error) throw error;
+        toast('Lembrete ativado ' + aqui() + '.');
+      } catch (_) { toast('Não conseguimos ativar agora. Tente de novo em instantes.'); }
+      lembreteFatura(cartoes);
+    };
+  }
+  $('vcClose').addEventListener('click', () => { $('vcModal').hidden = true; });
+  $('vcModal').addEventListener('click', (e) => { if (e.target === $('vcModal')) $('vcModal').hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('vcModal').hidden) $('vcModal').hidden = true; });
 
   // ----- Suas salas VIP: só o que a equipe conferiu (função minhas_salas_vip) -----
   const svSemInfo = (t) => !t || /confirmar|n[aã]o informad/i.test(t);

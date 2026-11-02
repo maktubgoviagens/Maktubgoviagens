@@ -9,3 +9,27 @@ self.addEventListener('fetch', (e) => {
   if (e.request.mode !== 'navigate') return;
   e.respondWith(fetch(e.request).catch(() => new Response(OFFLINE, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
 });
+
+// Lembrete da fatura: chega às 10h do dia do vencimento e abre o painel ao tocar.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Maktub Go', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Maktub Go', {
+    body: d.body || '',
+    icon: '/ativos/app-icon-192.png',
+    badge: '/ativos/app-icon-192.png',
+    tag: d.tag || undefined,
+    data: { url: d.url || '/painel/' }
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '/painel/', self.location.origin).href;
+  e.waitUntil((async () => {
+    const abertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of abertas) {
+      if (c.url.includes('/painel/') && 'focus' in c) { await c.focus(); if ('navigate' in c) return c.navigate(url); return; }
+    }
+    return self.clients.openWindow(url);
+  })());
+});
