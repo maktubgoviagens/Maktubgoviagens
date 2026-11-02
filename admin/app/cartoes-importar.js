@@ -69,8 +69,20 @@ function linhaCatalogo(r, t, S) {
     a_confirmar: sim(r.revisar_antes_de_usar) || sim(t.a_confirmar), vendido_hoje: !FORA.test(semAc((exige || '') + ' ' + (obs || ''))),
     pontos_expiram: txt(t.pontos_expiram), seguro_viagem: txt(t.seguro_viagem), observacoes: obs,
     fonte: primeiraUrl(t.fonte_url || r.fonte_url), conferido_em: data(t.data_verificacao || r.data_verificacao),
-    ...resumoVip(r, S),
+    ...resumoVip(r, S), ...extrasVip(r, S), limite_referencia: limiteMinimo(exige),
   };
+}
+// convidados grátis por ano e acesso próprio do cartão adicional (redes globais da aba salas_vip)
+function extrasVip(r, S) {
+  const G = S.filter(s => s.tipo === 'rede_global');
+  const conv = num(r.vip_convidados_ano) ?? G.map(s => { const m = semAc(String(s.acompanhantes || '')).match(/(\d+)\s*convidad/); return m ? Number(m[1]) : null; }).find(v => v !== null) ?? null;
+  const proprio = G.some(s => /propri/.test(semAc(String(s.adicionais || ''))));
+  return { vip_convidados_ano: conv, vip_adicional_proprio: proprio ? true : null };
+}
+// "limite mínimo de R$ 100 mil" nas exigências vira o limite de referência do cartão
+function limiteMinimo(t) {
+  const m = semAc(String(t || '')).match(/limite minimo de r\$\s*([\d.,]+)\s*(mil)?/);
+  if (!m) return null; let v = Number(m[1].replace(/\./g, '').replace(',', '.')); if (m[2]) v *= 1000; return v > 0 ? v : null;
 }
 
 function lerPlanilha(wb, XLSX) {
