@@ -8,6 +8,9 @@ const STATUS = { gerando: 'gerando', rascunho: 'rascunho', publicado: 'publicado
 const CONF = { alta: 'alta', media: 'média', baixa: 'baixa' };
 const n = (v) => v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v);
 const brl = (v) => v === null || v === undefined ? 'não calculado' : (v < 0 ? '−' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
+// o estudo com IA ficou guardado: a decisão sai da simulação e o texto do cliente sai dos modelos aprovados.
+// Os estudos já gerados continuam visíveis. Para voltar a gerar, troque para true.
+const GERAR_COM_IA = false;
 const dataHora = (s) => { const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 
 // o que vai para a IA: a simulação já calculada (com códigos C1, C2...), sem nome do cliente nem dados do gerente
@@ -56,9 +59,10 @@ export async function desenharEstudo(ctx, R) {
     ctx.estudos = r.data || [];
   }
   const L = ctx.estudos, aberto = L.find(e => e.id === ctx.estudoAberto) || L.find(e => e.status !== 'arquivado' && e.status !== 'erro') || null;
-  const podeGerar = !!R && R.caminhos.length > 0;
-  box.innerHTML = `<div class="secao">Estudo com IA</div><section class="bloco" style="margin-top:0">
-    ${podeGerar ? `<button class="zap" type="button" id="esGerar" style="width:100%">Gerar estudo com IA</button>
+  const podeGerar = GERAR_COM_IA && !!R && R.caminhos.length > 0;
+  if (!GERAR_COM_IA && !L.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="secao">${GERAR_COM_IA ? 'Estudo com IA' : 'Estudos com IA anteriores'}</div><section class="bloco" style="margin-top:0">
+    ${!GERAR_COM_IA ? '' : podeGerar ? `<button class="zap" type="button" id="esGerar" style="width:100%">Gerar estudo com IA</button>
       <div class="sub" style="font-size:13px">A IA lê a simulação acima, as regras da casa e o perfil, escolhe o melhor caminho e explica. Leva cerca de 1 minuto e custa em torno de R$ 2 por estudo. O estudo nasce como rascunho e o cliente não vê.</div>`
       : '<div class="vazio">Complete o que falta no perfil para gerar o estudo.</div>'}
     <div id="esCorpo">${aberto ? corpo(aberto, esc) : (L.length ? '' : '<div class="vazio" style="margin-top:8px">Nenhum estudo gerado para este cliente.</div>')}</div>
