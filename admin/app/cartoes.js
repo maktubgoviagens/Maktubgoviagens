@@ -611,6 +611,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
     return `<div class="lin" style="align-items:flex-start"><span><b style="font-weight:600">${esc(cat ? nomeBase(cat) : [x.banco, x.categoria].filter(Boolean).join(' '))}</b>${!cat ? ' <small style="color:var(--alerta)">(fora da base)</small>' : ''}
         <small style="display:block;color:var(--tinta-3);font-size:12px">${esc(det)}</small>
         ${x.disponivel !== null && x.disponivel !== undefined ? `<small style="display:block;color:var(--tinta-3);font-size:12px">disponível ${brl(x.disponivel)}, informado pelo cliente em ${data(x.disponivel_em)}</small>` : ''}
+        ${x.dia_vencimento ? `<small style="display:block;color:var(--tinta-3);font-size:13px">fatura vence todo dia ${x.dia_vencimento}, informado pelo cliente em ${data(x.vencimento_em)}</small>` : ''}
         ${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span>
       <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br>${!cat ? `<button class="mini" data-cb="${x.id}">cadastrar na base</button>` : ''}<button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>${!cat ? `<div data-cbf="${x.id}" hidden></div>` : ''}`;
   };
