@@ -312,18 +312,29 @@ export function simular(E) {
     else if (rentavel && !(x.retorno > 0) && !beneficio) { acao = 'cortar'; motivos.push('não tem anuidade, mas também não rende nada', 'não leva ao cartão do foco'); }
     else { acao = 'manter'; motivos.push(rentavel === null ? 'anuidade não informada' : 'rentável para o cliente'); }
     if (acao === 'negociar') motivos.push('negociar a anuidade para ele passar a se pagar');
-    return { id: x.id, cartao: x.cartao, acao, motivos, papel: papel.length > 0, saldo: x.saldo, anuidade: x.anuidade, limite: x.limite ?? null };
+    // frase curta para o documento do cliente (sem números)
+    const nomeFoco = cFoco ? cFoco.principal.cartao : '';
+    let frase = rentavel === null ? '' : 'Rende mais do que custa.';
+    if (cFoco && cFoco.principal.id === b.id) frase = 'É o cartão do seu objetivo.';
+    else if (cAgora && cAgora.principal.id === b.id) frase = cFoco && cFoco.principal.id !== b.id && chave(cFoco.principal.banco) === chave(b.banco) ? `É o caminho para o ${nomeFoco}.` : 'É o seu cartão principal agora.';
+    else if (cAgora && cAgora.apoio && cAgora.apoio.id === b.id) frase = 'Recebe o que passar do limite do cartão principal.';
+    else if (relacao && relacao.id === x.id) frase = `Mantém o relacionamento com o ${b.banco} para chegar ao ${nomeFoco}.`;
+    else if (melhorSala && melhorSala.id === x.id) frase = 'Dá acesso a sala VIP nos aeroportos que você usa.';
+    else if (reserva && reserva.id === x.id) frase = 'Não tem anuidade e fica como reserva.';
+    else if (acao === 'negociar') frase = 'A anuidade hoje é maior que o retorno.';
+    else if (acao === 'cortar') frase = rentavel && !(x.retorno > 0) ? 'Não rende nada e não faz parte do plano.' : 'Custa mais do que rende e não faz parte do plano.';
+    return { id: x.id, cartao: x.cartao, acao, motivos, frase, papel: papel.length > 0, saldo: x.saldo, anuidade: x.anuidade, limite: x.limite ?? null };
   });
   // máximo de cartões: passando do máximo, saem primeiro os sem papel que menos rendem
   const ficam = () => itens.filter(i => i.acao !== 'cortar');
   ficam().filter(i => !i.papel && i.acao !== 'avaliar').sort((a, c) => (a.saldo ?? 0) - (c.saldo ?? 0)).forEach(i => {
-    if (ficam().length > maxCartoes) { i.acao = 'cortar'; i.motivos.push(`passa do máximo de ${maxCartoes} cartões e é dos que menos rendem`); }
+    if (ficam().length > maxCartoes) { i.acao = 'cortar'; i.motivos.push(`passa do máximo de ${maxCartoes} cartões e é dos que menos rendem`); i.frase = 'Fica de fora para a carteira ficar enxuta.'; }
   });
   // trava do limite: o que fica precisa cobrir o gasto do mês com a folga
   const limiteNecessario = gasto * folga, somaLim = () => ficam().reduce((t, i) => t + (i.limite || 0), 0);
   const avisosCarteira = [];
   itens.filter(i => i.acao === 'cortar').sort((a, c) => (c.limite || 0) - (a.limite || 0)).forEach(i => {
-    if (somaLim() < limiteNecessario) { i.acao = 'negociar'; i.motivos.push('o limite dele faz falta: pedir aumento de limite no principal antes de cortar'); }
+    if (somaLim() < limiteNecessario) { i.acao = 'negociar'; i.motivos.push('o limite dele faz falta: pedir aumento de limite no principal antes de cortar'); i.frase = 'O limite dele ainda faz falta.'; }
   });
   if (somaLim() < limiteNecessario) avisosCarteira.push(`Os cartões que ficam somam ${brl(somaLim())} de limite e o gasto pede ${brl(limiteNecessario)}: pedir aumento de limite.`);
   if (itens.some(i => i.limite === null)) avisosCarteira.push('Há cartões sem limite informado: a conta do limite pode estar baixa.');
