@@ -1,8 +1,8 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=4';
-import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=4';
+import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=5';
+import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=5';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=1';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
@@ -881,12 +881,28 @@ async function desenharSimulacao(ctx) {
       <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · pontos valem ${brl(R.atual.valor)}${R.atual.beneficios ? ` · benefícios usados ${brl(R.atual.beneficios)}` : ''} · saldo ${brl(R.atual.saldo)}${R.atual.economia ? ` · economia de anuidade no ano ${brl(R.atual.economia)}` : ''}</div>
       ${hojeL.map(x => `<div style="font-size:13px;margin-top:4px;color:var(--tinta-2)"><b style="font-weight:600">${esc(x.cartao)}</b>: gasto ${brl(x.gasto)}/mês${x.gasto_estimado ? ' (estimado)' : ''} · ${x.outro ? `${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : num(x.milhas) + ' milhas'} · retorno ${brl(x.retorno)}${x.valor_beneficios ? ` (com ${brl(x.valor_beneficios)} de benefícios)` : ''} · anuidade ${brl(x.anuidade)}${x.economia ? ` · economia ${brl(x.economia)}` : ''}${x.anuidade_maior_que_retorno ? ' · <span style="color:var(--alerta)">anuidade maior que o retorno: negociar</span>' : ''}</div>`).join('')}
       <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Com o gasto médio lançado em cada cartão${hojeL.some(x => x.gasto_estimado) ? '; onde ele falta, o gasto total dividido pelos limites' : ''}.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
+    ${carteiraBox(R, esc)}
     ${R.realizado.length ? `<div style="margin-top:10px;font-size:13px"><b style="font-weight:600">Previsto e realizado nos últimos 12 meses</b>${R.realizado.map(r => `<div>${esc(r.programa)}: previsto ${r.previsto !== null ? num(r.previsto) : '·'} pts, entrou ${r.realizado !== null ? num(r.realizado) : '·'} pts</div>`).join('')}<div style="color:var(--tinta-3)">Entrou: acúmulo, clube e bônus lançados no extrato. Visitas a sala VIP no ano: ${num(R.visitas_sala_ano)}.</div></div>` : ''}
     ${top.map(linha).join('')}
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
     <div class="sub" style="font-size:13px;margin-top:8px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. "Dá para pedir" é só uma indicação pelas faixas do perfil: a aprovação de cartão, limite e upgrade depende do banco.</div></section>`;
   desenharTextoCliente(ctx, R);
   desenharEstudo(ctx, R);
+}
+// carteira ideal: o que fica, o que negociar e o que cortar (só recomendação para a equipe; nada é cancelado sozinho)
+function carteiraBox(R, esc) {
+  const C = R.carteira_ideal; if (!C || !C.itens.length) return '';
+  const brl = (v) => v === null || v === undefined ? 'não informado' : 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  const TAG = { manter: '<span class="tag ok">manter</span>', negociar: '<span class="tag ouro">negociar</span>', cortar: '<span class="tag alerta">cortar, depois de negociar</span>', avaliar: '<span class="tag">avaliar</span>' };
+  const ordem = { manter: 0, negociar: 1, cortar: 2, avaliar: 3 };
+  const L = C.itens.slice().sort((a, b) => ordem[a.acao] - ordem[b.acao]);
+  const conta = (k) => C.itens.filter(i => i.acao === k).length;
+  return `<div id="cxCarteira" style="margin-top:10px;padding:10px 12px;border:1px solid var(--linha)"><b style="font-weight:600">Carteira ideal</b>
+    <div style="font-size:14px;margin-top:4px">Fica com ${C.ficam} de ${C.total} cartões (máximo de ${C.max}) · ${conta('manter')} manter · ${conta('negociar')} negociar · ${conta('cortar')} cortar · limite que fica ${brl(C.limite_que_fica)} (o gasto pede ${brl(C.limite_necessario)})</div>
+    ${C.avisos.map(a => `<div style="font-size:13px;color:var(--alerta)">${esc(a)}</div>`).join('')}
+    ${L.map(i => `<div style="border-top:1px solid var(--linha);padding:6px 0;font-size:14px"><b style="font-weight:600">${esc(i.cartao)}</b> ${i.acao === 'cortar' && !(i.anuidade > 0) ? '<span class="tag alerta">cortar</span>' : TAG[i.acao]}
+      <div style="font-size:13px;color:var(--tinta-2)">${esc([i.saldo !== undefined && i.saldo !== null ? `rende ${i.saldo < 0 ? 'menos ' + brl(-i.saldo) : brl(i.saldo)} por ano já descontada a anuidade` : '', ...i.motivos].filter(Boolean).join(' · '))}</div></div>`).join('')}
+    <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Só recomendação: nada é cancelado sozinho. Antes de cortar, negociar a anuidade e manter limite suficiente.</div></div>`;
 }
 // visitas a salas VIP que a equipe lança: o painel mostra usadas e restantes no ano
 async function usoSalas(ctx) {

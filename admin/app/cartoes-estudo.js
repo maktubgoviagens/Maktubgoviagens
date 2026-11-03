@@ -35,6 +35,7 @@ export function montarEntrada(ctx, R) {
       retorno: k.retorno ?? null, anuidade: k.anuidade ?? null, anuidade_cheia: k.cheia ?? null, economia_ano: k.economia ?? null, anuidade_maior_que_retorno: !!k.anuidade_maior_que_retorno,
       situacao_anuidade: k.situacao || null, mes_renovacao: k.renovacao || null, negociacao: k.negociacao || null })),
     carteira_total: { milhas_ano: R.atual.milhas, anuidade: R.atual.anuidade, valor_pontos: R.atual.valor, beneficios: R.atual.beneficios, saldo: R.atual.saldo, economia_ano: R.atual.economia },
+    carteira_ideal: R.carteira_ideal ? R.carteira_ideal.itens.map(i => ({ cartao: i.cartao, acao: i.acao, motivos: i.motivos })) : null,
     previsto_e_realizado_12_meses: R.realizado, visitas_sala_vip_no_ano: R.visitas_sala_ano,
     premissas: { programa: R.programa, gasto_mes_nacional: R.gasto_mes, bonus_transferencia_pct: R.bonus_transferencia, milheiro_referencia: R.milheiro, aeroportos: R.aeroportos, avisos: R.avisos },
     falta_para_escolher_bem: R.falta,

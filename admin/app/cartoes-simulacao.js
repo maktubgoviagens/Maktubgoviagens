@@ -273,6 +273,62 @@ export function simular(E) {
   const realizado = !Object.keys(real).length ? [] : [...new Set([...Object.keys(prev), ...Object.keys(real)])].filter(Boolean).map(f => ({ programa: nomeProg(f), previsto: prev[f] ? Math.round(prev[f]) : null, realizado: real[f] ?? null }));
   const visitasAno = usoSalas.reduce((t, u) => t + (n(u.pessoas) || 1), 0);
 
+  // carteira ideal: fica o cartão rentável ou com papel na estratégia; sai o que não é rentável, não progride e quase não tem benefício
+  const rMax = regra(/^Carteira ideal: máximo de cartões/i), rFolga = regra(/^Carteira ideal: folga do limite/i);
+  const maxCartoes = rMax && n(rMax.valor) > 0 ? Math.round(n(rMax.valor)) : 6, folga = rFolga && n(rFolga.valor) > 0 ? n(rFolga.valor) : 1.5;
+  const cAgora = caminhos.find(c => c.id === escada.agora) || null, cFoco = caminhos.find(c => c.id === escada.foco) || null;
+  const naBase = hoje.filter(x => !x.fora_da_base);
+  const bandeira = (b) => /visa/i.test(b.bandeira || '') && !/master/i.test(b.bandeira || '') ? 'visa' : /master/i.test(b.bandeira || '') && !/visa/i.test(b.bandeira || '') ? 'master' : null;
+  const bPrincipal = cAgora ? porId[cAgora.principal.id] : null;
+  // o melhor cartão de sala VIP nos aeroportos do cliente e a reserva sem anuidade de outra bandeira
+  const notaSala = (x) => salaInfo(porId[x.catalogo_id], x.gasto).nota;
+  const melhorSala = naBase.filter(x => notaSala(x) > 0).sort((a, c) => notaSala(c) - notaSala(a) || (c.saldo ?? -1e9) - (a.saldo ?? -1e9))[0] || null;
+  const reserva = naBase.filter(x => x.anuidade === 0 && (!bPrincipal || !bandeira(bPrincipal) || bandeira(porId[x.catalogo_id]) !== bandeira(bPrincipal)) && (!cAgora || x.catalogo_id !== cAgora.principal.id))
+    .sort((a, c) => (c.limite || 0) - (a.limite || 0))[0] || null;
+  // relacionamento no banco do foco: um cartão só, e nenhum se o principal de agora já é desse banco
+  const bancoFoco = cFoco ? chave(cFoco.principal.banco) : null;
+  const relacao = bancoFoco && !(cAgora && chave(cAgora.principal.banco) === bancoFoco)
+    ? naBase.filter(x => chave(porId[x.catalogo_id].banco) === bancoFoco && x.catalogo_id !== cFoco.principal.id).sort((a, c) => (c.saldo ?? -1e9) - (a.saldo ?? -1e9))[0] || null : null;
+  const itens = hoje.map(x => {
+    if (x.fora_da_base) return { id: x.id, cartao: x.cartao, acao: 'avaliar', motivos: ['cartão fora da base: confira a anuidade e os benefícios'], limite: x.limite ?? null };
+    const b = porId[x.catalogo_id], papel = [], motivos = [];
+    if (cAgora && cAgora.principal.id === b.id) papel.push('cartão principal de agora');
+    if (cAgora && cAgora.apoio && cAgora.apoio.id === b.id) papel.push('cartão de apoio');
+    if (relacao && relacao.id === x.id) papel.push(`relacionamento no ${b.banco}, caminho para o ${cFoco.principal.cartao}`);
+    if (cFoco && cFoco.principal.id === b.id) papel.push('é o cartão do foco');
+    if (melhorSala && melhorSala.id === x.id) papel.push('melhor sala VIP nos aeroportos do cliente');
+    if (reserva && reserva.id === x.id) papel.push('reserva sem anuidade de outra bandeira');
+    const rentavel = x.saldo === null ? null : x.saldo >= 0;
+    // progride só o que leva ao foco do plano: cartão do mesmo banco do foco
+    // (se o principal de agora já é do banco do foco, outro cartão desse banco não leva a nada a mais)
+    const progride = !!(bancoFoco && chave(b.banco) === bancoFoco && !(cAgora && chave(cAgora.principal.banco) === bancoFoco && cAgora.principal.id !== b.id));
+    // benefício que conta: sala VIP ilimitada nos aeroportos dele (com o gasto mínimo) ou benefício que ele usa de verdade
+    const si = salaInfo(b, x.gasto), salaBoa = si.ilimitado && si.cumpre, usaBenef = (x.valor_beneficios || 0) > 0 || (x.beneficios || []).length > 0;
+    const beneficio = salaBoa || usaBenef;
+    let acao;
+    if (papel.length) { acao = rentavel === false ? 'negociar' : 'manter'; motivos.push(...papel); }
+    else if (rentavel === false && !progride && !beneficio) { acao = 'cortar'; motivos.push('anuidade maior que o retorno', 'não leva ao cartão do foco', 'quase sem benefício para este cliente'); }
+    else if (rentavel === false) { acao = 'negociar'; motivos.push('anuidade maior que o retorno', progride ? `é do banco do foco (${cFoco.principal.cartao})` : salaBoa ? 'tem sala VIP ilimitada nos aeroportos do cliente' : 'tem benefício que o cliente usa'); }
+    else if (rentavel && !(x.retorno > 0) && !beneficio) { acao = 'cortar'; motivos.push('não tem anuidade, mas também não rende nada', 'não leva ao cartão do foco'); }
+    else { acao = 'manter'; motivos.push(rentavel === null ? 'anuidade não informada' : 'rentável para o cliente'); }
+    if (acao === 'negociar') motivos.push('negociar a anuidade para ele passar a se pagar');
+    return { id: x.id, cartao: x.cartao, acao, motivos, papel: papel.length > 0, saldo: x.saldo, anuidade: x.anuidade, limite: x.limite ?? null };
+  });
+  // máximo de cartões: passando do máximo, saem primeiro os sem papel que menos rendem
+  const ficam = () => itens.filter(i => i.acao !== 'cortar');
+  ficam().filter(i => !i.papel && i.acao !== 'avaliar').sort((a, c) => (a.saldo ?? 0) - (c.saldo ?? 0)).forEach(i => {
+    if (ficam().length > maxCartoes) { i.acao = 'cortar'; i.motivos.push(`passa do máximo de ${maxCartoes} cartões e é dos que menos rendem`); }
+  });
+  // trava do limite: o que fica precisa cobrir o gasto do mês com a folga
+  const limiteNecessario = gasto * folga, somaLim = () => ficam().reduce((t, i) => t + (i.limite || 0), 0);
+  const avisosCarteira = [];
+  itens.filter(i => i.acao === 'cortar').sort((a, c) => (c.limite || 0) - (a.limite || 0)).forEach(i => {
+    if (somaLim() < limiteNecessario) { i.acao = 'negociar'; i.motivos.push('o limite dele faz falta: pedir aumento de limite no principal antes de cortar'); }
+  });
+  if (somaLim() < limiteNecessario) avisosCarteira.push(`Os cartões que ficam somam ${brl(somaLim())} de limite e o gasto pede ${brl(limiteNecessario)}: pedir aumento de limite.`);
+  if (itens.some(i => i.limite === null)) avisosCarteira.push('Há cartões sem limite informado: a conta do limite pode estar baixa.');
+  const carteiraIdeal = { max: maxCartoes, folga, itens, total: itens.length, ficam: ficam().length, limite_que_fica: somaLim(), limite_necessario: limiteNecessario, avisos: avisosCarteira };
+
   // para escolher bem, falta (a IA transforma em perguntas; o estudo pode ser gerado mesmo assim)
   const falta = [];
   if (!objetivos.length) falta.push('ordem das prioridades do cliente');
@@ -287,5 +343,5 @@ export function simular(E) {
   faltaValor.forEach(f => falta.push(f));
 
   return { programa: prefNome, gasto_mes: gasto, bonus_transferencia: bonus, milheiro, aeroporto: perfil.aeroporto_saida, aeroportos, objetivos: objetivos.map(o => ({ chave: o, nome: NOME_OBJ[o] })),
-    atual, caminhos, escada, falta, realizado, visitas_sala_ano: visitasAno, avisos };
+    atual, caminhos, escada, falta, realizado, visitas_sala_ano: visitasAno, carteira_ideal: carteiraIdeal, avisos };
 }
