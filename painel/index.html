@@ -208,6 +208,15 @@
 .vc-body{padding:20px 22px;font-size:16px;line-height:1.55;color:var(--text)}
 .vc-body p{margin:0 0 14px}
 .vc-acoes{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.est-card{background:var(--white);border:1px solid var(--border);padding:22px 24px}
+.est-obj{font-family:'Cormorant Garamond',serif;font-size:28px;line-height:1.25;color:var(--green);margin:0 0 18px}
+.est-obj em{font-style:italic;color:var(--gold)}
+.est-passos{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.est-passo{border-top:1px solid var(--border);padding-top:12px}
+.est-passo .l{display:block;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#715E32;font-weight:500;margin-bottom:6px}
+.est-passo p{margin:0;font-size:16px;line-height:1.55;color:var(--text)}
+.est-data{font-size:13px;color:var(--text-light);margin-top:14px}
+@media(max-width:700px){.est-card{padding:18px 16px}.est-obj{font-size:22px}.est-passos{grid-template-columns:1fr;gap:12px}}
 .sv-intro{font-size:16px;color:var(--text);line-height:1.6;margin:-8px 0 18px}
 .sv-list{background:var(--white);border:1px solid var(--border)}
 .sv-card{padding:18px 22px;border-top:1px solid var(--border)}
@@ -935,6 +944,10 @@
  
     <!-- ============= VIEW: MINHAS VIAGENS ============= -->
     <div class="view" id="view-cartoes" hidden>
+      <section class="sec" id="estrategiaSec" hidden>
+        <div class="blk-title">Objetivo e estratégia</div>
+        <div id="minhaEstrategia"></div>
+      </section>
       <section class="sec">
         <div class="blk-title">Meus Cartões</div>
         <div id="meusCartoes"><div class="empty-cards">Carregando cartões</div></div>
@@ -1464,6 +1477,21 @@
   $('vcClose').addEventListener('click', () => { $('vcModal').hidden = true; });
   $('vcModal').addEventListener('click', (e) => { if (e.target === $('vcModal')) $('vcModal').hidden = true; });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('vcModal').hidden) $('vcModal').hidden = true; });
+
+  // ----- Objetivo e estratégia: a última versão que a equipe publicou (função minha_estrategia_cartoes) -----
+  async function renderEstrategia() {
+    let e = null;
+    try { const r = await supabase.rpc('minha_estrategia_cartoes'); if (r.error) return; e = r.data; } catch (_) { return; }
+    if (!e || !e.objetivo) return;
+    const passo = (rot, t) => t ? `<div class="est-passo"><span class="l">${rot}</span><p>${escapeHtml(t)}</p></div>` : '';
+    $('minhaEstrategia').innerHTML = `<div class="est-card">
+        <p class="est-obj">${escapeHtml(e.objetivo)}</p>
+        <div class="est-passos">${passo('Agora', e.agora)}${passo('Próximo passo', e.proximo_passo)}${passo('Foco', e.foco)}</div>
+        <div class="sv-ressalva">A aprovação de cartão, limite e upgrade depende do banco.</div>
+        ${e.publicado_em ? `<div class="est-data">Atualizado pela sua equipe em ${brDate(String(e.publicado_em).slice(0, 10))}</div>` : ''}
+      </div>`;
+    $('estrategiaSec').hidden = false;
+  }
 
   // ----- Suas salas VIP: só o que a equipe conferiu (função minhas_salas_vip) -----
   const svSemInfo = (t) => !t || /confirmar|n[aã]o informad/i.test(t);
@@ -2593,6 +2621,7 @@
       renderCartoes(cartoes);
       renderMeusCartoes(cartoes);
       renderSalasVip();
+      renderEstrategia();
       renderViagens(viagens);
       renderMovimentos(movimentos);
       renderReunioes(reunioes);

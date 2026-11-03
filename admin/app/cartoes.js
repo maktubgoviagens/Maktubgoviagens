@@ -1,8 +1,9 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=3';
-import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=3';
+import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=4';
+import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=4';
+import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=1';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -771,7 +772,7 @@ function numeroSolto(t) {
 let CB_ED = null; // banco do cliente em edição: null, 'novo' ou o id
 export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   const { sb, esc } = X;
-  el.innerHTML = '<div id="cxFalta"></div><div id="cxSim"></div><div id="cxEstudo"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
+  el.innerHTML = '<div id="cxFalta"></div><div id="cxSim"></div><div id="cxTexto"></div><div id="cxEstudo"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
     + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>'
     + '<div class="secao">Benefícios que o cliente usa</div><section class="bloco" style="margin-top:0" id="cxBen"><div class="vazio">Carregando...</div></section>'
@@ -832,7 +833,7 @@ async function beneficiosUsados(ctx) {
 async function desenharSimulacao(ctx) {
   const { X } = ctx, { sb, esc, num } = X, box = ctx.el.querySelector('#cxSim');
   if (!box) return;
-  if (faltaEstudo(ctx).length) { box.innerHTML = ''; desenharEstudo(ctx, null); return; }
+  if (faltaEstudo(ctx).length) { box.innerHTML = ''; desenharTextoCliente(ctx, null); desenharEstudo(ctx, null); return; }
   box.innerHTML = '<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0"><div class="vazio">Calculando...</div></section>';
   const p = ctx.perfil || {}, aeros = [...new Set([p.aeroporto_saida, ...(p.aeroportos_frequentes || [])].filter(Boolean))], chaveA = aeros.join(',');
   if (!ctx.simDados || ctx.simDados.aero !== chaveA) {
@@ -884,6 +885,7 @@ async function desenharSimulacao(ctx) {
     ${top.map(linha).join('')}
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
     <div class="sub" style="font-size:13px;margin-top:8px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. "Dá para pedir" é só uma indicação pelas faixas do perfil: a aprovação de cartão, limite e upgrade depende do banco.</div></section>`;
+  desenharTextoCliente(ctx, R);
   desenharEstudo(ctx, R);
 }
 // visitas a salas VIP que a equipe lança: o painel mostra usadas e restantes no ano

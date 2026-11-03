@@ -190,7 +190,7 @@ export function simular(E) {
     if (P.somente_convite) AV.push(`${nomeP} é só por convite.`);
     cP.sala.redes.forEach(r => r.por.filter(x => !x.salas && x.a_confirmar).forEach(x => AV.push(`Em ${x.aeroporto}, ${x.a_confirmar} ${x.a_confirmar === 1 ? 'sala aceita' : 'salas aceitam'} ${r.rede} só "a confirmar" na base.`)));
     return {
-      id: P.id + (apoio ? '|' + apoio.b.id : ''), principal: { id: P.id, cartao: nomeP, gasto_mes: gP, limite: LP.v, limite_estimado: LP.estimado, ...cP },
+      id: P.id + (apoio ? '|' + apoio.b.id : ''), principal: { id: P.id, cartao: nomeP, banco: P.banco, gasto_mes: gP, limite: LP.v, limite_estimado: LP.estimado, ...cP },
       apoio: apoio ? { id: apoio.b.id, cartao: `${apoio.b.banco} ${apoio.b.nome}`.trim(), gasto_mes: apoio.g, limite: apoio.L.v, limite_estimado: apoio.L.estimado, ...apoio.c } : null,
       sem_cartao: sobra, milhas: soma(c => c.milhas), outros_pontos: [cP.outro, apoio && apoio.c.outro].filter(Boolean), valor, anuidade: anu, saldo: valor === null ? null : valor - anu,
       sala: salaBoa, ja_tem: meusIds.has(P.id), pedir: cP.pedir, somente_convite: !!P.somente_convite, fora_dos_bancos: foraSet.has(P),
