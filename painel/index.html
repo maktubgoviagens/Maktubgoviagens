@@ -216,6 +216,23 @@
 .est-passo .l{display:block;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#715E32;font-weight:500;margin-bottom:6px}
 .est-passo p{margin:0;font-size:16px;line-height:1.55;color:var(--text)}
 .est-data{font-size:13px;color:var(--text-light);margin-top:14px}
+.pl-sec{margin-top:22px;padding-top:16px;border-top:1px solid var(--border)}
+.pl-sec h4{font-family:'Jost',sans-serif;font-weight:500;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#715E32;margin:0 0 10px}
+.pl-car{display:grid;grid-template-columns:1.3fr 200px 2fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--border);font-size:16px}
+.pl-car:first-of-type{border-top:0}
+.pl-car b{font-weight:500;color:var(--green)}
+.pl-tag{display:inline-block;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border:1px solid currentColor;white-space:nowrap}
+.pl-manter{color:#193826}.pl-negociar{color:#715E32}.pl-cancelar{color:#8A3B2E}
+.pl-prog{font-size:16px;color:var(--text);margin:0 0 10px}
+.pl-prog-bar{height:4px;background:rgba(138,101,32,.15);margin-bottom:12px}.pl-prog-bar div{height:100%;background:var(--gold)}
+.pl-item{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border);font-size:16px;line-height:1.45}
+.pl-item button{flex:none;width:26px;height:26px;border:1px solid var(--gold);background:var(--white);cursor:pointer;color:var(--green);font-size:16px;line-height:1;padding:0}
+.pl-item button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--white)}
+.pl-item .eq{flex:none;width:26px;height:26px;border:1px dashed var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-light)}
+.pl-item .eq.ok{border:1px solid var(--green);background:var(--green);color:var(--white)}
+.pl-item small{display:block;font-size:13px;color:var(--text-light);margin-top:2px}
+.pl-item.feito span.t{color:var(--text-light);text-decoration:line-through}
+@media(max-width:700px){.pl-car{grid-template-columns:1fr auto}.pl-car .m{grid-column:1/-1;margin-top:-4px;color:var(--text-light);font-size:16px}}
 @media(max-width:700px){.est-card{padding:18px 16px}.est-obj{font-size:22px}.est-passos{grid-template-columns:1fr;gap:12px}}
 .sv-intro{font-size:16px;color:var(--text);line-height:1.6;margin:-8px 0 18px}
 .sv-list{background:var(--white);border:1px solid var(--border)}
@@ -1483,14 +1500,37 @@
     let e = null;
     try { const r = await supabase.rpc('minha_estrategia_cartoes'); if (r.error) return; e = r.data; } catch (_) { return; }
     if (!e || !e.objetivo) return;
+    let plano = [];
+    try { const r2 = await supabase.rpc('meu_plano_cartoes'); if (!r2.error && Array.isArray(r2.data)) plano = r2.data; } catch (_) {}
     const passo = (rot, t) => t ? `<div class="est-passo"><span class="l">${rot}</span><p>${escapeHtml(t)}</p></div>` : '';
     $('minhaEstrategia').innerHTML = `<div class="est-card">
         <p class="est-obj">${escapeHtml(e.objetivo)}</p>
         <div class="est-passos">${passo('Agora', e.agora)}${passo('Próximo passo', e.proximo_passo)}${passo('Foco', e.foco)}</div>
-        <div class="sv-ressalva">A aprovação de cartão, limite e upgrade depende do banco.</div>
+        <div id="planoCartoes"></div>
+        <div class="sv-ressalva">A aprovação de cartão, limite e upgrade depende do banco. Qualquer cancelamento é feito só com a sua confirmação.</div>
         ${e.publicado_em ? `<div class="est-data">Atualizado pela sua equipe em ${brDate(String(e.publicado_em).slice(0, 10))}</div>` : ''}
       </div>`;
     $('estrategiaSec').hidden = false;
+    renderPlanoCartoes(plano);
+  }
+  // ----- Plano de cartões: o que fazer com cada cartão e a lista do que fazer, com caixinha de feito -----
+  const PL_DEC = { manter: ['Manter', 'pl-manter'], manter_por_enquanto: ['Manter por enquanto', 'pl-manter'], negociar: ['Negociar', 'pl-negociar'], cancelar: ['Cancelar', 'pl-cancelar'] };
+  function renderPlanoCartoes(plano) {
+    const box = $('planoCartoes'); if (!box || !plano.length) return;
+    const cartoes = plano.filter(i => i.tipo === 'cartao'), tarefas = plano.filter(i => i.tarefa), feitas = tarefas.filter(i => i.feito_em).length;
+    const pct = tarefas.length ? Math.round(feitas / tarefas.length * 100) : 0;
+    box.innerHTML = `${cartoes.length ? `<div class="pl-sec"><h4>O que fazer com cada cartão</h4>${cartoes.map(c => { const d = PL_DEC[c.decisao] || ['', ''];
+        return `<div class="pl-car"><b>${escapeHtml(c.cartao)}</b><span class="pl-tag ${d[1]}">${d[0]}</span><span class="m">${escapeHtml(c.motivo || '')}</span></div>`; }).join('')}</div>` : ''}
+      ${tarefas.length ? `<div class="pl-sec"><h4>Seu plano</h4><p class="pl-prog">${feitas} de ${tarefas.length} ${tarefas.length === 1 ? 'passo feito' : 'passos feitos'}</p><div class="pl-prog-bar"><div style="width:${pct}%"></div></div>
+        ${tarefas.map(t => t.responsavel === 'cliente'
+          ? `<div class="pl-item${t.feito_em ? ' feito' : ''}"><button type="button" data-plf="${escapeHtml(t.id)}" aria-pressed="${t.feito_em ? 'true' : 'false'}" aria-label="Marcar como feito: ${escapeHtml(t.tarefa)}">${t.feito_em ? '✓' : ''}</button><span><span class="t">${escapeHtml(t.tarefa)}</span><small>${t.feito_em ? 'Feito em ' + brDate(String(t.feito_em).slice(0, 10)) : 'Toque no quadrado quando fizer'}</small></span></div>`
+          : `<div class="pl-item${t.feito_em ? ' feito' : ''}"><span class="eq${t.feito_em ? ' ok' : ''}" aria-hidden="true">${t.feito_em ? '✓' : ''}</span><span><span class="t">${escapeHtml(t.tarefa)}</span><small>${t.feito_em ? 'A equipe concluiu em ' + brDate(String(t.feito_em).slice(0, 10)) : 'A sua equipe cuida disso'}</small></span></div>`).join('')}</div>` : ''}`;
+    box.querySelectorAll('[data-plf]').forEach(b => b.onclick = async () => {
+      const t = plano.find(x => x.id === b.dataset.plf), novo = !t.feito_em; b.disabled = true;
+      try { const { data, error } = await supabase.rpc('cliente_marcar_feito', { p_item: t.id, p_feito: novo }); if (error) throw error; t.feito_em = novo ? (data || new Date().toISOString()) : null; toast(novo ? 'Marcado como feito. A sua equipe já foi avisada.' : 'Desmarcado.'); }
+      catch (_) { toast('Não conseguimos salvar agora. Tente de novo em instantes.'); }
+      renderPlanoCartoes(plano);
+    });
   }
 
   // ----- Suas salas VIP: só o que a equipe conferiu (função minhas_salas_vip) -----

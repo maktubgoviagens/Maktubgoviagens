@@ -1,9 +1,9 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=5';
+import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=6';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=5';
-import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=1';
+import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=2';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
