@@ -946,19 +946,24 @@ async function desenharSimulacao(ctx) {
   desenharTextoCliente(ctx, R);
   desenharEstudo(ctx, R);
 }
-// outras opções para o recomendado: as mais fáceis de conseguir primeiro (banco do cliente), a equipe escolhe uma
+// opções para o recomendado: Opção 1, 2 e 3 são cartões novos, os mais fáceis primeiro (banco do cliente);
+// "Ver todas" lista todos os cartões da simulação, para a equipe escolher qualquer um
 function opcoesBox(R, rec, esc, num, brl, tagPedir) {
-  const pos = (c) => R.caminhos.indexOf(c), vistos = new Set(rec ? [rec.principal.id] : []);
-  const L = R.caminhos.filter(c => c.pedir.r !== 'não' && (!c.somente_convite || c.ja_tem)).sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c))
-    .filter(c => { if (vistos.has(c.principal.id)) return false; vistos.add(c.principal.id); return true; }).slice(0, 4);
-  if (!L.length) return '';
-  return `<div style="margin-top:12px"><b style="font-weight:600;font-size:16px">Outras opções</b>
-    <div style="font-size:13px;color:var(--tinta-3)">Primeiro os bancos em que o cliente já tem relacionamento. Toque em "escolher" para trocar o recomendado.</div>
-    ${L.map(c => `<div style="border-top:1px solid var(--linha);padding:8px 0;display:flex;gap:8px;align-items:flex-start;justify-content:space-between"><span style="flex:1"><b style="font-weight:600;font-size:15px">${esc(c.principal.cartao)}</b>${c.apoio ? ` <span style="color:var(--tinta-3)">+ ${esc(c.apoio.cartao)}</span>` : ''}
+  const pos = (c) => R.caminhos.indexOf(c), vistos = new Set();
+  const unicos = R.caminhos.slice().sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c) || (c.pedir.r === 'não') - (a.pedir.r === 'não'))
+    .filter(c => { const k = String(c.principal.id); if (vistos.has(k)) return false; vistos.add(k); return true; });
+  const recId = rec ? String(rec.principal.id) : null;
+  const novos = unicos.filter(c => !c.ja_tem && String(c.principal.id) !== recId).sort((a, c) => (a.pedir.r === 'não') - (c.pedir.r === 'não'));
+  const top = novos.slice(0, 3), resto = unicos.filter(c => !top.includes(c) && String(c.principal.id) !== recId);
+  const item = (c, rot) => `<div style="border-top:1px solid var(--linha);padding:10px 0;display:flex;gap:10px;align-items:flex-start;justify-content:space-between"><span style="flex:1">${rot ? `<span style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dourado)">${rot}</span><br>` : ''}<b style="font-weight:600;font-size:16px">${esc(c.principal.cartao)}</b>
       <div style="margin-top:2px">${tagPedir(c.pedir)}${c.relacionamento && !c.ja_tem ? ' <span class="tag ok">banco do cliente</span>' : ''}${c.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}</div>
-      <div style="font-size:14px;color:var(--tinta-2);margin-top:2px">${num(c.milhas)} milhas/ano · anuidades ${brl(c.anuidade)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div>
+      <div style="font-size:14px;color:var(--tinta-2);margin-top:2px">${num(c.milhas)} milhas/ano · anuidade ${brl(c.principal.anuidade)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div>
       ${c.pedir.motivo ? `<div style="font-size:13px;color:var(--tinta-3)">${esc(c.pedir.motivo)}</div>` : ''}</span>
-      <button class="mini" type="button" data-fe="${esc(c.principal.id)}">escolher</button></div>`).join('')}</div>`;
+      <button class="zap" type="button" data-fe="${esc(String(c.principal.id))}" style="padding:8px 14px;font-size:13px">Escolher</button></div>`;
+  return `<div style="margin-top:14px"><b style="font-weight:600;font-size:18px">Opções de cartão novo</b>
+    <div style="font-size:13px;color:var(--tinta-3)">Primeiro os bancos em que o cliente já tem relacionamento. Toque em "Escolher" para tornar o recomendado.</div>
+    ${top.length ? top.map((c, i) => item(c, `Opção ${i + 1}`)).join('') : '<div class="vazio">Nenhum cartão novo na simulação.</div>'}
+    ${resto.length ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer;font-size:15px">Ver todos os cartões (${resto.length})</summary>${resto.map(c => item(c, '')).join('')}</details>` : ''}</div>`;
 }
 // a escolha fica no perfil do cliente (foco_escolhido, 74-foco-escolhido.sql); sem o SQL, vale só até recarregar a ficha
 const ESCOLHA_CX = {};
