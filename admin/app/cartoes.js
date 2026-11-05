@@ -2,8 +2,8 @@
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
 import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=6';
-import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=5';
-import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=2';
+import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
+import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=3';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -770,13 +770,44 @@ function numeroSolto(t) {
   m = s.match(/^(\d+(?:,\d+)?)\s*mil$/); return m ? Number(m[1].replace(',', '.')) * 1000 : null;
 }
 let CB_ED = null; // banco do cliente em edição: null, 'novo' ou o id
+const PASSOS_CX = [['dados', '1. Dados do cliente'], ['analise', '2. Análise'], ['relatorio', '3. Relatório']];
+const PASSO_CX = { cliente: null, passo: null }; // passo aberto na ficha (fica ao redesenhar)
+function irPasso(el, k) {
+  el.querySelectorAll('[data-passo]').forEach(d => { d.hidden = d.dataset.passo !== k; });
+  el.querySelectorAll('[data-passo-bt]').forEach(b => { const on = b.dataset.passoBt === k; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+}
+// status de cada grupo dos Dados, ao lado do título; grupo com o que falta para o estudo abre sozinho
+function statusGrupos(ctx) {
+  const el = ctx.el, F = faltaEstudo(ctx);
+  const st = (g, t, falta) => { const s = el.querySelector(`[data-st="${g}"]`); if (!s) return; s.textContent = t ? '· ' + t : ''; s.style.color = falta ? 'var(--alerta)' : 'var(--tinta-3)';
+    const d = el.querySelector(`.cxGrupo[data-g="${g}"]`); if (falta && d && !d.dataset.mexeu) d.open = true; };
+  const fPerfil = F.filter(f => f !== 'pelo menos um banco com o segmento');
+  st('perfil', fPerfil.length ? 'falta ' + fPerfil.join(', ') : 'completo', fPerfil.length > 0);
+  const nb = ctx.bancos.length, semSeg = !ctx.bancos.some(b => b.segmento_id || b.segmento_txt);
+  st('bancos', !nb ? 'nenhum banco lançado' : semSeg ? 'falta o segmento' : nb === 1 ? '1 banco' : nb + ' bancos', !nb || semSeg);
+  const nc = ctx.cartoes.length;
+  st('cartoes', !nc ? 'nenhum cartão lançado' : nc === 1 ? '1 cartão' : nc + ' cartões', !nc);
+  st('ben', 'opcional, melhora a conta', false);
+  st('salas', 'opcional', false);
+  el.querySelectorAll('.cxGrupo').forEach(d => { if (!d.dataset.liga) { d.dataset.liga = '1'; d.querySelector('summary').addEventListener('click', () => { d.dataset.mexeu = '1'; }); } });
+}
 export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   const { sb, esc } = X;
-  el.innerHTML = '<div id="cxFalta"></div><div id="cxSim"></div><div id="cxTexto"></div><div id="cxEstudo"></div><div class="secao">Bancos</div><section class="bloco" style="margin-top:0" id="cxBancos"><div class="vazio">Carregando...</div></section>'
-    + '<div class="secao">Perfil de viagem e gastos</div><section class="bloco" style="margin-top:0" id="cxPerfil"><div class="vazio">Carregando...</div></section>'
-    + '<div class="secao">Cartões</div><section class="bloco" style="margin-top:0" id="gtCartBox"></section>'
-    + '<div class="secao">Benefícios que o cliente usa</div><section class="bloco" style="margin-top:0" id="cxBen"><div class="vazio">Carregando...</div></section>'
-    + '<div class="secao">Uso de salas VIP</div><section class="bloco" style="margin-top:0" id="cxUso"><div class="vazio">Carregando...</div></section>';
+  // a aba em 3 passos: 1. dados do cliente, 2. análise (simulação), 3. relatório (PDF interno e, se quiser, publicar no painel)
+  const grupo = (g, titulo, corpoId, conteudo) => `<details class="cxGrupo" data-g="${g}" style="border-top:1px solid var(--linha);padding:4px 0"><summary style="cursor:pointer;padding:10px 0;font-size:16px"><b style="font-weight:600">${titulo}</b> <span data-st="${g}" style="font-size:13px;color:var(--tinta-3)"></span></summary>
+      <section class="bloco" style="margin-top:0" id="${corpoId}">${conteudo}</section></details>`;
+  el.innerHTML = `<div class="chips" id="cxPassos" role="tablist" style="margin-top:12px">${PASSOS_CX.map(([k, l]) => `<button type="button" role="tab" data-passo-bt="${k}">${l}</button>`).join('')}</div>
+    <div data-passo="dados"><div id="cxFalta"></div>
+      ${grupo('perfil', 'Perfil de viagem e gastos', 'cxPerfil', '<div class="vazio">Carregando...</div>')}
+      ${grupo('bancos', 'Bancos', 'cxBancos', '<div class="vazio">Carregando...</div>')}
+      ${grupo('cartoes', 'Cartões', 'gtCartBox', '')}
+      ${grupo('ben', 'Benefícios que o cliente usa', 'cxBen', '<div class="vazio">Carregando...</div>')}
+      ${grupo('salas', 'Uso de salas VIP', 'cxUso', '<div class="vazio">Carregando...</div>')}</div>
+    <div data-passo="analise" hidden><div id="cxSim"></div></div>
+    <div data-passo="relatorio" hidden><div id="cxRel"></div><div id="cxTexto"></div><div id="cxEstudo"></div></div>`;
+  if (PASSO_CX.cliente !== c.id) Object.assign(PASSO_CX, { cliente: c.id, passo: null });
+  irPasso(el, PASSO_CX.passo || 'dados');
+  el.querySelectorAll('[data-passo-bt]').forEach(b => b.onclick = () => { PASSO_CX.passo = b.dataset.passoBt; irPasso(el, PASSO_CX.passo); });
   secaoCliente(el.querySelector('#gtCartBox'), c, X, onPrimeiro);
   const [p, bs, sg, ct] = await Promise.all([sb.from('cliente_perfil').select('*').eq('cliente_id', c.id).maybeSingle(), sb.from('cliente_bancos').select('*').eq('cliente_id', c.id).order('criado_em'),
     sb.from('bancos_segmentos').select('*').order('banco').order('posicao_regua'), sb.from('cartoes').select('*').eq('cliente_id', c.id).order('ordem')]);
@@ -785,6 +816,8 @@ export async function abaCartoesCliente(el, c, X, onPrimeiro) {
   if (p.error || bs.error) { el.querySelector('#cxBancos').innerHTML = X.tec('<div class="config">Rode no Supabase o 64-ia-cartoes-dados-cliente.sql para ativar os bancos e o perfil do cliente.</div>'); el.querySelector('#cxPerfil').innerHTML = ''; return; }
   const ctx = { c, X, el, perfil: p.data || null, bancos: bs.data || [], segs: sg.error ? [] : (sg.data || []), cartoes: ct.error ? [] : (ct.data || []), diag: (X.dadosDiag && X.dadosDiag(c)) || {} };
   CB_ED = null;
+  // primeira vez na ficha: ficha completa abre na Análise; faltando dado, abre nos Dados
+  if (!PASSO_CX.passo) { PASSO_CX.passo = faltaEstudo(ctx).length ? 'dados' : 'analise'; irPasso(el, PASSO_CX.passo); }
   desenharFalta(ctx); desenharBancos(ctx); desenharPerfil(ctx);
   usoSalas(ctx);
   beneficiosUsados(ctx);
@@ -833,8 +866,12 @@ async function beneficiosUsados(ctx) {
 async function desenharSimulacao(ctx) {
   const { X } = ctx, { sb, esc, num } = X, box = ctx.el.querySelector('#cxSim');
   if (!box) return;
-  if (faltaEstudo(ctx).length) { box.innerHTML = ''; desenharTextoCliente(ctx, null); desenharEstudo(ctx, null); return; }
-  box.innerHTML = '<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0"><div class="vazio">Calculando...</div></section>';
+  const F0 = faltaEstudo(ctx);
+  if (F0.length) {
+    const msg = `<section class="bloco" style="margin-top:12px"><div class="vazio">Para a análise, complete nos Dados do cliente: ${ctx.X.esc(F0.join(', '))}.</div><button class="sec" type="button" data-ir="dados" style="width:100%;margin-top:8px">Completar os dados</button></section>`;
+    box.innerHTML = msg; ligarIr(ctx, box); desenharRelatorio(ctx, null); desenharTextoCliente(ctx, null); desenharEstudo(ctx, null); return;
+  }
+  box.innerHTML = '<section class="bloco" style="margin-top:12px"><div class="vazio">Calculando...</div></section>';
   const p = ctx.perfil || {}, aeros = [...new Set([p.aeroporto_saida, ...(p.aeroportos_frequentes || [])].filter(Boolean))], chaveA = aeros.join(',');
   if (!ctx.simDados || ctx.simDados.aero !== chaveA) {
     const desde = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10), ano = new Date().getFullYear() + '-01-01';
@@ -865,29 +902,93 @@ async function desenharSimulacao(ctx) {
       <div style="font-size:13px;color:var(--tinta-2);margin-top:6px;line-height:1.5">${[c.pedir.motivo ? 'Para pedir: ' + c.pedir.motivo : '', c.degrau ? 'Degrau: ' + c.degrau : '', ...c.notas,
         c.notas_objetivos ? 'Notas por prioridade: ' + R.objetivos.map(o => `${o.nome.toLowerCase()} ${Math.round(c.notas_objetivos[o.chave] * 100)}`).join(', ') : ''].filter(Boolean).map(esc).join('<br>')}<br><span style="color:var(--tinta-3)">Fontes: ${esc(c.fontes.join(', '))}</span></div></details>`;
   const porId = Object.fromEntries(R.caminhos.map(c => [c.id, c]));
-  const degrauBox = (rot, c) => c ? `<div style="margin-top:6px"><span class="tag ${rot === 'Foco' ? 'ok' : 'ouro'}">${rot}</span> <b style="font-weight:600">${esc(c.principal.cartao)}</b>${c.apoio ? ` + ${esc(c.apoio.cartao)}` : ''}
-      <div style="font-size:14px">${num(c.milhas)} milhas/ano · anuidades ${brl(c.anuidade)} · saldo ${brl(c.saldo)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div></div>` : '';
   const ag = porId[R.escada.agora], fo = porId[R.escada.foco];
   const hojeL = R.atual.cartoes.filter(x => !x.fora_da_base);
   const top = R.caminhos.slice(0, 12), resto = R.caminhos.slice(12);
-  box.innerHTML = `<div class="secao">Simulação de caminhos</div><section class="bloco" style="margin-top:0">
-    <div class="sub" style="margin-top:0;font-size:13px">Gasto nacional de ${brl(R.gasto_mes)} por mês, com o cartão principal até o limite e o resto no melhor cartão de apoio que o cliente já tem. Milhas contadas em ${esc(R.programa || 'programa não informado')}${R.bonus_transferencia ? ` com bônus de transferência de ${num(R.bonus_transferencia)}%` : ''}${R.milheiro !== null ? `, milheiro de R$ ${String(R.milheiro).replace('.', ',')}` : ''}. Aeroportos: ${esc(R.aeroportos.join(', ') || 'não informado')}. ${R.objetivos.length ? 'Ordem pelas prioridades: ' + esc(R.objetivos.map((o, i) => `${i + 1}. ${o.nome}`).join(', ')) + '.' : 'Sem prioridades: ordem pelo saldo.'} Contas por fórmula, sem IA. Só a equipe vê.</div>
-    ${R.avisos.map(a => `<div class="sub" style="color:var(--alerta);font-size:13px">${esc(a)}</div>`).join('')}
-    ${R.falta.length ? `<div class="config" style="margin-top:10px;font-size:14px"><b>Para escolher bem, falta:</b><br>${R.falta.map(f => '· ' + esc(f)).join('<br>')}<div style="font-size:13px;margin-top:4px">Dá para gerar o estudo assim mesmo: o que falta vira pergunta ao cliente.</div></div>` : ''}
-    ${fo ? `<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--dourado)"><b style="font-weight:600">Escada por prazo</b>
-      ${ag && ag.id !== fo.id ? degrauBox('Agora', ag) : ''}${R.escada.passos.length ? `<div style="margin-top:6px"><span class="tag">Próximo passo</span><div style="font-size:14px;line-height:1.5">${R.escada.passos.map(esc).join('<br>')}</div></div>` : ''}${degrauBox(ag && ag.id === fo.id ? 'Agora e foco' : 'Foco', fo)}
-      ${porId[R.escada.a_confirmar] ? `<div style="margin-top:8px;font-size:13px;color:var(--alerta)">Pelas prioridades, o melhor seria <b style="font-weight:600">${esc(porId[R.escada.a_confirmar].principal.cartao)}</b>, mas ele tem dados a confirmar na base e não pode ser o recomendado. Confira o cartão em Base de cartões e desmarque "a confirmar" para ele entrar no foco.</div>` : ''}</div>` : ''}
-    <div style="margin-top:10px;padding:10px 12px;background:var(--creme-2)"><b style="font-weight:600">Hoje, como está</b>
-      <div style="font-size:14px;margin-top:4px">${num(R.atual.milhas)} milhas/ano em ${esc(R.programa)} · anuidades ${brl(R.atual.anuidade)} · pontos valem ${brl(R.atual.valor)}${R.atual.beneficios ? ` · benefícios usados ${brl(R.atual.beneficios)}` : ''} · saldo ${brl(R.atual.saldo)}${R.atual.economia ? ` · economia de anuidade no ano ${brl(R.atual.economia)}` : ''}</div>
+  // quadro curto: hoje x recomendado, o próximo passo e o que fazer com cada cartão; as contas ficam em "Ver detalhes da conta"
+  const rec = fo || ag;
+  const col = (t, x, extra) => `<div style="flex:1;min-width:140px;padding:10px 12px;background:${t === 'Hoje' ? 'var(--creme-2)' : 'transparent'};border:1px solid ${t === 'Hoje' ? 'var(--linha)' : 'var(--dourado)'}">
+      <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-3)">${t}</div>${extra}
+      <div style="font-size:16px;margin-top:6px"><b style="font-weight:600">${num(x.milhas)}</b> milhas/ano</div>
+      <div style="font-size:14px;color:var(--tinta-2)">anuidades ${brl(x.anuidade)}</div>
+      <div style="font-size:14px;color:${(x.saldo ?? 0) >= 0 ? 'var(--verde)' : 'var(--alerta)'}">saldo ${brl(x.saldo)} no ano</div>
+      ${x.sala ? `<div style="font-size:14px;color:var(--tinta-2)">${x.sala.ilimitado && x.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala VIP ilimitada'}</div>` : ''}</div>`;
+  const CI = R.carteira_ideal, TAGC = { manter: ['ok', 'manter'], negociar: ['ouro', 'negociar'], cortar: ['alerta', 'cortar'], avaliar: ['', 'avaliar'] };
+  const ordCI = { manter: 0, negociar: 1, cortar: 2, avaliar: 3 };
+  const carteiraCurta = CI && CI.itens.length ? `<div style="margin-top:14px"><b style="font-weight:600;font-size:16px">O que fazer com cada cartão</b>
+      ${CI.itens.slice().sort((a, b) => ordCI[a.acao] - ordCI[b.acao]).map(i => `<div style="border-top:1px solid var(--linha);padding:6px 0;font-size:14px"><b style="font-weight:600">${esc(i.cartao)}</b> <span class="tag ${TAGC[i.acao][0]}">${TAGC[i.acao][1]}</span>${i.motivos.length ? `<div style="font-size:13px;color:var(--tinta-2)">${esc(i.motivos[0])}</div>` : ''}</div>`).join('')}
+      <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Só recomendação: nada é cancelado sozinho.</div></div>` : '';
+  box.innerHTML = `<section class="bloco" style="margin-top:12px">
+    ${R.avisos.map(a => `<div class="sub" style="color:var(--alerta);font-size:13px;margin-top:0">${esc(a)}</div>`).join('')}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('Hoje', R.atual, '')}${rec ? col('Recomendado', rec, `<div style="font-size:16px;margin-top:4px"><b style="font-weight:600">${esc(rec.principal.cartao)}</b>${rec.apoio ? ` + ${esc(rec.apoio.cartao)}` : ''}</div><div style="margin-top:4px">${tagPedir(rec.pedir)}</div>`) : '<div class="vazio" style="flex:1">Nenhum caminho alcançável com os dados de hoje.</div>'}</div>
+    ${ag && fo && ag.id !== fo.id ? `<div style="font-size:14px;margin-top:10px"><span style="color:var(--tinta-3)">Enquanto isso:</span> concentrar no <b style="font-weight:600">${esc(ag.principal.cartao)}</b>.</div>` : ''}
+    ${R.escada.passos.length ? `<div style="margin-top:12px"><b style="font-weight:600;font-size:16px">Próximo passo</b><div style="font-size:14px;line-height:1.5">${R.escada.passos.map(esc).join('<br>')}</div></div>` : ''}
+    ${porId[R.escada.a_confirmar] ? `<div style="margin-top:8px;font-size:13px;color:var(--alerta)">O <b style="font-weight:600">${esc(porId[R.escada.a_confirmar].principal.cartao)}</b> seria melhor, mas tem dados a confirmar na Base de cartões.</div>` : ''}
+    ${carteiraCurta}
+    ${R.falta.length ? `<div class="config" style="margin-top:12px;font-size:14px"><b>Para escolher melhor, falta:</b> ${R.falta.map(esc).join(', ')}.</div>` : ''}
+    <div class="sub" style="font-size:13px;margin-top:10px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. A aprovação de cartão, limite e upgrade depende do banco.</div>
+    <button class="zap" type="button" data-ir="relatorio" style="width:100%;margin-top:10px">Ir para o relatório</button>
+    <details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Ver detalhes da conta</summary>
+    <div class="sub" style="font-size:13px">Gasto nacional de ${brl(R.gasto_mes)} por mês, com o cartão principal até o limite e o resto no melhor cartão de apoio que o cliente já tem. Milhas contadas em ${esc(R.programa || 'programa não informado')}${R.bonus_transferencia ? ` com bônus de transferência de ${num(R.bonus_transferencia)}%` : ''}${R.milheiro !== null ? `, milheiro de R$ ${String(R.milheiro).replace('.', ',')}` : ''}. Aeroportos: ${esc(R.aeroportos.join(', ') || 'não informado')}. ${R.objetivos.length ? 'Ordem pelas prioridades: ' + esc(R.objetivos.map((o, i) => `${i + 1}. ${o.nome}`).join(', ')) + '.' : 'Sem prioridades: ordem pelo saldo.'} Contas por fórmula, sem IA. Só a equipe vê.</div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--creme-2)"><b style="font-weight:600">Hoje, cartão por cartão</b>
       ${hojeL.map(x => `<div style="font-size:13px;margin-top:4px;color:var(--tinta-2)"><b style="font-weight:600">${esc(x.cartao)}</b>: gasto ${brl(x.gasto)}/mês${x.gasto_estimado ? ' (estimado)' : ''} · ${x.outro ? `${num(x.outro.pontos)} pts ${esc(x.outro.programa)}` : num(x.milhas) + ' milhas'} · retorno ${brl(x.retorno)}${x.valor_beneficios ? ` (com ${brl(x.valor_beneficios)} de benefícios)` : ''} · anuidade ${brl(x.anuidade)}${x.economia ? ` · economia ${brl(x.economia)}` : ''}${x.anuidade_maior_que_retorno ? ' · <span style="color:var(--alerta)">anuidade maior que o retorno: negociar</span>' : ''}</div>`).join('')}
       <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Com o gasto médio lançado em cada cartão${hojeL.some(x => x.gasto_estimado) ? '; onde ele falta, o gasto total dividido pelos limites' : ''}.${R.atual.cartoes.some(x => x.fora_da_base) ? ' Cartões fora da base não entram na conta.' : ''}</div></div>
     ${carteiraBox(R, esc)}
     ${R.realizado.length ? `<div style="margin-top:10px;font-size:13px"><b style="font-weight:600">Previsto e realizado nos últimos 12 meses</b>${R.realizado.map(r => `<div>${esc(r.programa)}: previsto ${r.previsto !== null ? num(r.previsto) : '·'} pts, entrou ${r.realizado !== null ? num(r.realizado) : '·'} pts</div>`).join('')}<div style="color:var(--tinta-3)">Entrou: acúmulo, clube e bônus lançados no extrato. Visitas a sala VIP no ano: ${num(R.visitas_sala_ano)}.</div></div>` : ''}
+    <div style="margin-top:10px"><b style="font-weight:600">Todos os caminhos</b></div>
     ${top.map(linha).join('')}
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
-    <div class="sub" style="font-size:13px;margin-top:8px">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. "Dá para pedir" é só uma indicação pelas faixas do perfil: a aprovação de cartão, limite e upgrade depende do banco.</div></section>`;
+    </details></section>`;
+  ligarIr(ctx, box);
+  desenharRelatorio(ctx, R);
   desenharTextoCliente(ctx, R);
   desenharEstudo(ctx, R);
+}
+// passo 3: o estudo interno em PDF (só a equipe). Publicar no painel é opcional e fica logo abaixo.
+function desenharRelatorio(ctx, R) {
+  const { X } = ctx, { esc } = X, box = ctx.el.querySelector('#cxRel');
+  if (!box) return;
+  if (!R) { box.innerHTML = '<section class="bloco" style="margin-top:12px"><div class="vazio">O relatório sai da análise. Complete os dados do cliente primeiro.</div><button class="sec" type="button" data-ir="dados" style="width:100%;margin-top:8px">Completar os dados</button></section>'; ligarIr(ctx, box); return; }
+  box.innerHTML = `<div class="secao">Estudo interno</div><section class="bloco" style="margin-top:0">
+    <div class="sub" style="margin-top:0;font-size:14px">PDF para a equipe: hoje, o recomendado, o próximo passo e o que fazer com cada cartão. Só uso interno, o cliente não recebe.</div>
+    <button class="zap" type="button" id="relPdf" style="width:100%;margin-top:10px">Gerar PDF do estudo</button>
+    <div class="sub" style="font-size:13px;margin-top:8px">Para o cliente ver no painel, use "Publicar para o cliente" logo abaixo. É opcional.</div></section>`;
+  box.querySelector('#relPdf').onclick = () => { if (!pdfEstudo(ctx, R)) X.aviso('Libere as janelas do navegador para gerar o PDF.'); };
+}
+function pdfEstudo(ctx, R) {
+  const e = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const brl = (v) => v === null || v === undefined ? 'não calculado' : (v < 0 ? '-' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
+  const num = (v) => Math.round(v || 0).toLocaleString('pt-BR');
+  const porId = Object.fromEntries(R.caminhos.map(c => [c.id, c])), ag = porId[R.escada.agora], fo = porId[R.escada.foco], rec = fo || ag;
+  const p = ctx.perfil || {}, CI = R.carteira_ideal, ord = { manter: 0, negociar: 1, cortar: 2, avaliar: 3 }, ROT = { manter: 'Manter', negociar: 'Negociar', cortar: 'Cortar, depois de negociar', avaliar: 'Avaliar' };
+  const cor = { manter: '#193826', negociar: '#715E32', cortar: '#9a3b2a', avaliar: '#555' };
+  const col = (t, x, nome) => `<div class="col${t === 'Hoje' ? ' hoje' : ''}"><span class="l">${t}</span>${nome ? `<b class="nm">${e(nome)}</b>` : ''}<div><b>${num(x.milhas)}</b> milhas por ano</div><div>Anuidades: ${brl(x.anuidade)}</div><div>Saldo no ano: ${brl(x.saldo)}</div>${x.sala ? `<div>${x.sala.ilimitado && x.sala.cumpre ? 'Sala VIP ilimitada' : 'Sem sala VIP ilimitada'}</div>` : ''}</div>`;
+  const nomeCli = ctx.c.nome_completo || 'Cliente';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Estudo de cartões · ${e(nomeCli)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Jost,sans-serif;color:#2B2B26;font-size:13px;line-height:1.5;margin:0}
+h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:28px;color:#193826;margin:0}h1 i{color:#715E32}
+.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #A88B4A;padding-bottom:8px;margin-bottom:14px}
+.int{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#9a3b2a;font-weight:600}
+.l{display:block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#715E32;font-weight:600;margin:16px 0 6px}
+.cols{display:flex;gap:10px}.col{flex:1;border:1px solid #A88B4A;padding:10px 12px}.col.hoje{background:#F7F3EA;border-color:#EBE0C4}.col .l{margin:0 0 4px}.nm{display:block;font-size:16px;margin-bottom:4px}
+table{width:100%;border-collapse:collapse}td{border-top:1px solid #EBE0C4;padding:6px 4px;vertical-align:top}td.c{font-weight:600;width:34%}td.a{width:22%;font-weight:600}
+.pre{color:#555}.res{margin-top:18px;font-size:13px;color:#555;border-top:1px solid #EBE0C4;padding-top:8px}</style></head><body>
+<div class="top"><div><h1>Estudo de cartões <i>${e(nomeCli)}</i></h1><div class="pre">Gerado em ${hoje}</div></div><div class="int">Uso interno da equipe</div></div>
+<span class="l">Premissas</span><div class="pre">Gasto no cartão de ${brl(R.gasto_mes)} por mês · milhas contadas em ${e(R.programa || 'programa não informado')}${R.milheiro !== null ? ` · milheiro de referência R$ ${String(R.milheiro).replace('.', ',')}` : ''} · aeroportos: ${e(R.aeroportos.join(', ') || 'não informado')}${p.companhia_preferida ? ' · companhia preferida: ' + e(p.companhia_preferida) : ''}${R.objetivos.length ? ' · prioridades: ' + e(R.objetivos.map((o, i) => `${i + 1}. ${o.nome}`).join(', ')) : ''}</div>
+<span class="l">Hoje e o recomendado</span><div class="cols">${col('Hoje', R.atual, '')}${rec ? col('Recomendado', rec, rec.principal.cartao + (rec.apoio ? ' + ' + rec.apoio.cartao : '')) : '<div class="col">Nenhum caminho alcançável com os dados de hoje.</div>'}</div>
+${ag && fo && ag.id !== fo.id ? `<p>Enquanto isso, concentrar no <b>${e(ag.principal.cartao)}</b>.</p>` : ''}
+${R.escada.passos.length ? `<span class="l">Próximo passo</span><ol>${R.escada.passos.map(t => `<li>${e(t)}</li>`).join('')}</ol>` : ''}
+${CI && CI.itens.length ? `<span class="l">O que fazer com cada cartão</span><table>${CI.itens.slice().sort((a, b) => ord[a.acao] - ord[b.acao]).map(i => `<tr><td class="c">${e(i.cartao)}</td><td class="a" style="color:${cor[i.acao]}">${ROT[i.acao]}</td><td>${e(i.motivos.join('; '))}</td></tr>`).join('')}</table>` : ''}
+${R.falta.length ? `<span class="l">Falta para um estudo melhor</span><div>${R.falta.map(e).join('; ')}.</div>` : ''}
+${R.avisos.length ? `<span class="l">Avisos</span><div>${R.avisos.map(e).join('<br>')}</div>` : ''}
+<p class="res">Valor de referência, que varia conforme o resgate. Não é saldo em dinheiro. A aprovação de cartão, limite e upgrade depende do banco. Contas por fórmula, a partir da Base de cartões e das regras da casa. Nada é cancelado sem a confirmação do cliente.</p>
+<script>window.onload=function(){Promise.race([document.fonts?document.fonts.ready:null,new Promise(function(r){setTimeout(r,3000)})]).then(function(){setTimeout(function(){window.print()},400)})}<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) return false;
+  w.document.open(); w.document.write(html); w.document.close();
+  return true;
 }
 // carteira ideal: o que fica, o que negociar e o que cortar (só recomendação para a equipe; nada é cancelado sozinho)
 function carteiraBox(R, esc) {
@@ -949,10 +1050,14 @@ function faltaEstudo(ctx) {
   if (!ctx.bancos.some(b => b.segmento_id || b.segmento_txt)) F.push('pelo menos um banco com o segmento');
   return F;
 }
+// botões "ir para o passo" dentro dos passos
+function ligarIr(ctx, box) { box.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { PASSO_CX.passo = b.dataset.ir; irPasso(ctx.el, PASSO_CX.passo); ctx.el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }); }
 function desenharFalta(ctx) {
   const { esc } = ctx.X, F = faltaEstudo(ctx), box = ctx.el.querySelector('#cxFalta');
-  box.innerHTML = F.length ? `<div class="config" style="margin-top:14px"><b>Para gerar o estudo de cartões, falta:</b><br>${F.map(f => '· ' + esc(f)).join('<br>')}</div>`
-    : '<div class="config" style="margin-top:14px"><b>Ficha pronta para o estudo de cartões.</b></div>';
+  box.innerHTML = F.length ? `<div class="config" style="margin-top:14px"><b>Para a análise, falta:</b><br>${F.map(f => '· ' + esc(f)).join('<br>')}</div>`
+    : '<div class="config" style="margin-top:14px"><b>Ficha pronta para a análise.</b><button class="sec" type="button" data-ir="analise" style="width:100%;margin-top:8px">Ver a análise</button></div>';
+  ligarIr(ctx, box);
+  statusGrupos(ctx);
 }
 function desenharBancos(ctx) {
   const { X, bancos, segs } = ctx, { esc, campo } = X, box = ctx.el.querySelector('#cxBancos');

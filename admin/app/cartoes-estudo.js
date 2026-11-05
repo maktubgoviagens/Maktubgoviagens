@@ -62,7 +62,7 @@ export async function desenharEstudo(ctx, R) {
   const L = ctx.estudos, aberto = L.find(e => e.id === ctx.estudoAberto) || L.find(e => e.status !== 'arquivado' && e.status !== 'erro') || null;
   const podeGerar = GERAR_COM_IA && !!R && R.caminhos.length > 0;
   if (!GERAR_COM_IA && !L.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="secao">${GERAR_COM_IA ? 'Estudo com IA' : 'Estudos com IA anteriores'}</div><section class="bloco" style="margin-top:0">
+  box.innerHTML = `<div class="secao">${GERAR_COM_IA ? 'Sugestão da IA (opcional)' : 'Estudos com IA anteriores'}</div><section class="bloco" style="margin-top:0">
     ${!GERAR_COM_IA ? '' : podeGerar ? `<button class="zap" type="button" id="esGerar" style="width:100%">Gerar estudo com IA</button>
       <div class="sub" style="font-size:13px">A IA lê a simulação acima, as regras da casa e o perfil, escolhe o melhor caminho e explica. Leva cerca de 1 minuto e custa em torno de R$ 2 por estudo. O estudo nasce como rascunho e o cliente não vê.</div>`
       : '<div class="vazio">Complete o que falta no perfil para gerar o estudo.</div>'}
