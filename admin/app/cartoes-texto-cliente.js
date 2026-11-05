@@ -114,7 +114,7 @@ export async function desenharTextoCliente(ctx, R) {
   if (!ctx.textos) {
     const r = await sb.from('estrategia_cliente').select('*').eq('cliente_id', ctx.c.id).order('criado_em', { ascending: false });
     if (!box.isConnected) return;
-    if (r.error) { box.innerHTML = '<div class="secao">Estratégia para o cliente</div><section class="bloco" style="margin-top:0">' + X.tec('<div class="config">Rode no Supabase o 73-estrategia-cliente.sql para publicar a estratégia no painel.</div>') + '</section>'; return; }
+    if (r.error) { box.innerHTML = '<div class="secao">Publicar para o cliente (opcional)</div><section class="bloco" style="margin-top:0">' + X.tec('<div class="config">Rode no Supabase o 73-estrategia-cliente.sql para publicar a estratégia no painel.</div>') + '</section>'; return; }
     ctx.textos = r.data || [];
     const pub0 = ctx.textos.find(t => t.status === 'publicado');
     const it = pub0 ? await sb.from('plano_cartoes_itens').select('*').eq('estrategia_id', pub0.id).order('ordem') : { data: [] };
@@ -133,7 +133,7 @@ export async function desenharTextoCliente(ctx, R) {
   const verPlano = () => !P.length ? '' : `<div style="margin-top:10px"><b style="font-weight:600">Plano de cartões</b> <span style="font-size:13px;color:var(--tinta-3)">${feitas} de ${tarefasPub.length} feitos</span>
     ${P.filter(i => i.tipo === 'cartao').map(i => `<div style="font-size:14px;border-top:1px solid var(--linha);padding:5px 0"><b style="font-weight:600">${esc(i.cartao)}</b> <span class="tag ${i.decisao === 'cancelar' ? 'alerta' : i.decisao === 'negociar' ? 'ouro' : 'ok'}">${esc(ROT_DEC[i.decisao] || '')}</span> <span style="color:var(--tinta-2)">${esc(i.motivo || '')}</span></div>`).join('')}
     ${tarefasPub.length ? `<div style="margin-top:6px;font-size:13px;color:var(--tinta-3)">A fazer</div>${tarefasPub.map(i => `<label class="fc" style="margin:4px 0"><input type="checkbox" data-tcf="${i.id}" ${i.feito_em ? 'checked' : ''}><span style="font-size:14px">${esc(i.tarefa)} <small style="color:var(--tinta-3);font-size:13px">· ${i.responsavel === 'equipe' ? 'equipe' : 'cliente'}${i.feito_em ? ' · feito em ' + dataBR(i.feito_em) : ''}</small></span></label>`).join('')}` : ''}</div>`;
-  const aberto = ctx.textoEditando || (!pub && !!R);
+  const aberto = !!ctx.textoEditando; // publicar é opcional: o formulário só abre quando a equipe pede
   let form = '';
   if (aberto && R) {
     const base = ctx.textoEditando === 'rascunho' && rasc ? rasc : null;
@@ -154,7 +154,7 @@ export async function desenharTextoCliente(ctx, R) {
       <div class="sub" style="font-size:13px">No painel e no PDF, abaixo do texto, aparece sempre: "${RESSALVA}" Não use números nem prometa aprovação.</div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="zap" type="button" id="tcPublicar" style="flex:2">Publicar no painel do cliente</button><button class="sec" type="button" id="tcPdf" style="flex:1">Gerar PDF</button><button class="sec" type="button" id="tcRascunho" style="flex:1">Salvar rascunho</button>${pub ? '<button class="sec" type="button" id="tcCancelar" style="flex:1">Cancelar</button>' : ''}</div></div>`;
   }
-  box.innerHTML = `<div class="secao">Estratégia para o cliente</div><section class="bloco" style="margin-top:0">
+  box.innerHTML = `<div class="secao">Publicar para o cliente (opcional)</div><section class="bloco" style="margin-top:0">
     ${pub ? `<div style="font-size:13px;color:var(--tinta-3)">Publicado no painel em ${dataBR(pub.publicado_em)} <span class="tag ok">no painel</span></div><div style="margin-top:6px">${ver(pub)}</div>${verPlano()}
       <button class="sec" type="button" id="tcPdfPub" style="width:100%;margin-top:10px">Gerar PDF do que está publicado</button>` : '<div class="sub" style="margin-top:0;font-size:13px">Nada publicado ainda. O texto sai de um modelo aprovado e o plano sai da carteira ideal. Ajuste o que quiser antes de publicar.</div>'}
     ${rasc && !aberto ? `<div style="font-size:13px;color:var(--tinta-3);margin-top:8px">Há um rascunho salvo em ${dataBR(rasc.atualizado_em)}. <button class="mini" type="button" id="tcAbrirRasc">abrir rascunho</button></div>` : ''}
