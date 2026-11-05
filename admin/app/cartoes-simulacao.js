@@ -46,6 +46,8 @@ function podePedir(b, perfil, bancosCli, jaTem) {
 
 export const OBJETIVOS = [['mais_milhas', 'Mais milhas no programa preferido'], ['sala_vip', 'Sala VIP ilimitada'], ['cortar_anuidade', 'Cortar anuidade']];
 const PESOS = [3, 2, 1];
+// facilidade de conseguir o cartão: 0 já tem, 1 banco do cliente e dá para pedir, 2 banco do cliente e depende do banco, 3 outro banco e dá para pedir, 4 o resto
+export const facilidade = (c) => c.ja_tem ? 0 : c.relacionamento && c.pedir.r === 'sim' ? 1 : c.relacionamento ? 2 : c.pedir.r === 'sim' ? 3 : 4;
 const NOME_OBJ = Object.fromEntries(OBJETIVOS);
 
 /* Entrada:
@@ -193,7 +195,7 @@ export function simular(E) {
       id: P.id + (apoio ? '|' + apoio.b.id : ''), principal: { id: P.id, cartao: nomeP, banco: P.banco, gasto_mes: gP, limite: LP.v, limite_estimado: LP.estimado, ...cP },
       apoio: apoio ? { id: apoio.b.id, cartao: `${apoio.b.banco} ${apoio.b.nome}`.trim(), gasto_mes: apoio.g, limite: apoio.L.v, limite_estimado: apoio.L.estimado, ...apoio.c } : null,
       sem_cartao: sobra, milhas: soma(c => c.milhas), outros_pontos: [cP.outro, apoio && apoio.c.outro].filter(Boolean), valor, anuidade: anu, saldo: valor === null ? null : valor - anu,
-      sala: salaBoa, ja_tem: meusIds.has(P.id), pedir: cP.pedir, somente_convite: !!P.somente_convite, fora_dos_bancos: foraSet.has(P),
+      sala: salaBoa, ja_tem: meusIds.has(P.id), pedir: cP.pedir, somente_convite: !!P.somente_convite, fora_dos_bancos: foraSet.has(P), relacionamento: bancosNomes.has(chave(P.banco)),
       dados_a_confirmar: !!(P.a_confirmar || (apoio && apoio.b.a_confirmar)), degrau: degrau(P), avisos: AV,
       notas: [...cP.notas, ...(apoio ? apoio.c.notas.map(x => 'apoio: ' + x) : [])], fontes: [...new Set([...cP.fontes, ...(apoio ? apoio.c.fontes : [])])],
     };
@@ -215,9 +217,13 @@ export function simular(E) {
   // agora: o que ele já tem ou dá para pedir hoje (cartão que ele já tem vale mesmo com dados a confirmar na base)
   const agora = caminhos.find(c => (valido(c) || c.ja_tem) && ['já tem', 'sim'].includes(c.pedir.r)) || null;
   const pos = (c) => caminhos.indexOf(c);
-  let foco = caminhos.find(c => valido(c) && alcancavel(c)) || null;
-  // o foco só vale se for melhor que o "agora" pelas prioridades; senão o foco é o próprio "agora"
-  if (agora && (!foco || pos(foco) > pos(agora))) foco = agora;
+  // entre os que passam o "agora", vem primeiro o mais fácil de conseguir: banco em que o cliente já tem relacionamento
+  // e "dá para pedir"; depois banco do cliente que depende do banco; depois os outros bancos
+  const melhores = caminhos.filter(c => valido(c) && alcancavel(c) && (!agora || pos(c) < pos(agora)));
+  let foco = melhores.slice().sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c))[0] || agora;
+  // a equipe pode escolher outro caminho como recomendado (fica salvo no perfil do cliente)
+  const escolhido = E.focoEscolhido ? caminhos.find(c => c.principal.id === E.focoEscolhido) || null : null;
+  if (escolhido) foco = escolhido;
   // o melhor alcançável pode estar barrado só por dados a confirmar: a equipe confere na Base e ele passa a valer
   const barrado = caminhos.find(alcancavel);
   const aConfirmar = barrado && barrado.dados_a_confirmar && (!foco || barrado.id !== foco.id) ? barrado.id : null;
@@ -229,7 +235,8 @@ export function simular(E) {
     const mesmoBanco = bF && bA && chave(bF.banco) === chave(bA.banco), rs = regra(/^Subir no mesmo banco/i);
     if (mesmoBanco && rs) passos.push(`Regra da casa "${rs.titulo}": ${rs.regra}`);
   }
-  const escada = { agora: agora ? agora.id : null, foco: foco ? foco.id : null, a_confirmar: aConfirmar, passos };
+  if (escolhido && escolhido.dados_a_confirmar) passos.unshift(`Conferir o ${escolhido.principal.cartao} na Base de cartões: tem dados a confirmar.`);
+  const escada = { agora: agora ? agora.id : null, foco: foco ? foco.id : null, a_confirmar: escolhido ? null : aConfirmar, passos, escolhido: !!escolhido };
 
   // carteira de hoje: cada cartão com o gasto dele, os benefícios que o cliente usa e a economia de anuidade no ano
   const rSala = regra(/^Valor de referência: visita a sala VIP/i), rSeguro = regra(/^Valor de referência: seguro viagem/i);

@@ -213,6 +213,8 @@ export async function desenharTextoCliente(ctx, R) {
   bp.onclick = async () => {
     lerPlano(); const o = linha(); if (!o.objetivo) { X.aviso('Preencha o objetivo.'); return; }
     if (temTravessao(o)) { X.aviso('Tire o travessão do texto antes de publicar.'); return; }
+    const fo = R && R.caminhos.find(c => c.id === R.escada.foco);
+    if (fo && fo.dados_a_confirmar) { X.aviso(`Confira o ${fo.principal.cartao} na Base de cartões antes de publicar: ele tem dados a confirmar.`); return; }
     if (bp.dataset.ok !== '1') { bp.dataset.ok = '1'; bp.textContent = 'Confirmar: publicar no painel'; return; }
     bp.disabled = true;
     const agora = new Date().toISOString();

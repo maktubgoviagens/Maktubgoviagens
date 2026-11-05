@@ -1,9 +1,9 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS } from '/admin/app/cartoes-simulacao.js?v=6';
+import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=7';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
-import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=3';
+import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
@@ -883,7 +883,7 @@ async function desenharSimulacao(ctx) {
   }
   if (!box.isConnected) return;
   const D2 = ctx.simDados;
-  const R = simular({ perfil: p, cartoesCli: ctx.cartoes, base: BASE || [], salas: D2.salas, salasAero: D2.salasAero, bancosCli: ctx.bancos, segmentos: ctx.segs,
+  const R = simular({ perfil: p, cartoesCli: ctx.cartoes, base: BASE || [], salas: D2.salas, salasAero: D2.salasAero, bancosCli: ctx.bancos, segmentos: ctx.segs, focoEscolhido: focoEscolhido(ctx),
     regras: D2.regras, refs: D2.refs, cotacao: X.D.cfg && n(X.D.cfg.cotacao_dolar), calc, normProg: X.CART.normProg, beneficiosUso: D2.beneficiosUso, usoSalas: D2.usoSalas, extrato: D2.extrato });
   ctx.simR = R;
   const brl = (v) => v === null || v === undefined ? 'não calculado' : (v < 0 ? '−' : '') + 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
@@ -920,7 +920,8 @@ async function desenharSimulacao(ctx) {
       <div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Só recomendação: nada é cancelado sozinho.</div></div>` : '';
   box.innerHTML = `<section class="bloco" style="margin-top:12px">
     ${R.avisos.map(a => `<div class="sub" style="color:var(--alerta);font-size:13px;margin-top:0">${esc(a)}</div>`).join('')}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('Hoje', R.atual, '')}${rec ? col('Recomendado', rec, `<div style="font-size:16px;margin-top:4px"><b style="font-weight:600">${esc(rec.principal.cartao)}</b>${rec.apoio ? ` + ${esc(rec.apoio.cartao)}` : ''}</div><div style="margin-top:4px">${tagPedir(rec.pedir)}</div>`) : '<div class="vazio" style="flex:1">Nenhum caminho alcançável com os dados de hoje.</div>'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${col('Hoje', R.atual, '')}${rec ? col('Recomendado', rec, `<div style="font-size:16px;margin-top:4px"><b style="font-weight:600">${esc(rec.principal.cartao)}</b>${rec.apoio ? ` + ${esc(rec.apoio.cartao)}` : ''}</div><div style="margin-top:4px">${tagPedir(rec.pedir)}${rec.relacionamento && !rec.ja_tem ? ' <span class="tag ok">banco do cliente</span>' : ''}${rec.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}</div>${R.escada.escolhido ? '<div style="font-size:13px;color:var(--tinta-3);margin-top:4px">Escolhido pela equipe <button class="mini" type="button" data-fe="">voltar ao sugerido</button></div>' : ''}`) : '<div class="vazio" style="flex:1">Nenhum caminho alcançável com os dados de hoje.</div>'}</div>
+    ${opcoesBox(R, rec, esc, num, brl, tagPedir)}
     ${ag && fo && ag.id !== fo.id ? `<div style="font-size:14px;margin-top:10px"><span style="color:var(--tinta-3)">Enquanto isso:</span> concentrar no <b style="font-weight:600">${esc(ag.principal.cartao)}</b>.</div>` : ''}
     ${R.escada.passos.length ? `<div style="margin-top:12px"><b style="font-weight:600;font-size:16px">Próximo passo</b><div style="font-size:14px;line-height:1.5">${R.escada.passos.map(esc).join('<br>')}</div></div>` : ''}
     ${porId[R.escada.a_confirmar] ? `<div style="margin-top:8px;font-size:13px;color:var(--alerta)">O <b style="font-weight:600">${esc(porId[R.escada.a_confirmar].principal.cartao)}</b> seria melhor, mas tem dados a confirmar na Base de cartões.</div>` : ''}
@@ -940,9 +941,36 @@ async function desenharSimulacao(ctx) {
     ${resto.length ? `<details><summary class="sub" style="cursor:pointer">Ver mais ${resto.length} caminhos</summary>${resto.map(linha).join('')}</details>` : ''}
     </details></section>`;
   ligarIr(ctx, box);
+  box.querySelectorAll('[data-fe]').forEach(b => b.onclick = () => escolherFoco(ctx, b.dataset.fe || null));
   desenharRelatorio(ctx, R);
   desenharTextoCliente(ctx, R);
   desenharEstudo(ctx, R);
+}
+// outras opções para o recomendado: as mais fáceis de conseguir primeiro (banco do cliente), a equipe escolhe uma
+function opcoesBox(R, rec, esc, num, brl, tagPedir) {
+  const pos = (c) => R.caminhos.indexOf(c), vistos = new Set(rec ? [rec.principal.id] : []);
+  const L = R.caminhos.filter(c => c.pedir.r !== 'não' && (!c.somente_convite || c.ja_tem)).sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c))
+    .filter(c => { if (vistos.has(c.principal.id)) return false; vistos.add(c.principal.id); return true; }).slice(0, 4);
+  if (!L.length) return '';
+  return `<div style="margin-top:12px"><b style="font-weight:600;font-size:16px">Outras opções</b>
+    <div style="font-size:13px;color:var(--tinta-3)">Primeiro os bancos em que o cliente já tem relacionamento. Toque em "escolher" para trocar o recomendado.</div>
+    ${L.map(c => `<div style="border-top:1px solid var(--linha);padding:8px 0;display:flex;gap:8px;align-items:flex-start;justify-content:space-between"><span style="flex:1"><b style="font-weight:600;font-size:15px">${esc(c.principal.cartao)}</b>${c.apoio ? ` <span style="color:var(--tinta-3)">+ ${esc(c.apoio.cartao)}</span>` : ''}
+      <div style="margin-top:2px">${tagPedir(c.pedir)}${c.relacionamento && !c.ja_tem ? ' <span class="tag ok">banco do cliente</span>' : ''}${c.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}</div>
+      <div style="font-size:14px;color:var(--tinta-2);margin-top:2px">${num(c.milhas)} milhas/ano · anuidades ${brl(c.anuidade)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div>
+      ${c.pedir.motivo ? `<div style="font-size:13px;color:var(--tinta-3)">${esc(c.pedir.motivo)}</div>` : ''}</span>
+      <button class="mini" type="button" data-fe="${esc(c.principal.id)}">escolher</button></div>`).join('')}</div>`;
+}
+// a escolha fica no perfil do cliente (foco_escolhido, 74-foco-escolhido.sql); sem o SQL, vale só até recarregar a ficha
+const ESCOLHA_CX = {};
+function focoEscolhido(ctx) { return ctx.c.id in ESCOLHA_CX ? ESCOLHA_CX[ctx.c.id] : (ctx.perfil && ctx.perfil.foco_escolhido) || null; }
+async function escolherFoco(ctx, id) {
+  const { X } = ctx;
+  ESCOLHA_CX[ctx.c.id] = id;
+  const r = ctx.perfil ? await X.sb.from('cliente_perfil').update({ foco_escolhido: id }).eq('cliente_id', ctx.c.id) : { error: { message: 'sem perfil' } };
+  if (r.error) X.aviso(/foco_escolhido/.test(r.error.message || '') ? X.tec('Escolha feita. Para ficar salva, rode no Supabase o 74-foco-escolhido.sql.') : 'Escolha feita nesta tela. Salve o perfil do cliente para ela ficar guardada.');
+  else { ctx.perfil.foco_escolhido = id; X.aviso(id ? 'Recomendado trocado.' : 'Voltou ao recomendado sugerido.'); }
+  ctx.textoEditando = null; ctx.planoEdit = null;
+  desenharSimulacao(ctx);
 }
 // passo 3: o estudo interno em PDF (só a equipe). Publicar no painel é opcional e fica logo abaixo.
 function desenharRelatorio(ctx, R) {
