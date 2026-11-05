@@ -1,7 +1,7 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=7';
+import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=8';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
 

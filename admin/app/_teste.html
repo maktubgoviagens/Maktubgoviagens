@@ -409,12 +409,12 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 }
 </style></head><body><main style="padding:0 16px;max-width:760px;margin:0 auto"><div id="ab"></div></main>
 <script type="module">
-import * as C from '/admin/app/cartoes.js?v=24';
+import * as C from '/admin/app/cartoes.js?v=23';
 const T = {
- cartoes_catalogo:[{id:'b4',banco:'BTG Pactual',nome:'Ultrablue',anuidade_anual:1200,pontos_por:3,pontos_moeda:'USD',programa:'Livelo',salas_vip_ilimitado:true,exige_invest:1000000,ativo:true,conferido_em:'2026-11-01'},{id:'b1',banco:'Santander',nome:'Unlimited',a_confirmar:true,anuidade_anual:1300,isencao_gasto_mes:null,pontos_por:2.6,pontos_moeda:'USD',programa:'Esfera',salas_vip_ilimitado:true,salas_vip_programa:'Priority Pass',ativo:true,conferido_em:'2026-11-01'},
-  {id:'b2',banco:'Itaú',nome:'Azul Infinite',anuidade_anual:1200,isencao_gasto_mes:15000,pontos_por:2.2,pontos_moeda:'USD',programa:'Azul Fidelidade',salas_vip_ano:4,ativo:true,conferido_em:'2026-11-01'},
-  {id:'b3',banco:'Inter',nome:'Black',anuidade_anual:0,pontos_por:1,pontos_moeda:'USD',programa:'Livelo',ativo:true,conferido_em:'2026-11-01'}],
- cartoes:[{id:'k1',cliente_id:'c1',catalogo_id:'b2',banco:'Itaú',categoria:'Azul Infinite',limite:60000,gasto_medio_mes:20000,ordem:1},{id:'k2',cliente_id:'c1',catalogo_id:'b3',banco:'Inter',categoria:'Black',limite:40000,gasto_medio_mes:10000,ordem:2}],
+ cartoes_catalogo:[{id:1,banco:'Santander',nome:'Unlimited',anuidade_anual:1300,isencao_gasto_mes:null,pontos_por:2.6,pontos_moeda:'USD',programa:'Esfera',salas_vip_ilimitado:true,salas_vip_programa:'Priority Pass',ativo:true,conferido_em:'2026-11-01'},
+  {id:2,banco:'Itaú',nome:'Azul Infinite',anuidade_anual:1200,isencao_gasto_mes:15000,pontos_por:2.2,pontos_moeda:'USD',programa:'Azul Fidelidade',salas_vip_ano:4,ativo:true,conferido_em:'2026-11-01'},
+  {id:3,banco:'Inter',nome:'Black',anuidade_anual:0,pontos_por:1,pontos_moeda:'USD',programa:'Livelo',ativo:true,conferido_em:'2026-11-01'}],
+ cartoes:[{id:'k1',cliente_id:'c1',catalogo_id:2,banco:'Itaú',categoria:'Azul Infinite',limite:60000,gasto_medio_mes:20000,ordem:1},{id:'k2',cliente_id:'c1',catalogo_id:3,banco:'Inter',categoria:'Black',limite:40000,gasto_medio_mes:10000,ordem:2}],
  cliente_perfil:[{cliente_id:'c1',aeroporto_saida:'GIG',companhia_preferida:'Azul',programa_preferido:'Azul Fidelidade',gasto_cartao_mes:30000}],
  cliente_bancos:[{id:'cb1',cliente_id:'c1',banco:'Santander',segmento_txt:'Select'}],
 };
