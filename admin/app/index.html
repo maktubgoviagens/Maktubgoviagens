@@ -76,6 +76,10 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 .pend b{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:var(--tinta-3);line-height:1;min-width:24px;text-align:right}
 .pend b.tem{color:var(--alerta)}
 .pend .seta{color:var(--tinta-3);margin-left:10px}
+.pend.reun a{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--linha);padding:10px 14px;font-size:14px;color:var(--verde);text-decoration:none}
+.pend.reun a:first-child{border-top:0}
+.pend.reun a>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pend.reun b{font-family:inherit;font-size:13px;font-weight:600;color:var(--dourado);min-width:0;margin-right:6px;font-variant-numeric:tabular-nums}
 
 /* blocos */
 .bloco{background:var(--branco);border:1px solid var(--linha);padding:16px;margin-top:10px}
@@ -1324,6 +1328,24 @@ function eventos(todos) {
   if (podeAba('crm')) CRM.eventos(D).forEach(x => E.push({ d: x.d, hora: '', ic: x.ic, alerta: x.alerta || (x.aniv && difDias(x.d) === 0), t: x.t, s: x.s, href: '#crm/' + x.pid }));
   return E.filter(e => e.d && (todos || difDias(e.d) >= -1)).sort((a, b) => a.d - b.d || String(a.hora).localeCompare(String(b.hora)));
 }
+// Reuniões de hoje que ainda não passaram (ou começaram há menos de 1 h). Sem nenhuma hoje, traz só a próxima.
+function reunioesProximas() {
+  const agora = Date.now();
+  const L = eventos().filter(e => e.ic === 'reuniao').filter(e => {
+    if (!e.hora) return difDias(e.d) >= 0;
+    const [hh, mm] = e.hora.split(':').map(Number);
+    return new Date(e.d).setHours(hh || 0, mm || 0, 0, 0) >= agora - 36e5;
+  });
+  const hoje = L.filter(e => difDias(e.d) === 0);
+  return hoje.length ? { hoje: true, L: hoje } : { hoje: false, L: L.slice(0, 1) };
+}
+function blocoReunioes(R) {
+  if (!R.L.length) return '';
+  const quando = (e) => R.hoje ? (e.hora || 'Hoje') : `${nomeDia(e.d)}${e.hora ? ' ' + e.hora : ''}`;
+  return `<div class="secao">${R.hoje ? 'Reuniões hoje' : 'Próxima reunião'}</div>
+    <div class="pend reun">${R.L.map(e => `<a href="${esc(e.href)}"${e.ext ? ' target="_blank" rel="noopener"' : ''}><span><b>${esc(quando(e))}</b> ${esc(e.t.replace('Diagnóstico da Gestão de Milhas', 'Diagnóstico'))}</span><span class="seta">›</span></a>`).join('')}</div>`;
+}
+const mesmaReuniao = (a, b) => a.href === b.href && +a.d === +b.d && a.hora === b.hora && a.t === b.t;
 function agrupar(lista) { let u = ''; return lista.map(e => { const k = nomeDia(e.d); const h = k !== u ? `<div class="dia">${k}</div>` : ''; u = k; return h + htmlEvento(e); }).join(''); }
 function htmlEvento(e) {
   const ck = e.ck ? `<button class="ck ${e.ck.feito ? 'feito' : ''}" data-id="${e.ck.id}" data-tr="${e.ck.tr}">${e.ck.feito ? 'Check-in feito' : 'Marcar check-in feito'}</button>` : '';
@@ -1402,11 +1424,13 @@ function telaInicio(P) {
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
-  const prox = eventos().filter(e => difDias(e.d) >= 0).slice(0, 4);
+  const reun = reunioesProximas();
+  const prox = eventos().filter(e => difDias(e.d) >= 0 && !reun.L.some(r => mesmaReuniao(r, e))).slice(0, 4);
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     ${blocoGravar()}
+    ${blocoReunioes(reun)}
     <div class="secao">Precisa de você</div>
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
