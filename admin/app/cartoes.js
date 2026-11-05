@@ -1,7 +1,7 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=8';
+import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=9';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
 
@@ -950,18 +950,18 @@ async function desenharSimulacao(ctx) {
 // "Ver todas" lista todos os cartões da simulação, para a equipe escolher qualquer um
 function opcoesBox(R, rec, esc, num, brl, tagPedir) {
   const pos = (c) => R.caminhos.indexOf(c), vistos = new Set();
-  const unicos = R.caminhos.slice().sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c) || (c.pedir.r === 'não') - (a.pedir.r === 'não'))
+  const unicos = R.caminhos.slice() // já vêm na ordem do perfil: sala VIP ilimitada, banco do cliente, mais milhas, maior pontuação
     .filter(c => { const k = String(c.principal.id); if (vistos.has(k)) return false; vistos.add(k); return true; });
   const recId = rec ? String(rec.principal.id) : null;
-  const novos = unicos.filter(c => !c.ja_tem && String(c.principal.id) !== recId).sort((a, c) => (a.pedir.r === 'não') - (c.pedir.r === 'não'));
+  const novos = unicos.filter(c => !c.ja_tem && String(c.principal.id) !== recId);
   const top = novos.slice(0, 3), resto = unicos.filter(c => !top.includes(c) && String(c.principal.id) !== recId);
   const item = (c, rot) => `<div style="border-top:1px solid var(--linha);padding:10px 0;display:flex;gap:10px;align-items:flex-start;justify-content:space-between"><span style="flex:1">${rot ? `<span style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dourado)">${rot}</span><br>` : ''}<b style="font-weight:600;font-size:16px">${esc(c.principal.cartao)}</b>
-      <div style="margin-top:2px">${tagPedir(c.pedir)}${c.relacionamento && !c.ja_tem ? ' <span class="tag ok">banco do cliente</span>' : ''}${c.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}</div>
-      <div style="font-size:14px;color:var(--tinta-2);margin-top:2px">${num(c.milhas)} milhas/ano · anuidade ${brl(c.principal.anuidade)} · ${c.sala.ilimitado && c.sala.cumpre ? 'sala VIP ilimitada' : 'sem sala ilimitada'}</div>
+      <div style="margin-top:2px">${c.sala.ilimitado ? '<span class="tag ok">sala VIP ilimitada</span> ' : ''}${tagPedir(c.pedir)}${c.relacionamento && !c.ja_tem ? ' <span class="tag ok">banco do cliente</span>' : ''}${c.dados_a_confirmar ? ' <span class="tag alerta">dados a confirmar</span>' : ''}</div>
+      <div style="font-size:14px;color:var(--tinta-2);margin-top:2px">${num(c.milhas)} milhas/ano${c.taxa ? ` · pontuação ${String(c.taxa).replace('.', ',')}` : ''} · anuidade ${brl(c.principal.anuidade)}${c.sala.ilimitado && !c.sala.cumpre ? ' · sala ilimitada pede gasto mínimo' : ''}</div>
       ${c.pedir.motivo ? `<div style="font-size:13px;color:var(--tinta-3)">${esc(c.pedir.motivo)}</div>` : ''}</span>
       <button class="zap" type="button" data-fe="${esc(String(c.principal.id))}" style="padding:8px 14px;font-size:13px">Escolher</button></div>`;
   return `<div style="margin-top:14px"><b style="font-weight:600;font-size:18px">Opções de cartão novo</b>
-    <div style="font-size:13px;color:var(--tinta-3)">Primeiro os bancos em que o cliente já tem relacionamento. Toque em "Escolher" para tornar o recomendado.</div>
+    <div style="font-size:13px;color:var(--tinta-3)">Em ordem: sala VIP ilimitada, banco em que o cliente já tem relacionamento, mais milhas e maior pontuação. Toque em "Escolher" para tornar o recomendado.</div>
     ${top.length ? top.map((c, i) => item(c, `Opção ${i + 1}`)).join('') : '<div class="vazio">Nenhum cartão novo na simulação.</div>'}
     ${resto.length ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer;font-size:15px">Ver todos os cartões (${resto.length})</summary>${resto.map(c => item(c, '')).join('')}</details>` : ''}</div>`;
 }
