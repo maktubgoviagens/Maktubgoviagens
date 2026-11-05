@@ -219,10 +219,11 @@ export function simular(E) {
   const pos = (c) => caminhos.indexOf(c);
   // entre os que passam o "agora", vem primeiro o mais fácil de conseguir: banco em que o cliente já tem relacionamento
   // e "dá para pedir"; depois banco do cliente que depende do banco; depois os outros bancos
-  const melhores = caminhos.filter(c => valido(c) && alcancavel(c) && (!agora || pos(c) < pos(agora)));
+  // cartão de outro banco que depende do banco (renda, investimento, convite) não vira recomendado sozinho: a equipe escolhe se quiser
+  const melhores = caminhos.filter(c => valido(c) && alcancavel(c) && facilidade(c) <= 3 && (!agora || pos(c) < pos(agora)));
   let foco = melhores.slice().sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c))[0] || agora;
   // a equipe pode escolher outro caminho como recomendado (fica salvo no perfil do cliente)
-  const escolhido = E.focoEscolhido ? caminhos.find(c => c.principal.id === E.focoEscolhido) || null : null;
+  const escolhido = E.focoEscolhido ? caminhos.find(c => String(c.principal.id) === String(E.focoEscolhido)) || null : null;
   if (escolhido) foco = escolhido;
   // o melhor alcançável pode estar barrado só por dados a confirmar: a equipe confere na Base e ele passa a valer
   const barrado = caminhos.find(alcancavel);
