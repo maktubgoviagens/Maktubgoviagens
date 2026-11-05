@@ -158,7 +158,10 @@ export function simular(E) {
   let cand = base.filter(b => elegivel(b) && (meusIds.has(b.id) || segIds.has(b.id) || (pref && familia(String(b.programa || b.destino_pontos || '').split(/[(;]/)[0]) === pref) || bancosNomes.has(chave(b.banco))));
   // mais os de melhor saldo no mercado que não pedem convite, e os que dão sala ilimitada nos aeroportos do cliente
   const resto = base.filter(b => elegivel(b) && !cand.includes(b) && !b.somente_convite).map(b => ({ b, c: conta(b, gasto, false) }));
-  const fora = [...resto.filter(x => x.c.saldo !== null).sort((a, c) => c.c.saldo - a.c.saldo).slice(0, 8), ...(objetivos.includes('sala_vip') ? resto.filter(x => x.c.sala.ilimitado).sort((a, c) => (c.c.saldo ?? -1e9) - (a.c.saldo ?? -1e9)).slice(0, 6) : [])].map(x => x.b);
+  const taxaB = (b) => n(b.pts_internacional) ?? n(b.pts_nacional) ?? n(b.pontos_por) ?? 0;
+  const fora = [...resto.filter(x => x.c.saldo !== null).sort((a, c) => c.c.saldo - a.c.saldo).slice(0, 8),
+    ...resto.filter(x => x.c.sala.ilimitado).sort((a, c) => taxaB(c.b) - taxaB(a.b)).slice(0, 12),
+    ...resto.slice().sort((a, c) => taxaB(c.b) - taxaB(a.b)).slice(0, 8)].map(x => x.b);
   cand = cand.concat([...new Set(fora)]);
   const foraSet = new Set(fora);
 
@@ -202,14 +205,22 @@ export function simular(E) {
   };
   let caminhos = cand.map(combinar);
 
-  // ordem: pelas prioridades da equipe (pesos 3, 2 e 1 pela posição); sem prioridades, pelo saldo
+  // ordem (regra da equipe): 1. sala VIP ilimitada; 2. banco em que o cliente já tem relacionamento; 3. mais milhas no ano;
+  // 4. maior pontuação do cartão (vale quando as milhas não fecham, por exemplo sem a cotação do dólar); 5. melhor saldo
   if (objetivos.length) {
     const maxM = Math.max(1, ...caminhos.map(c => c.milhas)), anus = caminhos.map(c => c.anuidade), minA = Math.min(...anus), maxA = Math.max(...anus);
     const nota = { mais_milhas: (c) => c.milhas / maxM, sala_vip: (c) => c.sala.nota, cortar_anuidade: (c) => maxA === minA ? 1 : (maxA - c.anuidade) / (maxA - minA) };
     const somaP = objetivos.reduce((t, _, i) => t + PESOS[i], 0);
     caminhos.forEach(c => { c.notas_objetivos = Object.fromEntries(objetivos.map(o => [o, Math.round(nota[o](c) * 100) / 100])); c.nota = Math.round(objetivos.reduce((t, o, i) => t + PESOS[i] * nota[o](c), 0) / somaP * 100); });
-    caminhos.sort((a, c) => c.nota - a.nota || (c.saldo ?? -Infinity) - (a.saldo ?? -Infinity));
-  } else caminhos.sort((a, c) => (c.saldo ?? -Infinity) - (a.saldo ?? -Infinity));
+  }
+  const cortaAnu = objetivos[0] === 'cortar_anuidade';
+  caminhos.forEach(c => { c.taxa = taxaB(porId[c.principal.id] || {}); });
+  caminhos.sort((a, c) => (cortaAnu ? (a.anuidade ?? 1e9) - (c.anuidade ?? 1e9) : 0)
+    || (c.sala.ilimitado ? 1 : 0) - (a.sala.ilimitado ? 1 : 0)
+    || (c.relacionamento ? 1 : 0) - (a.relacionamento ? 1 : 0)
+    || (c.milhas || 0) - (a.milhas || 0)
+    || c.taxa - a.taxa
+    || (c.saldo ?? -Infinity) - (a.saldo ?? -Infinity));
 
   // escada por prazo: agora (já tem ou dá para pedir hoje), próximo passo e foco (o melhor pelas prioridades)
   // foco: o melhor pelas prioridades que o cliente consegue alcançar (sem "ainda não dá" e sem convite) e sem dados a confirmar
@@ -221,7 +232,7 @@ export function simular(E) {
   // e "dá para pedir"; depois banco do cliente que depende do banco; depois os outros bancos
   // cartão de outro banco que depende do banco (renda, investimento, convite) não vira recomendado sozinho: a equipe escolhe se quiser
   const melhores = caminhos.filter(c => valido(c) && alcancavel(c) && facilidade(c) <= 3 && (!agora || pos(c) < pos(agora)));
-  let foco = melhores.slice().sort((a, c) => facilidade(a) - facilidade(c) || pos(a) - pos(c))[0] || agora;
+  let foco = melhores[0] || agora;
   // a equipe pode escolher outro caminho como recomendado (fica salvo no perfil do cliente)
   const escolhido = E.focoEscolhido ? caminhos.find(c => String(c.principal.id) === String(E.focoEscolhido)) || null : null;
   if (escolhido) foco = escolhido;

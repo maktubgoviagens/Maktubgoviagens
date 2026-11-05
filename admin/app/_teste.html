@@ -414,15 +414,15 @@ const T = {
  cartoes_catalogo:[{id:1,banco:'Santander',nome:'Unlimited',anuidade_anual:1300,isencao_gasto_mes:null,pontos_por:2.6,pontos_moeda:'USD',programa:'Esfera',salas_vip_ilimitado:true,salas_vip_programa:'Priority Pass',ativo:true,conferido_em:'2026-11-01'},
   {id:2,banco:'Itaú',nome:'Azul Infinite',anuidade_anual:1200,isencao_gasto_mes:15000,pontos_por:2.2,pontos_moeda:'USD',programa:'Azul Fidelidade',salas_vip_ano:4,ativo:true,conferido_em:'2026-11-01'},
   {id:3,banco:'Inter',nome:'Black',anuidade_anual:0,pontos_por:1,pontos_moeda:'USD',programa:'Livelo',ativo:true,conferido_em:'2026-11-01'}],
- cartoes:[{id:'k5',cliente_id:'c1',catalogo_id:5,banco:'Santander',categoria:'Unique',limite:20000,ordem:3},{id:'k1',cliente_id:'c1',catalogo_id:2,banco:'Itaú',categoria:'Azul Infinite',limite:60000,gasto_medio_mes:20000,ordem:1},{id:'k2',cliente_id:'c1',catalogo_id:3,banco:'Inter',categoria:'Black',limite:40000,gasto_medio_mes:10000,ordem:2}],
+ cartoes:[{id:'k1',cliente_id:'c1',catalogo_id:2,banco:'Itaú',categoria:'Azul Infinite',limite:60000,gasto_medio_mes:20000,ordem:1},{id:'k2',cliente_id:'c1',catalogo_id:3,banco:'Inter',categoria:'Black',limite:40000,gasto_medio_mes:10000,ordem:2}],
  cliente_perfil:[{cliente_id:'c1',aeroporto_saida:'GIG',companhia_preferida:'Azul',programa_preferido:'Azul Fidelidade',gasto_cartao_mes:30000}],
- cliente_bancos:[{id:'cb1',cliente_id:'c1',banco:'Santander',segmento_txt:'Select'}],
+ cliente_bancos:[{id:'cb1',segmento_id:null,cliente_id:'c1',banco:'Santander',segmento_txt:'Select'}],
 };
 function q(t){let rows=(T[t]||[]).slice();const o={select(){return o},eq(k,v){rows=rows.filter(r=>r[k]===undefined||r[k]===v);return o},in(){return o},is(){return o},gte(){return o},order(){return o},limit(){return o},
  maybeSingle(){return Promise.resolve({data:rows[0]||null,error:null})},single(){return Promise.resolve({data:rows[0]||null,error:null})},then(r,j){return Promise.resolve({data:rows,error:null}).then(r,j)},update(){return o},insert(){return o},delete(){return o}};return o}
 const esc=(t)=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const X={sb:{from:q,functions:{invoke:async()=>({})}},esc,aviso:console.log,campo:(n,l,v='',t='text',a='')=>`<label class="fl"><span>${l}</span><input name="${n}" type="${t}" value="${esc(v)}" ${a}></label>`,
- brl:v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR'),num:v=>Math.round(v||0).toLocaleString('pt-BR'),D:{cfg:{cotacao_dolar:5.5},meuId:'u'},CART:{valoresRef:async()=>({'Azul Fidelidade':16,'Esfera':30,'Livelo':30}),normProg:x=>x},tec:x=>x,limparTec:x=>x,dadosDiag:()=>({})};
+ brl:v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR'),num:v=>Math.round(v||0).toLocaleString('pt-BR'),D:{cfg:{cotacao_dolar:null},meuId:'u'},CART:{valoresRef:async()=>({'Azul Fidelidade':16,'Esfera':30,'Livelo':30}),normProg:x=>x},tec:x=>x,limparTec:x=>x,dadosDiag:()=>({})};
 C.abaCartoesCliente(document.getElementById('ab'),{id:'c1',nome_completo:'Cliente Teste'},X);
 window.onerror=(m)=>document.body.insertAdjacentHTML('afterbegin','<pre>'+m+'</pre>');
 </script></body></html>
