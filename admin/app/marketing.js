@@ -174,8 +174,11 @@ function estilos() {
 [data-arr]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .mk-cm .d.alvo{background:rgba(168,139,74,.18);outline:2px dashed var(--dourado);outline-offset:-2px}
 .mk-arr-origem{opacity:.35}
-.mk-arr-fantasma{position:fixed;z-index:60;pointer-events:none;max-width:200px;padding:6px 10px;border-radius:4px;color:#fff;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 20px rgba(0,0,0,.25);transform:translate(-50%,-120%) rotate(-2deg)}
-body.mk-arrastando{cursor:grabbing}
+.mk-arr-fantasma{position:fixed;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;max-width:200px;padding:6px 10px;border-radius:4px;color:#fff;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+body.mk-arrastando{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.mk-arrastando *{cursor:grabbing!important}
+[data-arr]{touch-action:manipulation}
+@media (hover:hover){.mk-chip[data-arr]{cursor:grab}}
 .mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 @media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
 @media (min-width:700px){.mk-cm{margin:10px 0 0}.mk-cm .d{min-height:110px;padding:4px}.mk-chip{font-size:12px;padding:3px 6px}}
@@ -859,7 +862,7 @@ async function guardarEst(chave, tipo, valores, titulo) {
 }
 
 /* ---------- calendário: arrastar o post para outro dia ----------
-   Computador: clicar, segurar e soltar no dia. Celular: segurar o dedo ~0,35 s até o post "soltar", depois arrastar.
+   Computador: clicar, segurar e soltar no dia. Celular: segurar o dedo ~0,2 s até o post "soltar", depois arrastar.
    Toque rápido continua abrindo o post. Publicado não se move. O prazo de gravação anda os mesmos dias que o post. */
 let ARR = null, SUPRIME = 0;
 addEventListener('click', (e) => { if (Date.now() < SUPRIME) { e.stopPropagation(); e.preventDefault(); } }, true);
@@ -872,7 +875,15 @@ function moverData(p, novo) {
     campos.gravacao_data = maisDias(p.gravacao_data, diasEntre(p.data_prevista, novo));
     extra = ` Prazo de gravação: ${dm(campos.gravacao_data)}.`;
   }
-  mudar(p.id, campos, `Data alterada para ${dm(novo)}.${extra}`);
+  // muda na tela na hora; se o banco recusar, volta como estava
+  const antes = { data_prevista: p.data_prevista, gravacao_data: p.gravacao_data };
+  const i = LISTA.findIndex(x => x.id === p.id);
+  LISTA[i] = { ...p, ...campos }; X.aviso(`Data alterada para ${dm(novo)}.${extra}`); rerender();
+  X.sb.from('marketing_posts').update(campos).eq('id', p.id).select().single().then(({ data, error }) => {
+    const j = LISTA.findIndex(x => x.id === p.id);
+    if (error) { if (j >= 0) LISTA[j] = { ...LISTA[j], ...antes }; X.aviso('Não mudou a data: ' + error.message); rerender(); return; }
+    if (j >= 0 && data) LISTA[j] = data;
+  });
 }
 function arrastavel(P) {
   const diaSob = (x, y) => { const el = document.elementFromPoint(x, y); const d = el && el.closest('.mk-cm .d[data-dia]'); return d || null; };
@@ -880,16 +891,20 @@ function arrastavel(P) {
   const comecar = (el, p, x, y) => {
     const f = document.createElement('div'); f.className = 'mk-arr-fantasma'; f.style.background = contaCor(p); f.textContent = p.titulo || 'Post';
     document.body.appendChild(f); el.classList.add('mk-arr-origem'); document.body.classList.add('mk-arrastando');
-    Object.assign(ARR, { on: true, f }); if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+    Object.assign(ARR, { on: true, f, fw: f.offsetWidth, fh: f.offsetHeight, q: 0 }); if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
     seguir(x, y); loop();
   };
-  const seguir = (x, y) => { ARR.x = x; ARR.y = y; const w = ARR.f.offsetWidth / 2 + 8; ARR.f.style.left = Math.min(Math.max(x, w), innerWidth - w) + 'px'; ARR.f.style.top = y + 'px'; marcar(diaSob(x, y)); };
+  // a etiqueta segue o dedo por transform (sem recalcular a página); o dia de destino é conferido uma vez por quadro
+  const seguir = (x, y) => { ARR.x = x; ARR.y = y; if (ARR.q) return; ARR.q = requestAnimationFrame(() => { if (!ARR || !ARR.on) return; ARR.q = 0;
+    const w = ARR.fw / 2 + 8, cx = Math.min(Math.max(ARR.x, w), innerWidth - w);
+    ARR.f.style.transform = `translate3d(${cx - ARR.fw / 2}px,${ARR.y - ARR.fh - 18}px,0) rotate(-2deg)`; marcar(diaSob(ARR.x, ARR.y)); }); };
   // perto da borda da tela, rola sozinho (ex.: da lista "Sem data definida" até o calendário)
-  const loop = () => { if (!ARR || !ARR.on) return; const m = 70, v = ARR.y < m ? -12 : ARR.y > innerHeight - m - 60 ? 12 : 0; if (v) { scrollBy(0, v); marcar(diaSob(ARR.x, ARR.y)); } requestAnimationFrame(loop); };
+  const loop = () => { if (!ARR || !ARR.on) return; const m = 80, v = ARR.y < m ? -14 : ARR.y > innerHeight - m - 60 ? 14 : 0; if (v) { scrollBy(0, v); marcar(diaSob(ARR.x, ARR.y)); } requestAnimationFrame(loop); };
   const terminar = (soltar) => {
     if (!ARR) return; const a = ARR; ARR = null; clearTimeout(a.t);
     if (!a.on) return;
     SUPRIME = Date.now() + 400;
+    if (a.q) cancelAnimationFrame(a.q); if (soltar) a.alvo = diaSob(a.x, a.y) || a.alvo;
     a.f.remove(); a.el.classList.remove('mk-arr-origem'); document.body.classList.remove('mk-arrastando'); if (a.alvo) a.alvo.classList.remove('alvo');
     if (soltar && a.alvo) moverData(a.p, a.alvo.dataset.dia);
   };
@@ -912,11 +927,11 @@ function arrastavel(P) {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
       ARR = { el, p, sx: t.clientX, sy: t.clientY, x: t.clientX, y: t.clientY, on: false };
-      ARR.t = setTimeout(() => { if (ARR && !ARR.on) comecar(el, p, ARR.x, ARR.y); }, 350);
+      ARR.t = setTimeout(() => { if (ARR && !ARR.on) comecar(el, p, ARR.x, ARR.y); }, 200);
     }, { passive: true });
     el.addEventListener('touchmove', (e) => {
       if (!ARR) return; const t = e.touches[0];
-      if (!ARR.on) { ARR.x = t.clientX; ARR.y = t.clientY; if (Math.hypot(t.clientX - ARR.sx, t.clientY - ARR.sy) > 10) { clearTimeout(ARR.t); ARR = null; } return; }
+      if (!ARR.on) { ARR.x = t.clientX; ARR.y = t.clientY; if (Math.hypot(t.clientX - ARR.sx, t.clientY - ARR.sy) > 12) { clearTimeout(ARR.t); ARR = null; } return; }
       e.preventDefault(); seguir(t.clientX, t.clientY);
     }, { passive: false });
     el.addEventListener('touchend', (e) => { if (ARR && ARR.on) e.preventDefault(); terminar(true); });
