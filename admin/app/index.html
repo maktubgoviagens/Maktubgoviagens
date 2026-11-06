@@ -2146,13 +2146,18 @@ async function telaMetas(P) {
 
 /* ================= reuniões e conversão ================= */
 const RE_TIPOS = ['Reunião de venda', 'Cotação', 'Diagnóstico da Gestão de Milhas', 'Reunião com cliente', 'Pós-venda', 'Parceria', 'Reunião interna'];
-const RE_PRODUTOS = ['Passagens', 'Viagem completa / pacote', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Transfer', 'Trem', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
+// "Viagem completa / pacote" saiu em 06/11/2026 (subjetivo: cada serviço é marcado à parte). Só aparece nos cards antigos que já têm
+const RE_PROD_ANTIGOS = ['Viagem completa / pacote'];
+const RE_PRODUTOS = ['Passagens', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Transfer', 'Trem', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
 const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
 const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
 // o que o lead quer: etiquetas do lead (várias por lead), marcadas no site ou no app; obrigatórias para assumir; alimentam o indicador "O que pedem"
-const LEAD_INT = ['Passagens', 'Hotelaria', 'Pacote', 'Gestão de Milhas', 'Corporativo', 'Outros'];
-const LEAD_INT_PROD = { 'Passagens': 'Passagens', 'Hotelaria': 'Hotelaria', 'Pacote': 'Viagem completa / pacote', 'Corporativo': 'Maktub Corporativo', 'Outros': 'Outro' };
+const LEAD_INT = ['Passagens', 'Hotelaria', 'Gestão de Milhas', 'Corporativo', 'Outros'];
+// etiqueta antiga: só aparece no lead que já a tem (para poder desmarcar); não vira produto no card
+const LEAD_INT_ANTIGOS = ['Pacote'];
+const lintDe = (r) => LEAD_INT.concat(LEAD_INT_ANTIGOS.filter(k => intDe(r).includes(k)));
+const LEAD_INT_PROD = { 'Passagens': 'Passagens', 'Hotelaria': 'Hotelaria', 'Corporativo': 'Maktub Corporativo', 'Outros': 'Outro' };
 const intDe = (r) => Array.isArray(r.interesses) ? r.interesses : (r.tipo === 'corporativo' ? ['Corporativo'] : []);
 function produtoDoLead(r) {
   const I = intDe(r);
@@ -2842,7 +2847,7 @@ function telaFormReuniao(P) {
       <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
       ${campo('data', 'Data e hora ' + fusoRotulo(), dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
-      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
+      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
       ${ADMIN ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
       <div class="grupo">Cliente</div>
       ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
@@ -2892,12 +2897,12 @@ function telaFormReuniao(P) {
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
-  // reunião só aparece para pacote e gestão de milhas (ou quando o card já tem reunião); passagem avulsa fica limpa
+  // reunião abre sozinha na gestão de milhas, em viagem montada (Roteiro marcado ou 3+ produtos) ou quando o card já tem reunião; passagem avulsa fica limpa
   let reunAberta = false;
   f._reunVis = () => {
     const bl = $('blReun'); if (!bl) return;
     const prods = f._itens ? f._itens().map(x => x.produto) : String(r.produto || '').split(' + ');
-    const precisa = G || reunAberta || prods.includes('Viagem completa / pacote') || (!nova && reunioesDe(base.id).length > 0);
+    const precisa = G || reunAberta || prods.includes('Roteiro') || prods.filter(Boolean).length >= 3 || prods.includes('Viagem completa / pacote') || (!nova && reunioesDe(base.id).length > 0);
     bl.hidden = !precisa; if ($('reunMostra')) $('reunMostra').hidden = precisa;
   };
   if ($('reunMostra')) $('reunMostra').onclick = () => { reunAberta = true; f._reunVis(); };
@@ -3995,7 +4000,7 @@ function listaLeads() {
       return `<article class="card ${r.status === 'novo' ? 'novo' : ''}">
         <div class="cab"><div><div class="nome">${esc(r.nome)}</div><span class="tag ${r.tipo === 'corporativo' ? 'ouro' : ''}">${r.tipo === 'corporativo' ? 'Corporativo' : 'Viagem'}</span> ${r.responsavel_id ? `<span class="tag ok">com ${esc(nomeTime(r.responsavel_id) || 'equipe')}</span>` : r.status === 'novo' ? '<span class="tag alerta">sem dono</span>' : ''}</div><span class="quando">${quando(r.created_at)}</span></div>
         <div class="info">${pj ? `<div style="color:var(--verde);font-weight:600">${comp ? 'Já é cliente desde ' + comp.slice(5, 7) + '/' + comp.slice(0, 4) : 'Já tem ficha no CRM'} · <a href="#crm/${pj.id}">ver ficha</a></div>` : ''}${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
-        <div class="lint" data-lint="${r.id}"><span class="l">O que quer${intDe(r).length ? '' : ' · <b>falta marcar</b>'}</span><div class="chips">${LEAD_INT.map(k => `<button type="button" data-int="${esc(k)}" class="${intDe(r).includes(k) ? 'on' : ''}" aria-pressed="${intDe(r).includes(k)}">${esc(k)}</button>`).join('')}</div></div>
+        <div class="lint" data-lint="${r.id}"><span class="l">O que quer${intDe(r).length ? '' : ' · <b>falta marcar</b>'}</span><div class="chips">${lintDe(r).map(k => `<button type="button" data-int="${esc(k)}" class="${intDe(r).includes(k) ? 'on' : ''}" aria-pressed="${intDe(r).includes(k)}">${esc(k)}</button>`).join('')}</div></div>
         ${!r.responsavel_id && r.status === 'novo' ? `<button class="zap grande" data-assumir="${r.id}" style="width:100%;margin-top:12px">Assumir este lead</button>` : ''}
         <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}${cardDoLead(r) ? `<button class="sec" data-abrir-card="${cardDoLead(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: (pj && pj.nome) || r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: produtoDoLead(r), tipo: 'Reunião de venda', ...(pj ? { pessoa_id: pj.id } : {}) }))}">Abrir atendimento</button>`}</div>
         <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
