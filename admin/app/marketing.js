@@ -170,6 +170,15 @@ function estilos() {
 .mk-chip{display:block;width:100%;border:0;border-radius:3px;padding:2px 4px;font-size:10px;line-height:1.3;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
 .mk-chip.planejado{background:var(--branco)!important;color:var(--c);border:1px dashed var(--c);padding:1px 3px}.mk-chip.atrasado{box-shadow:inset 4px 0 0 #b5533c;padding-left:8px}
 .mk-mais{font-size:10px;color:var(--tinta-3);padding-left:3px}
+/* arrastar post para outro dia no calendário */
+[data-arr]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.mk-cm .d.alvo{background:rgba(168,139,74,.18);outline:2px dashed var(--dourado);outline-offset:-2px}
+.mk-arr-origem{opacity:.35}
+.mk-arr-fantasma{position:fixed;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;max-width:200px;padding:6px 10px;border-radius:4px;color:#fff;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+body.mk-arrastando{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.mk-arrastando *{cursor:grabbing!important}
+[data-arr]{touch-action:manipulation}
+@media (hover:hover){.mk-chip[data-arr]{cursor:grab}}
 .mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 @media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:9.5px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
 @media (min-width:700px){.mk-cm{margin:10px 0 0}.mk-cm .d{min-height:110px;padding:4px}.mk-chip{font-size:12px;padding:3px 6px}}
@@ -377,7 +386,7 @@ function vCalendario() {
     <div class="mk-cm">${cel}</div>
     <div class="mk-leg">${CONTAS.map(c => `<span><i style="background:${c[2]}"></i>${c[1]}</span>`).join('')}</div>
     <div class="mk-leg" style="margin-top:4px"><span>Contorno: ideia</span><span>Cor cheia: em andamento</span><span>✓ publicado</span><span>! atrasado</span></div>
-    <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele.</div>
+    <div class="sub">Toque no post para abrir. Toque no espaço vazio do dia para ver a lista e criar um post nele. Para mudar a data, arraste o post até o novo dia (no celular, segure o dedo no post até ele soltar da tela). Post publicado não muda de data.</div>
     ${DIA ? `<div class="secao">${new Date(DIA + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} <button data-novo-dia="${DIA}">+ Post neste dia</button></div>${doDia.length ? `<div class="mk-lista">${doDia.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || ''))).map(linha).join('')}</div>` : '<div class="vazio">Nenhum post neste dia.</div>'}` : ''}
     ${semData.length ? `<div class="secao">Sem data definida</div><div class="mk-lista">${semData.map(linha).join('')}</div>` : ''}`;
 }
@@ -852,6 +861,85 @@ async function guardarEst(chave, tipo, valores, titulo) {
   return true;
 }
 
+/* ---------- calendário: arrastar o post para outro dia ----------
+   Computador: clicar, segurar e soltar no dia. Celular: segurar o dedo ~0,2 s até o post "soltar", depois arrastar.
+   Toque rápido continua abrindo o post. Publicado não se move. O prazo de gravação anda os mesmos dias que o post. */
+let ARR = null, SUPRIME = 0;
+addEventListener('click', (e) => { if (Date.now() < SUPRIME) { e.stopPropagation(); e.preventDefault(); } }, true);
+function diasEntre(a, b) { return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5); }
+function moverData(p, novo) {
+  if (!p || p.status === 'publicado' || !novo || p.data_prevista === novo) return;
+  const campos = { data_prevista: novo };
+  let extra = '';
+  if (p.gravacao_data && p.data_prevista) {
+    campos.gravacao_data = maisDias(p.gravacao_data, diasEntre(p.data_prevista, novo));
+    extra = ` Prazo de gravação: ${dm(campos.gravacao_data)}.`;
+  }
+  // muda na tela na hora; se o banco recusar, volta como estava
+  const antes = { data_prevista: p.data_prevista, gravacao_data: p.gravacao_data };
+  const i = LISTA.findIndex(x => x.id === p.id);
+  LISTA[i] = { ...p, ...campos }; X.aviso(`Data alterada para ${dm(novo)}.${extra}`); rerender();
+  X.sb.from('marketing_posts').update(campos).eq('id', p.id).select().single().then(({ data, error }) => {
+    const j = LISTA.findIndex(x => x.id === p.id);
+    if (error) { if (j >= 0) LISTA[j] = { ...LISTA[j], ...antes }; X.aviso('Não mudou a data: ' + error.message); rerender(); return; }
+    if (j >= 0 && data) LISTA[j] = data;
+  });
+}
+function arrastavel(P) {
+  const diaSob = (x, y) => { const el = document.elementFromPoint(x, y); const d = el && el.closest('.mk-cm .d[data-dia]'); return d || null; };
+  const marcar = (d) => { if (ARR.alvo === d) return; if (ARR.alvo) ARR.alvo.classList.remove('alvo'); ARR.alvo = d; if (d) d.classList.add('alvo'); };
+  const comecar = (el, p, x, y) => {
+    const f = document.createElement('div'); f.className = 'mk-arr-fantasma'; f.style.background = contaCor(p); f.textContent = p.titulo || 'Post';
+    document.body.appendChild(f); el.classList.add('mk-arr-origem'); document.body.classList.add('mk-arrastando');
+    Object.assign(ARR, { on: true, f, fw: f.offsetWidth, fh: f.offsetHeight, q: 0 }); if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+    seguir(x, y); loop();
+  };
+  // a etiqueta segue o dedo por transform (sem recalcular a página); o dia de destino é conferido uma vez por quadro
+  const seguir = (x, y) => { ARR.x = x; ARR.y = y; if (ARR.q) return; ARR.q = requestAnimationFrame(() => { if (!ARR || !ARR.on) return; ARR.q = 0;
+    const w = ARR.fw / 2 + 8, cx = Math.min(Math.max(ARR.x, w), innerWidth - w);
+    ARR.f.style.transform = `translate3d(${cx - ARR.fw / 2}px,${ARR.y - ARR.fh - 18}px,0) rotate(-2deg)`; marcar(diaSob(ARR.x, ARR.y)); }); };
+  // perto da borda da tela, rola sozinho (ex.: da lista "Sem data definida" até o calendário)
+  const loop = () => { if (!ARR || !ARR.on) return; const m = 80, v = ARR.y < m ? -14 : ARR.y > innerHeight - m - 60 ? 14 : 0; if (v) { scrollBy(0, v); marcar(diaSob(ARR.x, ARR.y)); } requestAnimationFrame(loop); };
+  const terminar = (soltar) => {
+    if (!ARR) return; const a = ARR; ARR = null; clearTimeout(a.t);
+    if (!a.on) return;
+    SUPRIME = Date.now() + 400;
+    if (a.q) cancelAnimationFrame(a.q); if (soltar) a.alvo = diaSob(a.x, a.y) || a.alvo;
+    a.f.remove(); a.el.classList.remove('mk-arr-origem'); document.body.classList.remove('mk-arrastando'); if (a.alvo) a.alvo.classList.remove('alvo');
+    if (soltar && a.alvo) moverData(a.p, a.alvo.dataset.dia);
+  };
+  P.querySelectorAll('[data-p]').forEach(el => {
+    const p = LISTA.find(x => String(x.id) === el.dataset.p);
+    if (!p || p.status === 'publicado') return;
+    el.dataset.arr = '1';
+    // mouse e caneta
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || e.button !== 0) return;
+      ARR = { el, p, sx: e.clientX, sy: e.clientY, on: false };
+      const mv = (ev) => { if (!ARR) return; if (!ARR.on) { if (Math.hypot(ev.clientX - ARR.sx, ev.clientY - ARR.sy) > 6) comecar(el, p, ev.clientX, ev.clientY); return; } seguir(ev.clientX, ev.clientY); };
+      const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', cancel); terminar(true); };
+      const cancel = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', cancel); terminar(false); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', cancel);
+    });
+    el.addEventListener('dragstart', (e) => e.preventDefault());
+    // dedo: segurar para "soltar" o post; mexer antes disso é rolar a tela normalmente
+    el.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      ARR = { el, p, sx: t.clientX, sy: t.clientY, x: t.clientX, y: t.clientY, on: false };
+      ARR.t = setTimeout(() => { if (ARR && !ARR.on) comecar(el, p, ARR.x, ARR.y); }, 200);
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      if (!ARR) return; const t = e.touches[0];
+      if (!ARR.on) { ARR.x = t.clientX; ARR.y = t.clientY; if (Math.hypot(t.clientX - ARR.sx, t.clientY - ARR.sy) > 12) { clearTimeout(ARR.t); ARR = null; } return; }
+      e.preventDefault(); seguir(t.clientX, t.clientY);
+    }, { passive: false });
+    el.addEventListener('touchend', (e) => { if (ARR && ARR.on) e.preventDefault(); terminar(true); });
+    el.addEventListener('touchcancel', () => terminar(false));
+    el.addEventListener('contextmenu', (e) => { if (ARR) e.preventDefault(); });
+  });
+}
+
 function ligar(P) {
   const q = (s) => P.querySelectorAll(s), by = (id) => document.getElementById(id);
   if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('empresa');
@@ -879,6 +967,7 @@ function ligar(P) {
   q('[data-est]').forEach(b => b.onclick = () => { ED_EST = { id: b.dataset.est }; rerender(); scrollTo(0, 0); });
   q('[data-novo-est]').forEach(b => b.onclick = () => { ED_EST = { tipo: b.dataset.novoEst }; rerender(); scrollTo(0, 0); });
   q('[data-doc]').forEach(b => b.onclick = () => { const x = EST.find(e => e.chave === b.dataset.doc); ED_EST = x ? { id: x.id, chave: x.chave } : { tipo: 'documento', chave: b.dataset.doc }; rerender(); scrollTo(0, 0); });
+  if (VIEW === 'calendario') arrastavel(P);
   if (by('mkMes')) by('mkMes').onclick = (e) => { const b = e.target.closest('button'); if (b) { MES = mesMais(MES, +b.dataset.n); DIA = null; rerender(); } };
   if (by('mkExigir')) by('mkExigir').onchange = async (e) => { const ok = await guardarEst('config', 'config', { ...((cfg() || {}).valores || {}), aprovacao: e.target.checked }, 'Configuração do marketing'); if (ok) X.aviso(e.target.checked ? 'Aprovação obrigatória ligada.' : 'Aprovação obrigatória desligada.'); rerender(); };
   if (by('mkMeta')) by('mkMeta').onsubmit = async (ev) => {
