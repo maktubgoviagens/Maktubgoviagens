@@ -396,14 +396,15 @@ export async function bloco(el, c, X) {
     const b = X.$('ctrPedir'), res = X.$('ctrPedirRes'); b.disabled = true; b.textContent = 'Enviando...';
     const { data, error } = await sb.functions.invoke('email-enviar', { body: { acao: 'cadastro_gestao', pessoa_id: pf.id } });
     b.disabled = false; b.textContent = 'Pedir os dados do contrato ao cliente por e-mail';
-    if (data && data.ok) { X.aviso(`E-mail enviado para ${data.email}. Quando ele preencher, vocês recebem o aviso.`); res.innerHTML = `<div class="sub" style="margin-top:6px">Enviado para ${esc(data.email)} em ${new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</div>`; return; }
+    const okEnvio = !!(data && data.ok);
+    if (okEnvio) X.aviso(`E-mail enviado para ${data.email}. Quando ele preencher, vocês recebem o aviso.`);
     const msg = (data && data.erro) || (error && error.message) || 'erro';
-    if (!data || !data.link) { X.aviso(/not found|404|Failed to send/i.test(msg) ? 'A função email-enviar ainda não está ativa no Supabase.' : 'Não enviou: ' + msg); return; }
-    const nome = String(pf.nome || '').split(' ')[0], texto = `Oi, ${nome}! Para deixarmos o contrato da sua Gestão de Milhas pronto, preencha seus dados neste link seguro. Leva 2 minutos: ${data.link}`;
-    const zap = X.zapLink(pf.celular, nome, texto);
-    res.innerHTML = `<div class="config" style="margin-top:8px">${esc(msg)}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">Mandar no WhatsApp</a>` : ''}<button class="mini" id="ctrPedirCopiar">Copiar link</button></div></div>`;
-    X.$('ctrPedirCopiar').onclick = async () => { try { await navigator.clipboard.writeText(texto); X.aviso('Mensagem com o link copiada.'); } catch (_) { prompt('Copie o link:', data.link); } };
+    if (!okEnvio && (!data || !data.link)) { X.aviso(/not found|404|Failed to send/i.test(msg) ? 'A função email-enviar ainda não está ativa no Supabase.' : 'Não enviou: ' + msg); return; }
+    if (data.link) (window.__linkGestao = window.__linkGestao || {})[pf.id] = { link: data.link, email: data.email || '', quando: new Date().toISOString(), ok: okEnvio };
+    mostrarLink(res, pf, X, okEnvio ? { link: data.link, email: data.email, quando: new Date().toISOString(), ok: true } : { link: data.link, erro: msg });
   };
+  // se o link já foi gerado nesta sessão (no cadastro da Gestão ou aqui), ele continua à mão
+  if (X.$('ctrPedirRes') && pf && window.__linkGestao && window.__linkGestao[pf.id]) mostrarLink(X.$('ctrPedirRes'), pf, X, window.__linkGestao[pf.id]);
   if (X.$('ctrNovo')) X.$('ctrNovo').onclick = () => { FORM = { mes }; formulario(X.$('ctrForm'), c, pf, mod.data, X, el); };
   if (FORM) formulario(X.$('ctrForm'), c, pf, mod.data, X, el);
   void enviadosMes;
@@ -527,4 +528,20 @@ async function enviar(k, c, X, el, btn) {
   }
   X.aviso('Contrato enviado. Agora mande o link pelo WhatsApp da Maktub.');
   bloco(el, c, X);
+}
+
+// mostra o link dos dados do contrato com WhatsApp e Copiar, tenha o e-mail saído ou não
+function mostrarLink(res, pf, X, info) {
+  const esc = X.esc;
+  const quando = info.quando ? new Date(info.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  const topo = info.erro ? esc(info.erro) + '<br>Mande o link por aqui:'
+    : `E-mail enviado para ${esc(info.email || 'o cliente')}${quando ? ' em ' + quando : ''}.`;
+  if (!info.link) { res.innerHTML = `<div class="sub" style="margin-top:6px">${topo}</div>`; return; }
+  const nome = String(pf.nome || '').split(' ')[0];
+  const texto = `Oi, ${nome}! Para deixarmos o contrato da sua Gestão de Milhas pronto, preencha seus dados neste link seguro. Leva 2 minutos: ${info.link}`;
+  const zap = pf.celular ? X.zapLink(pf.celular, nome, texto) : '';
+  res.innerHTML = `<div class="config" style="margin-top:8px">${topo}${info.erro ? '' : '<br>Se ele não achar o e-mail, mande o mesmo link por aqui:'}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">Mandar no WhatsApp</a>` : ''}<button class="mini" id="ctrPedirCopiar">Copiar link</button></div>
+    <div class="sub" style="margin-top:6px">O link é pessoal e vale por 30 dias. Mande só para o próprio cliente.${pf.celular ? '' : ' A ficha não tem celular: copie o link e mande pelo WhatsApp dele.'}</div></div>`;
+  X.$('ctrPedirCopiar').onclick = async () => { try { await navigator.clipboard.writeText(texto); X.aviso('Mensagem com o link copiada.'); } catch (_) { prompt('Copie o link:', info.link); } };
 }

@@ -2501,7 +2501,9 @@ function ligarTopoGestao(P) {
     b.textContent = 'Enviando o e-mail...';
     const em = await sb.functions.invoke('email-enviar', { body: { acao: 'cadastro_gestao', pessoa_id: r.pessoa_id } }).catch(() => ({}));
     const ok = em && em.data && em.data.ok;
-    aviso(nome.split(' ')[0] + ' cadastrado na Gestão.' + (ok ? ` E-mail com o cadastro do contrato enviado para ${em.data.email}.` : ' O e-mail não saiu: use o botão "Pedir os dados do contrato" na ficha.'));
+    if (em && em.data && em.data.link) (window.__linkGestao = window.__linkGestao || {})[r.pessoa_id] = { link: em.data.link, email: em.data.email || '', quando: new Date().toISOString(), ok: !!ok, ...(ok ? {} : { erro: em.data.erro || 'O e-mail não saiu.' }) };
+    const temLink = !!(em && em.data && em.data.link);
+    aviso(nome.split(' ')[0] + ' cadastrado na Gestão.' + (ok ? ` E-mail com o cadastro do contrato enviado para ${em.data.email}.` + (temLink ? ' O link para WhatsApp fica na ficha, no bloco do contrato.' : '') : (temLink ? ' O e-mail não saiu: o link para WhatsApp está na ficha, no bloco do contrato.' : ' O e-mail não saiu: use o botão "Pedir os dados do contrato" na ficha.')));
     depois(r);
   });
   P.querySelectorAll('[data-lib-ctrst]').forEach(b => b.onclick = async () => {
