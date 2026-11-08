@@ -134,6 +134,7 @@ function escolherCard(P, X, escolhido, voltar) {
       <label class="fl"><span>Nome do cliente ou empresa</span><input name="cliente" list="dlCliC"></label>
       <datalist id="dlCliC">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
       <div class="duas-col"><label class="fl"><span>WhatsApp ou e-mail</span><input name="contato"></label><label class="fl"><span>Trecho ou destino</span><input name="trecho" placeholder="Rio → Lisboa"></label></div>
+      ${X.ind && X.ind.temCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou (cliente novo ou sem origem)</span></div>${X.ind.IND.htmlSeletor(X.ind, {})}` : ''}
       <button class="zap grande" id="criarCard" style="width:100%;margin-top:6px">Criar card e seguir para a cotação</button>
     </form>`;
   const desenha = (q) => {
@@ -146,6 +147,7 @@ function escolherCard(P, X, escolhido, voltar) {
   desenha('');
   X.$('buscaCard').oninput = (e) => desenha(e.target.value);
   X.$('voltarCard').onclick = () => voltar ? voltar() : (S = null, ir(X, null));
+  const SO = X.ind && X.ind.temCol() ? X.ind.IND.ligarSeletor(X.$('fCardNovo').querySelector('.ind-sel'), X.ind, {}) : null;
   X.$('criarCard').onclick = async () => {
     const f = X.$('fCardNovo'), g = (n) => f.elements[n].value.trim();
     const nome = g('cliente').replace(/\s+/g, ' ');
@@ -155,8 +157,16 @@ function escolherCard(P, X, escolhido, voltar) {
     const chave = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
     let p = (D.pessoas || []).find(x => chave(x.nome) === chave(nome));
     if (!p) { const ja = acharPessoa(D, { nome, contato: ct }); if (ja && confirm(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?\n\nOK: usar esta ficha. Cancelar: criar uma ficha nova.`)) p = ja; }
-    if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'] }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
+    // Como chegou: obrigatório para cliente novo; cliente com ficha e sem origem recebe a origem escolhida
+    let ori = null;
+    if (SO && (!p || !p.origem_canal)) {
+      if (SO.escolhido()) { ori = await SO.valor(); if (ori.erro) { X.aviso(ori.erro); b.disabled = false; b.textContent = 'Criar card e seguir para a cotação'; return; } }
+      else if (!p) { X.aviso('Escolha de onde o cliente veio (Como chegou).'); b.disabled = false; b.textContent = 'Criar card e seguir para a cotação'; return; }
+    }
+    if (p && ori && !p.origem_canal) { const ro = await X.ind.IND.gravarOrigem(X.ind, p.id, ori); if (ro.erro) X.aviso(ro.erro); }
+    if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'], ...(ori ? { ...ori, origem: X.ind.IND.ROTULO[ori.origem_canal] } : {}) }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
     const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: g('trecho') || null,
+      ...(p && p.origem_canal && X.ind ? { origem: X.ind.IND.ROTULO[p.origem_canal] } : {}),
       responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo: 'Montar e enviar a cotação', proximo_passo_data: hoje() };
     if (p) row.pessoa_id = p.id;
     const r = await X.sb.from('atendimentos').insert(row).select().single();
