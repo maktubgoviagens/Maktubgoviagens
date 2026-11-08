@@ -111,7 +111,7 @@ function telaLista(P, X) {
   const filtros = [['todos', 'Todos'], ['cliente', 'Clientes'], ['gestao', 'Gestão'], ['lead', 'Leads'], ['parceiro', 'Parceiros'], ['fornecedor', 'Fornecedores'], ['aniv', 'Aniversário no mês']];
   const q = norm(BUSCA), qd = so(BUSCA);
   const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : FILTRO === 'cliente' ? ehCliente(D, p) : FILTRO === 'lead' ? ehLead(D, p) : (p.papeis || []).includes(FILTRO))
-    .filter(p => !q || norm(p.nome).includes(q) || (qd.length >= 4 && so(p.celular).includes(qd)) || norm(p.email).includes(q))
+    .filter(p => !q || norm(p.nome).includes(q) || norm(p.apelido).includes(q) || (qd.length >= 4 && so(p.celular).includes(qd)) || norm(p.email).includes(q))
     .map(p => ({ p, r: resumo(D, p.id) }))
     .sort((a, b) => FILTRO === 'aniv' ? new Date(a.p.nascimento).getDate() - new Date(b.p.nascimento).getDate() : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   const dups = (D.dups || []).length;
@@ -119,9 +119,10 @@ function telaLista(P, X) {
     <h1 class="titulo">Clientes</h1>
     <div class="sub">${todas.length} fichas · ${todas.filter(p => ehCliente(D, p)).length} ${todas.filter(p => ehCliente(D, p)).length === 1 ? 'cliente' : 'clientes'} · ${todas.filter(p => ehLead(D, p)).length} ${todas.filter(p => ehLead(D, p)).length === 1 ? 'lead' : 'leads'} · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
     ${ADMIN ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups ? (dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas') + ' para confirmar ›' : 'Revisar fichas duplicadas ›'}</button>` : ''}
+    ${X.irOrigens && X.IND.pendentes(X) ? `<button class="sec grande" id="irOrigens" style="margin-top:10px;width:100%">${X.IND.pendentes(X)} ${X.IND.pendentes(X) === 1 ? 'cliente' : 'clientes'} com origem para marcar ›</button>` : ''}
     <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo cadastro</button>
     <div id="cadOp"></div>
-    <input class="busca" id="buscaP" type="search" placeholder="Buscar por nome, telefone ou e-mail" value="${esc(BUSCA)}">
+    <input class="busca" id="buscaP" type="search" placeholder="Buscar por nome, apelido, telefone ou e-mail" value="${esc(BUSCA)}">
     <div class="chips" id="filP" style="margin-top:10px">${filtros.map(([k, l]) => `<button data-f="${k}" class="${k === FILTRO ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="lista">${lista.length ? lista.slice(0, 300).map(({ p, r }) => `
       <button class="cli" data-p="${p.id}"><div><div class="nome">${esc(p.nome)}</div>
@@ -131,6 +132,7 @@ function telaLista(P, X) {
     ${verValor(X) ? '<div class="sub">Valores pelas emissões registradas no app.</div>' : ''}`;
   $('buscaP').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaP').focus(); $('buscaP').setSelectionRange(pos, pos); };
   $('filP').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; telaLista(P, X); } };
+  if ($('irOrigens')) $('irOrigens').onclick = () => X.irOrigens();
   $('novaP').onclick = () => {
     const el = $('cadOp');
     if (el.innerHTML) { el.innerHTML = ''; return; }
@@ -190,7 +192,8 @@ function telaFicha(P, X) {
   const r = resumo(D, p.id), doc = (D.docs || []).find(d => d.pessoa_id === p.id), verDocs = pode('emissoes');
   const vinc = (D.vinculos || []).filter(v => v.pessoa_a === p.id || v.pessoa_b === p.id).map(v => ({ v, o: pessoa(D, v.pessoa_a === p.id ? v.pessoa_b : v.pessoa_a) })).filter(x => x.o);
   const ind = p.indicado_por ? pessoa(D, p.indicado_por) : null;
-  const indicou = (D.pessoas || []).filter(x => x.indicado_por === p.id);
+  const indicou = (D.pessoas || []).filter(x => x.indicado_por === p.id || x.origem_indicado_por === p.id);
+  const temOrigem = 'origem_canal' in p, indN = p.origem_indicado_por ? pessoa(D, p.origem_indicado_por) : null;
   const parc = p.parceiro_ref ? (D.parceirosAdm || D.parc || []).find(x => x.id === p.parceiro_ref) : null;
   const aniv = proxAniv(p.nascimento), hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const diasAniv = aniv ? Math.round((aniv - hoje) / 864e5) : null;
@@ -245,10 +248,12 @@ function telaFicha(P, X) {
       <button class="zap" type="button" id="copiarKit" style="margin-top:10px;width:100%">Copiar dados para emitir</button>
     </section>` : ''}
     <section class="bloco"><h2>Como chegou</h2>
-      ${lin('Origem', esc(p.origem) || 'Não informado')}
-      ${ind ? `<button class="lin" data-p="${ind.id}" style="width:100%"><span>Indicado por</span><span>${esc(ind.nome)} ›</span></button>` : ''}
+      ${temOrigem ? (p.origem_canal ? lin('Origem', esc(X.IND.rotuloOrigem(p))) + (indN ? `<button class="lin" data-p="${indN.id}" style="width:100%"><span>Quem indicou</span><span>${esc(indN.nome)} ›</span></button>` : '') + lin('Marcada', [p.origem_definida_por && X.nomeTime ? esc(X.nomeTime(p.origem_definida_por)) : '', p.origem_definida_em ? new Date(p.origem_definida_em).toLocaleDateString('pt-BR') : ''].filter(Boolean).join(' · ')) : '<div class="lin"><span>Origem</span><span style="color:var(--alerta)">não marcada</span></div>') : ''}
+      ${p.origem ? lin(temOrigem ? 'Origem antiga (texto)' : 'Origem', esc(p.origem)) : temOrigem ? '' : lin('Origem', 'Não informado')}
+      ${ind && (!indN || ind.id !== indN.id) ? `<button class="lin" data-p="${ind.id}" style="width:100%"><span>${temOrigem ? 'Indicado por (antigo)' : 'Indicado por'}</span><span>${esc(ind.nome)} ›</span></button>` : ''}
       ${indicou.length ? `<div class="lin"><span>Indicou</span><span>${indicou.length} ${indicou.length === 1 ? 'pessoa' : 'pessoas'}</span></div>${indicou.map(x => `<button class="lin" data-p="${x.id}" style="width:100%"><span></span><span>${esc(x.nome)} ›</span></button>`).join('')}` : ''}
-      ${parc ? lin('Parceiro', `${Number(parc.pct || 0).toLocaleString('pt-BR')}% de repasse${parc.ativo === false ? ' · inativo' : ''}`) + (verDocs && doc && doc.parceiro_pix ? lin('Pix', esc(doc.parceiro_pix)) : '') : ''}
+      ${parc ? lin('Parceiro', `${Number(parc.pct || 0).toLocaleString('pt-BR')}% de repasse${parc.evento ? ' · evento' : ''}${parc.ativo === false ? ' · inativo' : ''}`) + (verDocs && doc && doc.parceiro_pix ? lin('Pix', esc(doc.parceiro_pix)) : '') : ''}
+      ${temOrigem && (!p.origem_canal || X.ADMIN) ? `<button class="sec" type="button" id="marcarOrigem" style="width:100%;margin-top:8px">${p.origem_canal ? 'Corrigir origem (só administrador)' : 'Marcar origem'}</button><div id="origemForm"></div>` : ''}
     </section>
     <section class="bloco"><h2>Família e acompanhantes</h2>
       ${vinc.map(({ v, o }) => `<div class="lin"><button data-p="${o.id}" style="text-align:left;color:var(--verde);font-weight:600;background:none;border:0;padding:0;font:inherit;cursor:pointer">${esc(o.nome)} ›</button><span>${v.tipo === 'familia' ? 'Família' : 'Viaja junto'} <button class="mini" data-desv="${v.pessoa_a}|${v.pessoa_b}" aria-label="Remover vínculo" style="margin-left:8px;color:var(--tinta-3);background:none;border:0;font-size:18px;line-height:1;cursor:pointer">×</button></span></div>`).join('') || '<div class="vazio">Ninguém vinculado.</div>'}
@@ -270,6 +275,20 @@ function telaFicha(P, X) {
   if ($('irPagarF')) $('irPagarF').onclick = () => X.irPagar();
   $('voltar').onclick = () => ir(X, 'lista');
   $('editarP').onclick = () => ir(X, 'editar', p.id);
+  if ($('marcarOrigem')) $('marcarOrigem').onclick = () => {
+    const box = $('origemForm'); $('marcarOrigem').hidden = true;
+    box.innerHTML = `${p.origem_canal ? '<div class="sub">A correção fica registrada no histórico, com quem corrigiu e quando.</div>' : ''}${X.IND.htmlSeletor(X, {})}<button class="zap" type="button" id="confOrigem" style="width:100%;margin-top:10px">${p.origem_canal ? 'Salvar correção' : 'Confirmar origem'}</button><div class="sub" id="msgOrigem"></div>`;
+    const S = X.IND.ligarSeletor(box.querySelector('.ind-sel'), X, { pessoa: p, C: { vendas: D.emissoes || [], parceiros: D.parceirosAdm && D.parceirosAdm.length ? D.parceirosAdm : (D.parc || []) } });
+    $('confOrigem').onclick = async () => {
+      if (p.origem_canal && !confirm(`Corrigir a origem de ${p.nome}? A origem atual é ${X.IND.rotuloOrigem(p)}.`)) return;
+      $('confOrigem').disabled = true; $('msgOrigem').textContent = 'Salvando...';
+      const v = await S.valor();
+      if (v.erro) { $('confOrigem').disabled = false; $('msgOrigem').textContent = v.erro; return; }
+      const r = await X.IND.gravarOrigem(X, p.id, v, !!p.origem_canal);
+      if (r.erro) { $('confOrigem').disabled = false; $('msgOrigem').textContent = r.erro; return; }
+      X.IND.limparCache(); MSG = 'Origem salva: ' + esc(X.IND.rotuloOrigem(r.ok)) + '.'; telaCRM(P, X);
+    };
+  };
   if ($('avaliarForn')) $('avaliarForn').onclick = () => X.fornecedores.avaliar({ pessoa_id: p.id });
   P.querySelectorAll('[data-forn]').forEach(b => b.onclick = () => X.fornecedores.abrir(b.dataset.forn));
   if ($('copiarKit')) $('copiarKit').onclick = async () => {
@@ -342,6 +361,9 @@ function telaForm(P, X) {
   const parceiros = (D.pessoas || []).filter(o => o.id !== p.id && (o.papeis || []).includes('parceiro'));
   const outros = (D.pessoas || []).filter(o => o.id !== p.id);
   const ind = p.indicado_por ? pessoa(D, p.indicado_por) : null;
+  // origem nova (colunas origem_*): congelada depois de marcada. Sem as colunas no banco, o formulário antigo continua igual
+  const temCol = (D.pessoas || []).length ? 'origem_canal' in D.pessoas[0] : false;
+  const indN = p.origem_indicado_por ? pessoa(D, p.origem_indicado_por) : null;
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ ${nova ? 'Clientes' : esc(p.nome)}</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? 'Novo <em>cadastro</em>' : 'Editar <em>ficha</em>'}</h1>
@@ -364,8 +386,12 @@ function telaForm(P, X) {
           ${campo('visto', 'Visto', doc.visto, 'text', 'placeholder="Ex.: EUA B1/B2"')}${campo('visto_validade', 'Validade do visto', doc.visto_validade, 'date')}
         </details>` : '<div class="sub">CPF e passaporte ficam visíveis só para quem tem a permissão de emissão.</div>'}
       <div class="grupo">Como chegou</div>
+      ${temCol ? (p.origem_canal ? `<div class="sub" style="margin-top:0">Origem: <b>${esc(X.IND.rotuloOrigem(p))}</b>${indN ? ' · indicado por ' + esc(indN.nome) : ''}. Fica congelada; para corrigir, use a ficha (só administrador).</div>`
+        : `${X.IND.htmlSeletor(X, {})}<div class="sub">${nova ? 'Obrigatório para lead e cliente. Passageiro, fornecedor e parceiro não precisam.' : 'Esta ficha ainda está sem origem. Se souber, marque agora.'}</div>`)
+        + (p.origem ? `<div class="sub">Origem antiga (texto): ${esc(p.origem)}${ind ? ' · indicado por ' + esc(ind.nome) : ''}</div>` : '')
+        + campo('apelido', 'Apelido (opcional)', p.apelido || '', 'text', 'placeholder="Como a pessoa é chamada"') : `
       <label class="fl"><span>Origem</span><select name="origem"><option value="">-</option>${[...new Set([...ORIGENS, p.origem].filter(Boolean))].map(o => `<option ${norm(o) === norm(p.origem) ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>
-      <label class="fl"><span>Indicado por</span><input name="indicado" list="dlInd" value="${esc(ind ? ind.nome : '')}" placeholder="Nome de quem indicou"></label>
+      <label class="fl"><span>Indicado por</span><input name="indicado" list="dlInd" value="${esc(ind ? ind.nome : '')}" placeholder="Nome de quem indicou"></label>`}
       <datalist id="dlInd">${[...parceiros.map(o => o.nome), ...(D.parc || []).map(x => x.nome).filter(n => !parceiros.some(o => norm(o.nome) === norm(n))), ...outros.filter(o => !parceiros.includes(o)).map(o => o.nome)].slice(0, 1500).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
       <div class="grupo">Interesse</div>
       <div class="chips" id="interP" style="flex-wrap:wrap">${Object.entries(INTERESSES).map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.interesse || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
@@ -378,6 +404,7 @@ function telaForm(P, X) {
       <div class="sub" id="msgP"></div>
     </form>`;
   const f = $('fP');
+  const SO = temCol && !p.origem_canal ? X.IND.ligarSeletor(f.querySelector('.ind-sel'), X, { pessoa: nova ? null : p, C: { vendas: D.emissoes || [], parceiros: D.parceirosAdm && D.parceirosAdm.length ? D.parceirosAdm : (D.parc || []) } }) : null;
   const papeis = new Set(p.papeis || []);
   const inter = new Set(p.interesse || []);
   $('interP').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; inter.has(k) ? inter.delete(k) : inter.add(k); b.classList.toggle('on', inter.has(k)); };
@@ -401,17 +428,24 @@ function telaForm(P, X) {
     if (nova && checar()) { $('msgP').textContent = 'Essa pessoa já tem ficha. Abra a ficha existente acima.'; return; }
     const cpf = so(g('cpf'));
     if (g('cpf') && cpf.length !== 11) { $('msgP').textContent = 'O CPF precisa ter 11 números.'; return; }
-    const indN = norm(g('indicado'));
-    let indP = indN ? (D.pessoas || []).find(o => o.id !== p.id && norm(o.nome) === indN) : null;
-    if (indN && !indP) {
-      const pc = (D.parc || []).find(x => norm(x.nome) === indN);
+    // origem: obrigatória no cadastro novo de lead ou cliente
+    let ori = null;
+    if (SO) {
+      if (SO.escolhido()) { ori = await SO.valor(); if (ori.erro) { $('msgP').textContent = ori.erro; return; } }
+      else if (nova && !['passageiro', 'fornecedor', 'parceiro'].some(k => papeis.has(k))) { $('msgP').textContent = 'Escolha de onde a pessoa veio (Como chegou).'; return; }
+    }
+    const indNome = norm(g('indicado'));
+    let indP = indNome ? (D.pessoas || []).find(o => o.id !== p.id && norm(o.nome) === indNome) : null;
+    if (indNome && !indP) {
+      const pc = (D.parc || []).find(x => norm(x.nome) === indNome);
       const ins = await X.sb.from('pessoas').insert({ nome: g('indicado').replace(/\s+/g, ' '), papeis: pc ? ['parceiro'] : [], ...(pc ? { parceiro_ref: pc.id } : {}) }).select().single();
       if (ins.error) { $('msgP').textContent = X.limparTec('Não criou a ficha de quem indicou: ' + ins.error.message); return; }
       indP = ins.data; D.pessoas.push(indP); X.aviso(`Ficha de ${indP.nome} criada${pc ? ' como parceira' : ''}.`);
     }
     const row = { nome: g('nome').replace(/\s+/g, ' '), celular: g('celular') || null, email: g('email') || null, instagram: g('instagram') || null,
       aceita_comunicacao: f.elements.aceita_comunicacao.checked, nascimento: g('nascimento') || null, sexo: g('sexo') || null,
-      origem: g('origem') || null, indicado_por: indP ? indP.id : null, observacoes: g('observacoes') || null,
+      ...(!temCol ? { origem: g('origem') || null, indicado_por: indP ? indP.id : null } : nova ? { origem: ori ? X.IND.ROTULO[ori.origem_canal] : null, indicado_por: ori ? ori.origem_indicado_por : null } : {}),
+      ...(temCol ? { apelido: g('apelido') || null, ...(ori || {}) } : {}), observacoes: g('observacoes') || null,
       papeis: [...new Set([...papeis, ...(p.papeis || []).filter(k => k === 'gestao' || (k === 'parceiro' && !X.ADMIN))])].filter(k => k !== 'lead'), interesse: [...inter] };
     $('salvarP').disabled = true; $('msgP').textContent = 'Salvando...';
     const q = nova ? X.sb.from('pessoas').insert(row).select().single() : X.sb.from('pessoas').update(row).eq('id', p.id).select().single();

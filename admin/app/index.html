@@ -568,6 +568,7 @@ import * as CMP from '/admin/app/compromissos.js?v=16';
 import * as CX from '/admin/app/caixa.js?v=2';
 import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
+import * as IND from '/admin/app/indicacoes.js?v=1';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -966,7 +967,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -981,9 +982,9 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 // perfil de marketing (Maju, Jéssica): o que não está salvo fica fechado, então uma permissão nova nunca abre o resto do app sozinha
 const pode = (k) => { if (ADMIN) return true; const P0 = (D.perfil && D.perfil.permissoes) || {}; const v = P0[k]; const mkt = P0.marketing === true || P0.marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { cartoesbase: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { cartoesbase: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], origens: ['comercial', 'emissoes', 'gestao', 'leads'], indicacoes: ['comercial', 'financeiro'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'origens', 'indicacoes', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
 const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
@@ -1031,7 +1032,7 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades'];
+const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades', 'indicacoes'];
 function segOp(atual) {
   if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
   return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
@@ -1126,11 +1127,11 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1273,10 +1274,14 @@ async function fecharMesesAuto() {
 }
 
 function ctxCTR() { return { D, sb, $, esc, aviso, campo, zapLink, ADMIN, programas: (id) => progsDe(id).map(p => p.programa).filter(Boolean) }; }
+const temOrigemCol = () => (D.pessoas || []).length > 0 && 'origem_canal' in D.pessoas[0];
+function ctxIND() {
+  return { D, $, esc, sb, aviso, ir, pode, ADMIN, brlC, brl2, limparTec, nomeTime, aba: () => ABA };
+}
 function ctxCRM() {
   return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
-    abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true),
+    abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true), irOrigens: () => ir('origens'), IND,
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
 }
 const pessoaPorNome = (n) => { const k = String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); return k ? (D.pessoas || []).find(p => String(p.nome).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim() === k) : null; };
@@ -1365,6 +1370,8 @@ function tela() {
   const P = $('pagina');
   mostrarFab();
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
+  if (ABA === 'origens') return IND.telaOrigens(P, ctxIND());
+  if (ABA === 'indicacoes') return IND.telaIndicacoes(P, ctxIND());
   if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, sairOk, limparTec, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)), voltarSeguro });
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
@@ -1373,7 +1380,7 @@ function tela() {
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
-  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar });
+  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
@@ -2858,7 +2865,7 @@ function telaFormReuniao(P) {
       <div id="cliResumo"></div>
       <div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>
       ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`}
-      <label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+      ${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}
       ${G ? '</details><div style="order:-4">' + htmlGestaoSdr(r) + '</div><div style="order:-5">' : ''}
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
@@ -2939,6 +2946,29 @@ function telaFormReuniao(P) {
   });
   f.elements.cliente.addEventListener('input', () => { if (!pessoaPorNome(f.elements.cliente.value)) { f.elements.pessoa_id.value = nova ? '' : f.elements.pessoa_id.value; } resumoCli(); });
   resumoCli();
+  // Como chegou: a origem é da pessoa e fica congelada. Cliente com origem marcada: só mostra. Sem origem: pergunta (obrigatório no atendimento novo)
+  let SRE = null, pRe = undefined;
+  const origemRe = () => {
+    if (!$('reOrigem')) return;
+    const p = (D.pessoas || []).find(x => x.id === f.elements.pessoa_id.value) || null;
+    if (p === pRe && $('reOrigem').innerHTML) return; pRe = p;
+    if (p && p.origem_canal) { SRE = null; $('reOrigem').innerHTML = `<div class="sub" style="margin:0 0 8px">Origem do cliente: <b>${esc(IND.rotuloOrigem(p))}</b> (fica congelada na ficha).</div>`; return; }
+    const ini = /^site$/i.test(r.origem || '') ? { canal: 'internet', detalhe: 'site' } : /^google$/i.test(r.origem || '') ? { canal: 'internet', detalhe: 'google' } : /^instagram$/i.test(r.origem || '') ? { canal: 'internet', detalhe: 'instagram' } : /prospec/i.test(r.origem || '') ? { canal: 'prospeccao_ativa' } : /^indica|^parceiro$/i.test(r.origem || '') ? { canal: 'indicacao' } : {};
+    $('reOrigem').innerHTML = (!nova && r.origem ? `<div class="sub" style="margin:0 0 6px">Registrado neste atendimento: ${esc(r.origem)}</div>` : '') + IND.htmlSeletor(ctxIND(), ini) + `<div class="sub" style="margin:6px 0 8px">${nova ? 'Obrigatório no atendimento novo.' : 'O cliente ainda não tem origem marcada. Se souber, marque agora.'}</div>`;
+    SRE = IND.ligarSeletor($('reOrigem').querySelector('.ind-sel'), ctxIND(), { pessoa: p, C: { vendas: D.emissoes || [], parceiros: D.parceirosAdm && D.parceirosAdm.length ? D.parceirosAdm : (D.parc || []) } });
+  };
+  f.elements.cliente.addEventListener('change', () => setTimeout(origemRe, 0));
+  f.elements.cliente.addEventListener('input', () => setTimeout(origemRe, 0));
+  origemRe();
+  f._origem = async () => {
+    if (!$('reOrigem')) return { ok: true };
+    const p = (D.pessoas || []).find(x => x.id === f.elements.pessoa_id.value) || null;
+    if (p && p.origem_canal) { if (nova) f.elements.origem.value = IND.ROTULO[p.origem_canal]; return { ok: true }; }
+    if (!SRE || !SRE.escolhido()) return nova ? { erro: 'Escolha de onde o cliente veio (Como chegou).' } : { ok: true };
+    const v = await SRE.valor(); if (v.erro) return v;
+    f.elements.origem.value = IND.ROTULO[v.origem_canal];
+    return { ok: true, v };
+  };
   if ($('assumirAt')) $('assumirAt').onclick = () => assumirAtendimento(base.id);
   const atualizarIndic = () => { const el = $('indicDestino'); if (el && f.elements.trecho) el.innerHTML = htmlIndicacoes(f.elements.trecho.value); el && el.querySelectorAll('[data-fornid]').forEach(b => b.onclick = () => ir('fornecedores', () => FORN.abrir(b.dataset.fornid))); };
   if (f.elements.trecho) { f.elements.trecho.addEventListener('input', atualizarIndic); atualizarIndic(); }
@@ -3114,6 +3144,8 @@ function telaFormReuniao(P) {
       if (!g('motivo_frase') && !g('motivo_detalhe')) { $('msgRe').textContent = 'Toque numa das frases ou escreva uma observação.'; return; }
     }
     if ((g('nr_abordado') || g('nr_data')) && !g('nr_assunto')) { $('msgRe').textContent = 'Informe o assunto da reunião.'; f.elements.nr_assunto.focus(); return; }
+    const oriRe = f._origem ? await f._origem() : { ok: true };
+    if (oriRe.erro) { $('msgRe').textContent = oriRe.erro; return; }
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
     const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
@@ -3160,9 +3192,13 @@ function telaFormReuniao(P) {
     if (!row.pessoa_id) {
       // cliente novo: cria a ficha no CRM antes de salvar o atendimento
       const ct = g('contato'), ehMail = /@/.test(ct);
-      const pn = await sb.from('pessoas').insert({ nome: g('cliente').replace(/\s+/g, ' '), celular: !ehMail && ct ? ct : null, email: ehMail ? ct : (g('cn_email') || null), nascimento: g('cn_nasc') || null, papeis: [], interesse: [G ? 'gestao' : 'viagens'], origem: g('origem') || null }).select().single();
+      const pn = await sb.from('pessoas').insert({ nome: g('cliente').replace(/\s+/g, ' '), celular: !ehMail && ct ? ct : null, email: ehMail ? ct : (g('cn_email') || null), nascimento: g('cn_nasc') || null, papeis: [], interesse: [G ? 'gestao' : 'viagens'], origem: g('origem') || null, ...(oriRe.v || {}) }).select().single();
       if (pn.error) falhas.push('O atendimento será salvo, mas a ficha do cliente não foi criada: ' + pn.error.message);
       else { (D.pessoas = D.pessoas || []).push(pn.data); row.pessoa_id = pn.data.id; f.elements.pessoa_id.value = pn.data.id; }
+    } else if (oriRe.v) {
+      // cliente com ficha e sem origem: a origem escolhida aqui vai para a ficha (primeira marcação)
+      const pf = (D.pessoas || []).find(x => x.id === row.pessoa_id);
+      if (pf && !pf.origem_canal) { const ro = await IND.gravarOrigem(ctxIND(), pf.id, oriRe.v); if (ro.erro) falhas.push('A origem não foi salva na ficha: ' + ro.erro); }
     }
     if (nova && G && row.pessoa_id) {
       const ja = D.reunioes.find(x => ehGestao(x) && x.pessoa_id === row.pessoa_id && ['Em andamento', 'Fechou'].includes(x.resultado));
@@ -3679,12 +3715,12 @@ function telaMais(P) {
 
 /* ---------- Empresa: painel e atalhos ---------- */
 let EMP_MODO = 'mes', EMP_TOP = 'fat';
-const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
+const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['indicacoes', 'leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
     ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
-    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
+    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
