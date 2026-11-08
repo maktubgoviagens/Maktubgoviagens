@@ -397,7 +397,7 @@ function telaForm(P, X) {
       <div class="chips" id="interP" style="flex-wrap:wrap">${Object.entries(INTERESSES).map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.interesse || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="grupo">Situação</div>
       <div class="chips" id="papeis" style="flex-wrap:wrap">${[['cliente', 'Já comprou antes do app'], ['passageiro', 'Passageiro'], ...(X.ADMIN ? [['parceiro', 'Parceiro de indicação'], ['fornecedor', 'Fornecedor (compramos dele)']] : [])].map(([k, l]) => `<button type="button" data-k="${k}" class="${(p.papeis || []).includes(k) ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <div id="parcCampos" ${(p.papeis || []).includes('parceiro') ? '' : 'hidden'}><div class="duas-col">${campo('parc_pct', 'Remuneração do parceiro (%)', '', 'number', 'placeholder="10"')}${verDocs ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}</div><div class="sub" style="margin-top:0">O percentual vale para as próximas vendas que ele indicar. O WhatsApp é o celular da ficha.</div></div>
+      <div id="parcCampos" ${(p.papeis || []).includes('parceiro') ? '' : 'hidden'}><div class="duas-col">${campo('parc_pct', 'Remuneração do parceiro (%)', '', 'number', 'placeholder="10"')}${verDocs ? campo('parceiro_pix', 'Chave Pix do parceiro', doc.parceiro_pix) : ''}</div><label class="fc"><input type="checkbox" name="parc_evento"><span>Este parceiro é um evento (quem vier por ele conta como Indicação de parceiro, mesmo com 0%)</span></label><div class="sub" style="margin-top:0">O percentual vale para as próximas vendas que ele indicar. O WhatsApp é o celular da ficha. Para evento, use o nome do evento no cadastro (ex.: Congresso X 2026).</div></div>
       <div class="sub">Lead vira cliente sozinho na primeira compra (emissão ou atendimento fechado). Gestão é marcada quando a pessoa entra na Gestão de Milhas.</div>
       <label class="fl"><span>Anotações</span><textarea name="observacoes" rows="3">${esc(p.observacoes || '')}</textarea></label>
       <button class="zap grande" type="submit" id="salvarP" style="margin-top:14px;width:100%">${nova ? 'Cadastrar' : 'Salvar'}</button>
@@ -409,7 +409,7 @@ function telaForm(P, X) {
   const inter = new Set(p.interesse || []);
   $('interP').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; inter.has(k) ? inter.delete(k) : inter.add(k); b.classList.toggle('on', inter.has(k)); };
   $('papeis').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k; papeis.has(k) ? papeis.delete(k) : papeis.add(k); b.classList.toggle('on', papeis.has(k)); if (k === 'parceiro') $('parcCampos').hidden = !papeis.has(k); };
-  if (X.ADMIN && p.parceiro_ref) X.sb.from('parceiros').select('pct').eq('id', p.parceiro_ref).maybeSingle().then(({ data }) => { if (data && f.elements.parc_pct && !f.elements.parc_pct.value) f.elements.parc_pct.value = data.pct ?? ''; });
+  if (X.ADMIN && p.parceiro_ref) X.sb.from('parceiros').select('*').eq('id', p.parceiro_ref).maybeSingle().then(({ data }) => { if (data && f.elements.parc_pct && !f.elements.parc_pct.value) f.elements.parc_pct.value = data.pct ?? ''; if (data && f.elements.parc_evento) { f.elements.parc_evento.checked = !!data.evento; f.elements.parc_evento.dataset.tem = 'evento' in data ? '1' : ''; } });
   $('voltar').onclick = () => nova ? ir(X, 'lista') : ir(X, 'ficha', p.id);
   // avisa na hora se a pessoa já tem ficha
   const checar = () => {
@@ -456,6 +456,8 @@ function telaForm(P, X) {
       if (ehParc) {
         const prow = { nome: row.nome, whatsapp: row.celular, ativo: true };
         if (g('parc_pct') !== '') prow.pct = Number(String(g('parc_pct')).replace(',', '.')) || 0;
+        // evento (76-parceiro-evento.sql): só grava quando muda, para não mexer em cadastro antigo à toa
+        if (f.elements.parc_evento && (f.elements.parc_evento.checked || f.elements.parc_evento.dataset.tem)) prow.evento = f.elements.parc_evento.checked;
         const r = data.parceiro_ref ? await X.sb.from('parceiros').update(prow).eq('id', data.parceiro_ref) : await X.sb.from('parceiros').insert({ pct: 0, ...prow }).select().single();
         if (r.error) falhas.push('o cadastro de parceiro não salvou (' + X.limparTec(r.error.message) + ')');
         else if (!data.parceiro_ref && r.data) { const u = await X.sb.from('pessoas').update({ parceiro_ref: r.data.id }).eq('id', data.id).select().single(); if (!u.error) Object.assign(data, u.data); }
