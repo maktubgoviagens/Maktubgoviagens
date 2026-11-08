@@ -425,7 +425,8 @@ export async function telaIndicacoes(P, X, opt = {}) {
       <section class="bloco" style="margin-top:0"><h2>${V ? 'Lucro da Maktub por origem' : 'Vendas por origem'}</h2>
         ${['internet', 'indicacao_cliente', 'indicacao_parceiro', 'rede_socios', 'prospeccao_ativa', 'registro_teste', 'sem_origem', 'sem_ficha'].map(linha).join('')}
         <div class="ind-tot"><span>Total</span><span>${V ? brl2(R.total) : R.vendas.length + ' vendas'}</span></div>
-        <div class="ind-nota">${V ? 'Lucro líquido: venda menos custo, imposto, comissão do vendedor e repasse do parceiro. ' : ''}Cada venda conta uma vez, pela origem de quem comprou, na data da venda.${R.por.sem_origem.n ? ' Para tirar vendas de "Sem origem marcada", use Clientes › Origens para marcar.' : ''}</div>
+        <div class="ind-nota">${V ? 'Lucro líquido: venda menos custo, imposto, comissão do vendedor e repasse do parceiro. ' : ''}Cada venda conta uma vez, pela origem de quem comprou, na data da venda.</div>
+        ${R.por.sem_origem.n && X.podeOrigens ? `<button class="zap" type="button" data-irorigens style="width:100%;margin-top:12px">Marcar as origens que faltam ›</button>` : ''}
       </section>
       <section class="bloco" style="margin-top:0"><h2>Indicação no período</h2>
         <div class="lin"><span>${V ? 'Lucro vindo de indicação' : 'Vendas vindas de indicação'}</span><span>${V ? brl2(R.por.indicacao_cliente.l + R.por.indicacao_parceiro.l) : R.por.indicacao_cliente.n + R.por.indicacao_parceiro.n}</span></div>
@@ -452,6 +453,7 @@ export async function telaIndicacoes(P, X, opt = {}) {
     $('indPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PER = b.dataset.p; telaIndicacoes(P, X); } };
     if ($('indNav')) $('indNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { mover(+b.dataset.n); telaIndicacoes(P, X); } };
   }
+  P.querySelectorAll('[data-irorigens]').forEach(b => b.onclick = () => X.ir('origens'));
   if (em('fecharArv')) em('fecharArv').onclick = () => { ARV = null; telaIndicacoes(P, X, opt); };
   P.querySelectorAll('[data-arv]').forEach(b => b.onclick = () => { ARV = b.dataset.arv; telaIndicacoes(P, X, opt).then(() => { const a = em('fecharArv'); if (a) a.scrollIntoView({ block: 'center' }); }); });
 }

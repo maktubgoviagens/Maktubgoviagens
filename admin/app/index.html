@@ -570,7 +570,7 @@ import * as CMP from '/admin/app/compromissos.js?v=16';
 import * as CX from '/admin/app/caixa.js?v=2';
 import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=2';
+import * as IND from '/admin/app/indicacoes.js?v=3';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1278,7 +1278,7 @@ async function fecharMesesAuto() {
 function ctxCTR() { return { D, sb, $, esc, aviso, campo, zapLink, ADMIN, programas: (id) => progsDe(id).map(p => p.programa).filter(Boolean) }; }
 const temOrigemCol = () => (D.pessoas || []).length > 0 && 'origem_canal' in D.pessoas[0];
 function ctxIND() {
-  return { D, $, esc, sb, aviso, ir, pode, ADMIN, brlC, brl2, limparTec, nomeTime, aba: () => ABA };
+  return { D, $, esc, sb, aviso, ir, pode, ADMIN, brlC, brl2, limparTec, nomeTime, aba: () => ABA, podeOrigens: podeAba('origens') };
 }
 function ctxCRM() {
   return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
