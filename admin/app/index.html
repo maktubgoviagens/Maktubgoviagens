@@ -146,6 +146,8 @@ body.com-fab .pagina{padding-bottom:calc(var(--barra-h) + 100px + env(safe-area-
 /* KPIs da Gestão */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 @media (min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpis4{grid-template-columns:1fr 1fr}@media (min-width:900px){.kpis.kpis4{grid-template-columns:repeat(4,1fr)}}
+.kpis4 .kpi .d{margin-top:4px}
 .kpi{background:var(--branco);border:1px solid var(--linha);padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:2px;font:inherit;color:inherit;min-width:0}
 button.kpi{cursor:pointer;border-left:3px solid var(--dourado)}
 .kpi .l{font-size:13px;color:var(--tinta-2);font-weight:500;line-height:1.3}
@@ -568,7 +570,7 @@ import * as CMP from '/admin/app/compromissos.js?v=16';
 import * as CX from '/admin/app/caixa.js?v=2';
 import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=1';
+import * as IND from '/admin/app/indicacoes.js?v=2';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -3713,8 +3715,10 @@ function telaMais(P) {
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
 }
 
-/* ---------- Empresa: painel e atalhos ---------- */
-let EMP_MODO = 'mes', EMP_TOP = 'fat';
+/* ---------- Empresa: painel de KPIs e atalhos ---------- */
+// O painel só lê: vendas (emissoes), metas (metas_progresso), atendimentos, contratos e origens. Nenhuma conta muda aqui.
+// Um período para a tela inteira: semana (quarta a terça, sem atravessar o mês), mês, ano e desde o início.
+let EMP_TOP = 'fat', PNL_PER = 'mes', PNL_REF = null, PNL_ABA = 'vendas', PNL_COM = 'viagens';
 const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['indicacoes', 'leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
@@ -3725,32 +3729,133 @@ function itensEmpresa() {
 }
 function telaEmpresa(P) {
   const verNum = ADMIN || pode('financeiro');
-  const ano = EM_MES.slice(0, 4);
-  const L = EMP_MODO === 'ano' ? D.emissoes.filter(e => String(e.data_negociacao).slice(0, 4) === ano) : doMes(EM_MES);
+  const it = itensEmpresa();
+  P.innerHTML = `
+    <h1 class="titulo">Empresa</h1>
+    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
+    ${verNum ? '<div id="painelEmp"><div class="vazio">Carregando o painel...</div></div>' : ''}
+    ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
+    ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
+    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
+  P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
+  if (verNum) painelEmp();
+}
+
+// vendas de todas as datas (o app carrega só desde janeiro do ano passado; o painel precisa de "desde o início")
+let PNL_EM = null, PNL_EM_T = 0;
+async function emissoesTodas() {
+  if (PNL_EM && Date.now() - PNL_EM_T < 60e3) return PNL_EM;
+  const { data, error } = await sb.from('emissoes').select('*').order('data_negociacao', { ascending: false }).limit(20000);
+  PNL_EM = error ? D.emissoes.filter(e => !e.outra) : (data || []); PNL_EM_T = Date.now();
+  return PNL_EM;
+}
+const PNL_METAS = {};
+async function metasDoMes(k) {
+  if (k in PNL_METAS) return PNL_METAS[k];
+  const { data, error } = await sb.rpc('metas_progresso', { p_mes: k + '-01' });
+  return (PNL_METAS[k] = error ? null : ((data && data.empresa) || {}));
+}
+// meta do período: mês = a do mês; ano = soma dos meses; semana = proporcional aos dias corridos (vendas arredondadas para cima); desde o início = sem meta
+async function metaPeriodo(per, modo) {
+  if (modo === 'tudo') return null;
+  const meses = modo === 'ano' ? Array.from({ length: 12 }, (_, i) => per.ini.slice(0, 4) + '-' + String(i + 1).padStart(2, '0')) : [per.ini.slice(0, 7)];
+  const L = await Promise.all(meses.map(metasDoMes));
+  let lucro = 0, qtd = 0;
+  L.forEach(m => { if (m) { lucro += +m.lucro_meta1 || 0; qtd += +m.qtd_meta || 0; } });
+  if (modo === 'semana') {
+    const [y, mm] = per.ini.split('-').map(Number), dm = new Date(y, mm, 0).getDate();
+    const dias = Math.round((dia(per.fim) - dia(per.ini)) / 864e5) + 1;
+    lucro = lucro * dias / dm; qtd = Math.ceil(qtd * dias / dm);
+  }
+  return { lucro, qtd };
+}
+function refAnterior() {
+  const p = IND.periodo(PNL_PER, PNL_REF), d = dia(PNL_PER === 'semana' ? p.ini : PNL_REF);
+  if (PNL_PER === 'semana') { d.setDate(d.getDate() - 1); return isoLocal(d); }
+  if (PNL_PER === 'mes') return isoLocal(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  return isoLocal(new Date(d.getFullYear() - 1, 0, 1));
+}
+function moverPainel(n) {
+  const p = IND.periodo(PNL_PER, PNL_REF), d = dia(PNL_REF);
+  if (PNL_PER === 'semana') { const x = dia(n < 0 ? p.ini : p.fim); x.setDate(x.getDate() + n); PNL_REF = isoLocal(x); }
+  else if (PNL_PER === 'mes') PNL_REF = isoLocal(new Date(d.getFullYear(), d.getMonth() + n, 1));
+  else if (PNL_PER === 'ano') PNL_REF = isoLocal(new Date(d.getFullYear() + n, 0, 1));
+}
+const noPeriodoDe = (p, campo) => (x) => { const v = x[campo]; if (!v) return false; const s = String(v).length > 10 ? isoLocal(new Date(v)) : String(v).slice(0, 10); return s >= p.ini && s <= p.fim; };
+// variação contra o período anterior
+function variacao(v, a, dinheiro) {
+  if (a === null || a === undefined) return '';
+  const d = v - a;
+  if (dinheiro) { if (!a) return v ? '' : ''; const pc = d / Math.abs(a) * 100; return `<span style="color:${pc < 0 ? 'var(--alerta)' : 'var(--ok)'};font-weight:600">${pc >= 0 ? '+' : '−'}${Math.abs(Math.round(pc))}%</span>`; }
+  return `<span style="color:${d < 0 ? 'var(--alerta)' : 'var(--ok)'};font-weight:600">${d >= 0 ? '+' : '−'}${Math.abs(d)}</span>`;
+}
+
+async function painelEmp() {
+  const box = $('painelEmp'); if (!box) return;
+  if (!PNL_REF) PNL_REF = isoLocal(new Date());
+  const per = IND.periodo(PNL_PER, PNL_REF), ant = PNL_PER === 'tudo' ? null : IND.periodo(PNL_PER, refAnterior());
+  const [E, C, meta] = await Promise.all([emissoesTodas(), IND.carregarDados(ctxIND()), metaPeriodo(per, PNL_PER)]);
+  if (ABA !== 'empresa' || !$('painelEmp')) return;
+  const L = E.filter(noPeriodoDe(per, 'data_negociacao')), LA = ant ? E.filter(noPeriodoDe(ant, 'data_negociacao')) : null;
+  const lb = soma(L, 'lucro_bruto'), ll = soma(L, 'lucro_liquido');
+  const temOrigem = (D.pessoas || []).length && 'origem_canal' in D.pessoas[0];
+  const R = temOrigem ? IND.calcular(D, C, per.ini, per.fim) : null, RA = temOrigem && ant ? IND.calcular(D, C, ant.ini, ant.fim) : null;
+  const indic = (r) => r ? r.por.indicacao_cliente.l + r.por.indicacao_parceiro.l : null;
+  const assinados = (C.contratos || []).filter(k => k.status === 'assinado').filter(noPeriodoDe(per, 'assinado_em')).length;
+  const at = pode('gestao') ? clientesAtivos().length : null;
+  const nomeAnt = !ant ? '' : PNL_PER === 'semana' ? 'a semana anterior' : PNL_PER === 'mes' ? ant.nome.split(' ')[0].toLowerCase() : ant.nome;
+  // " · +12% vs outubro" só quando há base para comparar
+  const vs = (v, a, din) => { const x = ant ? variacao(v, a, din) : ''; return x ? `<br>${x} vs ${esc(nomeAnt)}` : ''; };
+  const barra = (x) => `<div class="kb"><i style="width:${Math.min(100, Math.max(0, x))}%"></i></div>`;
+  const card = (l, v, extra, d) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>${extra || ''}<div class="d">${d}</div></div>`;
+  const vMeta = (v, m, fmt) => m ? `${pct(v / m * 100)} da meta de ${fmt(m)}` : 'sem meta definida';
+  const tabs = [['vendas', 'Vendas'], ['comercial', 'Comercial'], ['indicacoes', 'Indicações'], ['financeiro', 'Financeiro']];
+  box.innerHTML = `
+    <div class="seg" id="pnlPer" style="margin-top:12px">${[['semana', 'Semana'], ['mes', 'Mês'], ['ano', 'Ano'], ['tudo', 'Desde o início']].map(([k, t]) => `<button data-p="${k}" class="${PNL_PER === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    ${PNL_PER === 'tudo' ? '' : `<div class="mesnav" id="pnlNav"><button data-n="-1">‹</button><span>${esc(per.nome)}</span><button data-n="1">›</button></div>`}
+    ${PNL_PER === 'semana' ? '<div class="sub">Semana de quarta a terça. Na virada do mês, a semana é cortada no último dia do mês.</div>' : ''}
+    <div class="kpis kpis4">
+      ${card('Lucro bruto', brlC(lb), meta && meta.lucro ? barra(lb / meta.lucro * 100) : '', `${vMeta(lb, meta && meta.lucro, brlC)}${vs(lb, LA && soma(LA, 'lucro_bruto'), true)}<br>líquido <b style="font-weight:600;color:var(--verde)">${brlC(ll)}</b>`)}
+      ${card('Vendas', num(L.length), meta && meta.qtd ? barra(L.length / meta.qtd * 100) : '', `${vMeta(L.length, meta && meta.qtd, num)}${vs(L.length, LA && LA.length, false)}`)}
+      ${card('Clientes ativos da Gestão', at === null ? '-' : num(at), at === null ? '' : barra(at / META_CLIENTES * 100), at === null ? 'só para quem vê a Gestão' : `de ${META_CLIENTES}, meta de ${META_ANO}<br>+${assinados} ${assinados === 1 ? 'contrato assinado' : 'contratos assinados'} no período`)}
+      ${card('Lucro vindo de indicação', R ? brlC(indic(R)) : '-', '', R ? `sem meta definida${ll ? '<br>' + pct(indic(R) / ll * 100) + ' do lucro líquido' : ''}${RA ? vs(indic(R), indic(RA), true) : ''}` : 'Rode o 75-origem-e-indicacoes.sql')}
+    </div>
+    <div class="seg" id="pnlAba" style="margin-top:16px">${tabs.map(([k, t]) => `<button data-a="${k}" class="${PNL_ABA === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div id="pnlCorpo"></div>`;
+  const corpo = $('pnlCorpo');
+  if (PNL_ABA === 'vendas') corpo.innerHTML = abaVendas(L, per);
+  else if (PNL_ABA === 'comercial') corpo.innerHTML = abaComercial(per);
+  else if (PNL_ABA === 'financeiro') corpo.innerHTML = abaFinanceiro(L, E);
+  else IND.telaIndicacoes(corpo, ctxIND(), { embutido: true, per: PNL_PER, ref: PNL_REF });
+  $('pnlPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PNL_PER = b.dataset.p; painelEmp(); } };
+  if ($('pnlNav')) $('pnlNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { moverPainel(+b.dataset.n); painelEmp(); } };
+  $('pnlAba').onclick = (e) => { const b = e.target.closest('button'); if (b) { PNL_ABA = b.dataset.a; painelEmp(); } };
+  if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; painelEmp(); } };
+  if ($('pnlCom')) $('pnlCom').onclick = (e) => { const b = e.target.closest('button'); if (b) { PNL_COM = b.dataset.c; painelEmp(); } };
+  corpo.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
+  corpo.querySelectorAll('[data-irdre]').forEach(b => b.onclick = () => ir('dre'));
+  corpo.querySelectorAll('[data-irrec]').forEach(b => b.onclick = () => ir('receber'));
+}
+
+// Vendas: os mesmos blocos que ficavam no topo da Empresa (números, Top 10, fonte de receita e vendedores)
+function abaVendas(L, per) {
   const fat = soma(L, 'valor_receber'), luc = soma(L, 'lucro_liquido'), tk = L.length ? fat / L.length : 0;
   const serv = (e) => e.servico_app || e.servico || 'Outro';
   const pessoaNome = (id) => ((D.pessoas || []).find(p => p.id === id) || {}).nome;
   const grupo = (fn) => { const g = {}; L.forEach(e => { const k = fn(e); if (!k) return; g[k] = g[k] || { n: 0, fat: 0, luc: 0 }; g[k].n++; g[k].fat += Number(e.valor_receber) || 0; g[k].luc += Number(e.lucro_liquido) || 0; }); return Object.entries(g); };
   const top = grupo(e => e.pessoa_id || ('nome:' + [e.comprador, e.sobrenome].filter(Boolean).join(' '))).sort((a, b) => b[1][EMP_TOP] - a[1][EMP_TOP]).slice(0, 10);
-  const porServ = grupo(serv).sort((a, b) => b[1].fat - a[1].fat);
-  const reuP = reunioesDoPeriodo(EM_MES, EMP_MODO);
-  const noPer = (d) => d && (EMP_MODO === 'ano' ? String(mesLocal(d)).slice(0, 4) === ano : mesLocal(d) === EM_MES);
+  const porServ = grupo(serv).sort((a, b) => b[1].fat - a[1].fat), maxS = Math.max(1, ...porServ.map(([, x]) => x.fat));
+  const reuP = D.reunioes.filter(noPeriodoDe(per, 'data'));
   const vend = grupo(e => e.vendedor_id || '-').sort((a, b) => b[1].fat - a[1].fat).map(([k, x]) => {
     const c = conversao(reuP.filter(r => (r.responsavel_id || '-') === k));
-    const av = (D.avaliacoes || []).filter(a => (a.vendedor_id || '-') === k && a.nota && noPer(a.respondida_em));
+    const av = (D.avaliacoes || []).filter(a => (a.vendedor_id || '-') === k && a.nota).filter(noPeriodoDe(per, 'respondida_em'));
     return { k, ...x, c, nota: av.length ? av.reduce((t, a) => t + a.nota, 0) / av.length : null, nAv: av.length };
   });
-  const maxS = Math.max(1, ...porServ.map(([, x]) => x.fat));
-  const it = itensEmpresa();
-  P.innerHTML = `
-    <h1 class="titulo">Empresa</h1>
-    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
-    ${verNum ? `
-    <div class="seg" id="empModo" style="margin-top:12px"><button data-m="mes" class="${EMP_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${EMP_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
-    ${EMP_MODO === 'mes' ? seletorMes('empMes') : `<div class="mesnav" id="empMes"><button data-n="-12">‹</button><span>${ano}</span><button data-n="12">›</button></div>`}
-    <div class="numeros" style="margin-top:10px">
+  return `<div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
-      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>${ADMIN || pode('dre') ? `<button class="num" data-irdre style="text-align:left;cursor:pointer"><div class="l">Resultado da empresa</div><div class="v" style="font-size:15px">no DRE ›</div><div class="d">depois de salários e despesas</div></button>` : ''}
+      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
       <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
@@ -3763,18 +3868,43 @@ function telaEmpresa(P) {
     ${ADMIN ? `<section class="bloco"><h2>Vendedores</h2>
       ${vend.length ? vend.map(v => `<div style="padding:10px 0;border-top:1px solid var(--linha)"><div style="display:flex;justify-content:space-between"><b style="color:var(--verde);font-weight:600">${esc(nomeTime(v.k) || 'Sem vendedor')}</b><span>${brlC(v.fat)}</span></div>
         <div class="sub" style="margin-top:2px">${v.n} ${v.n === 1 ? 'venda' : 'vendas'} · ticket ${brlC(v.fat / v.n)} · lucro ${brlC(v.luc)}${v.c.taxa !== null ? ' · conversão ' + pct(v.c.taxa) : ''}${v.nota !== null ? ' · nota ' + v.nota.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' (' + v.nAv + ')' : ''}</div></div>`).join('') : '<div class="vazio">Nenhuma venda no período.</div>'}
-      <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}` : ''}
-    ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
-    ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
-    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
-  if ($('empModo')) $('empModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_MODO = b.dataset.m; telaEmpresa(P); } };
-  if ($('empTop')) $('empTop').onclick = (e) => { const b = e.target.closest('button'); if (b) { EMP_TOP = b.dataset.t; telaEmpresa(P); } };
-  if ($('empMes')) ligarMes('empMes', () => telaEmpresa(P));
-  P.querySelectorAll('[data-pid]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.pid)));
-  P.querySelectorAll('[data-irdre]').forEach(b => b.onclick = () => ir('dre'));
-  P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
-  P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
+      <div class="sub">Conversão pelos atendimentos do período; nota pelas avaliações respondidas pelos clientes.</div></section>` : ''}`;
+}
+
+// Comercial: funil e conversão no período (os mesmos cálculos de Comercial › Resultados)
+function abaComercial(per) {
+  const G = PNL_COM === 'gestao' && (ADMIN || pode('gestao'));
+  const desde = `${new Date().getFullYear() - 1}-01-01`;
+  const base = D.reunioes.filter(noPeriodoDe(per, 'data')).filter(r => G ? ehGestao(r) : !ehGestao(r));
+  const c = conversao(base);
+  const motivos = Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]);
+  return `${ADMIN || pode('gestao') ? `<div class="seg" id="pnlCom" style="margin-top:12px"><button data-c="viagens" class="${G ? '' : 'on'}">Viagens</button><button data-c="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>` : ''}
+    ${per.ini < desde ? `<div class="sub">O app guarda no aparelho os atendimentos desde ${dataBR(desde)}. Antes disso, o funil fica incompleto.</div>` : ''}
+    <div class="numeros" style="margin-top:10px">
+      <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
+      <div class="num"><div class="l">${G ? 'Leads e reuniões' : 'Cotações e reuniões'}</div><div class="v">${base.length}</div><div class="d">${c.andamento} ainda em aberto</div></div>
+      <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">no período</div></div>
+      <div class="num"><div class="l">Não fecharam</div><div class="v">${c.perdeu}</div><div class="d">motivos abaixo</div></div>
+    </div>
+    ${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}
+    ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
+    ${blocoConv('Conversão por origem', base, r => r.origem)}
+    ${blocoAtendimento(base)}
+    ${motivos.length ? `<section class="bloco"><h2>Por que não fechou</h2>${motivos.map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}</section>` : ''}
+    <div class="sub">Conversão = fechou ÷ (fechou + não fechou), pelos atendimentos abertos no período. O funil do dia a dia continua em Comercial.</div>`;
+}
+
+// Financeiro: do faturamento ao lucro líquido das vendas, e o que falta receber
+function abaFinanceiro(L, E) {
+  const rec = soma(L, 'valor_receber'), cus = soma(L, 'custo'), lb = soma(L, 'lucro_bruto'), imp = soma(L, 'imposto'), com = soma(L, 'comissao'), rep = soma(L, 'repasse'), ll = soma(L, 'lucro_liquido');
+  const ln = (t, v, forte) => `<div class="lin"${forte ? ' style="font-weight:600;color:var(--verde)"' : ''}><span>${t}</span><span>${v < 0 ? '− ' + brl2(-v) : brl2(v)}</span></div>`;
+  const ar = E.filter(aReceberCli);
+  return `<section class="bloco"><h2>Das vendas do período</h2>
+      ${ln('Faturamento', rec)}${ln('(−) Custo', -cus)}${ln('= Lucro bruto', lb, true)}${ln('(−) Imposto', -imp)}${ln('(−) Comissão dos vendedores', -com)}${ln('(−) Repasse a parceiros (comissão direta)', -rep)}${ln('= Lucro líquido das vendas', ll, true)}
+      <div class="sub">${rec ? pct(ll / rec * 100) + ' de margem líquida. ' : ''}A comissão indireta não existe: só a direta é paga.</div></section>
+    <section class="bloco"><h2>A receber dos clientes</h2>
+      <button class="lin" data-irrec style="width:100%"><span>${ar.length} ${ar.length === 1 ? 'venda' : 'vendas'} sem pagamento confirmado (todas as datas)</span><span>${brl2(soma(ar, 'valor_receber'))}<b class="seta">›</b></span></button></section>
+    ${ADMIN || pode('dre') ? '<section class="bloco"><button class="lin" data-irdre style="width:100%"><span>Resultado da empresa, depois de salários e despesas</span><span>no DRE<b class="seta">›</b></span></button></section>' : ''}`;
 }
 
 /* ---------- equipe, parceiros e regras (administradores) ---------- */

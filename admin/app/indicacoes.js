@@ -36,6 +36,7 @@ export function nomeComPistas(nome, esc) {
 // ---------- dados ----------
 let CACHE = null; // { vendas, contratos, parceiros, atend, em }
 export function limparCache() { CACHE = null; }
+export const carregarDados = (X) => carregar(X);
 async function carregar(X) {
   if (CACHE && Date.now() - CACHE.em < 60000) return CACHE;
   const [v, k, pa, at] = await Promise.all([
@@ -375,22 +376,25 @@ export function calcular(D, C, ini, fim) {
 }
 
 // ---------- tela: Indicações ----------
-export async function telaIndicacoes(P, X) {
+// opt.embutido: aba Indicações do painel da Empresa (sem título nem período próprios; usa o período do painel)
+export async function telaIndicacoes(P, X, opt = {}) {
   estilos();
-  const { $, esc, brlC, brl2 } = X;
+  const { $, esc, brlC, brl2 } = X, emb = !!opt.embutido;
   if (!REF) REF = iso(new Date());
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => X.ir('empresa');
+  const MODO = emb ? opt.per : PER, REFX = emb ? opt.ref : REF;
+  const em = (id) => P.querySelector('#' + id);
+  P.innerHTML = emb ? '<div class="vazio">Carregando...</div>' : `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1><div class="vazio">Carregando...</div>`;
+  if (!emb) $('voltar').onclick = () => X.ir('empresa');
   if (!(X.D.pessoas || []).length || !('origem_canal' in ((X.D.pessoas || [])[0] || {}))) {
     P.querySelector('.vazio').textContent = X.ADMIN ? 'Rode o 75-origem-e-indicacoes.sql no Supabase para ativar.' : 'Recurso ainda não ativado. Fale com o administrador.'; return;
   }
   const C = await carregar(X);
-  if (X.aba() !== 'indicacoes') return;
-  const V = verValor(X), per = periodo(PER, REF), R = calcular(X.D, C, per.ini, per.fim);
+  if (emb ? !P.isConnected : X.aba() !== 'indicacoes') return;
+  const V = verValor(X), per = periodo(MODO, REFX), R = calcular(X.D, C, per.ini, per.fim);
   const val = (x) => V ? brl2(x) : '';
   // conferência 1: soma por origem = lucro total. Conferência 2 (no mês): mesmo número da tela Empresa
   const bate = Math.abs(R.somaOrigens - R.total) < 0.01;
-  const empresa = PER === 'mes' ? r2((X.D.emissoes || []).filter(e => !e.outra && String(e.data_negociacao).slice(0, 7) === per.ini.slice(0, 7)).reduce((t, e) => t + (+e.lucro_liquido || 0), 0)) : null;
+  const empresa = MODO === 'mes' ? r2((X.D.emissoes || []).filter(e => !e.outra && String(e.data_negociacao).slice(0, 7) === per.ini.slice(0, 7)).reduce((t, e) => t + (+e.lucro_liquido || 0), 0)) : null;
   const bateEmp = empresa === null || Math.abs(empresa - R.total) < 0.01;
   const maxL = Math.max(1, ...['internet', 'indicacao_cliente', 'indicacao_parceiro', 'rede_socios', 'prospeccao_ativa'].map(k => Math.abs(V ? R.por[k].l : R.por[k].n)));
   const base = V ? R.total : R.vendas.length;
@@ -407,10 +411,10 @@ export async function telaIndicacoes(P, X) {
       <div class="s">${vd.length} ${vd.length === 1 ? 'venda' : 'vendas'} no período${V && vd.length ? ' · lucro da Maktub ' + brl2(vd.reduce((t, e) => t + (+e.lucro_liquido || 0), 0)) + ' · repasse ' + brl2(vd.reduce((t, e) => t + (+e.repasse || 0), 0)) : ''}${nivel > 1 ? ' · comissão indireta R$ 0,00' : ''}</div>
       ${fs.map(f => noArv(f, nivel + 1, vistos)).join('')}</div>`;
   };
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1>
+  P.innerHTML = `${emb ? '' : `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1>
     <div class="ind-per"><div class="seg" id="indPer">${[['semana', 'Semana'], ['mes', 'Mês'], ['ano', 'Ano'], ['tudo', 'Desde o início']].map(([k, l]) => `<button data-p="${k}" class="${PER === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       ${PER === 'tudo' ? '' : `<div class="mesnav" id="indNav" style="margin:0;flex:1 1 260px"><button data-n="-1">‹</button><span>${esc(per.nome)}</span><button data-n="1">›</button></div>`}</div>
-    ${PER === 'semana' ? '<div class="sub">Semana de quarta a terça. Na virada do mês, a semana é cortada no último dia do mês.</div>' : ''}
+    ${PER === 'semana' ? '<div class="sub">Semana de quarta a terça. Na virada do mês, a semana é cortada no último dia do mês.</div>' : ''}`}
     ${C.erroVendas ? `<div class="config" style="margin-top:10px">${esc(X.limparTec('As vendas não carregaram por completo: ' + C.erroVendas))}</div>` : ''}
     ${V ? `<div class="ind-conf ${bate && bateEmp ? 'ok' : 'erro'}"><span>Soma por origem <b>${brl2(R.somaOrigens)}</b> = lucro total do período <b>${brl2(R.total)}</b>${empresa !== null ? ` · tela Empresa ${brl2(empresa)}` : ''}</span><b>${bate && bateEmp ? 'Confere ✓' : 'Não confere: avise o administrador'}</b></div>` : ''}
     ${arv ? `<section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Árvore de ${esc(arv.nome)}<button type="button" class="mini" id="fecharArv" style="background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--tinta-3)" aria-label="Fechar">×</button></h2>
@@ -443,9 +447,11 @@ export async function telaIndicacoes(P, X) {
       : '<div class="vazio">Ninguém com indicação marcada ainda. As indicações aparecem aqui conforme a equipe marca as origens.</div>'}
       <div class="ind-nota">Indicou, fecharam e conversão contam desde o início. Vendas, ${V ? 'faturamento, lucro, comissão e ' : ''}Gestão seguem o período (Gestão pela data de assinatura do contrato). Toque no nome para ver a árvore.${R.orfaos ? ` ${R.orfaos} ${R.orfaos === 1 ? 'pessoa aponta' : 'pessoas apontam'} para uma ficha de quem indicou que não existe mais: um administrador precisa corrigir.` : ''}</div>
     </section>`;
-  $('voltar').onclick = () => X.ir('empresa');
-  $('indPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PER = b.dataset.p; telaIndicacoes(P, X); } };
-  if ($('indNav')) $('indNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { mover(+b.dataset.n); telaIndicacoes(P, X); } };
-  if ($('fecharArv')) $('fecharArv').onclick = () => { ARV = null; telaIndicacoes(P, X); };
-  P.querySelectorAll('[data-arv]').forEach(b => b.onclick = () => { ARV = b.dataset.arv; telaIndicacoes(P, X); scrollTo(0, 0); });
+  if (!emb) {
+    $('voltar').onclick = () => X.ir('empresa');
+    $('indPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PER = b.dataset.p; telaIndicacoes(P, X); } };
+    if ($('indNav')) $('indNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { mover(+b.dataset.n); telaIndicacoes(P, X); } };
+  }
+  if (em('fecharArv')) em('fecharArv').onclick = () => { ARV = null; telaIndicacoes(P, X, opt); };
+  P.querySelectorAll('[data-arv]').forEach(b => b.onclick = () => { ARV = b.dataset.arv; telaIndicacoes(P, X, opt).then(() => { const a = em('fecharArv'); if (a) a.scrollIntoView({ block: 'center' }); }); });
 }
