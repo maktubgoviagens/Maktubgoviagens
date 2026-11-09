@@ -559,7 +559,8 @@ import * as MKT from '/admin/app/marketing.js?v=23';
 import * as CART from '/admin/app/carteira.js?v=3';
 import * as CARTOES from '/admin/app/cartoes.js?v=26';
 import * as ACV from '/admin/app/acervo.js?v=7';
-import * as CRM from '/admin/app/crm.js?v=19';
+import * as CRM from '/admin/app/crm.js?v=20';
+import * as CAL from '/admin/app/calendario.js?v=1';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
 import * as COT from '/admin/app/cotador.js?v=51';
@@ -849,7 +850,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) conf
 // confere também a cada 2 minutos com o app aberto (só mostra o aviso; nunca recarrega sozinho)
 setInterval(() => { if (!document.hidden) conferirVersao(); }, 120e3);
 // com um formulário ou ficha aberta (fechamento, emissão, cotação...), atualiza os dados mas nunca redesenha a tela
-const editando = () => { if (SUJO) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
+const editando = () => { if (SUJO) return true; if (calAberto()) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
@@ -1249,7 +1250,7 @@ async function carregar(silencioso, manterTela) {
   if (ag) { D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
-  if (!manterTela) tela();
+  if (!manterTela) tela(); else calAvisarNovo();
 }
 
 function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: () => ABA, mesNome, nomeTime, CAT_DESP, mes: () => EM_MES, setMes: (k) => { EM_MES = k; }, seletorMes, ligarMes, folha: (k) => CMP.folha(ctxCMP(), k), mesCaixa: CMP.MES_CAIXA }; }
@@ -1363,6 +1364,7 @@ function htmlEvento(e) {
 /* ================= telas ================= */
 function tela() {
   SUJO = false; PREENCHIDO = false;
+  document.body.classList.remove('cal-largo');
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
@@ -2741,7 +2743,7 @@ async function moverEtapa(id, etapa) {
 }
 // atendimentos da vista atual sem responsável (ou com alguém que saiu da equipe)
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
-let RE_PARTE = 'funil';
+let RE_PARTE = (() => { try { return localStorage.getItem('maktub_re_parte') || 'funil'; } catch (_) { return 'funil'; } })();
 function telaReunioes(P) {
   if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => { if (location.hash === '#reunioes/b2b' && ANTERIOR !== null) { ANTERIOR = null; history.back(); } else { RE_ED = null; ir('reunioes'); } } });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
@@ -2761,15 +2763,16 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    ${pode('gestao') ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
+    ${pode('gestao') || RE_PARTE === 'cal' ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
-    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Funil · ${abertos.length}</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
-    ${RE_PARTE === 'res' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
+    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Kanban · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
+    ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
     <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(ehGestao(r)))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPos).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
 `}
-    ${RE_PARTE === 'funil' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
+    ${RE_PARTE !== 'res' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
@@ -2789,7 +2792,9 @@ function telaReunioes(P) {
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
-  $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
+  $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; try { localStorage.setItem('maktub_re_parte', RE_PARTE); } catch (_) {} telaReunioes(P); } };
+  document.body.classList.toggle('cal-largo', RE_PARTE === 'cal');
+  if (RE_PARTE === 'cal') ligarCalendario(P, ABA === 'gestao', () => telaReunioes(P));
   if ($('gePrio')) $('gePrio').onclick = (e) => { const b = e.target.closest('button'); if (b) { GE_PRIO = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
@@ -2814,6 +2819,123 @@ function telaReunioes(P) {
   P.querySelectorAll('[data-assumir-at]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); assumirAtendimento(b.dataset.assumirAt); });
   const kb = P.querySelector('.kanban'), col = kb && [...kb.children].find(c => c.querySelector('.kc'));
   if (col) requestAnimationFrame(() => { kb.style.scrollSnapType = 'none'; kb.scrollLeft = 0; kb.scrollLeft = col.getBoundingClientRect().left - kb.getBoundingClientRect().left - 16; kb.style.scrollSnapType = ''; });
+}
+/* ---------- calendário do Comercial e da Gestão ----------
+   Só lê o que já é registrado: retorno de cada card em aberto (atendimentos), reuniões (agenda, Cal.com,
+   pedidos do painel e onboarding), renovações dos contratos da Gestão e aniversários da ficha única.
+   No Comercial mostra tudo; na Gestão, só o que é da Gestão. Nunca mostra valores. */
+const CAL_TIPOS = [
+  ['rv', 'Retorno de viagens', '#2E5E6E'],
+  ['rg', 'Retorno da Gestão', '#715E32'],
+  ['reu', 'Reunião', '#6B3A4A'],
+  ['ren', 'Vencimento do contrato', '#8A6D3B'],
+  ['ren90', 'Começa a renovação (90 dias antes)', '#8A6D3B', true],
+  ['aniv', 'Aniversário', '#7A6A55']
+];
+// filtro por tipo: renovação junta o vencimento e o marco de 90 dias
+const CAL_FILTRO_TIPOS = [['rv', 'Retornos de viagens', '#2E5E6E'], ['rg', 'Retornos da Gestão', '#715E32'], ['reu', 'Reuniões', '#6B3A4A'], ['ren', 'Renovações', '#8A6D3B'], ['aniv', 'Aniversários', '#7A6A55']];
+const calGrupo = (t) => t === 'ren90' ? 'ren' : t;
+const CAL_ST = { reunioes: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() }, gestao: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() } };
+let CAL_F = (() => { try { return JSON.parse(localStorage.getItem('maktub_cal_filtro') || 'null') || {}; } catch (_) { return {}; } })();
+const calSalvarFiltro = () => { try { localStorage.setItem('maktub_cal_filtro', JSON.stringify(CAL_F)); } catch (_) {} };
+const calAberto = () => (ABA === 'reunioes' || (ABA === 'gestao' && GE_FUNIL)) && !RE_ED && RE_PARTE === 'cal';
+let CAL_DESENHO = 0, CAL_ITENS = [];
+const primeiroN = (id) => String(nomeTime(id) || '').split(' ')[0];
+// reunião da agenda que faz parte do comercial (e, na Gestão, só as da Gestão)
+const reuDaGestao = (x) => /Gestão/.test(x.tipo || '') || !!x.cliente_id || (x.atendimento_id && ehGestao(D.reunioes.find(r => r.id === x.atendimento_id) || {}));
+const reuDoComercial = (x) => /^Comercial|Cliente da Gestão/.test(x.tipo || '') || !!(x.atendimento_id || x.cliente_id || x.pessoa_id);
+function calItens(G, de, ate) {
+  const hj = hojeISO(), E = [], noPer = (d) => d && d >= de && d <= ate;
+  const hm = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  // retornos e follow-ups: o próximo passo de cada card em aberto. Vencido e não atualizado fica em hoje, como atrasado
+  D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && (!G || ehGestao(r))).forEach(r => {
+    const d0 = String(r.proximo_passo_data).slice(0, 10), atr = d0 < hj, d = atr ? hj : d0;
+    if (!noPer(d)) return;
+    const donos = [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].filter(Boolean);
+    const quem = [...new Set(donos)].map(primeiroN).filter(Boolean).join(' e ');
+    E.push({ d, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', t: r.cliente || 'Card sem nome', s: [r.proximo_passo || 'Próximo passo não escrito', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
+  });
+  // reuniões da agenda (inclui as que chegam pelo Cal.com e o diagnóstico e a proposta marcados no card)
+  (D.agenda || []).filter(x => (x.status === 'Agendada' || x.status === 'Realizada') && (G ? reuDaGestao(x) : reuDoComercial(x))).forEach(x => {
+    const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
+    const card = x.atendimento_id ? D.reunioes.find(r => r.id === x.atendimento_id) : null;
+    const quem = [x.vendedor_id, ...(x.participantes || [])].filter(Boolean);
+    const passou = x.status === 'Realizada' || new Date(x.data) < Date.now() - 3 * 36e5;
+    E.push({ d, hora: hm(x.data), tipo: 'reu', t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
+      abrir: () => podeAba('agenda') ? abrirReuniao(x.id) : card ? abrirAtendimento(card.id) : aviso('Seu acesso não inclui a agenda.') });
+  });
+  // pedidos de reunião que o cliente da Gestão fez pelo painel
+  (D.ags || []).forEach(a => {
+    if ((D.agenda || []).some(x => String(x.agendamento_id) === String(a.id))) return;
+    if (a.status === 'confirmada' && a.data_confirmada) { const d = isoLocal(new Date(a.data_confirmada)); if (noPer(d)) E.push({ d, hora: hm(a.data_confirmada), tipo: 'reu', t: 'Reunião: ' + nomeCli(a.cliente_id), s: 'Pedida pelo cliente no painel', donos: [], abrir: () => abrirFicha(a.cliente_id) }); }
+    if (a.status === 'solicitada') { const d = a.data_preferida && String(a.data_preferida).slice(0, 10) >= hj ? String(a.data_preferida).slice(0, 10) : hj; if (noPer(d)) E.push({ d, hora: '', tipo: 'reu', t: 'Reunião a confirmar: ' + nomeCli(a.cliente_id), s: 'Pedida pelo painel' + (a.periodo ? ' · prefere ' + String(a.periodo).toLowerCase() : ''), atr: true, atrTxt: 'Falta confirmar', donos: [], abrir: () => abrirFicha(a.cliente_id) }); }
+  });
+  // reunião de onboarding marcada na ficha do cliente da Gestão (se já não estiver na agenda)
+  (D.clientes || []).filter(c => c.onboard_data).forEach(c => {
+    const d = isoLocal(new Date(c.onboard_data)); if (!noPer(d)) return;
+    if ((D.agenda || []).some(x => x.cliente_id === c.id && /onboard|embarque/i.test(x.titulo || '') && isoLocal(new Date(x.data)) === d)) return;
+    E.push({ d, hora: hm(c.onboard_data), tipo: 'reu', t: 'Onboarding: ' + c.nome_completo, s: 'Reunião de onboarding da Gestão', passado: new Date(c.onboard_data) < Date.now() - 3 * 36e5, donos: [], abrir: () => abrirFicha(c.id, 'tarefas') });
+  });
+  // renovações: vencimento do contrato (12 meses a partir da assinatura) e o começo da renovação, 90 dias antes
+  (D.clientes || []).filter(c => c.gestao_vencimento).forEach(c => {
+    const v = String(c.gestao_vencimento).slice(0, 10), m90 = CAL.somaDias(v, -90), cong = c.gestao_congelado_em ? ' · gestão congelada, a data ainda vai mudar' : '';
+    if (noPer(v)) E.push({ d: v, hora: '', tipo: 'ren', t: 'Vence o contrato: ' + c.nome_completo, s: 'Reunião de renovação' + cong, donos: [], abrir: () => abrirFicha(c.id) });
+    if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirFicha(c.id) });
+  });
+  // aniversários da ficha única (leads e clientes), todo ano
+  const idsG = new Set((D.clientes || []).map(c => c.id));
+  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || idsG.has(p.cliente_id))).forEach(p => {
+    const md = String(p.nascimento).slice(5, 10);
+    for (let y = +de.slice(0, 4); y <= +ate.slice(0, 4); y++) {
+      const d = `${y}-${md === '02-29' && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? '02-28' : md}`;
+      if (noPer(d)) E.push({ d, hora: '', tipo: 'aniv', t: 'Aniversário: ' + p.nome, s: 'Faz ' + (y - +p.nascimento.slice(0, 4)) + ' anos' + (p.celular ? '' : ' · sem WhatsApp na ficha'), donos: [], p, abrir: () => ir('crm', () => CRM.abrir(p.id)) });
+    }
+  });
+  return E;
+}
+// filtros: responsável (itens sem responsável, como aniversário e renovação, aparecem em qualquer filtro) e tipo
+const calTiposDe = (G) => CAL_FILTRO_TIPOS.filter(([k]) => !(G && k === 'rv') && (k !== 'ren' || (D.clientes || []).length || pode('gestao')) && (k !== 'aniv' || D.pessoas));
+function calFiltrar(E, G) {
+  const tipos = calTiposDe(G).map(t => t[0]).filter(k => !(CAL_F.fora || []).includes(k));
+  const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || '';
+  return E.filter(it => tipos.includes(calGrupo(it.tipo)) && (!quem || !it.donos.length || it.donos.includes(quem)));
+}
+function htmlCalendario(G) {
+  CAL.estilos();
+  const st = CAL_ST[G ? 'gestao' : 'reunioes'], per = CAL.periodo(st);
+  const E = CAL_ITENS = calFiltrar(calItens(G, per.de, per.ate), G);
+  const semData = D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.proximo_passo_data && (!G || ehGestao(r)) && !(CAL_F.fora || []).includes(ehGestao(r) ? 'rg' : 'rv'))
+    .filter(r => { const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || ''; return !quem || [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].includes(quem); });
+  const semCtr = (pode('gestao') && !(CAL_F.fora || []).includes('ren')) ? semContrato() : [];
+  const tiposF = calTiposDe(G);
+  const filtros = `<div class="cal-filtros" style="margin-top:12px">
+      <label class="fl" style="margin:0"><span>Responsável</span><select id="calResp"><option value="">Todo o time</option><option value="eu" ${CAL_F.resp === 'eu' ? 'selected' : ''}>Só os meus</option>${D.time.filter(t => t.user_id !== D.meuId).map(t => `<option value="${t.user_id}" ${CAL_F.resp === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      <div class="chips cal-tipos" id="calTipos" style="margin-top:8px">${tiposF.map(([k, n, c]) => `<button type="button" data-k="${k}" class="${(CAL_F.fora || []).includes(k) ? '' : 'on'}" style="--c:${c}"><i></i>${esc(n)}</button>`).join('')}</div>
+    </div>`;
+  const rodape = `${semData.length ? `<div class="cal-dia">Sem data de retorno <small>${semData.length} ${semData.length === 1 ? 'card' : 'cards'}</small></div><div class="cal-vazio" style="padding-top:0">Card em aberto sem retorno marcado não aparece no calendário. Abra e marque o retorno.</div>${semData.map(r => `<div class="cal-it" style="--c:${ehGestao(r) ? '#715E32' : '#2E5E6E'}"><button type="button" data-cal-card="${r.id}"><span class="t">${esc(r.cliente || 'Card sem nome')}</span><span class="s">${esc([etapaDe(r), [r.responsavel_id, r.assumido_por].filter(Boolean).map(primeiroN).filter(Boolean).join(' e ') || 'sem responsável'].join(' · '))}</span></button></div>`).join('')}` : ''}
+    ${semCtr.length ? `<div class="cal-dia">Sem data de contrato <small>${semCtr.length}</small></div><div class="cal-vazio" style="padding-top:0">Sem a data de entrada, o vencimento não aparece. Defina na ficha.</div>${semCtr.map(c => `<div class="cal-it" style="--c:#8A6D3B"><button type="button" data-cal-ficha="${c.id}"><span class="t">${esc(c.nome_completo)}</span><span class="s">Definir a data de entrada</span></button></div>`).join('')}` : ''}`;
+  const ag = D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+  CAL_DESENHO = ULT_CARGA;
+  return `${filtros}
+    ${CAL.html(st, { itens: E, tipos: CAL_TIPOS.filter(([k]) => tiposF.some(t => t[0] === calGrupo(k))), esc, rodape,
+      extra: (it) => it.tipo === 'aniv' && it.p && it.p.celular ? `<a class="zap" href="${esc(zapLink(it.p.celular, it.p.nome, `Oi, ${String(it.p.nome || '').split(' ')[0]}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`))}" target="_blank" rel="noopener">Mandar parabéns</a>` : '',
+      dica: 'Toque no dia para ver tudo dele. Toque no item para abrir o card ou a ficha.' })}
+    <div class="cal-vazio" id="calAtual" style="margin-top:14px">Dados de ${ag}. <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button></div>`;
+}
+function ligarCalendario(P, G, redesenhar) {
+  const st = CAL_ST[G ? 'gestao' : 'reunioes'];
+  CAL.ligar(P, st, { itens: CAL_ITENS }, redesenhar, (it) => it && it.abrir && it.abrir());
+  if ($('calResp')) $('calResp').onchange = (e) => { CAL_F.resp = e.target.value; calSalvarFiltro(); redesenhar(); };
+  if ($('calTipos')) $('calTipos').onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; const f = new Set(CAL_F.fora || []); f.has(b.dataset.k) ? f.delete(b.dataset.k) : f.add(b.dataset.k); CAL_F.fora = [...f]; calSalvarFiltro(); redesenhar(); };
+  P.querySelectorAll('[data-cal-card]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.calCard));
+  P.querySelectorAll('[data-cal-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.calFicha));
+  if ($('calAtualizar')) $('calAtualizar').onclick = () => carregar(false);
+}
+// com o calendário aberto, os dados se atualizam por trás sem redesenhar: só avisa que tem novidade
+function calAvisarNovo() {
+  if (!calAberto() || ULT_CARGA <= CAL_DESENHO || !$('calAtual')) return;
+  $('calAtual').innerHTML = `<b style="color:var(--verde);font-weight:600">Tem informação nova.</b> <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button>`;
+  $('calAtualizar').onclick = () => tela();
 }
 function telaFormReuniao(P) {
   const nova = RE_ED === 'nova';
@@ -4504,6 +4626,7 @@ function telaGestao(P) {
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
     </details>
+    <div class="pend" style="margin-top:12px"><button data-g="calendario"><span>Calendário da Gestão<small style="display:block;font-size:13px;color:var(--tinta-3)">Retornos, reuniões, renovações e aniversários do mês</small></span><span><span class="seta">›</span></span></button></div>
     <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>
     ${podeAba('cartoesbase') ? `<div class="pend" style="margin-top:12px"><button data-g="cartoesbase"><span>Base de cartões<small style="display:block;font-size:13px;color:var(--tinta-3)">Cartões, salas VIP, bancos e correções a revisar</small></span><span><span class="seta">›</span></span></button></div>` : ''}
     ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
@@ -4535,7 +4658,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   ['geCiclo', 'kpiCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {

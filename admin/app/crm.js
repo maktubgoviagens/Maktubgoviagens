@@ -12,6 +12,8 @@ export function ehCliente(D, p) {
   return (D.emissoes || []).some(e => e.pessoa_id === p.id) || (D.reunioes || []).some(r => r.pessoa_id === p.id && r.resultado === 'Fechou');
 }
 const ehLead = (D, p) => !ehCliente(D, p) && !(((p.papeis || []).includes('fornecedor') || (p.papeis || []).includes('parceiro')) && !(p.interesse || []).length);
+// leads e clientes (sem fornecedor ou parceiro que não quer viajar): os aniversários do calendário do Comercial
+export const leadOuCliente = (D, p) => ehCliente(D, p) || ehLead(D, p);
 const rotulos = (D, p) => [ehCliente(D, p) ? 'Cliente' : !ehLead(D, p) ? '' : 'Lead' + ((p.interesse || []).length ? ' · ' + p.interesse.map(k => INTERESSES[k] || k).join(' e ') : ''), ...(p.papeis || []).filter(k => k === 'gestao' || k === 'passageiro' || k === 'parceiro' || k === 'fornecedor').map(k => PAPEIS[k])].filter(Boolean);
 const ORIGENS = ['Site', 'Indicação', 'Instagram', 'WhatsApp', 'Cliente antigo', 'Outro'];
 let VISTA = 'lista', PID = null, BUSCA = '', FILTRO = 'todos', MSG = '';
