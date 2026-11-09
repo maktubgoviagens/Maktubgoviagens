@@ -10,7 +10,8 @@ const hojeISO = () => { const d = new Date(); return new Date(d - d.getTimezoneO
 export function calcCarteira(extrato) {
   const hoje = hojeISO();
   const ordem = (x) => x.tipo === 'transf_saida' ? 0 : x.tipo === 'transf_entrada' ? 2 : 1;
-  const rows = [...extrato].sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.created_at || '').localeCompare(String(b.created_at || '')) || ordem(a) - ordem(b));
+  // emissão cancelada fica guardada no extrato, mas não conta: as milhas voltam ao saldo
+  const rows = extrato.filter(x => !x.cancelado_em).sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.created_at || '').localeCompare(String(b.created_at || '')) || ordem(a) - ordem(b));
   const P = {}, porLinha = {}, pend = {}, meses = {};
   const prog = (nome) => { const k = normProg(nome); return P[k] || (P[k] = { key: k, programa: String(nome || '').trim(), h: 0, o: 0, p: 0, ch: 0, cp: 0, lotes: [] }); };
   const saldo = (s) => s.h + s.o + s.p;
@@ -122,7 +123,10 @@ export async function syncCarteira(cid, refs) {
   const ind = { patrimonio_total: W.total, evolucao_mes: W.evolucao_mes, evolucao_ano: W.evolucao_ano, crescimento_pct: base > 0 ? round2(W.evolucao_ano / base * 100) : null, atualizado_em: agora };
   if (temRef) ind.patrimonio_equivalente_brl = round2(patrimonio);
   ops.push(ec.data ? sb.from('economia_gerada').update(ind).eq('id', ec.data.id) : sb.from('economia_gerada').insert({ ...ind, cliente_id: cid }));
-  const emis = (ex.data || []).filter(x => x.tipo === 'emissao');
+  const emis = (ex.data || []).filter(x => x.tipo === 'emissao' && !x.cancelado_em);
+  // economia de emissão cancelada: fica guardada e marcada como cancelada (sai do painel do cliente), nunca apagada
+  const canc = (ex.data || []).filter(x => x.tipo === 'emissao' && x.cancelado_em);
+  if (canc.length) ops.push(sb.from('historico_economia').update({ cancelado_em: agora }).in('extrato_id', canc.map(x => x.id)).is('cancelado_em', null));
   const comEco = emis.filter(x => ancora(x.valor_pagante_brl, x.valor_rex_brl)), semEco = emis.filter(x => !ancora(x.valor_pagante_brl, x.valor_rex_brl));
   if (comEco.length) ops.push(sb.from('historico_economia').upsert(comEco.map(x => {
     const i = W.porLinha[x.id] || {};
