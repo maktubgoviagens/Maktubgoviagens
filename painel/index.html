@@ -2671,8 +2671,8 @@
       const [voos, saldos, extrato, economias, agendamentos, documentos, relatorios, convites, gestorArr] = await Promise.all([
         safe(supabase.from('voos').select('*').eq('cliente_id', uid).order('data_voo', { ascending: true }).order('hora_partida', { ascending: true })),
         safe(supabase.from('historico_saldos').select('*').eq('cliente_id', uid).order('mes', { ascending: true })),
-        safe(supabase.from('extrato_milhas').select('*').eq('cliente_id', uid).order('data', { ascending: false })),
-        safe(supabase.from('historico_economia').select('*').eq('cliente_id', uid).order('data', { ascending: true })),
+        safe(supabase.from('extrato_milhas').select('*').eq('cliente_id', uid).is('cancelado_em', null).order('data', { ascending: false })),
+        safe(supabase.from('historico_economia').select('*').eq('cliente_id', uid).is('cancelado_em', null).order('data', { ascending: true })),
         safe(supabase.from('agendamentos_reuniao').select('*').eq('cliente_id', uid).order('created_at', { ascending: false }).limit(12)),
         safe(supabase.from('documentos').select('*').eq('cliente_id', uid).order('created_at', { ascending: false })),
         safe(supabase.from('relatorios_mensais').select('mes,publicado').eq('cliente_id', uid).eq('publicado', true)),

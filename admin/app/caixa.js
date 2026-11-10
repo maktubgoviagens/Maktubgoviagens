@@ -8,6 +8,8 @@
 const ORIGENS = [['cartao', 'Cartão de crédito'], ['banco', 'Empréstimo bancário'], ['socios', 'Dinheiro dos sócios'], ['outro', 'Outro']];
 const DIA_LANCAR = 5; // dia do mês em que o rendimento do mês anterior já deve estar lançado
 
+// RB: reembolsos de taxas da Gestão (emissão com milhas do cliente em que a Maktub pagou as taxas): movimento neutro
+let RB = [];
 let R = null, E = null, PG = null, ERRO = null, ANO = String(new Date().getFullYear()), ED = null, VER = null, CONF = null;
 
 const r2 = (x) => Math.round((x + (x >= 0 ? 1e-9 : -1e-9)) * 100) / 100;
@@ -31,6 +33,8 @@ export async function carregar(sb) {
   ]);
   ERRO = (a.error || b.error || c.error) ? (a.error || b.error || c.error).message : null;
   R = a.error ? [] : (a.data || []); E = b.error ? [] : (b.data || []); PG = c.error ? [] : (c.data || []);
+  const rb = await sb.from('reembolsos_taxas_gestao').select('*').is('cancelado_em', null).order('pago_em', { ascending: false }).limit(2000);
+  RB = rb.error ? [] : (rb.data || []);
   return { R, E, PG, erro: ERRO };
 }
 export const recarregar = () => { R = E = PG = null; };
@@ -162,6 +166,7 @@ function painel(P, X) {
       <div class="lin"><span>Juro total de todos os empréstimos</span><span>${brl2(jurosTot)}</span></div>
       <div class="sub">O valor que entrou não é receita e a parte principal das parcelas não é despesa: os dois ficam fora do resultado. Só o juro entra no DRE, como despesa financeira, no mês de cada parcela. As parcelas aparecem em Compromissos a pagar.</div></section>` : ''}`;
 
+  P.insertAdjacentHTML('beforeend', blocoNeutros(X));
   $('voltar').onclick = () => { ED = VER = null; ir('empresa'); };
   const tela2 = () => { tela(P, X); scrollTo(0, 0); };
   if ($('cxPend')) $('cxPend').onclick = () => { ED = { tipo: 'rend', id: 'novo', mes: ant }; tela2(); };
@@ -314,4 +319,25 @@ function detalheEmp(P, X) {
     if (r.error) { aviso('Não desfez: ' + r.error.message); return; }
     aviso('Parcela voltou para a pagar.'); X.aoMudar && X.aoMudar(); tela(P, X);
   });
+}
+
+/* ---------- movimentos neutros: taxas da Gestão pagas pela Maktub e reembolsadas pelo cliente ---------- */
+// Saída no mês em que a Maktub pagou, entrada no mês em que o cliente reembolsou: os dois se anulam.
+// Fora de vendas, metas, comissão e receita do DRE. O recebimento é marcado em Pagamentos a receber.
+function blocoNeutros(X) {
+  const { esc, brl2 } = X;
+  const doAno = (d) => String(d || '').slice(0, 4) === ANO;
+  const meses = {};
+  RB.forEach(r => {
+    if (doAno(r.pago_em)) { const k = mk(r.pago_em); (meses[k] = meses[k] || { s: 0, e: 0 }).s += +r.valor || 0; }
+    if (r.recebido && doAno(r.recebido_em)) { const k = mk(r.recebido_em); (meses[k] = meses[k] || { s: 0, e: 0 }).e += +r.valor || 0; }
+  });
+  const pend = RB.filter(r => !r.recebido), ks = Object.keys(meses).sort();
+  const quem = (r) => (X.nomeCard && X.nomeCard(r.atendimento_id)) || 'Cliente da Gestão';
+  return `<div class="secao">Movimentos neutros</div>
+    <section class="bloco"><h2>Reembolso de taxas da Gestão em ${ANO}</h2>
+      ${ks.length ? ks.map(k => { const m = meses[k], res = Math.round((m.e - m.s) * 100) / 100; return `<div class="lin"><span>${nomeMes(k)}</span><span>saída ${brl2(m.s)} · entrada ${brl2(m.e)} · ${res === 0 ? 'neutro' : (res < 0 ? 'falta receber ' + brl2(-res) : 'recebido de meses anteriores ' + brl2(res))}</span></div>`; }).join('') : '<div class="vazio">Nenhum reembolso de taxas neste ano.</div>'}
+      ${pend.length ? `<div class="sub" style="margin-top:8px"><b>A receber dos clientes (${pend.length}): ${brl2(pend.reduce((t, r) => t + (+r.valor || 0), 0))}</b></div>${pend.map(r => `<div class="lin"><span>${esc(quem(r))} · pago em ${br(r.pago_em)}</span><span>${brl2(r.valor)}</span></div>`).join('')}` : ''}
+      <div class="sub">A Maktub pagou as taxas de uma emissão feita com as milhas do cliente da Gestão e o cliente reembolsa o mesmo valor. A saída e a entrada se anulam: fica fora de vendas, metas, comissão e receita do DRE. Marque o recebimento em Pagamentos a receber.</div>
+    </section>`;
 }
