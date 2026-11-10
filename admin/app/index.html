@@ -570,7 +570,7 @@ import * as CMP from '/admin/app/compromissos.js?v=16';
 import * as CX from '/admin/app/caixa.js?v=3';
 import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=3';
+import * as IND from '/admin/app/indicacoes.js?v=4';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -693,7 +693,7 @@ function acoesNovo() {
   const L = [];
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
-  if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar venda', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
+  if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar emissão', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
   if (!pode('comercial') && podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => abrirB2B()]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
@@ -733,7 +733,7 @@ function buscaGeral(q) {
   // número do card: "014", "#14" ou "14" acham o card #014
   const nCard = /^#?\d{1,5}$/.test(String(q).trim()) ? +String(q).replace(/\D/g, '') : null;
   if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => (nCard && +r.numero === nCard) || semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
-  if (pode('gestao')) G.push(['Gestão de Milhas', (D.clientes || []).filter(c => semAc([c.nome_completo, c.email].join(' ')).includes(k) || (dig.length >= 4 && String(c.telefone || c.celular || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(c => [c.nome_completo, 'Carteira da Gestão', () => ir('clientes', () => { CLI = c.id; })])]);
+  if (pode('gestao')) G.push(['Carteira da Gestão', (D.clientes || []).filter(c => semAc([c.nome_completo, c.email].join(' ')).includes(k) || (dig.length >= 4 && String(c.telefone || c.celular || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(c => [c.nome_completo, 'Carteira da Gestão', () => ir('clientes', () => { CLI = c.id; })])]);
   if (podeAba('leads')) G.push(['Leads do site', (D.leads || []).filter(l => semAc([l.nome, l.email, l.destino].join(' ')).includes(k) || (dig.length >= 4 && String(l.whatsapp || l.telefone || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(l => [l.nome || 'Lead', [l.destino, l.status].filter(Boolean).join(' · '), () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'todos'; })])]);
   if (podeAba('fornecedores')) G.push(['Hotéis e serviços', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
@@ -1135,7 +1135,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -2570,7 +2570,7 @@ function htmlJornadaGestao() {
     else { const ap = agProp(r), passou = ap && tsDe(ap.data) < Date.now(); s = ap ? 'Proposta ' + quandoDiag(ap.data) : 'Sem data da reunião'; c = !ap || passou ? 'al' : 'ok'; prox = passou ? 'Registrar se fechou e por quê' : ap ? 'Apresentar a proposta' : 'Marcar a reunião de proposta'; }
     return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${htmlPrio(r)}${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
   };
-  const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Gestor ' + String(g.nome).split(' ')[0] : 'Sem gestor'; };
+  const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Responsável ' + String(g.nome).split(' ')[0] : 'Sem responsável'; };
   const kC = (c, s, cls, prox) => `<button class="gjk" data-gj-c="${c.id}"><span class="n">${esc(c.nome_completo)}</span><span class="s ${cls}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(gestor(c))}</span></button>`;
   // 4 colunas comerciais + Implantação; a carteira (ativos e renovação) fica na aba Clientes
   const GRUPOS_G = [['Entrada', ['Novo lead', 'Qualificação']], ['Diagnóstico', ['Diagnóstico agendado', 'Diagnóstico feito']], ['Proposta', ['Reunião de proposta']], ['Follow-up', ['Follow-up']]];
@@ -3820,8 +3820,8 @@ let EMP_TOP = 'fat', PNL_PER = 'mes', PNL_REF = null, PNL_ABA = 'vendas', PNL_CO
 const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['indicacoes', 'leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
-    ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
+    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
@@ -3830,7 +3830,7 @@ function telaEmpresa(P) {
   const it = itensEmpresa();
   P.innerHTML = `
     <h1 class="titulo">Empresa</h1>
-    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
+    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe e acessos'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
     ${verNum ? '<div id="painelEmp"><div class="vazio">Carregando o painel...</div></div>' : ''}
     ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
     ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
@@ -4445,7 +4445,7 @@ function htmlBaseMes() {
   const L = (D.clientes || []).filter(c => precisaBase(c, k) && vejoBase(c)).map(c => ({ c, f: confDoMes(c, k) }));
   if (!L.length) return '';
   const linha = ({ c }) => `<div class="kbl"><span>${esc(c.nome_completo)}${gest(c)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar</button></div>`;
-  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'gestor ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem gestor'}</small>` : '';
+  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'responsável ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem responsável'}</small>` : '';
   // primeiro quem tem o dia planejado mais cedo; sem dia planejado vai para o fim
   const falta = L.filter(x => !x.f).sort((a, b) => (Number(a.c.dia_saldos) || 99) - (Number(b.c.dia_saldos) || 99) || String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
   const feitas = L.filter(x => x.f).sort((a, b) => String(b.f.feita_em).localeCompare(String(a.f.feita_em)));
@@ -4599,7 +4599,7 @@ function telaGestao(P) {
 
     ${htmlPedidosDiagnostico()}
 
-    <div class="secao">Carteira de clientes</div>
+    <div class="secao">Carteira da Gestão</div>
     <div class="numeros" style="margin-top:0">
       <div class="num destaque"><div class="l">Carteira sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
@@ -4607,7 +4607,7 @@ function telaGestao(P) {
       <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
     </div>
     <div class="pend" style="margin-top:10px">
-      <button data-g="clientes"><span>Carteira de clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
+      <button data-g="clientes"><span>Carteira da Gestão</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
       <button data-g="implantacao"><span>Onboarding e tarefas<small style="display:block;font-size:12px;color:var(--tinta-3)">Checklist D0 a D7, cartões e dia dos saldos, na ficha de cada cliente</small></span><span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b><span class="seta">›</span></span></button>
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
@@ -4782,7 +4782,7 @@ function telaFicha(P, id) {
     <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
     ${(pf => pf && podeAba('crm') ? CRM.abasFicha('gestao') + CRM.resumoPessoa(D, pf) : '')((D.pessoas || []).find(x => x.cliente_id === c.id))}
-    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
+    <div class="sub">${g ? 'Responsável: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
     <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}${(() => { const T = tarefasOb(c.id), f = T.filter(t => t.feito).length; return T.length && f < T.length ? ' ' + pilula(false, `Onboarding ${f} de ${T.length}`) : ''; })()}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
@@ -5333,7 +5333,7 @@ async function fiRelatorio(el, c) {
     <div class="mesnav" id="fiMes" style="margin-top:12px"><button data-n="-1">‹</button><span>${mesNome(mes)}</span><button data-n="1">›</button></div>
     <div class="sub">${r.id ? (r.publicado ? '<b style="color:var(--verde)">Publicada</b>: o cliente já vê esta carta.' : '<b style="color:var(--alerta)">Rascunho</b>: o cliente ainda não vê.') : 'Sem carta neste mês.'} Os números do relatório saem sozinhos da carteira e das economias.</div>
     <form class="bloco form" id="fRel">
-      <label class="fl"><span>Carta do gestor</span><textarea name="carta_gestor" rows="8" placeholder="Como foi o mês, o que foi conquistado e o que vem a seguir.">${esc(r.carta_gestor || '')}</textarea></label>
+      <label class="fl"><span>Carta da equipe</span><textarea name="carta_gestor" rows="8" placeholder="Como foi o mês, o que foi conquistado e o que vem a seguir.">${esc(r.carta_gestor || '')}</textarea></label>
       <label class="fl"><span>Destaques (um por linha)</span><textarea name="destaques" rows="3">${esc(r.destaques || '')}</textarea></label>
       <label class="fl"><span>Próximos passos (um por linha)</span><textarea name="proximos_passos" rows="3">${esc(r.proximos_passos || '')}</textarea></label>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" data-pub="1" style="flex:2">${r.publicado ? 'Salvar publicada' : 'Salvar e publicar'}</button><button class="sec" type="submit" data-pub="0" style="flex:1">Rascunho</button></div>

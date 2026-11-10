@@ -40,7 +40,7 @@ export const carregarDados = (X) => carregar(X);
 async function carregar(X) {
   if (CACHE && Date.now() - CACHE.em < 60000) return CACHE;
   const [v, k, pa, at] = await Promise.all([
-    X.sb.from('emissoes').select('id,pessoa_id,data_negociacao,valor_receber,lucro_liquido,repasse,parceiro_id,parceiro_app,parceiro_pct,parceiro_pct_app').order('data_negociacao').limit(20000),
+    X.sb.from('emissoes').select('id,pessoa_id,data_negociacao,valor_receber,lucro_liquido,repasse,parceiro_id,parceiro_app,parceiro_pct,parceiro_pct_app,comprador,sobrenome,localizador,servico,servico_app,origem,destino').order('data_negociacao').limit(20000),
     X.sb.from('contratos').select('id,pessoa_id,cliente_id,status,assinado_em,cortesia:dados->cortesia').limit(5000),
     X.sb.from('parceiros').select('*').limit(5000),
     X.sb.from('atendimentos').select('pessoa_id,origem,data').not('pessoa_id', 'is', null).order('data').limit(20000)
@@ -285,11 +285,42 @@ export async function telaOrigens(P, X) {
         <button class="zap" type="button" data-conf="${p.id}" style="width:100%;margin-top:12px">Confirmar origem</button>
         <div class="sub" data-msg="${p.id}"></div>
       </div>`; }).join('') : '<div class="vazio">Nada para marcar neste filtro.</div>'}</div>
-    ${semFicha.length ? `<div class="secao">Vendas sem ficha do comprador</div><section class="bloco" style="margin-top:0"><div class="lin"><span>${semFicha.length} ${semFicha.length === 1 ? 'venda' : 'vendas'}${V ? ' · ' + X.brl2(semFicha.reduce((t, e) => t + (+e.lucro_liquido || 0), 0)) + ' de lucro' : ''}</span></div><div class="sub" style="margin-top:0">Aparecem como "Sem ficha do comprador" nas indicações. Para entrarem num canal, cada venda precisa ser ligada a uma ficha.</div></section>` : ''}`;
+    ${semFicha.length ? `<div class="secao">Vendas sem ficha do comprador · ${semFicha.length}</div>
+      <div class="sub" style="margin-top:0">Ligue cada venda à ficha de quem comprou. Depois, a venda entra no canal de origem dessa pessoa. Só o comprador da venda muda; nenhum valor é alterado.</div>
+      <div class="ind-lista">${semFicha.map(e => { const sug = sugerirFicha(D, e); const nome = [e.comprador, e.sobrenome].filter(Boolean).join(' ') || 'Sem nome na planilha';
+        return `<div class="ind-card" data-sf="${esc(String(e.id))}">
+          <div class="c1"><span class="nome">${esc(nome)}</span>${V ? `<span class="luc">${brlC(+e.lucro_liquido || 0)}</span>` : ''}</div>
+          <div class="ant">${esc([e.data_negociacao ? new Date(String(e.data_negociacao).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR') : '', e.servico_app || e.servico, [e.origem, e.destino].filter(Boolean).join(' → '), e.localizador ? 'loc. ' + e.localizador : '', V ? 'venda ' + X.brl2(+e.valor_receber || 0) : ''].filter(Boolean).join(' · '))}</div>
+          ${sug ? `<div class="ind-sug">Ficha com o mesmo nome: ${esc(sug.nome)}</div>` : ''}
+          <label class="fl" style="margin-top:8px"><span>Ficha de quem comprou</span><input type="text" class="sf-in" list="sfdl" value="${esc(sug ? sug.nome : '')}" placeholder="Digite o nome e escolha a ficha" autocomplete="off"></label>
+          <button class="zap" type="button" data-ligar="${esc(String(e.id))}" style="width:100%;margin-top:8px">Ligar à ficha</button>
+          <div class="sub" data-sfmsg></div></div>`; }).join('')}</div>
+      <datalist id="sfdl">${D.pessoas.slice(0, 3000).map(o => `<option value="${esc(o.nome)}">`).join('')}</datalist>` : ''}`;
   OR_MSG = '';
   $('voltar').onclick = () => X.ir('crm');
   $('orFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { OR_FILTRO = b.dataset.f; telaOrigens(P, X); } };
-  P.querySelectorAll('.ind-card').forEach(card => {
+  P.querySelectorAll('[data-ligar]').forEach(b => b.onclick = async () => {
+    const card = b.closest('[data-sf]'), msg = card.querySelector('[data-sfmsg]'), k = norm(card.querySelector('.sf-in').value);
+    const L = k ? D.pessoas.filter(o => norm(o.nome) === k) : [];
+    if (!k) { msg.innerHTML = '<span class="ind-alerta">Escolha a ficha de quem comprou.</span>'; return; }
+    if (L.length > 1) { msg.innerHTML = '<span class="ind-alerta">Há mais de uma ficha com esse nome. Junte as fichas antes ou escreva o nome completo.</span>'; return; }
+    let pf = L[0];
+    if (!pf) {
+      const nome = card.querySelector('.sf-in').value.replace(/\s+/g, ' ').trim();
+      if (!confirm(`Não existe ficha de "${nome}". Criar a ficha agora e ligar a venda a ela?`)) return;
+      const ins = await X.sb.from('pessoas').insert({ nome, papeis: ['cliente'] }).select().single();
+      if (ins.error) { msg.innerHTML = `<span class="ind-alerta">${esc(X.limparTec('Não criou a ficha: ' + ins.error.message))}</span>`; return; }
+      pf = ins.data; D.pessoas.push(pf);
+    }
+    b.disabled = true; msg.textContent = 'Salvando...';
+    // só liga venda que ainda está sem ficha (nunca troca o comprador de uma venda já ligada)
+    const { data, error } = await X.sb.from('emissoes').update({ pessoa_id: pf.id }).eq('id', b.dataset.ligar).is('pessoa_id', null).select('id');
+    if (error || !data || !data.length) { b.disabled = false; msg.innerHTML = `<span class="ind-alerta">${esc(error ? X.limparTec('Não ligou: ' + error.message) : 'A venda já tinha sido ligada a uma ficha. Atualize a tela.')}</span>`; return; }
+    const em = (X.D.emissoes || []).find(x => String(x.id) === String(b.dataset.ligar)); if (em) em.pessoa_id = pf.id;
+    limparCache(); OR_MSG = `Venda ligada à ficha de ${esc(pf.nome)}.${pf.origem_canal ? '' : ' Agora marque a origem dessa pessoa na lista acima.'}`;
+    telaOrigens(P, X);
+  });
+  P.querySelectorAll('.ind-card[data-pid]').forEach(card => {
     const p = D.pessoas.find(x => x.id === card.dataset.pid);
     const S = ligarSeletor(card.querySelector('.ind-sel'), X, { pessoa: p, C });
     card.querySelector('[data-conf]').onclick = async (ev) => {
@@ -303,6 +334,11 @@ export async function telaOrigens(P, X) {
       telaOrigens(P, X);
     };
   });
+}
+function sugerirFicha(D, e) {
+  const k = norm([e.comprador, e.sobrenome].filter(Boolean).join(' ')), k1 = norm(e.comprador);
+  const L = (D.pessoas || []).filter(o => norm(o.nome) === k || (k1 && norm(o.nome) === k1) || (o.apelido && norm(o.apelido) === k1));
+  return L.length === 1 ? L[0] : null;
 }
 export function pendentes(X) {
   const D = X.D; if (!(D.pessoas || []).length || !('origem_canal' in D.pessoas[0])) return 0;
