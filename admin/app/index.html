@@ -564,7 +564,7 @@ import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
 import * as COT from '/admin/app/cotador.js?v=51';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
-import * as VENDA from '/admin/app/venda.js?v=24';
+import * as VENDA from '/admin/app/venda.js?v=25';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=16';
 import * as CX from '/admin/app/caixa.js?v=3';
@@ -1415,6 +1415,7 @@ function telaInicio(P) {
     ['Leads esperando alguém assumir', leadsSemDono().filter(l => !cardDoLead(l)).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins para fazer', checkinsTotal(), () => ir('agenda', () => { AG_VISTA = 'checkins'; })],
+    ...(ADMIN || podeAba('emissoes') ? [['Voos sem horário de saída', voosSemHorario().length, () => { const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
     ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
@@ -1446,6 +1447,7 @@ function telaInicio(P) {
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
     ${blocoAnivHoje()}
+    ${blocoSemHorario()}
     ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
@@ -1463,6 +1465,7 @@ function telaInicio(P) {
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   ligarAnivHoje(P);
+  ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicio(P));
   ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -1488,6 +1491,7 @@ function telaInicioColab(P) {
     ${(() => { const ck = eventos().filter(e => e.ic === 'voo' && e.alerta), pv = pode('comercial') ? posVenda().length : 0;
       return `${pv ? `<div class="pend" style="margin-top:12px"><button data-ir="reunioes"><span>Vendas fechadas aguardando emissão</span><span><b class="tem">${pv}</b><span class="seta">›</span></span></button></div>` : ''}
       ${ck.length ? `<div class="secao">Check-ins para fazer</div>${agrupar(ck)}` : ''}`; })()}
+    ${blocoSemHorario()}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${blocoAnivHoje()}
     ${blocoPosViagem()}
@@ -1496,6 +1500,7 @@ function telaInicioColab(P) {
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
   if ($('novaReuniao')) $('novaReuniao').onclick = () => escolherAtendimento();
   ligarCardsReuniao(P);
+  ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicioColab(P));
   ligarAnivHoje(P);
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
@@ -1716,7 +1721,7 @@ function telaFormEmissao(P) {
     ${!nova && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) && ((D.trechos || {})[String(e.id)] || []).length ? `<section class="bloco" style="margin-top:12px"><h2>Voos e horários</h2><div class="sub" style="margin-top:-4px">Horário local de saída, como está no bilhete. O aviso de check-in chega 24 h antes de cada voo.</div>
       ${D.trechos[String(e.id)].slice().sort((a, b) => a.n - b.n).map(r => `<div class="duas-col" style="align-items:end"><div class="sub" style="margin:0 0 10px"><b>Voo ${r.n}</b> · ${esc([r.origem, r.destino].filter(Boolean).join(' → '))} · ${dataCurta(dia(r.data))}${r.checkin ? ' · check-in feito' : ''}</div><label class="fl"><span>Saída</span><input type="time" data-hrv="${r.n}" value="${esc(String(r.hora || '').slice(0, 5))}"></label></div>`).join('')}
       <button type="button" class="sec grande" id="hrSalvarV" style="width:100%;margin-top:6px">Salvar horários</button></section>`
-    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega à meia-noite do dia anterior.</div>
+    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega às 7h do dia anterior.</div>
       <div class="duas-col">${e.data_ida ? `<label class="fl"><span>Saída da ida (${dataCurta(dia(e.data_ida))})</span><input type="time" id="hrIda" value="${esc(String(h.hora_ida || '').slice(0, 5))}"></label>` : '<div></div>'}${e.data_volta ? `<label class="fl"><span>Saída da volta (${dataCurta(dia(e.data_volta))})</span><input type="time" id="hrVolta" value="${esc(String(h.hora_volta || '').slice(0, 5))}"></label>` : '<div></div>'}</div>
       <button type="button" class="sec grande" id="hrSalvar" style="width:100%;margin-top:6px">Salvar horário</button></section>`)((D.horas || {})[String(e.id)] || {}) : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
@@ -4163,6 +4168,10 @@ function instanteVoo(iso, hhmm, tz) {
     try { const loc = new Date(new Date(utc).toLocaleString('en-US', { timeZone: tz || 'America/Sao_Paulo' })), ref = new Date(new Date(utc).toLocaleString('en-US', { timeZone: 'UTC' })); return utc - (loc - ref); } catch (__) { return utc + 3 * 36e5; }
   }
 }
+// voo sem horário de saída: check-in pendente no dia do voo e, a partir das 7h (horário de Brasília), no dia anterior.
+// Mesma regra do aviso no celular e no Telegram (avisos_checkin_24h no servidor).
+const horaBrasilia = () => { try { return +new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' }).format(new Date()); } catch (_) { return new Date().getHours(); } };
+const pendSemHora = (k) => k === 0 || (k === 1 && horaBrasilia() >= 7);
 /* trechos de voo das emissões (todo o time vê) */
 function trechosEm() {
   const T = [];
@@ -4174,7 +4183,7 @@ function trechosEm() {
       R.forEach(r => {
         const d = dia(r.data), k = difDias(d); if (k < -1) return;
         const hr = r.hora ? String(r.hora).slice(0, 5) : '', feito = !!r.checkin;
-        let pend = !feito && k >= 0 && k <= 2;
+        let pend = !feito && pendSemHora(k);
         if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
         T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, de: r.origem, para: r.destino, v });
       });
@@ -4185,7 +4194,7 @@ function trechosEm() {
       const d = dia(data), k = difDias(d);
       if (k < -1) return;
       const H = (D.horas || {})[String(v.id)] || {}, hr = H['hora_' + tr];
-      let pend = !feito && k >= 0 && k <= 2;
+      let pend = !feito && pendSemHora(k);
       if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
       T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, de, para, v });
     });
@@ -4193,6 +4202,27 @@ function trechosEm() {
   return T;
 }
 const checkinsEm = () => trechosEm().filter(t => t.pendente);
+// voos que ainda vão acontecer e não têm horário de saída (vendas antigas): sem horário, o aviso de check-in só chega às 7h do dia anterior
+function voosSemHorario() {
+  const L = [];
+  (D.voosEm || []).forEach(v => {
+    if (v.milhas_cliente) return;
+    const em = (D.emissoes || []).find(x => x.id === v.id); if (B2B.ehB2B(em) || B2B.ehCancelada(em, D)) return;
+    const R = ((D.trechos || {})[String(v.id)] || []).slice().sort((a, b) => a.n - b.n), H = (D.horas || {})[String(v.id)] || {};
+    const falta = R.length
+      ? R.filter(r => r.data && !r.hora && !r.checkin && difDias(dia(r.data)) >= 0).map(r => ({ d: dia(r.data), de: r.origem, para: r.destino }))
+      : [['ida', v.data_ida, v.origem, v.destino], ['volta', v.data_volta, v.destino, v.origem]].filter(([tr, data]) => data && !v['checkin_' + tr] && !H['hora_' + tr] && difDias(dia(data)) >= 0).map(([, data, de, para]) => ({ d: dia(data), de, para }));
+    if (falta.length) L.push({ v, em, falta, d: falta[0].d });
+  });
+  return L.sort((a, b) => a.d - b.d);
+}
+function blocoSemHorario() {
+  if (!(ADMIN || podeAba('emissoes'))) return '';
+  const L = voosSemHorario(); if (!L.length) return '';
+  const linha = ({ v, em, falta }) => `<button type="button" class="lin" data-semhr="${esc(v.id)}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--linha);padding:8px 0;cursor:pointer;font:inherit;color:inherit"><span>${esc((em && em.comprador) || v.passageiro || 'Passageiro')}${v.localizador ? ' · ' + esc(String(v.localizador).toUpperCase()) : ''}<small style="display:block;color:var(--tinta-3)">${falta.map(f => `${esc(f.de || '?')} → ${esc(f.para || '?')} ${dataCurta(f.d)}`).join(' · ')}</small></span><span class="seta">›</span></button>`;
+  return `<div class="secao" id="semHorario">Voos sem horário de saída</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin:0 0 6px">Vendas sem o horário do voo: o aviso de check-in só chega às 7h do dia anterior. Toque e complete o horário como está no bilhete.</div>${L.slice(0, 8).map(linha).join('')}${L.length > 8 ? `<details><summary class="sub" style="cursor:pointer;margin-top:6px">Mais ${L.length - 8}</summary>${L.slice(8).map(linha).join('')}</details>` : ''}</section>`;
+}
+function ligarSemHorario(P) { P.querySelectorAll('[data-semhr]').forEach(b => b.onclick = () => ir('emissoes', () => { EM_ED = b.dataset.semhr; })); }
 
 /* ---------- leads ---------- */
 // talentos não têm status: o "novo" é o que este aparelho ainda não abriu
