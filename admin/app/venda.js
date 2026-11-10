@@ -78,8 +78,31 @@ export function pendenciasItem(x) {
     if (x.bagagem == null || x.bagagem === '') f.push('bagagem despachada');
     if (!x.print) f.push('print da tarifa');
     if (!x.cia_emissora) f.push('companhia');
+    // data e horário de saída de cada voo: é deles que saem o aviso de check-in e o envio do bilhete
+    f.push(...pendenciasHorarios(x));
   }
   if (!x.emitido) f.push('marcar como emitido');
+  return f;
+}
+// voos da emissão (ida, volta, cada trecho do multitrecho) com a data e o horário de saída que o check-in vai usar.
+// O horário vem da cotação quando bate a rota; o digitado no fechamento vale mais (ida, volta e cada trecho do meio).
+function voosDaEmissao(x) {
+  const tipo = x.tipo_trecho || 'iv', ct = Array.isArray(x.ct) ? x.ct : [], porTrecho = !!(x.ct_on && ct.length);
+  let ls = (porTrecho ? ct : linhasPadrao(x, { tipoPadrao: tipo })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
+  // só ida: a volta que sobrou de antes (campo escondido) não é voo
+  if (tipo === 'ida' && !porTrecho) ls = ls.slice(0, 1);
+  ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
+  const hrs = Array.isArray(x.hrs) ? x.hrs : [];
+  ls.forEach((l, k) => { if (hrs[k]) l.hora = hrs[k]; });
+  if (ls.length && x.hora_ida) ls[0].hora = x.hora_ida;
+  if (ls.length > 1 && tipo !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
+  return ls;
+}
+export function pendenciasHorarios(x) {
+  const ls = voosDaEmissao(x), tipo = x.tipo_trecho || 'iv', f = [];
+  if (!ls.length) return ['data da ida', 'horário de saída da ida'];
+  const nome = (k) => ls.length === 1 ? 'da ida' : tipo === 'iv' && ls.length === 2 ? (k ? 'da volta' : 'da ida') : `do voo ${k + 1}${ls[k].o && ls[k].d ? ` (${ls[k].o} → ${ls[k].d})` : ''}`;
+  ls.forEach((l, k) => { if (!l.data) f.push('data ' + nome(k)); if (!l.hora) f.push('horário de saída ' + nome(k)); });
   return f;
 }
 export function pendenciasFechamento(r) {
@@ -189,7 +212,8 @@ function htmlItem(X, x, i, ctx) {
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
       ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
       ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
-      <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo.</div>
+      ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? (ls => ls.length > 2 ? `<div class="duas-col">${ls.slice(1, -1).map((l, j) => inp(X, 'hrm', i, `Saída do voo ${j + 2}${l.o && l.d ? ` (${l.o} → ${l.d})` : ''}`, l.hora, 'h', `data-hrm="${i}|${j + 1}"`)).join('')}</div>` : '')(voosDaEmissao(x)) : ''}
+      <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo. Data e horário de saída de todos os voos são obrigatórios para fechar.</div>
       <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']].concat(ctx.gestao && ctx.gestao.ativo && !trava ? [['cliente_gestao', 'Milhas do cliente da Gestão']] : []), x.pago_em || 'milhas')}
       ${dupla(inp(X, 'cia_emissora', i, 'Emitido na cia', x.cia_emissora, 's', 'placeholder="Azul"'), inp(X, 'cia_voo', i, 'Voa de (se for aliança)', x.cia_voo, 's', 'placeholder="Turkish"'))}
       ${x.cia_voo && x.cia_emissora && x.cia_voo.trim().toLowerCase() !== x.cia_emissora.trim().toLowerCase() ? `<div class="config" style="margin:4px 0 8px">Aliança: emitido na ${X.esc(x.cia_emissora)}, voa de ${X.esc(x.cia_voo)}. O check-in e o bilhete são pela ${X.esc(x.cia_voo)}.</div>` : ''}
@@ -367,6 +391,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   const desenha = () => {
     if (ctx.detalhes) padroes();
     el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.querySelectorAll('[data-hrm]').forEach(e => { const [i, k] = e.dataset.hrm.split('|'), x = IT[+i]; e.removeAttribute('data-it'); e.oninput = () => { x.hrs = Array.isArray(x.hrs) ? x.hrs : []; x.hrs[+k] = e.value; }; });
     el.querySelectorAll('input[data-it],textarea[data-it]').forEach(e => {
       const set = () => { const x = IT[+e.dataset.it], k = e.dataset.k, t = e.dataset.t; x[k] = t === 'b' ? e.checked : t === 'n' ? nb(e.value) : e.value.trim(); };
       if (e.type === 'checkbox') e.onchange = () => {
@@ -375,7 +400,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         set(); desenha();
       };
       // milhas, milheiro e taxas: atualiza só o custo calculado, sem redesenhar a tela (não fecha o teclado nem pula a página)
-      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { const x = IT[+e.dataset.it]; if (['cia_voo', 'cia_emissora'].includes(e.dataset.k) || (ehCliente(x) && ['programa', 'milhas', 'taxas', 'pagante', 'rex', 'cabine', 'data_emissao', 'taxas_pago_em', 'localizador'].includes(e.dataset.k))) desenha(); }; }
+      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { const x = IT[+e.dataset.it]; if (['cia_voo', 'cia_emissora', 'trechos'].includes(e.dataset.k) || (ehCliente(x) && ['programa', 'milhas', 'taxas', 'pagante', 'rex', 'cabine', 'data_emissao', 'taxas_pago_em', 'localizador'].includes(e.dataset.k))) desenha(); }; }
     });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => {
       const x = IT[+b.dataset.it], k = b.dataset.k, v = b.dataset.set;
@@ -654,7 +679,7 @@ export async function enviarParaPlanilha(X, r, IT, F) {
 }
 
 // horário de saída de cada emissão de voo (ida e volta/último trecho): é o que faz o aviso de check-in sair 24 h antes.
-// Sem horário, o aviso sai à meia-noite do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
+// Sem horário (vendas antigas), o aviso sai às 7h do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
 // O horário digitado é o local do aeroporto de saída; o fuso dele vai junto para o aviso converter para Brasília.
 let FUSOS = null;
 export async function fusoDe(cod) {
@@ -679,15 +704,9 @@ export async function salvarHorarios(X, L) {
 export async function salvarVoos(X, L) {
   const rows = [];
   for (const { id, x } of L.filter(({ x }) => ehVoo(x))) {
-    // rota e datas como estão no fechamento (podem ter mudado desde a cotação); o horário de cada voo vem da cotação quando bate a rota
-    const ct = Array.isArray(x.ct) ? x.ct : [];
-    let ls = (x.ct_on && ct.length ? ct : linhasPadrao(x, { tipoPadrao: x.tipo_trecho || 'iv' })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
-    ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
-    ls = ls.filter(l => l.data);
+    // rota, datas e horários como estão no fechamento (podem ter mudado desde a cotação)
+    const ls = voosDaEmissao(x).filter(l => l.data);
     if (!ls.length) continue;
-    // horário digitado no fechamento vale para o primeiro e o último voo
-    if (x.hora_ida) ls[0].hora = x.hora_ida;
-    if (ls.length > 1 && x.tipo_trecho !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
     for (let n = 0; n < ls.length; n++) { const l = ls[n]; rows.push({ emissao_id: String(id), n: n + 1, origem: l.o || null, destino: l.d || null, data: l.data, hora: l.hora || null, tz: await fusoDe(l.o) }); }
   }
   if (!rows.length) return;
