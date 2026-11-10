@@ -1165,7 +1165,9 @@ async function carregar(silencioso, manterTela) {
       sb.rpc('parceiros_ativos'),
       sb.rpc('time_nomes'),
       carregarAgendaEm(),
-      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
+      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000),
+      // calendário: quem não tem a carteira da Gestão recebe só nome, vencimento, congelamento e onboarding (78-calendario-renovacoes.sql)
+      !pode('gestao') && podeAba('reunioes') ? sb.rpc('calendario_renovacoes') : nada
     ]),
     podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000) : null,
     sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000),
@@ -1217,6 +1219,7 @@ async function carregar(silencioso, manterTela) {
     recarregarGravar()
   ]);
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
+  D.renovT = comum[7] && !comum[7].error ? (comum[7].data || []) : [];
   if (pc) D.cots = pc.error ? [] : (pc.data || []);
   D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda;
   D.tt = tt.error ? null : tt.data;
@@ -2893,6 +2896,15 @@ const primeiroN = (id) => String(nomeTime(id) || '').split(' ')[0];
 // reunião da agenda que faz parte do comercial (e, na Gestão, só as da Gestão)
 const reuDaGestao = (x) => /Gestão/.test(x.tipo || '') || !!x.cliente_id || (x.atendimento_id && ehGestao(D.reunioes.find(r => r.id === x.atendimento_id) || {}));
 const reuDoComercial = (x) => /^Comercial|Cliente da Gestão/.test(x.tipo || '') || !!(x.atendimento_id || x.cliente_id || x.pessoa_id);
+// clientes da Gestão para o calendário: a carteira inteira para quem tem acesso; para o resto do time, só o resumo do SQL 78
+const clientesCal = () => pode('gestao') ? (D.clientes || []) : (D.renovT || []).map(x => ({ id: x.cliente_id, nome_completo: x.nome, gestao_vencimento: x.vencimento, gestao_congelado_em: x.congelada ? true : null, onboard_data: x.onboard_data }));
+// abre a ficha da Gestão; sem esse acesso, abre a ficha única da pessoa (Clientes)
+function abrirClienteCal(id, aba) {
+  if (pode('gestao')) return abrirFicha(id, aba);
+  const p = (D.pessoas || []).find(x => x.cliente_id != null && String(x.cliente_id) === String(id));
+  if (p && podeAba('crm')) return ir('crm', () => CRM.abrir(p.id));
+  aviso('A ficha deste cliente fica na Gestão, e o seu acesso não inclui a carteira.');
+}
 function calItens(G, de, ate) {
   const hj = hojeISO(), E = [], noPer = (d) => d && d >= de && d <= ate;
   const hm = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -2922,20 +2934,21 @@ function calItens(G, de, ate) {
     if (a.status === 'solicitada') { const d = a.data_preferida && String(a.data_preferida).slice(0, 10) >= hj ? String(a.data_preferida).slice(0, 10) : hj; if (noPer(d)) E.push({ d, hora: '', tipo: 'reu', t: 'Reunião a confirmar: ' + nomeCli(a.cliente_id), s: 'Pedida pelo painel' + (a.periodo ? ' · prefere ' + String(a.periodo).toLowerCase() : ''), atr: true, atrTxt: 'Falta confirmar', donos: [], abrir: () => abrirFicha(a.cliente_id) }); }
   });
   // reunião de onboarding marcada na ficha do cliente da Gestão (se já não estiver na agenda)
-  (D.clientes || []).filter(c => c.onboard_data).forEach(c => {
+  const CLG = clientesCal();
+  CLG.filter(c => c.onboard_data).forEach(c => {
     const d = isoLocal(new Date(c.onboard_data)); if (!noPer(d)) return;
     if ((D.agenda || []).some(x => x.cliente_id === c.id && /onboard|embarque/i.test(x.titulo || '') && isoLocal(new Date(x.data)) === d)) return;
-    E.push({ d, hora: hm(c.onboard_data), tipo: 'reu', t: 'Onboarding: ' + c.nome_completo, s: 'Reunião de onboarding da Gestão', passado: new Date(c.onboard_data) < Date.now() - 3 * 36e5, donos: [], abrir: () => abrirFicha(c.id, 'tarefas') });
+    E.push({ d, hora: hm(c.onboard_data), tipo: 'reu', t: 'Onboarding: ' + c.nome_completo, s: 'Reunião de onboarding da Gestão', passado: new Date(c.onboard_data) < Date.now() - 3 * 36e5, donos: [], abrir: () => abrirClienteCal(c.id, 'tarefas') });
   });
   // renovações: vencimento do contrato (12 meses a partir da assinatura) e o começo da renovação, 90 dias antes
-  (D.clientes || []).filter(c => c.gestao_vencimento).forEach(c => {
+  CLG.filter(c => c.gestao_vencimento).forEach(c => {
     const v = String(c.gestao_vencimento).slice(0, 10), m90 = CAL.somaDias(v, -90), cong = c.gestao_congelado_em ? ' · gestão congelada, a data ainda vai mudar' : '';
-    if (noPer(v)) E.push({ d: v, hora: '', tipo: 'ren', t: 'Vence o contrato: ' + c.nome_completo, s: 'Reunião de renovação' + cong, donos: [], abrir: () => abrirFicha(c.id) });
-    if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirFicha(c.id) });
+    if (noPer(v)) E.push({ d: v, hora: '', tipo: 'ren', t: 'Vence o contrato: ' + c.nome_completo, s: 'Reunião de renovação' + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
+    if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
   });
   // aniversários da ficha única (leads e clientes), todo ano
-  const idsG = new Set((D.clientes || []).map(c => c.id));
-  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || idsG.has(p.cliente_id))).forEach(p => {
+  const idsG = new Set(CLG.map(c => String(c.id)));
+  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || (p.cliente_id != null && idsG.has(String(p.cliente_id))))).forEach(p => {
     const md = String(p.nascimento).slice(5, 10);
     for (let y = +de.slice(0, 4); y <= +ate.slice(0, 4); y++) {
       const d = `${y}-${md === '02-29' && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? '02-28' : md}`;
@@ -2945,7 +2958,7 @@ function calItens(G, de, ate) {
   return E;
 }
 // filtros: responsável (itens sem responsável, como aniversário e renovação, aparecem em qualquer filtro) e tipo
-const calTiposDe = (G) => CAL_FILTRO_TIPOS.filter(([k]) => !(G && k === 'rv') && (k !== 'ren' || (D.clientes || []).length || pode('gestao')) && (k !== 'aniv' || D.pessoas));
+const calTiposDe = (G) => CAL_FILTRO_TIPOS.filter(([k]) => !(G && k === 'rv') && (k !== 'ren' || clientesCal().length || pode('gestao')) && (k !== 'aniv' || D.pessoas));
 function calFiltrar(E, G) {
   const tipos = calTiposDe(G).map(t => t[0]).filter(k => !(CAL_F.fora || []).includes(k));
   const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || '';
