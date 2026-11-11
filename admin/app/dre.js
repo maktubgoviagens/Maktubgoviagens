@@ -21,12 +21,12 @@ export async function tela(P, ctx) {
   const hojeK = mk(hojeISO());
   const fimAno = ano === hojeK.slice(0, 4) ? hojeK : ano + '-12';
   const ini = mesModo ? mes : ano + '-01', fim = mesModo ? mes : fimAno;
-  const cab = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">DRE da <em>empresa</em></h1>
+  const cab = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">DRE da <em>empresa</em></h1>
     <div class="seg" id="dreModo"><button data-m="mes" class="${mesModo ? 'on' : ''}">Mês</button><button data-m="ano" class="${mesModo ? '' : 'on'}">Ano</button></div>
     ${mesModo ? ctx.seletorMes('dreMes') : `<div class="mesnav" id="dreMes"><button data-n="-12">‹</button><span>${ano}${ano === hojeK.slice(0, 4) ? ' até ' + mesNome(hojeK).split(' ')[0].toLowerCase() : ''}</span><button data-n="12">›</button></div>`}`;
   P.innerHTML = cab + '<div class="vazio">Calculando...</div>';
   const ligarTopo = () => {
-    $('voltar').onclick = () => ir('empresa');
+    $('voltar').onclick = () => ir('mais');
     $('dreModo').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b && b.dataset.m !== MODO) { MODO = b.dataset.m; tela(P, ctx); } };
     ctx.ligarMes('dreMes', () => tela(P, ctx));
   };

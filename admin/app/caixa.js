@@ -106,14 +106,14 @@ export function alertaRendimento() {
 /* ---------- tela ---------- */
 export async function tela(P, X) {
   const { sb, $, esc, ir } = X;
-  const voltar = () => { ED = VER = null; ir('empresa'); };
+  const voltar = () => { ED = VER = null; ir('mais'); };
   if (!E) {
-    P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1><div class="vazio">Carregando...</div>`;
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1><div class="vazio">Carregando...</div>`;
     $('voltar').onclick = voltar;
     await carregar(sb);
     if (X.aba() !== 'caixa') return;
   }
-  if (ERRO) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1><div class="vazio">Rode o investimentos-e-caixa.sql no Supabase para ativar. (${esc(ERRO)})</div>`; $('voltar').onclick = voltar; return; }
+  if (ERRO) { P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1><div class="vazio">Rode o investimentos-e-caixa.sql no Supabase para ativar. (${esc(ERRO)})</div>`; $('voltar').onclick = voltar; return; }
   if (ED && ED.tipo === 'rend') return formRend(P, X);
   if (ED && ED.tipo === 'emp') return formEmp(P, X);
   if (VER) return detalheEmp(P, X);
@@ -139,7 +139,7 @@ function painel(P, X) {
         ${x.falta ? `<div><span>Falta pagar:</span> ${brl2(x.faltaValor)} em ${x.falta} ${x.falta === 1 ? 'parcela' : 'parcelas'}${x.proxima ? ' · próxima ' + br(iso(x.proxima.venc)) : ''}</div>` : ''}
         <div class="toque">Toque para ver as parcelas ›</div></div></button>`;
 
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Investimentos <em>e caixa</em></h1>
     ${pend ? `<div class="pend" style="margin-top:12px"><button id="cxPend"><span>Lançar o rendimento de ${nomeMes(ant)}</span><span><b class="tem">1</b><span class="seta">›</span></span></button></div>` : ''}
     <div class="numeros" style="margin-top:12px">
       <div class="num destaque"><div class="l">Rendimento em ${ANO}</div><div class="v">${brlC(rendAno)}</div><div class="d">${doAno.length ? Object.keys(porMes).length + (Object.keys(porMes).length === 1 ? ' mês lançado' : ' meses lançados') : 'nada lançado'}</div></div>
@@ -167,7 +167,7 @@ function painel(P, X) {
       <div class="sub">O valor que entrou não é receita e a parte principal das parcelas não é despesa: os dois ficam fora do resultado. Só o juro entra no DRE, como despesa financeira, no mês de cada parcela. As parcelas aparecem em Compromissos a pagar.</div></section>` : ''}`;
 
   P.insertAdjacentHTML('beforeend', blocoNeutros(X));
-  $('voltar').onclick = () => { ED = VER = null; ir('empresa'); };
+  $('voltar').onclick = () => { ED = VER = null; ir('mais'); };
   const tela2 = () => { tela(P, X); scrollTo(0, 0); };
   if ($('cxPend')) $('cxPend').onclick = () => { ED = { tipo: 'rend', id: 'novo', mes: ant }; tela2(); };
   $('cxNovoRend').onclick = () => { ED = { tipo: 'rend', id: 'novo' }; tela2(); };

@@ -130,8 +130,8 @@ const quando = (d) => { const n = difDias(d); return n < 0 ? `<span class="tag">
 
 export async function tela(P, ctx) {
   const { $, esc, brl2, aviso, sb, ir } = ctx;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => ir('empresa');
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => ir('mais');
   await carregar(ctx);
   if (ctx.aba() !== 'compromissos') return;
   if (C.erro) { P.querySelector('.vazio').textContent = 'Rode o compromissos.sql no Supabase para ativar. (' + C.erro + ')'; return; }
@@ -153,7 +153,7 @@ export async function tela(P, ctx) {
       <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="zap" type="submit" style="flex:1">Pago</button><details style="flex:1" data-outro><summary class="sub" style="cursor:pointer;margin:0">Outro valor ou data</summary></details></div>
       <div class="duas-col" data-campos hidden style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><label class="fl"><span>Pago em</span><input name="pago_em" type="date" value="${hojeLocal()}"></label></div>
     </form>`;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
     <div class="sub">Salário e comissão de cada pessoa, despesas fixas com dia de vencimento, despesas avulsas lançadas no DRE e parcelas dos empréstimos para o caixa. Fechamento de cada mês, pago no mês seguinte: salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês.</div>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Próximos 7 dias</div><div class="v">${brl2(vence7.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${vence7.length} ${vence7.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
@@ -172,7 +172,7 @@ export async function tela(P, ctx) {
     <div class="secao">Dia de pagamento de cada pessoa</div>
     <section class="bloco" style="margin-top:0">${pessoas.filter(p => L.some(x => x.ref === p.id)).map(p => `<div class="lin"><span>${esc(p.nome)}</span><span><select data-dia="${p.id}">${Array.from({ length: 28 }, (_, i) => `<option ${i + 1 === p.dia ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></span></div>`).join('') || '<div class="vazio">Ninguém com salário ou comissão.</div>'}
       <div class="sub">Despesas fixas entram aqui quando têm dia de vencimento, em Salários e despesas fixas. Despesas avulsas entram ao serem lançadas no DRE.</div></section>`;
-  $('voltar').onclick = () => ir('empresa');
+  $('voltar').onclick = () => ir('mais');
   P.querySelectorAll('details[data-det]').forEach(d => d.ontoggle = () => { if (d.open) ABERTO = d.dataset.det; else if (ABERTO === d.dataset.det) ABERTO = null; });
   // um toque marca como pago (valor previsto, data de hoje); "outro valor ou data" abre os campos
   P.querySelectorAll('details[data-outro]').forEach(d => d.ontoggle = () => { const c = d.closest('form').querySelector('[data-campos]'); if (c) c.hidden = !d.open; });

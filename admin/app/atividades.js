@@ -84,11 +84,11 @@ export async function tela(P, ctx) {
   else if (QUEM === null) QUEM = ctx.meuId;
   const time = (D.time || []).filter(t => t.user_id);
   const pessoas = ADMIN ? `<div class="chips" id="atQuem" style="margin-top:10px">${[['todos', 'Todos'], ...time.map(t => [t.user_id, String(t.nome || '').split(' ')[0]])].map(([k, n]) => `<button data-q="${k}" class="${(QUEM || 'todos') === k ? 'on' : ''}">${esc(n)}</button>`).join('')}</div>` : '';
-  P.innerHTML = `${ADMIN ? '<button class="voltar" id="voltar">‹ Empresa</button>' : '<button class="voltar" id="voltar">‹ Voltar</button>'}
+  P.innerHTML = `${ADMIN ? '<button class="voltar" id="voltar">‹ Mais</button>' : '<button class="voltar" id="voltar">‹ Voltar</button>'}
     <h1 class="titulo" style="margin-top:6px">${ADMIN ? 'Atividades da <em>equipe</em>' : 'Minhas <em>atividades</em>'}</h1>
     <div class="seg" id="atVista" style="margin-top:10px"><button data-v="dia" class="${VISTA === 'dia' ? 'on' : ''}">Dia a dia</button><button data-v="tempos" class="${VISTA === 'tempos' ? 'on' : ''}">Tempo por etapa</button></div>
     ${pessoas}<div id="atCorpo"><div class="vazio">Carregando...</div></div>`;
-  $('voltar').onclick = () => ctx.ir(ADMIN ? 'empresa' : 'inicio');
+  $('voltar').onclick = () => ctx.ir(ADMIN ? 'mais' : 'inicio');
   $('atVista').onclick = (e) => { const b = e.target.closest('[data-v]'); if (b && b.dataset.v !== VISTA) { VISTA = b.dataset.v; tela(P, ctx); } };
   if ($('atQuem')) $('atQuem').onclick = (e) => { const b = e.target.closest('[data-q]'); if (!b) return; QUEM = b.dataset.q === 'todos' ? '' : b.dataset.q; tela(P, ctx); };
   const C = $('atCorpo');
