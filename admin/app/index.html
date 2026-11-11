@@ -559,10 +559,11 @@ import * as MKT from '/admin/app/marketing.js?v=23';
 import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=26';
 import * as ACV from '/admin/app/acervo.js?v=7';
-import * as CRM from '/admin/app/crm.js?v=19';
+import * as CRM from '/admin/app/crm.js?v=20';
+import * as CAL from '/admin/app/calendario.js?v=1';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
-import * as COT from '/admin/app/cotador.js?v=51';
+import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=25';
 import * as ATV from '/admin/app/atividades.js?v=1';
@@ -768,7 +769,7 @@ function minhasTarefas() {
   }
   if (podeAba('leads') && pode('leads')) { const n = leadsSemDono().length; if (n) add('Comercial', n2(n, 'lead do site sem ninguém', 'leads do site sem ninguém'), 'Assuma e responda pelo WhatsApp', () => ir('leads'), true); }
   if (!soMarketing()) {
-    if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (r.proximo_passo_data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + (r.proximo_passo ? ': ' + r.proximo_passo : ''), () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
+    if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (passoDe(r).data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + ': ' + passoDe(r).txt, () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
     const av = avaliacoesParaPedir(true).length; if (av) add('Comercial', n2(av, 'avaliação de atendimento para pedir', 'avaliações de atendimento para pedir'), 'Reuniões realizadas nos últimos 14 dias', () => ir('agenda'));
     if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 48 horas', () => ir('agenda'), true); }
     if (pode('gestao')) { const n = tarefasParaHoje().length; if (n) add('Gestão de Milhas', n2(n, 'tarefa da Gestão para hoje', 'tarefas da Gestão para hoje'), 'Implantação e acompanhamento dos clientes', () => ir('gestao')); }
@@ -849,7 +850,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) conf
 // confere também a cada 2 minutos com o app aberto (só mostra o aviso; nunca recarrega sozinho)
 setInterval(() => { if (!document.hidden) conferirVersao(); }, 120e3);
 // com um formulário ou ficha aberta (fechamento, emissão, cotação...), atualiza os dados mas nunca redesenha a tela
-const editando = () => { if (SUJO) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
+const editando = () => { if (SUJO) return true; if (calAberto()) return true; const h = location.hash.replace('#', '').split('/').filter(Boolean); if (h[0] === 'marketing') return h.includes('post') || h.includes('nova'); return h.length > 1; };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
@@ -1088,11 +1089,11 @@ async function cotacaoEnviada(id, o = {}) {
   const et = etapaDe(r), row = {};
   if (!r.assumido_por) Object.assign(row, { assumido_por: D.meuId, assumido_em: new Date().toISOString(), responsavel_id: r.responsavel_id || D.meuId });
   if (!r.cotacao_inicio) row.cotacao_inicio = hojeISO();
-  if (o.iniciada) { if (et === 'Novo lead') row.etapa = 'Em cotação'; }
+  if (o.iniciada) { if (et === 'Novo lead') { row.etapa = 'Em cotação'; Object.assign(row, passoPadraoRow(r, 'Em cotação')); } }
   else {
-    if (['Novo lead', 'Em cotação'].includes(et)) { row.etapa = 'Cotação enviada'; row.proximo_passo = 'Aguardando retorno da cotação'; row.proximo_passo_data = maisDias(2); }
-    // cotação nova no follow-up (ou reenviada): o retorno renova para 2 dias depois
-    else if (['Cotação enviada', 'Follow-up'].includes(et)) { row.proximo_passo = 'Aguardando retorno da nova cotação'; row.proximo_passo_data = maisDias(2); }
+    if (['Novo lead', 'Em cotação'].includes(et)) { row.etapa = 'Cotação enviada'; Object.assign(row, passoPadraoRow(r, 'Cotação enviada')); }
+    // cotação nova no follow-up (ou reenviada): o retorno renova pelo padrão da cotação enviada (2 dias)
+    else if (['Cotação enviada', 'Follow-up'].includes(et)) Object.assign(row, passoPadraoRow(r, 'Cotação enviada'), { proximo_passo: 'Retorno da cotação: nova cotação enviada' });
     if (o.valor > 0) row.valor_estimado = o.valor;
   }
   if (!Object.keys(row).length) return;
@@ -1166,7 +1167,9 @@ async function carregar(silencioso, manterTela) {
       sb.rpc('parceiros_ativos'),
       sb.rpc('time_nomes'),
       carregarAgendaEm(),
-      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000)
+      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000),
+      // calendário: quem não tem a carteira da Gestão recebe só nome, vencimento, congelamento e onboarding (78-calendario-renovacoes.sql)
+      !pode('gestao') && podeAba('reunioes') ? sb.rpc('calendario_renovacoes') : nada
     ]),
     podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000) : null,
     sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000),
@@ -1218,6 +1221,7 @@ async function carregar(silencioso, manterTela) {
     recarregarGravar()
   ]);
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
+  D.renovT = comum[7] && !comum[7].error ? (comum[7].data || []) : [];
   if (pc) D.cots = pc.error ? [] : (pc.data || []);
   D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda;
   D.tt = tt.error ? null : tt.data;
@@ -1251,7 +1255,7 @@ async function carregar(silencioso, manterTela) {
   if (ag) { D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
-  if (!manterTela) tela();
+  if (!manterTela) tela(); else calAvisarNovo();
 }
 
 function ctxDRE() { return { D, sb, $, esc, aviso, brl2, pct, campo, ir, aba: () => ABA, mesNome, nomeTime, CAT_DESP, mes: () => EM_MES, setMes: (k) => { EM_MES = k; }, seletorMes, ligarMes, folha: (k) => CMP.folha(ctxCMP(), k), mesCaixa: CMP.MES_CAIXA }; }
@@ -1365,6 +1369,7 @@ function htmlEvento(e) {
 /* ================= telas ================= */
 function tela() {
   SUJO = false; PREENCHIDO = false;
+  document.body.classList.remove('cal-largo');
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
@@ -2237,6 +2242,7 @@ function eventosCard(r) {
   });
   Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
   ((M['Follow-up'] || {}).hist || []).forEach(h => ev.push([h.em, 'Follow-up: chamar em ' + (h.retorno ? dataBR(h.retorno) : '-'), [h.por ? 'por ' + (nomeTime(h.por) || '') : '', h.nota || ''].filter(Boolean).join(' · ')]));
+  (M._adiamentos || []).forEach(a => { const n = Math.round((dia(a.para) - dia(a.padrao)) / 864e5); ev.push([a.em, 'Retorno marcado depois do padrão', [`padrão ${ddmm(a.padrao)}, marcado para ${ddmm(a.para)} (+${plural(n, 'dia', 'dias')})`, a.de && a.de !== a.padrao ? 'antes estava em ' + ddmm(a.de) : '', a.tipo ? rotPasso(a.tipo) : '', a.por ? 'por ' + (nomeTime(a.por) || '') : ''].filter(Boolean).join(' · ')]); });
   const tipoReu = (a) => /diagn/i.test(a.titulo || '') ? 'Diagnóstico' : /proposta/i.test(a.titulo || '') ? 'Reunião de proposta' : '';
   reunioesDe(r.id).forEach(a => { const tp = tipoReu(a); if (a.created_at) ev.push([a.created_at, tp ? tp + ' marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !tp ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, tp ? tp + ' realizado' : 'Reunião realizada', a.resumo ? String(a.resumo).slice(0, 140) + (String(a.resumo).length > 140 ? '…' : '') : (a.titulo && !tp ? a.titulo : '')]); });
   cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada ao cliente', c.titulo || '']); }));
@@ -2620,7 +2626,53 @@ const ehGestao = (r) => r.produto === 'Gestão de Milhas';
 const daVista = (r) => RE_VISTA === 'gestao' ? ehGestao(r) : !ehGestao(r);
 const maisDias = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const retornosHoje = () => D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && r.proximo_passo_data <= hojeISO());
+/* ---------- próximo passo de cada card: tipos e padrão de cada etapa (tudo aqui, num lugar só) ----------
+   Todo card em aberto tem um passo de tipo definido e uma data. Ao mudar de etapa, o passo e a data vêm do padrão.
+   A pessoa pode trocar a data pelos atalhos; se marcar depois do padrão, fica na linha do tempo do card. */
+const PASSOS = {
+  viagens: [['primeiro_contato', 'Primeiro contato'], ['enviar_cotacao', 'Enviar cotação'], ['retorno_cotacao', 'Retorno da cotação'], ['follow_up', 'Follow-up'], ['reuniao', 'Reunião'], ['aguardando', 'Aguardando o cliente']],
+  gestao: [['qualificar', 'Qualificar'], ['agendar_diagnostico', 'Agendar diagnóstico'], ['diagnostico', 'Diagnóstico'], ['preparar_proposta', 'Preparar proposta'], ['reuniao_proposta', 'Reunião de proposta'], ['enviar_contrato', 'Enviar contrato'], ['follow_up', 'Follow-up'], ['onboarding', 'Onboarding']]
+};
+// padrão de cada etapa: [passo, dias a partir de hoje]. 'reuniao' = a data da reunião marcada no card
+const PADRAO_ETAPA = {
+  viagens: { 'Novo lead': ['primeiro_contato', 1], 'Em cotação': ['enviar_cotacao', 1], 'Cotação enviada': ['retorno_cotacao', 2], 'Follow-up': ['follow_up', 2] },
+  gestao: { 'Novo lead': ['qualificar', 1], 'Qualificação': ['agendar_diagnostico', 1], 'Diagnóstico agendado': ['diagnostico', 'reuniao'], 'Diagnóstico feito': ['preparar_proposta', 1], 'Reunião de proposta': ['reuniao_proposta', 'reuniao'], 'Follow-up': ['follow_up', 2] }
+};
+const PASSO_MAX_DIAS = { aguardando: 7 }; // "Aguardando o cliente" vai até 7 dias: nenhum card fica parado sem retorno
+const PASSO_REUNIAO = ['diagnostico', 'reuniao_proposta', 'reuniao']; // no dia seguinte à reunião vira o retorno pós-reunião
+const ATALHOS_DATA = [['Amanhã', 1], ['3 dias', 3], ['7 dias', 7], ['15 dias', 15], ['1 mês', 30], ['3 meses', 90], ['6 meses', 180]];
+const funilDe = (r) => ehGestao(r) ? 'gestao' : 'viagens';
+const rotPasso = (k) => (PASSOS.viagens.concat(PASSOS.gestao).find(x => x[0] === k) || [])[1] || '';
+const dataAtalho = (n) => { const d = new Date(); if (n % 30 === 0) d.setMonth(d.getMonth() + n / 30); else d.setDate(d.getDate() + n); return isoLocal(d); };
+// passo e data padrão da etapa (para o card r, que pode ter reunião marcada)
+function padraoPasso(r, etapa) {
+  const P = PADRAO_ETAPA[funilDe(r)][etapa]; if (!P) return null;
+  if (P[1] === 'reuniao') { const a = r.id ? (etapa === 'Diagnóstico agendado' ? agDiag(r) : agProp(r)) : null; return { tipo: P[0], data: a && a.status === 'Agendada' ? isoLocal(new Date(a.data)) : maisDias(1) }; }
+  return { tipo: P[0], data: dataAtalho(P[1]) };
+}
+// o texto gravado em proximo_passo é o nome do passo mais a observação ("Follow-up: vai falar com a esposa")
+const notaPasso = (r) => { const t = String(r.proximo_passo || ''), rot = rotPasso(r.proximo_passo_tipo); if (!r.proximo_passo_tipo) return t; return t === rot ? '' : t.startsWith(rot + ': ') ? t.slice(rot.length + 2) : t; };
+const textoPasso = (tipo, nota) => rotPasso(tipo) + (nota ? ': ' + nota : '');
+// passo em vigor: cards antigos sem tipo usam o padrão da etapa; depois da reunião, entra o retorno pós-reunião
+function passoDe(r) {
+  const tipo = r.proximo_passo_tipo || (PADRAO_ETAPA[funilDe(r)][etapaDe(r)] || [])[0] || '';
+  const d = r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : null;
+  if (d && PASSO_REUNIAO.includes(tipo) && d < hojeISO()) return { tipo: 'retorno_reuniao', rot: 'Retorno pós-reunião', data: CAL.somaDias(d, 1), txt: 'Retorno pós-reunião' };
+  return { tipo, rot: rotPasso(tipo), data: d, txt: r.proximo_passo || rotPasso(tipo) };
+}
+// campos do passo padrão para gravar junto com a mudança de etapa
+const passoPadraoRow = (r, etapa) => { const p = padraoPasso(r, etapa); return p ? { proximo_passo_tipo: p.tipo, proximo_passo: rotPasso(p.tipo), proximo_passo_data: p.data } : {}; };
+// retorno marcado depois do padrão: registra na linha do tempo do card quem mudou e de quanto para quanto
+function registrarAdiamento(r, row, etapa) {
+  const nova = row.proximo_passo_data, antes = r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : null;
+  if (!nova || nova === antes) return;
+  if (PASSO_REUNIAO.includes(row.proximo_passo_tipo)) return; // data de reunião não é retorno empurrado
+  const p = padraoPasso(r, etapa); if (!p || nova <= p.data) return;
+  const M = { ...(row.marcos || r.marcos || {}) };
+  M._adiamentos = (M._adiamentos || []).concat([{ em: new Date().toISOString(), por: D.meuId, etapa, tipo: row.proximo_passo_tipo || null, padrao: p.data, de: antes, para: nova }]);
+  row.marcos = M;
+}
+const retornosHoje = () => D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && passoDe(r).data <= hojeISO());
 const mesLocal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 function reunioesDoPeriodo(k, modo) { return D.reunioes.filter(r => modo === 'ano' ? mesLocal(r.data).slice(0, 4) === k.slice(0, 4) : mesLocal(r.data) === k); }
 function conversao(L) {
@@ -2675,7 +2727,7 @@ function htmlReuniao(r) {
       ${r.observacoes ? `<div><span>Anotações:</span> ${esc(r.observacoes)}</div>` : ''}
       ${r.resultado === 'Não fechou' && (r.motivo_perda || r.motivo_detalhe) ? `<div><span>Por que não fechou:</span> ${esc([r.motivo_perda, r.motivo_detalhe].filter(Boolean).join(': '))}</div>` : ''}
       ${resumoReunioes(r.id) ? `<div><span>Reuniões:</span> ${esc(resumoReunioes(r.id))}</div>` : ''}
-      ${r.resultado === 'Em andamento' && (r.proximo_passo || r.proximo_passo_data) ? `<div style="${atrasado ? 'color:var(--alerta)' : ''}"><span>Próximo passo:</span> ${esc(r.proximo_passo || '')}${r.proximo_passo_data ? ' · ' + dataCurta(dia(r.proximo_passo_data)) : ''}</div>` : ''}</div>
+      ${r.resultado === 'Em andamento' && (r.proximo_passo || r.proximo_passo_data) ? `<div style="${atrasado ? 'color:var(--alerta)' : ''}"><span>Próximo passo:</span> ${esc(passoDe(r).txt)}${passoDe(r).data ? ' · ' + dataCurta(dia(passoDe(r).data)) : ''}</div>` : ''}</div>
     </button>
     ${r.resultado === 'Em andamento' ? `<div class="resq"><button class="f" data-mv="${r.id}" data-et="Fechou">Fechou</button><button class="n" data-mv="${r.id}" data-et="Não fechou">Não fechou</button></div>` : ''}
   </div>`;
@@ -2691,6 +2743,7 @@ async function assumirAtendimento(id) {
   if (!r.cotacao_inicio && !ehGestao(r)) upd.cotacao_inicio = hojeISO();
   if (etapaDe(r) === 'Novo lead' && !ehGestao(r)) upd.etapa = 'Em cotação';
   if (ehGestao(r)) { if (!r.sdr_id) upd.sdr_id = D.meuId; if (etapaDe(r) === 'Novo lead') upd.etapa = 'Qualificação'; }
+  if (upd.etapa) Object.assign(upd, passoPadraoRow(r, upd.etapa));
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não assumiu: ' + error.message + (/assumido/.test(error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
   Object.assign(r, data); aviso(`${r.cliente} é seu. Estude o card e acione o cliente.`); tela();
@@ -2720,14 +2773,14 @@ function htmlKCard(r, etapas) {
   return `<div class="kc ${atr ? 'atr' : ''}" data-kid="${r.id}">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><button class="n" data-r="${r.id}">${ehGestao(r) ? htmlPrio(r) : ''}${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>${r.pessoa_id && CRM.ehCliente(D, (D.pessoas || []).find(p => p.id === r.pessoa_id)) ? '<span class="tag ok" style="font-size:10px;padding:2px 7px">Cliente</span>' : '<span class="tag" style="font-size:10px;padding:2px 7px">Lead</span>'}${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="kzap" data-kz="${r.id}" href="${esc(zapLink(r.contato, r.cliente, `Oi, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     ${ehGestao(r) && RE_VISTA !== 'gestao' ? '<span class="tag ouro" style="margin:4px 0 0">Gestão</span>' : ''}<div class="i">${esc(r.trecho || r.produto)}${r.valor_estimado ? ' · ' + brl2(r.valor_estimado) : ''}${ADMIN && r.responsavel_id ? ' · ' + esc(nomeTime(r.responsavel_id)) : ''}</div>
-    ${r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
+    ${r.resultado === 'Em andamento' ? `<div class="i">${esc(passoDe(r).txt)}</div>` : r.proximo_passo ? `<div class="i">${esc(r.proximo_passo)}</div>` : ''}
     ${ehGestao(r) && (r.sdr_id || r.closer_id) ? `<div class="t">SDR ${esc(nomeTime(r.sdr_id) || '-')} · Closer ${esc(nomeTime(r.closer_id) || '-')}</div>` : ''}
     ${ehGestao(r) && agDiag(r) && agDiag(r).status === 'Agendada' ? `<div class="t" style="color:var(--verde)">Diagnóstico ${dhCurta(agDiag(r).data)}</div>` : ''}
     ${D.cots && !ehGestao(r) ? (n => n ? `<div class="t" style="color:var(--verde)">Cotação no app${n > 1 ? ` (${n})` : ''}</div>` : ['Cotação enviada', 'Follow-up'].includes(et) ? '<div class="t alerta">Sem cotação ligada ao card</div>' : '')(cotsDe(r.id).length) : ''}
     ${r.assumido_por ? `<div class="t">Com ${esc(nomeTime(r.assumido_por) || '')}${r.cotacao_inicio ? ' · cotando desde ' + dataCurta(dia(r.cotacao_inicio)) : ''}</div>` : `${(ld => ld && !intDe(ld).length ? `<div class="lint" data-lintk="${ld.id}" style="margin-top:6px"><span class="l">O que quer · <b>falta marcar</b></span><div class="chips">${LEAD_INT.map(k => `<button type="button" data-int="${esc(k)}">${esc(k)}</button>`).join('')}</div></div>` : '')(leadDoCard(r))}<button class="zap" data-assumir-at="${r.id}" style="width:100%;margin:6px 0 2px;padding:8px">Assumir</button>`}
     ${r.resultado === 'Em andamento' && doSite(r) ? (ms => !r.assumido_por && !r.sdr_id && etapaDe(r) === 'Novo lead' ? `<div class="t ${ms >= 9e5 ? 'alerta' : ''}">Entrou há ${haTempo(ms)}${ms >= 9e5 ? ' · sem ninguém' : ''}</div>` : r.primeiro_contato_em ? `<div class="t">1º contato ${haTempo(new Date(r.primeiro_contato_em) - new Date(entradaDe(r)))} após a entrada</div>` : '<div class="t alerta">Sem 1º contato registrado</div>')(Date.now() - new Date(entradaDe(r))) : ''}
     ${resumoReunioes(r.id) ? `<div class="t">${esc(resumoReunioes(r.id))}</div>` : ''}
-    <div class="t ${atr ? 'alerta' : ''}">${plural(diasDesde(r.etapa_desde || r.created_at), 'dia', 'dias')} nesta etapa · aberto há ${plural(diasDesde(r.created_at || r.data), 'dia', 'dias')}${r.proximo_passo_data ? ' · retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''}</div>
+    <div class="t ${atr ? 'alerta' : ''}">${plural(diasDesde(r.etapa_desde || r.created_at), 'dia', 'dias')} nesta etapa · aberto há ${plural(diasDesde(r.created_at || r.data), 'dia', 'dias')}${passoDe(r).data ? ' · retorno ' + dataCurta(dia(passoDe(r).data)) : ''}</div>
     <div class="mv">${i > 0 ? `<button class="vt" data-mv="${r.id}" data-et="${esc(etapas[i - 1])}" aria-label="Voltar etapa">‹</button>` : ''}${i < etapas.length - 1 ? `<button class="av" data-mv="${r.id}" data-et="${esc(etapas[i + 1])}">${esc(etapas[i + 1])} ›</button>` : ''}</div>
     <div class="mv"><button class="fe" data-mv="${r.id}" data-et="Fechou">Fechou</button><button class="nf" data-mv="${r.id}" data-et="Não fechou">Não fechou</button></div>
   </div>`;
@@ -2746,16 +2799,17 @@ async function moverEtapa(id, etapa) {
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
   if (ehGestao(r) && ['Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'].includes(etapa)) return abrirAtendimento(id, { etapa });
   if (!etapasDe(ehGestao(r)).includes(etapa)) { aviso(ehGestao(r) ? 'Card da Gestão: assuma e siga pelas etapas da Gestão (diagnóstico, proposta).' : 'Essa etapa é do funil da Gestão.'); tela(); return; }
-  const upd = { etapa };
+  // o passo e a data vêm do padrão da etapa; no Follow-up, um retorno já marcado para frente continua
+  const upd = { etapa, ...passoPadraoRow(r, etapa) };
   if (etapa === 'Em cotação' && !r.cotacao_inicio) upd.cotacao_inicio = hojeISO();
-  if (etapa === 'Follow-up') { if (!r.proximo_passo) upd.proximo_passo = 'Fazer follow-up'; if (!r.proximo_passo_data || r.proximo_passo_data < hojeISO()) upd.proximo_passo_data = maisDias(2); }
+  if (etapa === 'Follow-up' && r.proximo_passo_data && r.proximo_passo_data > hojeISO()) upd.proximo_passo_data = r.proximo_passo_data;
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
 }
 // atendimentos da vista atual sem responsável (ou com alguém que saiu da equipe)
 const semResp = () => D.reunioes.filter(r => daVista(r) && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
-let RE_PARTE = 'funil';
+let RE_PARTE = (() => { try { return localStorage.getItem('maktub_re_parte') || 'funil'; } catch (_) { return 'funil'; } })();
 function telaReunioes(P) {
   if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => { if (location.hash === '#reunioes/b2b' && ANTERIOR !== null) { ANTERIOR = null; history.back(); } else { RE_ED = null; ir('reunioes'); } } });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
@@ -2775,15 +2829,16 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    ${pode('gestao') ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
+    ${pode('gestao') || RE_PARTE === 'cal' ? '' : `<div class="seg" id="reVista"><button data-v="viagens" class="${G ? '' : 'on'}">Viagens e cotações</button><button data-v="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>`}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
-    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Funil · ${abertos.length}</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
-    ${RE_PARTE === 'res' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
+    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Kanban · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
+    ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     <div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
     <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(ehGestao(r)))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPos).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
 `}
-    ${RE_PARTE === 'funil' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
+    ${RE_PARTE !== 'res' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
@@ -2803,7 +2858,9 @@ function telaReunioes(P) {
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
-  $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; telaReunioes(P); } };
+  $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; try { localStorage.setItem('maktub_re_parte', RE_PARTE); } catch (_) {} telaReunioes(P); } };
+  document.body.classList.toggle('cal-largo', RE_PARTE === 'cal');
+  if (RE_PARTE === 'cal') ligarCalendario(P, ABA === 'gestao', () => telaReunioes(P));
   if ($('gePrio')) $('gePrio').onclick = (e) => { const b = e.target.closest('button'); if (b) { GE_PRIO = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
@@ -2829,13 +2886,142 @@ function telaReunioes(P) {
   const kb = P.querySelector('.kanban'), col = kb && [...kb.children].find(c => c.querySelector('.kc'));
   if (col) requestAnimationFrame(() => { kb.style.scrollSnapType = 'none'; kb.scrollLeft = 0; kb.scrollLeft = col.getBoundingClientRect().left - kb.getBoundingClientRect().left - 16; kb.style.scrollSnapType = ''; });
 }
+/* ---------- calendário do Comercial e da Gestão ----------
+   Só lê o que já é registrado: retorno de cada card em aberto (atendimentos), reuniões (agenda, Cal.com,
+   pedidos do painel e onboarding), renovações dos contratos da Gestão e aniversários da ficha única.
+   No Comercial mostra tudo; na Gestão, só o que é da Gestão. Nunca mostra valores. */
+const CAL_TIPOS = [
+  ['rv', 'Retorno de viagens', '#2E5E6E'],
+  ['rg', 'Retorno da Gestão', '#715E32'],
+  ['reu', 'Reunião', '#6B3A4A'],
+  ['ren', 'Vencimento do contrato', '#8A6D3B'],
+  ['ren90', 'Começa a renovação (90 dias antes)', '#8A6D3B', true],
+  ['aniv', 'Aniversário', '#7A6A55']
+];
+// filtro por tipo: renovação junta o vencimento e o marco de 90 dias
+const CAL_FILTRO_TIPOS = [['rv', 'Retornos de viagens', '#2E5E6E'], ['rg', 'Retornos da Gestão', '#715E32'], ['reu', 'Reuniões', '#6B3A4A'], ['ren', 'Renovações', '#8A6D3B'], ['aniv', 'Aniversários', '#7A6A55']];
+const calGrupo = (t) => t === 'ren90' ? 'ren' : t;
+const CAL_ST = { reunioes: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() }, gestao: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() } };
+let CAL_F = (() => { try { return JSON.parse(localStorage.getItem('maktub_cal_filtro') || 'null') || {}; } catch (_) { return {}; } })();
+const calSalvarFiltro = () => { try { localStorage.setItem('maktub_cal_filtro', JSON.stringify(CAL_F)); } catch (_) {} };
+const calAberto = () => (ABA === 'reunioes' || (ABA === 'gestao' && GE_FUNIL)) && !RE_ED && RE_PARTE === 'cal';
+let CAL_DESENHO = 0, CAL_ITENS = [];
+const primeiroN = (id) => String(nomeTime(id) || '').split(' ')[0];
+// reunião da agenda que faz parte do comercial (e, na Gestão, só as da Gestão)
+const reuDaGestao = (x) => /Gestão/.test(x.tipo || '') || !!x.cliente_id || (x.atendimento_id && ehGestao(D.reunioes.find(r => r.id === x.atendimento_id) || {}));
+const reuDoComercial = (x) => /^Comercial|Cliente da Gestão/.test(x.tipo || '') || !!(x.atendimento_id || x.cliente_id || x.pessoa_id);
+// clientes da Gestão para o calendário: a carteira inteira para quem tem acesso; para o resto do time, só o resumo do SQL 78
+const clientesCal = () => pode('gestao') ? (D.clientes || []) : (D.renovT || []).map(x => ({ id: x.cliente_id, nome_completo: x.nome, gestao_vencimento: x.vencimento, gestao_congelado_em: x.congelada ? true : null, onboard_data: x.onboard_data }));
+// abre a ficha da Gestão; sem esse acesso, abre a ficha única da pessoa (Clientes)
+function abrirClienteCal(id, aba) {
+  if (pode('gestao')) return abrirFicha(id, aba);
+  const p = (D.pessoas || []).find(x => x.cliente_id != null && String(x.cliente_id) === String(id));
+  if (p && podeAba('crm')) return ir('crm', () => CRM.abrir(p.id));
+  aviso('A ficha deste cliente fica na Gestão, e o seu acesso não inclui a carteira.');
+}
+function calItens(G, de, ate) {
+  const hj = hojeISO(), E = [], noPer = (d) => d && d >= de && d <= ate;
+  const hm = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  // retornos e follow-ups: o próximo passo de cada card em aberto. Vencido e não atualizado fica em hoje, como atrasado
+  D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && (!G || ehGestao(r))).forEach(r => {
+    const pe = passoDe(r), d0 = pe.data, atr = d0 < hj, d = atr ? hj : d0;
+    if (!noPer(d)) return;
+    // passo de reunião com a reunião já na agenda nesse dia: a própria reunião aparece, sem repetir
+    if (PASSO_REUNIAO.includes(pe.tipo) && reunioesDe(r.id).some(a => a.status === 'Agendada' && isoLocal(new Date(a.data)) === d0)) return;
+    const donos = [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].filter(Boolean);
+    const quem = [...new Set(donos)].map(primeiroN).filter(Boolean).join(' e ');
+    E.push({ d, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', t: r.cliente || 'Card sem nome', s: [pe.txt || 'Sem passo definido', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
+  });
+  // reuniões da agenda (inclui as que chegam pelo Cal.com e o diagnóstico e a proposta marcados no card)
+  (D.agenda || []).filter(x => (x.status === 'Agendada' || x.status === 'Realizada') && (G ? reuDaGestao(x) : reuDoComercial(x))).forEach(x => {
+    const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
+    const card = x.atendimento_id ? D.reunioes.find(r => r.id === x.atendimento_id) : null;
+    const quem = [x.vendedor_id, ...(x.participantes || [])].filter(Boolean);
+    const passou = x.status === 'Realizada' || new Date(x.data) < Date.now() - 3 * 36e5;
+    E.push({ d, hora: hm(x.data), tipo: 'reu', t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
+      abrir: () => podeAba('agenda') ? abrirReuniao(x.id) : card ? abrirAtendimento(card.id) : aviso('Seu acesso não inclui a agenda.') });
+  });
+  // pedidos de reunião que o cliente da Gestão fez pelo painel
+  (D.ags || []).forEach(a => {
+    if ((D.agenda || []).some(x => String(x.agendamento_id) === String(a.id))) return;
+    if (a.status === 'confirmada' && a.data_confirmada) { const d = isoLocal(new Date(a.data_confirmada)); if (noPer(d)) E.push({ d, hora: hm(a.data_confirmada), tipo: 'reu', t: 'Reunião: ' + nomeCli(a.cliente_id), s: 'Pedida pelo cliente no painel', donos: [], abrir: () => abrirFicha(a.cliente_id) }); }
+    if (a.status === 'solicitada') { const d = a.data_preferida && String(a.data_preferida).slice(0, 10) >= hj ? String(a.data_preferida).slice(0, 10) : hj; if (noPer(d)) E.push({ d, hora: '', tipo: 'reu', t: 'Reunião a confirmar: ' + nomeCli(a.cliente_id), s: 'Pedida pelo painel' + (a.periodo ? ' · prefere ' + String(a.periodo).toLowerCase() : ''), atr: true, atrTxt: 'Falta confirmar', donos: [], abrir: () => abrirFicha(a.cliente_id) }); }
+  });
+  // reunião de onboarding marcada na ficha do cliente da Gestão (se já não estiver na agenda)
+  const CLG = clientesCal();
+  CLG.filter(c => c.onboard_data).forEach(c => {
+    const d = isoLocal(new Date(c.onboard_data)); if (!noPer(d)) return;
+    if ((D.agenda || []).some(x => x.cliente_id === c.id && /onboard|embarque/i.test(x.titulo || '') && isoLocal(new Date(x.data)) === d)) return;
+    E.push({ d, hora: hm(c.onboard_data), tipo: 'reu', t: 'Onboarding: ' + c.nome_completo, s: 'Reunião de onboarding da Gestão', passado: new Date(c.onboard_data) < Date.now() - 3 * 36e5, donos: [], abrir: () => abrirClienteCal(c.id, 'tarefas') });
+  });
+  // renovações: vencimento do contrato (12 meses a partir da assinatura) e o começo da renovação, 90 dias antes
+  CLG.filter(c => c.gestao_vencimento).forEach(c => {
+    const v = String(c.gestao_vencimento).slice(0, 10), m90 = CAL.somaDias(v, -90), cong = c.gestao_congelado_em ? ' · gestão congelada, a data ainda vai mudar' : '';
+    if (noPer(v)) E.push({ d: v, hora: '', tipo: 'ren', t: 'Vence o contrato: ' + c.nome_completo, s: 'Reunião de renovação' + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
+    if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
+  });
+  // aniversários da ficha única (leads e clientes), todo ano
+  const idsG = new Set(CLG.map(c => String(c.id)));
+  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || (p.cliente_id != null && idsG.has(String(p.cliente_id))))).forEach(p => {
+    const md = String(p.nascimento).slice(5, 10);
+    for (let y = +de.slice(0, 4); y <= +ate.slice(0, 4); y++) {
+      const d = `${y}-${md === '02-29' && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? '02-28' : md}`;
+      if (noPer(d)) E.push({ d, hora: '', tipo: 'aniv', t: 'Aniversário: ' + p.nome, s: 'Faz ' + (y - +p.nascimento.slice(0, 4)) + ' anos' + (p.celular ? '' : ' · sem WhatsApp na ficha'), donos: [], p, abrir: () => ir('crm', () => CRM.abrir(p.id)) });
+    }
+  });
+  return E;
+}
+// filtros: responsável (itens sem responsável, como aniversário e renovação, aparecem em qualquer filtro) e tipo
+const calTiposDe = (G) => CAL_FILTRO_TIPOS.filter(([k]) => !(G && k === 'rv') && (k !== 'ren' || clientesCal().length || pode('gestao')) && (k !== 'aniv' || D.pessoas));
+function calFiltrar(E, G) {
+  const tipos = calTiposDe(G).map(t => t[0]).filter(k => !(CAL_F.fora || []).includes(k));
+  const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || '';
+  return E.filter(it => tipos.includes(calGrupo(it.tipo)) && (!quem || !it.donos.length || it.donos.includes(quem)));
+}
+function htmlCalendario(G) {
+  CAL.estilos();
+  const st = CAL_ST[G ? 'gestao' : 'reunioes'], per = CAL.periodo(st);
+  const E = CAL_ITENS = calFiltrar(calItens(G, per.de, per.ate), G);
+  const semData = D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.proximo_passo_data && (!G || ehGestao(r)) && !(CAL_F.fora || []).includes(ehGestao(r) ? 'rg' : 'rv'))
+    .filter(r => { const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || ''; return !quem || [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].includes(quem); });
+  const semCtr = (pode('gestao') && !(CAL_F.fora || []).includes('ren')) ? semContrato() : [];
+  const tiposF = calTiposDe(G);
+  const filtros = `<div class="cal-filtros" style="margin-top:12px">
+      <label class="fl" style="margin:0"><span>Responsável</span><select id="calResp"><option value="">Todo o time</option><option value="eu" ${CAL_F.resp === 'eu' ? 'selected' : ''}>Só os meus</option>${D.time.filter(t => t.user_id !== D.meuId).map(t => `<option value="${t.user_id}" ${CAL_F.resp === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
+      <div class="chips cal-tipos" id="calTipos" style="margin-top:8px">${tiposF.map(([k, n, c]) => `<button type="button" data-k="${k}" class="${(CAL_F.fora || []).includes(k) ? '' : 'on'}" style="--c:${c}"><i></i>${esc(n)}</button>`).join('')}</div>
+    </div>`;
+  const rodape = `${semData.length ? `<div class="cal-dia">Sem data de retorno <small>${semData.length} ${semData.length === 1 ? 'card' : 'cards'}</small></div><div class="cal-vazio" style="padding-top:0">Card em aberto sem retorno marcado não aparece no calendário. Abra e marque o retorno.</div>${semData.map(r => `<div class="cal-it" style="--c:${ehGestao(r) ? '#715E32' : '#2E5E6E'}"><button type="button" data-cal-card="${r.id}"><span class="t">${esc(r.cliente || 'Card sem nome')}</span><span class="s">${esc([etapaDe(r), [r.responsavel_id, r.assumido_por].filter(Boolean).map(primeiroN).filter(Boolean).join(' e ') || 'sem responsável'].join(' · '))}</span></button></div>`).join('')}` : ''}
+    ${semCtr.length ? `<div class="cal-dia">Sem data de contrato <small>${semCtr.length}</small></div><div class="cal-vazio" style="padding-top:0">Sem a data de entrada, o vencimento não aparece. Defina na ficha.</div>${semCtr.map(c => `<div class="cal-it" style="--c:#8A6D3B"><button type="button" data-cal-ficha="${c.id}"><span class="t">${esc(c.nome_completo)}</span><span class="s">Definir a data de entrada</span></button></div>`).join('')}` : ''}`;
+  const ag = D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+  CAL_DESENHO = ULT_CARGA;
+  return `${filtros}
+    ${CAL.html(st, { itens: E, tipos: CAL_TIPOS.filter(([k]) => tiposF.some(t => t[0] === calGrupo(k))), esc, rodape,
+      extra: (it) => it.tipo === 'aniv' && it.p && it.p.celular ? `<a class="zap" href="${esc(zapLink(it.p.celular, it.p.nome, `Oi, ${String(it.p.nome || '').split(' ')[0]}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`))}" target="_blank" rel="noopener">Mandar parabéns</a>` : '',
+      dica: 'Toque no dia para ver tudo dele. Toque no item para abrir o card ou a ficha.' })}
+    <div class="cal-vazio" id="calAtual" style="margin-top:14px">Dados de ${ag}. <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button></div>`;
+}
+function ligarCalendario(P, G, redesenhar) {
+  const st = CAL_ST[G ? 'gestao' : 'reunioes'];
+  CAL.ligar(P, st, { itens: CAL_ITENS }, redesenhar, (it) => it && it.abrir && it.abrir());
+  if ($('calResp')) $('calResp').onchange = (e) => { CAL_F.resp = e.target.value; calSalvarFiltro(); redesenhar(); };
+  if ($('calTipos')) $('calTipos').onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; const f = new Set(CAL_F.fora || []); f.has(b.dataset.k) ? f.delete(b.dataset.k) : f.add(b.dataset.k); CAL_F.fora = [...f]; calSalvarFiltro(); redesenhar(); };
+  P.querySelectorAll('[data-cal-card]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.calCard));
+  P.querySelectorAll('[data-cal-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.calFicha));
+  if ($('calAtualizar')) $('calAtualizar').onclick = () => carregar(false);
+}
+// com o calendário aberto, os dados se atualizam por trás sem redesenhar: só avisa que tem novidade
+function calAvisarNovo() {
+  if (!calAberto() || ULT_CARGA <= CAL_DESENHO || !$('calAtual')) return;
+  $('calAtual').innerHTML = `<b style="color:var(--verde);font-weight:600">Tem informação nova.</b> <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button>`;
+  $('calAtualizar').onclick = () => tela();
+}
 function telaFormReuniao(P) {
   const nova = RE_ED === 'nova';
   const agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
   if (nova && RE_PRE && RE_PRE.produto) RE_VISTA = RE_PRE.produto === 'Gestão de Milhas' ? 'gestao' : 'viagens';
   const base = nova ? (RE_VISTA === 'gestao'
-      ? { data: agora, tipo: 'Diagnóstico da Gestão de Milhas', produto: 'Gestão de Milhas', resultado: 'Em andamento', etapa: 'Novo lead', responsavel_id: D.meuId, proximo_passo_data: maisDias(3) }
-      : { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Novo lead', responsavel_id: null, proximo_passo: 'Assumir, estudar o card e acionar o cliente', proximo_passo_data: maisDias(1) })
+      ? { data: agora, tipo: 'Diagnóstico da Gestão de Milhas', produto: 'Gestão de Milhas', resultado: 'Em andamento', etapa: 'Novo lead', responsavel_id: D.meuId, proximo_passo_tipo: 'qualificar', proximo_passo: rotPasso('qualificar'), proximo_passo_data: maisDias(1) }
+      : { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Novo lead', responsavel_id: null, proximo_passo_tipo: 'primeiro_contato', proximo_passo: 'Primeiro contato: assumir, estudar o card e acionar o cliente', proximo_passo_data: maisDias(1) })
     : D.reunioes.find(x => x.id === RE_ED);
   if (!base) { RE_ED = null; return telaReunioes(P); }
   if (!nova) RE_VISTA = ehGestao(base) ? 'gestao' : 'viagens';
@@ -2892,9 +3078,15 @@ function telaFormReuniao(P) {
       <div id="blAndamento">
         ${campo('valor_estimado', G ? 'Valor potencial (R$)' : 'Valor cotado (R$)', r.valor_estimado, 'number')}
         ${G ? '' : campo('cotacao_inicio', 'Começou a cotar em', r.cotacao_inicio, 'date')}
-        ${campo('proximo_passo', 'Próximo passo', r.proximo_passo, 'text', 'placeholder="Ex.: enviar a cotação, ligar para confirmar datas"')}
-        ${campo('proximo_passo_data', 'Retornar em', r.proximo_passo_data, 'date')}
-        <div class="sub">No dia do retorno, você recebe um aviso.</div>
+        ${(pp => `<div id="blPasso">
+          <label class="fl"><span>Próximo passo</span><select name="proximo_passo_tipo">${PASSOS[G ? 'gestao' : 'viagens'].map(([k, l]) => `<option value="${k}" ${k === pp.tipo ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <div class="fl" style="margin-bottom:0"><span>Retornar em</span></div>
+          <div class="chips" id="passoAtalhos" style="margin-bottom:6px">${ATALHOS_DATA.map(([l, n]) => `<button type="button" data-pd="${n}">${l}</button>`).join('')}</div>
+          ${campo('proximo_passo_data', 'Data do retorno', pp.data, 'date')}
+          <div class="sub" id="passoPadrao"></div>
+          ${campo('proximo_passo_nota', 'Observação do passo (opcional)', pp.nota, 'text', 'placeholder="Ex.: ligar para confirmar as datas"')}
+          <div class="sub">No dia do retorno, você recebe um aviso, e o card aparece no calendário.</div>
+        </div>`)((() => { const pd = padraoPasso(r, etapaDe(r)) || {}; return { tipo: r.proximo_passo_tipo || pd.tipo || '', data: r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : pd.data || '', nota: r.proximo_passo_tipo ? notaPasso(r) : r.proximo_passo || '' }; })())}
       </div>
       ${G ? '</div>' : ''}
       ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
@@ -2933,6 +3125,24 @@ function telaFormReuniao(P) {
   if (G && !nova) { ligarTopoGestao(P); ligarPropostaIA(P, base); }
   f.addEventListener('click', (e) => { const b = e.target.closest('[data-fup]'); if (!b || !f.elements.mg_fup) return; const d = new Date(); if (+b.dataset.fup % 30 === 0) d.setMonth(d.getMonth() + b.dataset.fup / 30); else d.setDate(d.getDate() + +b.dataset.fup); f.elements.mg_fup.value = isoLocal(d); [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b)); });
   $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  // próximo passo: troca de etapa traz o padrão; atalhos mudam a data; aviso quando passa do padrão
+  const passoInfo = () => {
+    const el = $('passoPadrao'); if (!el || !f.elements.proximo_passo_tipo) return;
+    const et = f.elements.etapa.value, pd = padraoPasso(base, et), tp = f.elements.proximo_passo_tipo.value, dt = f.elements.proximo_passo_data.value, max = PASSO_MAX_DIAS[tp];
+    $('blPasso').hidden = G && et === 'Follow-up';
+    [...$('passoAtalhos').children].forEach(b => { b.disabled = !!max && +b.dataset.pd > max; b.style.opacity = b.disabled ? .4 : ''; b.classList.toggle('on', dt === dataAtalho(+b.dataset.pd)); });
+    const fora = pd && dt && dt > pd.data && !PASSO_REUNIAO.includes(tp);
+    el.innerHTML = (pd ? `Padrão da etapa: ${esc(rotPasso(pd.tipo))} em ${ddmm(pd.data)}.` : '') + (max ? ` ${esc(rotPasso(tp))} vai até ${max} dias, no máximo até ${ddmm(maisDias(max))}.` : '') + (fora ? ' <b style="color:var(--alerta);font-weight:600">Data depois do padrão: fica registrada na linha do tempo do card.</b>' : '');
+  };
+  const passoPadraoForm = () => { const pd = padraoPasso(base, f.elements.etapa.value); if (!pd || !f.elements.proximo_passo_tipo) return passoInfo(); f.elements.proximo_passo_tipo.value = pd.tipo; f.elements.proximo_passo_data.value = pd.data; passoInfo(); };
+  if (f.elements.proximo_passo_tipo) {
+    $('reRes').addEventListener('click', (e) => { if (e.target.closest('button')) passoPadraoForm(); });
+    $('passoAtalhos').onclick = (e) => { const b = e.target.closest('[data-pd]'); if (!b || b.disabled) return; f.elements.proximo_passo_data.value = dataAtalho(+b.dataset.pd); passoInfo(); };
+    f.elements.proximo_passo_tipo.onchange = passoInfo; f.elements.proximo_passo_data.oninput = passoInfo;
+    // diagnóstico e reunião de proposta: a data do retorno acompanha a data da reunião
+    f.addEventListener('change', (e) => { const n = e.target.name; if ((n === 'mg_diag' || n === 'mg_prop') && e.target.value && PASSO_REUNIAO.includes(f.elements.proximo_passo_tipo.value)) { f.elements.proximo_passo_data.value = isoLocal(new Date(e.target.value)); passoInfo(); } });
+    passoInfo();
+  }
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
@@ -3221,10 +3431,18 @@ function telaFormReuniao(P) {
     const oriRe = f._origem ? await f._origem() : { ok: true };
     if (oriRe.erro) { $('msgRe').textContent = oriRe.erro; return; }
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
+    // todo card em aberto tem um passo definido e uma data; "Aguardando o cliente" vai até 7 dias
+    if (res === 'Em andamento' && !(G && et === 'Follow-up')) {
+      const tp = g('proximo_passo_tipo'), dt = g('proximo_passo_data'), antes = base.proximo_passo_data ? String(base.proximo_passo_data).slice(0, 10) : '';
+      if (!tp || !dt) { $('msgRe').textContent = 'Escolha o próximo passo e a data do retorno.'; f.elements.proximo_passo_data.focus(); return; }
+      if (dt !== antes && dt < hojeISO()) { $('msgRe').textContent = 'A data do retorno não pode ficar no passado.'; f.elements.proximo_passo_data.focus(); return; }
+      if (PASSO_MAX_DIAS[tp] && dt > maisDias(PASSO_MAX_DIAS[tp])) { $('msgRe').textContent = `${rotPasso(tp)} vai até ${PASSO_MAX_DIAS[tp]} dias. Escolha uma data até ${ddmm(maisDias(PASSO_MAX_DIAS[tp]))}.`; f.elements.proximo_passo_data.focus(); return; }
+    }
     const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
       motivo_detalhe: res === 'Não fechou' ? ((fr, ob) => (fr && ob.startsWith(fr) ? ob : [fr, ob].filter(Boolean).join('. ')) || null)(g('motivo_frase'), g('motivo_detalhe')) : null,
-      valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (g('proximo_passo') || null) : null,
+      valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (textoPasso(g('proximo_passo_tipo'), g('proximo_passo_nota')) || null) : null,
+      proximo_passo_tipo: res === 'Em andamento' ? (g('proximo_passo_tipo') || null) : null,
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, observacoes: g('observacoes') || null,
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (IT) { row.itens = IT; if (res === 'Fechou' && row.valor_fechado == null) { const v = IT.reduce((a, x) => a + (+x.venda || 0), 0); if (v) row.valor_fechado = v; } }
@@ -3249,14 +3467,18 @@ function telaFormReuniao(P) {
       if (etN === 'Qualificação' && !row.sdr_id) row.sdr_id = D.meuId;
       if (etN === 'Reunião de proposta' && mudou && !g('mg_prop')) { $('msgRe').textContent = 'Informe a data e a hora da reunião de proposta.'; return; }
       if (etN === 'Reunião de proposta' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
+      // diagnóstico e reunião de proposta: o retorno fica na data da reunião (no dia seguinte, vira o retorno pós-reunião)
+      if (etN === 'Diagnóstico agendado' && g('mg_diag') && PASSO_REUNIAO.includes(row.proximo_passo_tipo)) row.proximo_passo_data = isoLocal(new Date(g('mg_diag')));
+      if (etN === 'Reunião de proposta' && g('mg_prop') && PASSO_REUNIAO.includes(row.proximo_passo_tipo)) row.proximo_passo_data = isoLocal(new Date(g('mg_prop')));
       if (etN === 'Follow-up') {
         if (!g('mg_fup')) { $('msgRe').textContent = 'Escolha quando chamar o cliente de novo (3, 7, 15 dias, 1, 3 ou 6 meses, ou uma data).'; const c = $('fupChips'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-        row.proximo_passo_data = g('mg_fup'); row.proximo_passo = 'Follow-up' + (g('mg_fupnota') ? ': ' + g('mg_fupnota') : '');
+        row.proximo_passo_data = g('mg_fup'); row.proximo_passo_tipo = 'follow_up'; row.proximo_passo = 'Follow-up' + (g('mg_fupnota') ? ': ' + g('mg_fupnota') : '');
         const M = { ...(base.marcos || {}) }, ant = M['Follow-up'] || {}, hist = (ant.hist || []).concat([{ em: new Date().toISOString(), por: D.meuId, retorno: g('mg_fup'), nota: g('mg_fupnota') || null }]);
         M['Follow-up'] = { ...ant, em: ant.em || new Date().toISOString(), por: ant.por || D.meuId, nota: g('mg_fupnota') || null, retorno: g('mg_fup'), hist }; row.marcos = M;
       }
       if (g('mg_em') && etN !== 'Follow-up') { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { cond: g('mg_cond') || null, pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
     }
+    if (res === 'Em andamento') registrarAdiamento(base, row, et);
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
     if (!row.pessoa_id) {
       // antes de criar: a pessoa já tem ficha (CPF, celular, e-mail ou nome parecido)? liga com um toque
@@ -4642,6 +4864,7 @@ function telaGestao(P) {
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
     </details>
+    <div class="pend" style="margin-top:12px"><button data-g="calendario"><span>Calendário da Gestão<small style="display:block;font-size:13px;color:var(--tinta-3)">Retornos, reuniões, renovações e aniversários do mês</small></span><span><span class="seta">›</span></span></button></div>
     <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>
     ${podeAba('cartoesbase') ? `<div class="pend" style="margin-top:12px"><button data-g="cartoesbase"><span>Base de cartões<small style="display:block;font-size:13px;color:var(--tinta-3)">Cartões, salas VIP, bancos e correções a revisar</small></span><span><span class="seta">›</span></span></button></div>` : ''}
     ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
@@ -4673,7 +4896,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   ['geCiclo', 'kpiCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {

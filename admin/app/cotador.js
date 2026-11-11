@@ -34,6 +34,8 @@ const dLonga = (iso) => { const d = dt(iso); return d ? `${SEMANA[d.getDay()]}, 
 const dCurta = (iso) => { const d = dt(iso); return d ? `${String(d.getDate()).padStart(2, '0')} de ${MES[d.getMonth()]}` : ''; };
 const linhas = (t) => String(t || '').split('\n').map(x => x.trim()).filter(Boolean);
 const hoje = () => new Date().toLocaleDateString('sv-SE');
+// card novo do cotador: o passo "Enviar cotação" tem 1 dia de prazo (padrão da etapa Em cotação, definido no index.html)
+const amanha = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString('sv-SE'); };
 const noites = (a, b) => a && b ? Math.round((dt(b) - dt(a)) / 864e5) : 0;
 
 const VOO = () => ({ rotulo: '', data: '', origem: '', saida: '', destino: '', chegada: '', mais1: false, tipo: 'Voo direto', periodo: '' });
@@ -167,7 +169,7 @@ function escolherCard(P, X, escolhido, voltar) {
     if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'], ...(ori ? { ...ori, origem: X.ind.IND.ROTULO[ori.origem_canal] } : {}) }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
     const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: g('trecho') || null,
       ...(p && p.origem_canal && X.ind ? { origem: X.ind.IND.ROTULO[p.origem_canal] } : {}),
-      responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo: 'Montar e enviar a cotação', proximo_passo_data: hoje() };
+      responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo_tipo: 'enviar_cotacao', proximo_passo: 'Enviar cotação', proximo_passo_data: amanha() };
     if (p) row.pessoa_id = p.id;
     const r = await X.sb.from('atendimentos').insert(row).select().single();
     b.disabled = false; b.textContent = 'Criar card e seguir para a cotação';
