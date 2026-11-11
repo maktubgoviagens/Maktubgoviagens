@@ -63,3 +63,4 @@ Estas regras valem para qualquer trabalho neste repositório. Em caso de dúvida
 - Blocos com a classe `so-rascunho` ficam escondidos no site publicado. Conferir no código antes de afirmar que algo aparece.
 - Toda mudança de texto ou visual: apresentar a proposta antes, aplicar em branch separada, mostrar prints antes e depois e só fazer merge e publicar com aprovação expressa.
 - Mudança no Supabase: entregar o SQL antes. O código que depende dele só entra depois do "feito". Nunca apagar ou alterar registros existentes.
+- Toda mudança da Gestão de Milhas no app fica na aba Gestão, menu de baixo. Exceção: a emissão feita com as milhas do cliente da Gestão é lançada no card do Comercial, no bloco Passagens, porque é lá que vivem o voo e o check-in. O registro aparece sozinho em "Uso de milhas" na ficha do cliente, na aba Gestão.
