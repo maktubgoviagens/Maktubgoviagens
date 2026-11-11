@@ -2606,7 +2606,9 @@
       // 4. Buscar todos os dados em paralelo
       const [programasRes, cartoesRes, viagensRes, movimentosRes, reunioesRes, economiaRes] = await Promise.all([
         supabase.from('programas_milhas').select('*').eq('cliente_id', user.id).order('ordem').order('saldo', { ascending: false }),
-        supabase.from('cartoes').select('*').eq('cliente_id', user.id).order('ordem'),
+        // cartões pela função meus_cartoes (80-cartoes-do-cliente-sem-campos-internos.sql): só as colunas que o painel mostra,
+        // nunca as observações internas e a negociação de anuidade da equipe
+        supabase.rpc('meus_cartoes'),
         supabase.from('viagens').select('*').eq('cliente_id', user.id).order('data_viagem', { ascending: true }),
         supabase.from('movimentos_estrategicos').select('*').eq('cliente_id', user.id).order('prioridade', { ascending: false }).order('ordem'),
         supabase.from('reunioes').select('*').eq('cliente_id', user.id).order('data_reuniao', { ascending: false }).limit(8),
