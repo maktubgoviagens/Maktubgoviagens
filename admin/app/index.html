@@ -572,7 +572,7 @@ import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=26';
 import * as ATV from '/admin/app/atividades.js?v=2';
-import * as CMP from '/admin/app/compromissos.js?v=18';
+import * as CMP from '/admin/app/compromissos.js?v=19';
 import * as CX from '/admin/app/caixa.js?v=4';
 import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
@@ -1448,7 +1448,7 @@ function telaInicio(P) {
     ['Check-ins para fazer', checkinsTotal(), () => ir('agenda', () => { AG_VISTA = 'checkins'; })],
     ...(ADMIN || podeAba('emissoes') ? [['Voos sem horário de saída', voosSemHorario().length, () => { const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
-    ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
+    ['Contas para pagar hoje', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
     ['Fornecedores a pagar', aPagar().length, () => ir('pagar')],
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],

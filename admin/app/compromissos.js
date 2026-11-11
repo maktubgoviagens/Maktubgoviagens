@@ -119,10 +119,11 @@ export async function folha(ctx, k) {
 }
 export const MES_CAIXA = mesMais(INICIO, 1);
 
-/* Para o Início: quantos pagamentos vencem nos próximos 3 dias ou já venceram. */
+/* Para o Início: quantos pagamentos vencem hoje ou já venceram. */
 export function alertas(ctx) {
   if (!C || C.erro) return undefined;
-  return montar(ctx).L.filter(x => !x.pago && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) <= 3).length + C.fixas.filter(x => !x.dia_vencimento && (!x.ate || mk(x.ate) >= mk(hojeLocal()))).length;
+  // só o que vence hoje ou já venceu; o resto fica na tela Compromissos
+  return montar(ctx).L.filter(x => !x.pago && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) <= 0).length;
 }
 
 const hojeLocal = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
