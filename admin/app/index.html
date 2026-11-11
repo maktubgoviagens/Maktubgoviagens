@@ -563,11 +563,11 @@ import * as OPM from '/admin/app/op-milhas.js?v=4';
 import * as MKT from '/admin/app/marketing.js?v=23';
 import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=26';
-import * as ACV from '/admin/app/acervo.js?v=7';
+import * as ACV from '/admin/app/acervo.js?v=8';
 import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
 import * as CTR from '/admin/app/contrato.js?v=4';
-import * as FORN from '/admin/app/fornecedores.js?v=11';
+import * as FORN from '/admin/app/fornecedores.js?v=12';
 import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=25';
@@ -1042,7 +1042,8 @@ function navItens() {
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
-const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades', 'indicacoes'];
+const EMP_ABAS = ['marketing', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'opmilhas', 'mais', 'comissao', 'atividades', 'indicacoes'];
+const COM_ABAS = ['cotador', 'fornecedores', 'leads', 'acervo'];
 // Operação: Emissões | Agenda | Check-ins (os check-ins são uma vista da Agenda; antes só abriam pelo Início)
 function segOp(atual) {
   const L = [podeAba('emissoes') && ['emissoes', 'Emissões'], podeAba('agenda') && ['agenda', 'Agenda'], podeAba('agenda') && ['checkins', 'Check-ins' + (checkinsTotal() ? ' · ' + checkinsTotal() : '')]].filter(Boolean);
@@ -1092,6 +1093,17 @@ function ir(aba, extra) {
   marcarNav(); tela(); scrollTo(0, 0);
 }
 window.irCotador = () => { COT.preparar(null); ir('cotador'); };
+// atalhos do topo do Comercial: as telas de venda que antes moravam na Empresa
+function atalhosComercial() {
+  const L = [podeAba('cotador') && '<button onclick="irCotador()"><span>Cotações</span><b>›</b></button>',
+    podeAba('leads') && `<button onclick="irLeads()"><span>Leads do site</span><b class="${LE_NOVOS() ? 'tem' : ''}">${LE_NOVOS() || '›'}</b></button>`,
+    podeAba('fornecedores') && '<button onclick="irFornecedores()"><span>Hotéis e serviços</span><b>›</b></button>',
+    podeAba('acervo') && '<button onclick="irAcervo()"><span>Acervo de viagens</span><b>›</b></button>'].filter(Boolean);
+  return L.length ? `<div class="gatalhos">${L.join('')}</div>` : '';
+}
+window.irLeads = () => ir('leads');
+const voltarCom = () => podeAba('reunioes') ? ['reunioes', 'Comercial'] : ['empresa', 'Empresa'];
+window.irAcervo = () => ir('acervo');
 window.irFornecedores = () => ir('fornecedores', () => FORN.abrir(null));
 // cotação montada no cotador: o card do funil anda sozinho.
 // iniciada: saiu do Novo lead para Em cotação (e fica com quem está cotando, se ninguém tinha assumido)
@@ -1144,7 +1156,7 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : EMP_ABAS.includes(ABA) && naNav('empresa') ? 'empresa' : ABA === 'cotador' && naNav('reunioes') ? 'reunioes' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
@@ -1393,7 +1405,7 @@ function tela() {
   if (ABA === 'crm') return CRM.telaCRM(P, ctxCRM());
   if (ABA === 'origens') return IND.telaOrigens(P, ctxIND());
   if (ABA === 'indicacoes') return IND.telaIndicacoes(P, ctxIND());
-  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, sairOk, limparTec, campo, ir, admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)), voltarSeguro });
+  if (ABA === 'fornecedores') return FORN.tela(P, { D, $, esc, sb, aviso, sairOk, limparTec, campo, ir, voltarCom: voltarCom(), admin: ADMIN, aba: () => ABA, abrirCliente: (id) => ir('crm', () => CRM.abrir(id)), voltarSeguro });
   if (ABA === 'reunioes') return telaReunioes(P);
   if (ABA === 'gestao') return GE_FUNIL ? telaReunioes(P) : telaGestao(P);
   if (ABA === 'avisos') return telaAvisos(P);
@@ -1402,7 +1414,7 @@ function tela() {
   if (ABA === 'acessos') return telaAcessos(P);
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
-  if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, aba: () => ABA });
+  if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
   if (ABA === 'compromissos') return CMP.tela(P, ctxCMP());
@@ -2831,7 +2843,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (pode('gestao') && !RE_ED) RE_VISTA = 'viagens';
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + ((podeAba('cotador') || podeAba('fornecedores')) ? `<div class="botoes4" style="margin-top:10px">${podeAba('cotador') ? '<button class="sec" onclick="irCotador()">Cotações</button>' : ''}${podeAba('fornecedores') ? '<button class="sec" onclick="irFornecedores()">Hotéis e serviços</button>' : ''}</div>` : '');
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + atalhosComercial();
   if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => (daVista(r) || (!G && ABA !== 'gestao' && ehGestao(r) && !r.assumido_por && etapaDe(r) === 'Novo lead')) && r.resultado === 'Em andamento')

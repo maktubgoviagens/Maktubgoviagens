@@ -26,7 +26,7 @@ export function avaliacoes() { return AVS || []; }
 export async function tela(P, X) {
   const { $ } = X;
   if (LISTA === null) { P.innerHTML = '<h1 class="titulo">Hotéis e serviços</h1><div class="vazio">Carregando...</div>'; await carregar(X.sb); if (X.aba() !== 'fornecedores') return; }
-  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Hotéis e serviços</h1><div class="config" style="margin-top:12px">${X.admin ? 'Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`; $('voltar').onclick = () => X.ir('empresa'); return; }
+  if (LISTA === false) { P.innerHTML = `<button class="voltar" id="voltar">‹ ${(X.voltarCom || ['empresa', 'Empresa'])[1]}</button><h1 class="titulo" style="margin-top:6px">Hotéis e serviços</h1><div class="config" style="margin-top:12px">${X.admin ? 'Fornecedores ainda não ativados no Supabase. Rode o <b>38-fornecedores.sql</b>.' : 'Recurso ainda não ativado. Fale com o administrador.'}</div>`; $('voltar').onclick = () => X.ir((X.voltarCom || ['empresa'])[0]); return; }
   if (VISTA === 'novo' || VISTA === 'editar') return form(P, X);
   if (VISTA === 'avaliar') return formAvaliar(P, X);
   if (VISTA === 'lote') return loteGoogle(P, X);
@@ -45,7 +45,7 @@ function telaLista(P, X) {
     .map(f => { const av = AVS.filter(a => a.fornecedor_id === f.id); return { f, av, m: media(av), ind: av.filter(a => a.indicaria === true).length, nInd: av.filter(a => a.indicaria !== null && a.indicaria !== undefined).length }; })
     .sort((a, b) => (b.m || 0) - (a.m || 0) || b.av.length - a.av.length || a.f.nome.localeCompare(b.f.nome, 'pt-BR'));
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Empresa</button>
+    <button class="voltar" id="voltar">‹ ${(X.voltarCom || ['empresa', 'Empresa'])[1]}</button>
     <h1 class="titulo" style="margin-top:6px">Hotéis e <em>serviços</em></h1>
     <div class="sub">${LISTA.length} fornecedores · ${AVS.filter(a => a.nota).length} avaliações · ${AVS.filter(a => !a.nota).length} usos esperando nota</div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="novoF">+ Fornecedor</button><button class="sec" id="avaliarF">Registrar avaliação</button></div>
@@ -58,7 +58,7 @@ function telaLista(P, X) {
       <div class="val">${m !== null ? `<b>${fmt1(m)}</b><span>${av.filter(a => a.nota).length} ${av.filter(a => a.nota).length === 1 ? 'nota' : 'notas'}</span>` : `<span>${av.length ? av.length + (av.length === 1 ? ' uso' : ' usos') + ', sem nota' : 'sem avaliação'}</span>`}</div></button>`).join('')
       : `<div class="vazio">${BUSCA || TIPO !== 'todos' ? 'Nada encontrado com esse filtro.' : 'Nenhum fornecedor ainda. Cadastre o primeiro hotel ou registre a avaliação de um cliente.'}</div>`}</div>
     <div class="sub">Ordenado pela nota média dos clientes. Busque pela cidade para ver as melhores opções de um destino.</div>`;
-  $('voltar').onclick = () => X.ir('empresa');
+  $('voltar').onclick = () => X.ir((X.voltarCom || ['empresa'])[0]);
   $('novoF').onclick = () => ir(X, 'novo');
   if ($('dupG')) $('dupG').onclick = () => { VISTA = 'duplicados'; tela(P, X); scrollTo(0, 0); };
   if ($('loteG')) $('loteG').onclick = () => { PULADOS = new Set(); VISTA = 'lote'; tela(P, X); scrollTo(0, 0); };
