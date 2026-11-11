@@ -122,7 +122,7 @@ export const MES_CAIXA = mesMais(INICIO, 1);
 /* Para o Início: quantos pagamentos vencem nos próximos 3 dias ou já venceram. */
 export function alertas(ctx) {
   if (!C || C.erro) return undefined;
-  return montar(ctx).L.filter(x => !x.pago && difDias(x.venc) <= 3).length;
+  return montar(ctx).L.filter(x => !x.pago && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) <= 3).length + C.fixas.filter(x => !x.dia_vencimento && (!x.ate || mk(x.ate) >= mk(hojeLocal()))).length;
 }
 
 const hojeLocal = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
@@ -150,7 +150,7 @@ export async function tela(P, ctx) {
       <div class="cab"><div class="nome" style="font-size:19px">${esc(x.titulo)}</div>${quando(x.venc)}</div>
       <div class="lin"><span>${esc(x.desc)} · ${x.tipo === 'time' ? 'pagar em' : 'vence'} ${dd(x.venc)}</span><span><b>${brl2(x.valor)}</b></span></div>
       ${detalhe(x)}
-      <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="zap" type="submit" style="flex:1">Pago</button><details style="flex:1" data-outro><summary class="sub" style="cursor:pointer;margin:0">Outro valor ou data</summary></details></div>
+      ${x.tipo === 'time' && x.aberto ? `<div class="sub" style="margin-top:8px">${nomeMes(x.comp).replace(/^./, c => c.toUpperCase())} ainda não fechou. Dá para marcar como pago a partir de 01/${mesMais(x.comp, 1).slice(5)}.</div>` : `<div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="zap" type="submit" style="flex:1">Pago</button><details style="flex:1" data-outro><summary class="sub" style="cursor:pointer;margin:0">Outro valor ou data</summary></details></div>`}
       <div class="duas-col" data-campos hidden style="margin-top:8px;align-items:end"><label class="fl"><span>Valor pago (R$)</span><input name="valor" type="number" step="0.01" value="${x.valor.toFixed(2)}" required></label><label class="fl"><span>Pago em</span><input name="pago_em" type="date" value="${hojeLocal()}"></label></div>
     </form>`;
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Compromissos <em>a pagar</em></h1>
@@ -159,10 +159,11 @@ export async function tela(P, ctx) {
       <div class="num destaque"><div class="l">Próximos 7 dias</div><div class="v">${brl2(vence7.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${vence7.length} ${vence7.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
       <div class="num"><div class="l">Atrasados</div><div class="v">${brl2(atras.reduce((a, x) => a + x.valor, 0))}</div><div class="d">${atras.length} ${atras.length === 1 ? 'pagamento' : 'pagamentos'}</div></div>
     </div>
-    ${(h => h.length > 1 ? `<button class="zap grande" id="pagarHoje" style="width:100%;margin-top:12px">Marcar como pagos os ${h.length} de hoje · ${brl2(h.reduce((a, x) => a + x.valor, 0))}</button>` : '')(aPagar.filter(x => x.tipo !== 'emprestimo' && difDias(x.venc) === 0))}
+    ${(h => h.length > 1 ? `<button class="zap grande" id="pagarHoje" style="width:100%;margin-top:12px">Marcar como pagos os ${h.length} de hoje · ${brl2(h.reduce((a, x) => a + x.valor, 0))}</button>` : '')(aPagar.filter(x => x.tipo !== 'emprestimo' && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) === 0))}
     <div class="secao">A pagar</div>
     <div class="lista" style="margin-top:0">${aPagar.length ? aPagar.map(card).join('') : '<div class="vazio">Nada a pagar por enquanto.</div>'}</div>
     ${forn.length ? `<div class="pend" style="margin-top:10px"><button data-irpagar><span>Fornecedores a pagar · ${forn.length} ${forn.length === 1 ? 'venda' : 'vendas'}</span><span><b class="tem">${brl2(forn.reduce((a, e) => a + (Number(e.custo) || 0), 0))}</b><span class="seta">›</span></span></button></div>` : ''}
+    ${(sd => sd.length ? `<section class="bloco"><h2>Despesas fixas sem dia de vencimento</h2><div class="sub">Sem o dia, o app não avisa o pagamento. Preencha em Mais > Salários e despesas fixas.</div>${sd.map(x => `<button class="lin" data-irfixas><span>${esc(x.descricao)} · ${esc(x.categoria || 'Despesa fixa')}</span><span>${brl2(Number(x.valor) || 0)}<b class="seta">›</b></span></button>`).join('')}</section>` : '')(C.fixas.filter(x => !x.dia_vencimento && (!x.ate || mk(x.ate) >= atual)))}
     ${semIda.length ? `<section class="bloco"><h2>Vendas sem data de ida</h2><div class="sub">A 1ª metade da comissão já entra no pagamento. A 2ª metade só entra quando a data de ida for preenchida.</div>${semIda.map(e => `<button class="lin" data-em="${e.id}"><span>${esc(e.comprador || e.produto || e.servico || 'Venda')} · ${esc(ctx.nomeTime(e.vendedor_id))}</span><span>${brl2(Number(e.comissao) - r2(Number(e.comissao) / 2))} aguardando<b class="seta">›</b></span></button>`).join('')}</section>` : ''}
     <div class="secao">Previsão dos próximos meses</div>
     <section class="bloco" style="margin-top:0">${futuro.length ? futuro.map(x => `<div class="lin"><span>${esc(x.titulo)} · fechamento de ${nomeMes(x.comp)}, paga em ${dd(x.venc)}<small style="display:block;color:var(--tinta-3);font-size:12px">fixo ${brl2(x.fixo)} + comissões já garantidas ${brl2(x.com)}</small></span><span>${brl2(x.valor)}</span></div>`).join('') : '<div class="vazio">Sem previsão além dos próximos pagamentos.</div>'}
@@ -177,6 +178,7 @@ export async function tela(P, ctx) {
   // um toque marca como pago (valor previsto, data de hoje); "outro valor ou data" abre os campos
   P.querySelectorAll('details[data-outro]').forEach(d => d.ontoggle = () => { const c = d.closest('form').querySelector('[data-campos]'); if (c) c.hidden = !d.open; });
   const pagar = async (x, valor, data) => {
+    if (x.tipo === 'time' && x.comp >= mk(hojeLocal())) return { message: 'o mês ainda não fechou' };
     const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, data)
       : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: data || undefined });
     // pagou o fechamento do time: o mês fecha sozinho (nada daquele mês muda depois de pago)
@@ -193,7 +195,7 @@ export async function tela(P, ctx) {
     aviso('Marcado como pago. Para desfazer, use "desfazer" em Pagos.'); tela(P, ctx);
   });
   if ($('pagarHoje')) $('pagarHoje').onclick = async () => {
-    const H = aPagar.filter(x => x.tipo !== 'emprestimo' && difDias(x.venc) === 0);
+    const H = aPagar.filter(x => x.tipo !== 'emprestimo' && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) === 0);
     if (!confirm(`Marcar como pagos ${H.length} pagamentos de hoje, nos valores previstos?`)) return;
     for (const x of H) { const e = await pagar(x, x.valor, hojeLocal()); if (e) { aviso('Parou no pagamento de ' + x.titulo + ': ' + e.message); tela(P, ctx); return; } }
     aviso('Pagamentos de hoje marcados como pagos.'); tela(P, ctx);
@@ -212,5 +214,6 @@ export async function tela(P, ctx) {
     aviso('Dia de pagamento salvo.'); tela(P, ctx);
   });
   P.querySelectorAll('[data-irpagar]').forEach(b => b.onclick = () => ir('pagar'));
+  P.querySelectorAll('[data-irfixas]').forEach(b => b.onclick = () => ir('custos'));
   P.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { location.hash = '#emissoes/' + b.dataset.em; });
 }

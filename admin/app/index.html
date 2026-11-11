@@ -572,7 +572,7 @@ import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=26';
 import * as ATV from '/admin/app/atividades.js?v=2';
-import * as CMP from '/admin/app/compromissos.js?v=17';
+import * as CMP from '/admin/app/compromissos.js?v=18';
 import * as CX from '/admin/app/caixa.js?v=4';
 import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
@@ -3847,7 +3847,7 @@ async function telaCustos(P) {
         <div class="duas-col">${campo('descricao', 'Descrição', x.descricao, 'text', 'required')}${campo('valor', 'Valor mensal (R$)', x.valor, 'number', 'required step="0.01"')}</div>
         <label class="fl"><span>Categoria</span><select name="categoria">${[...new Set([...CAT_DESP, x.categoria])].map(c => `<option ${c === x.categoria ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <div class="duas-col">${campo('desde', 'Começou em', String(x.desde).slice(0, 7), 'month', 'required')}${campo('ate', 'Último mês (opcional)', x.ate ? String(x.ate).slice(0, 7) : '', 'month')}</div>
-        ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', x.dia_vencimento || '', 'number', 'min="1" max="31"')}
+        ${campo('dia_vencimento', 'Dia do vencimento (para o aviso)', x.dia_vencimento || '', 'number', 'required min="1" max="31"')}
         <div class="sub" style="margin-top:2px">Sem último mês, ela entra em todos os meses daqui para frente. Mudar o valor aqui muda também os meses passados; se o valor mudou de um mês para o outro, encerre esta e cadastre uma nova.</div>
         <div class="duas-col" style="margin-top:8px"><button class="zap" type="submit">Salvar</button><button class="sec" type="button" data-fxcancel>Cancelar</button></div>
         <button class="mini" type="button" data-fxdel="${x.id}" style="margin-top:10px">excluir de todos os meses</button>
@@ -3856,7 +3856,7 @@ async function telaCustos(P) {
     <form class="bloco form" id="fFixa"><h2>Nova despesa fixa</h2>
       <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: contador, Supabase, Canva"')}${campo('valor', 'Valor mensal (R$)', '', 'number', 'required')}</div>
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
-      ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', '', 'number', 'min="1" max="31"')}
+      ${campo('dia_vencimento', 'Dia do vencimento (para o aviso)', '', 'number', 'required min="1" max="31"')}
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
   $('voltar').onclick = () => voltarA('mais');
   P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
