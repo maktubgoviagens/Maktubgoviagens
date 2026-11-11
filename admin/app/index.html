@@ -700,7 +700,6 @@ function acoesNovo() {
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
   if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar emissão', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
-  if (!pode('comercial') && podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => abrirB2B()]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
 }
@@ -712,9 +711,10 @@ function abrirB2B() {
 }
 function escolherAtendimento() {
   const L = [
-    ['Cotação para cliente', 'Viagem ou passagem: entra no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })],
-    ['Emissão B2B', 'Agência ou revendedor: só emite, sem cotação', () => abrirB2B()]
+    ['Cotação para cliente', 'Viagem ou passagem: entra no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]
   ];
+  // Emissão B2B: continua funcionando, mas fora de uso; fica em Mais > Arquivo
+  if (L.length === 1) { L[0][2](); scrollTo(0, 0); return; }
   document.querySelector('#folhaMais .folha-tit').textContent = 'Novo atendimento';
   $('folhaItens').innerHTML = L.map(([t, d], i) => `<button class="folha-item" data-acao="${i}"><span>${t}<small>${d}</small></span><span class="seta">›</span></button>`).join('');
   $('folhaItens').querySelectorAll('[data-acao]').forEach(b => b.onclick = () => { fechaFolhas(); L[+b.dataset.acao][2](); scrollTo(0, 0); });
@@ -1035,10 +1035,12 @@ const NAV_IC = {
   mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
 function navItens() {
-  if (ADMIN) return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['empresa', 'Empresa']];
+  if (ADMIN) return [['inicio', 'Início'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['mais', 'Mais']];
   if (soMarketing()) { const a = MKT_ABAS(); return a.length > 1 ? [['marketing', 'Marketing'], ['leads', 'Leads do site']] : []; }
-  return [['inicio', 'Início'], ['crm', 'Clientes'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['marketing', 'Marketing'], ['empresa', 'Empresa']]
+  // o Marketing ocupa a vaga de uma aba que a pessoa não tem; com as 4 abas, ele fica no topo do Mais
+  const L = [['inicio', 'Início'], ['reunioes', 'Comercial'], ['gestao', 'Gestão'], ['operacao', 'Operação'], ['marketing', 'Marketing'], ['mais', 'Mais']]
     .filter(([k]) => k === 'operacao' ? podeAba('emissoes') || podeAba('agenda') : podeAba(k));
+  return L.length > 5 ? L.filter(([k]) => k !== 'marketing') : L;
 }
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
@@ -1061,7 +1063,7 @@ function montarNav() {
   $('nav').classList.toggle('seis', itens.length > 5);
   $('nav').hidden = !itens.length; $('buscaTopo').hidden = soMarketing();
   $('sino').hidden = false; $('sino').setAttribute('aria-label', ADMIN ? 'Avisos' : 'Suas tarefas');
-  $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa');
+  $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa' || k === 'mais');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
 }
@@ -4035,33 +4037,33 @@ async function blocoReembolsos() {
 }
 
 /* ---------- mais (administradores) ---------- */
-function itensMais() {
-  const L = [
-    ['crm', 'Clientes: fichas, família e cadastro', ADMIN ? (D.dups || []).length : 0],
-    ['acessos', 'Equipe e acessos', 0],
-    ['leads', 'Leads do site', LE_NOVOS()],
-    ['site', 'Números do site', 0],
-    ['equipe', 'Comissões e regras', 0],
-    ['metas', 'Metas do mês', 0],
-    ['custos', 'Salários e despesas fixas', 0],
-    ['acervo', 'Acervo de viagens: destinos e roteiros', 0],
-    ['opmilhas', 'Operação de milhas dos sócios', 0],
-    ['avisos', 'Avisos no celular, Telegram e WhatsApp', ADMIN ? avisosNovos().length : 0],
-    ['comissao', 'Minha comissão', 0]
-  ];
-  const naNav = navItens().map(([k]) => k), naEmpresa = naNav.includes('empresa') ? itensEmpresa().map(([k]) => k) : [];
-  return L.filter(([k]) => !naNav.includes(k) && !naEmpresa.includes(k) && podeAba(k));
-}
+// Mais: índice de tudo o que a pessoa pode abrir, por assunto. Cada item continua passando por podeAba (permissões iguais).
+const MAIS_GRUPOS = () => [
+  ['Números', [['empresa', 'Painel da empresa: números, metas e atalhos'], ['indicacoes', 'Indicações e origem dos clientes'], ['metas', 'Metas do mês'], ['site', 'Números do site'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']]],
+  ['Clientes', [['crm', 'Clientes: fichas, família e cadastro', ADMIN ? (D.dups || []).length : 0], ['origens', 'Origens para marcar', IND.pendentes(ctxIND())], ['clientes', 'Carteira da Gestão'], ['cartoesbase', 'Base de cartões']]],
+  ['Vendas', [['reunioes', 'Comercial: funil e atendimentos'], ['cotador', 'Cotações'], ['leads', 'Leads do site', LE_NOVOS()], ['fornecedores', 'Hotéis e serviços'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['emissoes', 'Emissões'], ['agenda', 'Agenda da operação']]],
+  ['Dinheiro', [['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['dre', 'DRE da empresa: geral e detalhado'], ['custos', 'Salários e despesas fixas'], ['equipe', 'Comissões e regras'], ['comissao', 'Minha comissão']]],
+  ['Equipe', [['acessos', 'Equipe e acessos'], ['avisos', 'Avisos no celular, Telegram e WhatsApp', ADMIN ? avisosNovos().length : 0]]],
+  ['Marketing', [['marketing', 'Marketing: posts, aprovação e estratégia']]]
+];
+// não consulta a barra (a barra consulta o Mais): o índice mostra tudo o que a pessoa pode abrir
+const itemMaisOk = ([k]) => podeAba(k) && !(ADMIN && k === 'comissao');
+function itensMais() { return MAIS_GRUPOS().flatMap(([, L]) => L).filter(itemMaisOk); }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
 function telaMais(P) {
-  const itens = itensMais();
+  const ok = itemMaisOk;
+  const linha = ([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`;
+  const arquivo = [podeAba('opmilhas') && '<button data-ir="opmilhas"><span>Operação de milhas dos sócios</span><span class="seta">›</span></button>',
+    podeAba('emissoes') && '<button data-b2b><span>Emissão B2B para agências<small style="display:block;font-size:13px;color:var(--tinta-3)">Fora de uso, mas continua funcionando. O histórico fica em Emissões</small></span><span class="seta">›</span></button>'].filter(Boolean);
   P.innerHTML = `<h1 class="titulo">Mais</h1>
-    <div class="pend" style="margin-top:14px">${itens.map(([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}
-      ${ADMIN ? `<button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button>` : ''}</div>
+    ${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div>` : ''; }).join('')}
+    ${ADMIN ? `<div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
+    ${arquivo.length ? `<details class="gsec" style="margin-top:18px"><summary><span>Arquivo<small>O que saiu do dia a dia, mas continua guardado</small></span></summary><div class="pend" style="margin-top:10px">${arquivo.join('')}</div></details>` : ''}
     <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
+  P.querySelectorAll('[data-b2b]').forEach(b => b.onclick = () => abrirB2B());
 }
 
 /* ---------- Empresa: painel de KPIs e atalhos ---------- */
