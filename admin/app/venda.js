@@ -17,8 +17,14 @@ const nb = (v) => { let x = String(v ?? '').trim(); if (x.includes(',')) x = x.r
 const r2 = (n) => Math.round((+n || 0) * 100) / 100;
 // custo da emissão em milhas = milhas x milheiro / 1000 + taxas (mesma conta da planilha)
 export const custoMilhas = (x) => r2((+x.milhas || 0) * (+x.milheiro || 0) / 1000 + (+x.taxas || 0));
-const usaMilhas = (x) => ehVoo(x) && x.pago_em !== 'pagante';
-export const custoDe = (x) => usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : (+x.custo || 0);
+// emissão com as milhas do cliente da Gestão: não é venda. Fica fora de planilha, metas, comissão, conversão e dos totais do card;
+// ao fechar, vira um Uso de milhas na ficha da Gestão do cliente e o voo entra no check-in.
+export const ehCliente = (x) => !!x && ehVoo(x) && x.pago_em === 'cliente_gestao';
+// card que só tem emissão com milhas do cliente: fica em Fechou, mas fora da conversão e do valor fechado
+export const soMilhasCliente = (r) => { const IT = (r && r.itens) || []; return IT.length > 0 && IT.every(ehCliente); };
+const usaMilhas = (x) => ehVoo(x) && x.pago_em !== 'pagante' && x.pago_em !== 'cliente_gestao';
+export const custoDe = (x) => ehCliente(x) ? 0 : usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : (+x.custo || 0);
+export const vendaDe = (x) => ehCliente(x) ? 0 : (+x.venda || 0);
 export const enviado = (x) => !!x.planilha_id;
 
 // passageiros do voo: nome, CPF e nascimento de cada um (B2C). A quantidade tem que bater com "Passageiros".
@@ -60,6 +66,7 @@ function pendenciasPax(x) {
 
 // o que falta para um serviço poder ir para a planilha
 export function pendenciasItem(x) {
+  if (ehCliente(x)) return pendenciasCliente(x);
   const f = [];
   if (!x.venda) f.push('valor de venda');
   if (!custoDe(x) && x.produto !== 'Taxa de Planejamento') f.push('custo');
@@ -71,26 +78,120 @@ export function pendenciasItem(x) {
     if (x.bagagem == null || x.bagagem === '') f.push('bagagem despachada');
     if (!x.print) f.push('print da tarifa');
     if (!x.cia_emissora) f.push('companhia');
+    // data e horário de saída de cada voo: é deles que saem o aviso de check-in e o envio do bilhete
+    f.push(...pendenciasHorarios(x));
   }
   if (!x.emitido) f.push('marcar como emitido');
+  return f;
+}
+// voos da emissão (ida, volta, cada trecho do multitrecho) com a data e o horário de saída que o check-in vai usar.
+// O horário vem da cotação quando bate a rota; o digitado no fechamento vale mais (ida, volta e cada trecho do meio).
+function voosDaEmissao(x) {
+  const tipo = x.tipo_trecho || 'iv', ct = Array.isArray(x.ct) ? x.ct : [], porTrecho = !!(x.ct_on && ct.length);
+  let ls = (porTrecho ? ct : linhasPadrao(x, { tipoPadrao: tipo })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
+  // só ida: a volta que sobrou de antes (campo escondido) não é voo
+  if (tipo === 'ida' && !porTrecho) ls = ls.slice(0, 1);
+  ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
+  const hrs = Array.isArray(x.hrs) ? x.hrs : [];
+  ls.forEach((l, k) => { if (hrs[k]) l.hora = hrs[k]; });
+  if (ls.length && x.hora_ida) ls[0].hora = x.hora_ida;
+  if (ls.length > 1 && tipo !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
+  return ls;
+}
+export function pendenciasHorarios(x) {
+  const ls = voosDaEmissao(x), tipo = x.tipo_trecho || 'iv', f = [];
+  if (!ls.length) return ['data da ida', 'horário de saída da ida'];
+  const nome = (k) => ls.length === 1 ? 'da ida' : tipo === 'iv' && ls.length === 2 ? (k ? 'da volta' : 'da ida') : `do voo ${k + 1}${ls[k].o && ls[k].d ? ` (${ls[k].o} → ${ls[k].d})` : ''}`;
+  ls.forEach((l, k) => { if (!l.data) f.push('data ' + nome(k)); if (!l.hora) f.push('horário de saída ' + nome(k)); });
   return f;
 }
 export function pendenciasFechamento(r) {
   const F = r.fech || {}, IT = r.itens || [];
   const f = [];
-  if (!F.forma) f.push('forma de pagamento');
-  // sem as parcelas não dá para medir o custo da maquininha
-  if (F.forma === 'cartao' && !+F.parcelas) f.push('em quantas vezes no cartão');
-  if (F.forma === 'pix_cartao') {
-    if (!+F.pix_valor) f.push('valor recebido no Pix');
-    if (!+F.cartao_liq) f.push('valor recebido no cartão');
-    if (!+F.parcelas) f.push('em quantas vezes no cartão');
+  // pagamento e comprovante só quando há venda da Maktub a enviar (emissão com milhas do cliente não é venda)
+  const vendas = IT.filter(x => !ehCliente(x) && !enviado(x));
+  if (vendas.length) {
+    if (!F.forma) f.push('forma de pagamento');
+    // sem as parcelas não dá para medir o custo da maquininha
+    if (F.forma === 'cartao' && !+F.parcelas) f.push('em quantas vezes no cartão');
+    if (F.forma === 'pix_cartao') {
+      if (!+F.pix_valor) f.push('valor recebido no Pix');
+      if (!+F.cartao_liq) f.push('valor recebido no cartão');
+      if (!+F.parcelas) f.push('em quantas vezes no cartão');
+    }
+    if (!F.comprovante) f.push('comprovante de pagamento');
   }
-  if (!F.comprovante) f.push('comprovante de pagamento');
-  IT.filter(x => !enviado(x)).forEach(x => { const p = pendenciasItem(x); if (p.length) f.push(`${x.produto}: ${p.join(', ')}`); });
+  vendas.forEach(x => { const p = pendenciasItem(x); if (p.length) f.push(`${x.produto}: ${p.join(', ')}`); });
+  IT.filter(x => ehCliente(x) && !x.gestao_em && !x.cancelado_em).forEach(x => { const p = pendenciasCliente(x); if (p.length) f.push(`Milhas do cliente: ${p.join(', ')}`); });
   return f;
 }
-export const concluida = (r) => r.resultado === 'Fechou' && (r.itens || []).length > 0 && (r.itens || []).every(enviado) && !!(r.fech || {}).comprovante;
+// card concluído: cada venda na planilha (com comprovante) e cada emissão com milhas do cliente lançada na Gestão (ou cancelada)
+export const concluida = (r) => {
+  const IT = (r && r.itens) || [];
+  return r.resultado === 'Fechou' && IT.length > 0 && IT.every(x => ehCliente(x) ? !!(x.gestao_em || x.cancelado_em) : enviado(x))
+    && (IT.every(ehCliente) || !!(r.fech || {}).comprovante);
+};
+// o que falta lançar ao tocar no botão do Fechou: vendas para a planilha e emissões com milhas do cliente para a Gestão
+export const aEnviar = (IT) => ({ vendas: (IT || []).filter(x => !ehCliente(x) && !enviado(x)), cliente: (IT || []).filter(x => ehCliente(x) && !x.gestao_em && !x.cancelado_em) });
+
+// ---------- emissão com as milhas do cliente da Gestão ----------
+const ok3 = (t) => /^[A-Za-z]{3}$/.test(String(t || '').trim());
+export const voosCliente = (x) => (Array.isArray(x.voos) ? x.voos : []);
+export function pendenciasCliente(x) {
+  const f = [];
+  if (!String(x.programa || '').trim()) f.push('programa');
+  if (!(+x.milhas > 0)) f.push('milhas usadas');
+  if (!x.data_emissao) f.push('data da emissão');
+  if (!x.cia_emissora) f.push('companhia');
+  if (!x.localizador) f.push('localizador');
+  const V = voosCliente(x);
+  if (!V.length) f.push('voos');
+  // datas e horários obrigatórios em todos os voos: é deles que sai o aviso de check-in
+  V.forEach((v, k) => { const fv = [!ok3(v.o) && 'origem', !ok3(v.d) && 'destino', !v.data && 'data', !v.hora && 'horário']; if (fv.some(Boolean)) f.push(`voo ${k + 1}: ${fv.filter(Boolean).join(', ')}`); });
+  if (!x.passageiros) f.push('passageiros');
+  else f.push(...pendenciasPax(x));
+  if (!(+x.pagante > 0) && !(+x.rex > 0)) f.push('valor pagante');
+  if (x.taxas_quem === 'maktub' && !(+x.taxas > 0)) f.push('taxas pagas pela Maktub');
+  if (x.taxas_quem === 'maktub' && !x.taxas_pago_em) f.push('data em que a Maktub pagou as taxas');
+  if (!x.print) f.push('print da emissão');
+  if (!x.emitido) f.push('marcar como emitido');
+  return f;
+}
+const ddmm = (iso) => iso ? String(iso).slice(0, 10).split('-').reverse().slice(0, 2).join('/') : '';
+const primeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+const juntarE = (L) => L.length > 1 ? L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1] : (L[0] || '');
+// descrição do Uso de milhas: "GIG > GRU 12/11, GRU > GIG 15/11, econômica, Ana e João"
+export function descCliente(x) {
+  if (x.desc_manual && String(x.descricao || '').trim()) return String(x.descricao).trim();
+  const tr = voosCliente(x).filter(v => v.o || v.d).map(v => `${up3(v.o)} > ${up3(v.d)}${v.data ? ' ' + ddmm(v.data) : ''}`);
+  const pax = juntarE((x.pax || []).slice(0, nPax(x)).map(p => primeiroNome(p.nome)).filter(Boolean));
+  return [tr.join(', '), String(x.cabine || '').trim().toLowerCase(), pax].filter(Boolean).join(', ');
+}
+// rota, datas e horários do cabeçalho saem da lista de voos (o título, a agenda e o check-in usam esses campos)
+function cabecalhoCliente(x) {
+  const V = voosCliente(x).filter(v => v.o || v.d); if (!V.length) return;
+  const ult = V[V.length - 1], volta = V.length === 2 && up3(V[1].d) === up3(V[0].o);
+  x.tipo_trecho = V.length === 1 ? 'ida' : volta ? 'iv' : 'multi';
+  x.origem = up3(V[0].o); x.destino = volta || V.length === 1 ? up3(V[0].d) : up3(ult.d);
+  x.data_ida = V[0].data || null; x.hora_ida = V[0].hora || '';
+  x.data_volta = V.length > 1 ? (ult.data || null) : null; x.hora_volta = V.length > 1 ? (ult.hora || '') : '';
+  x.trechos = x.tipo_trecho === 'multi' ? V.map(v => `${up3(v.o)}-${up3(v.d)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n') : '';
+}
+// retrato do que vai para a Gestão: se mudou depois de lançado, aparece "Atualizar na Gestão"
+export const snapCliente = (x) => JSON.stringify([x.data_emissao, x.programa, +x.milhas || 0, +x.taxas || 0, +x.pagante || 0, +x.rex || 0, descCliente(x), x.taxas_quem, x.taxas_pago_em, x.localizador, x.cia_emissora, x.cia_voo, voosCliente(x), nPax(x)]);
+const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function prepararCliente(x, ctx) {
+  if (!x.ref) x.ref = uuid();
+  if (!x.taxas_quem) x.taxas_quem = 'cliente';
+  if (!x.data_emissao) x.data_emissao = hojeIso();
+  if (!voosCliente(x).length) {
+    // aproveita a rota e as datas que já estavam na emissão
+    const L = linhasPadrao(x, ctx).filter(l => l.o || l.d);
+    x.voos = L.length ? L.map((l, k) => ({ o: l.o, d: l.d, data: l.data || '', hora: (k === 0 ? x.hora_ida : k === L.length - 1 ? x.hora_volta : '') || '' })) : [{ o: '', d: '', data: '', hora: '' }];
+  }
+  if (ctx.gestao && ctx.gestao.cliente_id) { x.cliente_gestao_id = ctx.gestao.cliente_id; x.cliente_gestao_nome = ctx.gestao.nome; }
+  x.custo = null; x.venda = null; x.milheiro = null; x.ct_on = false;
+}
 
 const seg = (k, i, ops, v) => `<div class="seg" style="margin:6px 0 8px">${ops.map(([val, l]) => `<button type="button" data-it="${i}" data-k="${k}" data-set="${val}" class="${String(v ?? '') === String(val) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
 const inp = (X, k, i, rot, v, t = 's', extra = '') => `<label class="fl"><span>${rot}</span><input data-it="${i}" data-k="${k}" data-t="${t}" value="${X.esc(v ?? '')}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'd' ? 'type="date"' : ''} ${t === 'h' ? 'type="time"' : ''} ${extra}></label>`;
@@ -99,6 +200,7 @@ const chk = (X, k, i, rot, v, dis) => `<label class="fc" style="margin:8px 0"><i
 
 // detalhes de um serviço (dentro do atendimento)
 function htmlItem(X, x, i, ctx) {
+  if (ehCliente(x)) return htmlCliente(X, x, i, ctx);
   const trava = enviado(x);
   somarTrechos(x);
   const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
@@ -110,8 +212,9 @@ function htmlItem(X, x, i, ctx) {
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
       ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
       ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
-      <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo.</div>
-      <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']], x.pago_em || 'milhas')}
+      ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? (ls => ls.length > 2 ? `<div class="duas-col">${ls.slice(1, -1).map((l, j) => inp(X, 'hrm', i, `Saída do voo ${j + 2}${l.o && l.d ? ` (${l.o} → ${l.d})` : ''}`, l.hora, 'h', `data-hrm="${i}|${j + 1}"`)).join('')}</div>` : '')(voosDaEmissao(x)) : ''}
+      <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo. Data e horário de saída de todos os voos são obrigatórios para fechar.</div>
+      <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']].concat(ctx.gestao && ctx.gestao.ativo && !trava ? [['cliente_gestao', 'Milhas do cliente da Gestão']] : []), x.pago_em || 'milhas')}
       ${dupla(inp(X, 'cia_emissora', i, 'Emitido na cia', x.cia_emissora, 's', 'placeholder="Azul"'), inp(X, 'cia_voo', i, 'Voa de (se for aliança)', x.cia_voo, 's', 'placeholder="Turkish"'))}
       ${x.cia_voo && x.cia_emissora && x.cia_voo.trim().toLowerCase() !== x.cia_emissora.trim().toLowerCase() ? `<div class="config" style="margin:4px 0 8px">Aliança: emitido na ${X.esc(x.cia_emissora)}, voa de ${X.esc(x.cia_voo)}. O check-in e o bilhete são pela ${X.esc(x.cia_voo)}.</div>` : ''}
       ${usaMilhas(x) ? `${dupla(inp(X, 'conta', i, 'Conta usada', x.conta), inp(X, 'gestor', i, 'Gestor da conta', x.gestor))}
@@ -136,11 +239,61 @@ function htmlItem(X, x, i, ctx) {
   return base + `<details ${ctx.fechou && !trava ? 'open' : ''} style="margin-top:4px"><summary style="cursor:pointer;font-size:13px;color:var(--verde);font-weight:600;padding:6px 0">Detalhes ${ehVoo(x) ? 'do voo' : ehHotel(x) ? 'do hotel' : 'do serviço'}${trava ? ' · na planilha' : x.emitido ? ' · emitido' : ''}</summary>${det}</details>`;
 }
 
+// emissão com as milhas do cliente da Gestão: o print preenche quase tudo; a equipe confere e digita o valor pagante (e a REX)
+const normP = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const milFmt = (n) => Math.round(+n || 0).toLocaleString('pt-BR');
+function htmlCliente(X, x, i, ctx) {
+  const G = ctx.gestao || null, canc = !!x.cancelado_em, lanc = !!x.gestao_em, dis = canc ? 'disabled' : '';
+  const nome = (G && G.nome) || x.cliente_gestao_nome || 'cliente da Gestão';
+  const progs = G && Array.isArray(G.programas) ? G.programas : [];
+  const prog = progs.find(p => normP(p.programa) === normP(x.programa));
+  const anc = Math.max(+x.pagante || 0, +x.rex || 0), V = voosCliente(x), mudou = lanc && !canc && x.gestao_snap && x.gestao_snap !== snapCliente(x);
+  const n = (k, rot, v, extra = '') => inp(X, k, i, rot, v, 'n', `${dis} ${extra}`);
+  const t = (k, rot, v, extra = '') => inp(X, k, i, rot, v, 's', `${dis} ${extra}`);
+  const pend = canc ? [] : pendenciasCliente(x);
+  const estado = canc ? `<div class="config" style="margin:6px 0">Emissão cancelada em ${ddmm(String(x.cancelado_em).slice(0, 10))}. O registro continua guardado na Gestão, fora do painel do cliente.</div>`
+    : lanc ? `<div class="config" style="margin:6px 0"><b style="color:var(--verde)">Lançado na Gestão em ${ddmm(String(x.gestao_em).slice(0, 10))}${x.gestao_por && X.nomeTime ? ' por ' + X.esc(X.nomeTime(x.gestao_por) || '') : ''}.</b>${x.gestao_manual ? '<br>Ligado ao Uso de milhas que já estava lançado à mão na ficha.' : ''}
+      <div class="botoes4" style="margin-top:8px">${mudou ? `<button type="button" class="zap" data-clatual="${i}">Atualizar na Gestão</button>` : ''}${ctx.verFicha ? `<button type="button" class="sec" data-clficha="${i}">Ver na ficha</button>` : ''}<button type="button" class="sec" data-clcanc="${i}">Cancelar esta emissão</button></div></div>` : '';
+  const det = `${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante'], ['cliente_gestao', 'Milhas do cliente da Gestão']], 'cliente_gestao')}
+    <div class="config" style="margin:6px 0 8px"><b>Milhas de ${X.esc(nome)} · Gestão</b><br>Não é venda: fica fora de metas, comissão e planilha. Ao fechar, entra sozinho no Uso de milhas da ficha da Gestão e o voo vai para o check-in.</div>
+    ${canc ? '' : `<div class="botoes4" style="margin:2px 0 4px"><button type="button" class="zap" data-lercola="${i}">Colar print da emissão</button><label class="sec" style="display:block;text-align:center;cursor:pointer;padding:10px">Escolher da galeria<input type="file" accept="image/*" multiple data-lerarq="${i}" style="display:none"></label></div>
+    <div class="sub" style="margin:0 0 8px">${x.lido_em ? 'Preenchido pelo print. Confira cada campo.' + (x.lido_obs ? ' ' + X.esc(x.lido_obs) : '') : 'O print da emissão preenche voos, localizador, passageiros, programa, milhas e taxas. No computador, Ctrl+V também lê.'}</div>`}
+    <datalist id="dlProgG${i}">${progs.map(p => `<option value="${X.esc(p.programa)}">`).join('')}</datalist>
+    ${dupla(inp(X, 'data_emissao', i, 'Data da emissão', x.data_emissao, 'd', dis), t('programa', 'Programa', x.programa, `list="dlProgG${i}" autocomplete="off"`))}
+    ${dupla(n('milhas', 'Milhas usadas', x.milhas), n('taxas', 'Taxas pagas (R$)', x.taxas))}
+    ${prog ? `<div class="sub" style="margin:-2px 0 6px">Saldo de ${X.esc(prog.programa)} na carteira: ${milFmt(prog.saldo)}.${+x.milhas > +prog.saldo ? ` <span style="color:var(--alerta)">A emissão passa do saldo da carteira. Pode gravar; depois faça a Conferência do mês na ficha da Gestão.</span>` : ''}</div>` : x.programa && progs.length ? '<div class="sub" style="margin:-2px 0 6px">Programa ainda não está na carteira do cliente. Confira o nome.</div>' : ''}
+    ${dupla(t('cia_emissora', 'Emitido na cia', x.cia_emissora, 'placeholder="GOL"'), t('cia_voo', 'Voa de (se for aliança)', x.cia_voo))}
+    ${dupla(t('localizador', 'Localizador', x.localizador, 'style="text-transform:uppercase"'), t('cabine', 'Cabine (opcional)', x.cabine, 'placeholder="econômica"'))}
+    <div class="sub" style="margin:6px 0 0">Voos: data e horário de saída obrigatórios em todos</div>
+    ${V.map((v, k) => `<div style="border-left:3px solid ${ok3(v.o) && ok3(v.d) && v.data && v.hora ? 'var(--verde)' : 'var(--linha)'};padding-left:8px;margin:6px 0">
+      <div class="duas-col">${['o', 'd'].map(f => `<label class="fl"><span>Voo ${k + 1}: ${f === 'o' ? 'de' : 'para'}</span><input data-cv="${i}|${k}|${f}" value="${X.esc(v[f] || '')}" maxlength="3" style="text-transform:uppercase" placeholder="${f === 'o' ? 'GIG' : 'GRU'}" ${dis}></label>`).join('')}</div>
+      <div class="duas-col"><label class="fl"><span>Data</span><input type="date" data-cv="${i}|${k}|data" value="${X.esc(v.data || '')}" ${dis}></label><label class="fl"><span>Horário de saída</span><input type="time" data-cv="${i}|${k}|hora" value="${X.esc(v.hora || '')}" ${dis}></label></div>
+      ${canc || V.length < 2 ? '' : `<button type="button" data-cvtira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:13px;padding:0">tirar voo</button>`}</div>`).join('')}
+    ${canc ? '' : `<button type="button" class="sec" data-cvmais="${i}" style="width:100%;margin:2px 0 8px">+ Voo</button>`}
+    <div class="sub" style="margin:-2px 0 6px">O horário de saída é o local do aeroporto. O aviso de check-in chega 24 h antes do voo.</div>
+    ${dupla(n('passageiros', 'Passageiros', x.passageiros, 'inputmode="numeric"'), '<div></div>')}
+    <div class="sub" style="margin:-2px 0 4px">As milhas são de ${X.esc(String(nome).split(' ')[0])}; os passageiros podem ser ele, a família ou outras pessoas.</div>
+    ${htmlPax(X, x, i, canc, ctx)}
+    <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
+    ${dupla(n('pagante', 'Valor pagante (R$)', x.pagante), n('rex', 'Tarifa REX (R$, opcional)', x.rex))}
+    <div class="sub" style="margin:-2px 0 6px">${anc ? `Base da economia no painel do cliente: ${X.brl2(anc)} (o maior entre pagante e REX).` : 'Digite quanto a mesma passagem custaria em dinheiro: é a base da economia no painel do cliente.'}</div>
+    <label class="fl"><span>Descrição no Uso de milhas</span><input data-it="${i}" data-k="descricao" data-descm="1" value="${X.esc(descCliente(x))}" ${dis}></label>
+    <div class="sub" style="margin:6px 0 0">Quem pagou as taxas</div>${seg('taxas_quem', i, [['cliente', 'Cliente, no cartão dele'], ['maktub', 'Maktub, cliente reembolsa']], x.taxas_quem || 'cliente')}
+    ${x.taxas_quem === 'maktub' ? `${dupla(inp(X, 'taxas_pago_em', i, 'Data em que a Maktub pagou', x.taxas_pago_em, 'd', dis), '<div></div>')}
+      <div class="sub" style="margin:-2px 0 6px">Custo ${X.brl2(+x.taxas || 0)} e reembolso ${X.brl2(+x.taxas || 0)}: lucro zero. Fica em A receber até o reembolso ser marcado como recebido e, no Caixa, aparece como movimento neutro. Fora de vendas, metas, comissão, DRE e planilha.</div>` : ''}
+    <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da emissão anexado (tocar para ver)' : 'Anexar print da emissão (obrigatório)'}</span></button>${!x.print && !canc ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !canc ? `<button type="button" data-printtroca="${i}" style="font-size:13px;text-decoration:underline">trocar</button>` : ''}</div>
+    ${chk(X, 'emitido', i, 'Emitido (bilhete gerado)', x.emitido, canc)}
+    ${!lanc && !canc && ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : ''}`;
+  const base = `<div class="lin" style="margin:4px 0"><span>Milhas do cliente da Gestão</span><b>${+x.milhas ? milFmt(x.milhas) + ' ' + X.esc(x.programa || 'milhas') : 'a preencher'}</b></div>${estado}`;
+  return base + `<details ${(ctx.fechou && !lanc) || !x.print ? 'open' : ''} style="margin-top:4px"><summary style="cursor:pointer;font-size:13px;color:var(--verde);font-weight:600;padding:6px 0">Detalhes do voo · milhas do cliente${canc ? ' · cancelada' : lanc ? ' · lançado na Gestão' : x.emitido ? ' · emitido' : ''}</summary>${det}</details>`;
+}
+
 // título de cada emissão quando a venda tem mais de uma: rota, companhia e localizador
 function tituloVoo(X, x, IT) {
   const n = IT.filter(ehVoo).length; if (n < 2 && !x.localizador) return '';
   const rota = x.origem || x.destino ? ` · ${X.esc(up3(x.origem))} ${x.tipo_trecho === 'iv' ? '⇄' : '→'} ${X.esc(up3(x.destino))}` : '';
-  return `<span style="font-weight:400;color:var(--tinta-2)">${n > 1 ? ' · emissão ' + (IT.filter(ehVoo).indexOf(x) + 1) : ''}${rota}${x.cia_emissora ? ' · ' + X.esc(x.cia_emissora) : ''}${x.localizador ? ' · ' + X.esc(String(x.localizador).toUpperCase()) : ''}</span>`;
+  const tipo = ehCliente(x) ? ' · milhas do cliente' : IT.some(ehCliente) ? ' · vendida pela Maktub' : '';
+  return `<span style="font-weight:400;color:var(--tinta-2)">${n > 1 ? ' · emissão ' + (IT.filter(ehVoo).indexOf(x) + 1) : ''}${rota}${x.cia_emissora ? ' · ' + X.esc(x.cia_emissora) : ''}${x.localizador ? ' · ' + X.esc(String(x.localizador).toUpperCase()) : ''}${tipo}</span>`;
 }
 // um trecho que foi emitido à parte (outra companhia, outro localizador) vira outra emissão, com o próprio custo
 function separarTrecho(IT, i, k) {
@@ -222,10 +375,15 @@ function htmlPax(X, x, i, trava, ctx) {
 
 // editor dos serviços: devolve funções para ler o estado
 export function editorItens(X, el, IT, ctx, aoMudar) {
-  const tot = () => ({ v: r2(IT.reduce((a, x) => a + (+x.venda || 0), 0)), c: r2(IT.reduce((a, x) => a + custoDe(x), 0)) });
-  const resumo = () => { const t = tot(); const e = el.querySelector('#reTot'); if (e) e.innerHTML = IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div><div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>` : ''; if (aoMudar) aoMudar(t); };
+  // totais só da parte vendida: a emissão com milhas do cliente não é venda
+  const tot = () => ({ v: r2(IT.reduce((a, x) => a + vendaDe(x), 0)), c: r2(IT.reduce((a, x) => a + custoDe(x), 0)) });
+  const linhaCliente = () => { const L = IT.filter(x => ehCliente(x) && !x.cancelado_em); if (!L.length) return '';
+    const porProg = {}; L.forEach(x => { const k = String(x.programa || 'milhas').trim(); porProg[k] = (porProg[k] || 0) + (+x.milhas || 0); });
+    return `<div class="lin"><span>Com milhas do cliente</span><span>${Object.entries(porProg).map(([k, v]) => v ? milFmt(v) + ' ' + X.esc(k) : 'a preencher').join(' + ')}</span></div><div class="sub" style="margin:0">Fora de metas, comissão e planilha.</div>`; };
+  const resumo = () => { const t = tot(); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div><div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
   const padroes = () => IT.forEach(x => {
     if (enviado(x)) return;
+    if (ehCliente(x)) { prepararCliente(x, ctx); cabecalhoCliente(x); return; }
     if (ehVoo(x)) { if (!x.tipo_trecho) x.tipo_trecho = ctx.tipoPadrao; if (!x.pago_em) x.pago_em = 'milhas'; }
     if (x.data_ida == null && ctx.ida) x.data_ida = ctx.ida;
     if (x.data_volta == null && ctx.volta && (ehVoo(x) || ehHotel(x)) && x.tipo_trecho !== 'ida') x.data_volta = ctx.volta;
@@ -233,6 +391,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   const desenha = () => {
     if (ctx.detalhes) padroes();
     el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.querySelectorAll('[data-hrm]').forEach(e => { const [i, k] = e.dataset.hrm.split('|'), x = IT[+i]; e.removeAttribute('data-it'); e.oninput = () => { x.hrs = Array.isArray(x.hrs) ? x.hrs : []; x.hrs[+k] = e.value; }; });
     el.querySelectorAll('input[data-it],textarea[data-it]').forEach(e => {
       const set = () => { const x = IT[+e.dataset.it], k = e.dataset.k, t = e.dataset.t; x[k] = t === 'b' ? e.checked : t === 'n' ? nb(e.value) : e.value.trim(); };
       if (e.type === 'checkbox') e.onchange = () => {
@@ -241,9 +400,37 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         set(); desenha();
       };
       // milhas, milheiro e taxas: atualiza só o custo calculado, sem redesenhar a tela (não fecha o teclado nem pula a página)
-      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { if (['cia_voo', 'cia_emissora'].includes(e.dataset.k)) desenha(); }; }
+      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { const x = IT[+e.dataset.it]; if (['cia_voo', 'cia_emissora', 'trechos'].includes(e.dataset.k) || (ehCliente(x) && ['programa', 'milhas', 'taxas', 'pagante', 'rex', 'cabine', 'data_emissao', 'taxas_pago_em', 'localizador'].includes(e.dataset.k))) desenha(); }; }
     });
-    el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { IT[+b.dataset.it][b.dataset.k] = b.dataset.set; desenha(); });
+    el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => {
+      const x = IT[+b.dataset.it], k = b.dataset.k, v = b.dataset.set;
+      if (k === 'pago_em' && ehCliente(x) && v !== 'cliente_gestao' && (x.gestao_em || x.cancelado_em)) { X.aviso('Esta emissão já foi lançada na Gestão. Para trocar a forma, cancele a emissão.'); return; }
+      x[k] = v; if (k === 'pago_em' && v === 'cliente_gestao') prepararCliente(x, ctx);
+      if (k === 'taxas_quem' && v === 'maktub' && !x.taxas_pago_em) x.taxas_pago_em = x.data_emissao || hojeIso();
+      desenha(); });
+    // emissão com milhas do cliente: voos (de, para, data, horário), leitura do print, atualizar e cancelar na Gestão
+    el.querySelectorAll('[data-cv]').forEach(e => {
+      const [i, k, campo] = e.dataset.cv.split('|'), x = IT[+i];
+      e.oninput = () => { const v = x.voos[+k]; v[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : e.value; cabecalhoCliente(x); };
+      e.onchange = () => { if (campo === 'data' && e.value && +e.value.slice(0, 4) < 1990) return; cabecalhoCliente(x); desenha(); };
+    });
+    el.querySelectorAll('[data-cvmais]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.cvmais], u = x.voos[x.voos.length - 1] || {}; x.voos.push({ o: u.d || '', d: '', data: '', hora: '' }); desenha(); });
+    el.querySelectorAll('[data-cvtira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cvtira.split('|'), x = IT[+i]; x.voos.splice(+k, 1); cabecalhoCliente(x); desenha(); });
+    el.querySelectorAll('[data-descm]').forEach(e => e.addEventListener('input', () => { IT[+e.dataset.it].desc_manual = !!e.value.trim(); }));
+    el.querySelectorAll('[data-lercola]').forEach(b => b.onclick = async () => {
+      if (!navigator.clipboard || !navigator.clipboard.read) { X.aviso('Este navegador não deixa colar direto. Use Escolher da galeria ou aperte Ctrl+V com o card aberto.'); return; }
+      try { const fs = []; for (const it of await navigator.clipboard.read()) { const t = it.types.find(y => /^image\//.test(y)); if (t) fs.push(new File([await it.getType(t)], 'print.' + t.split('/')[1], { type: t })); }
+        if (fs.length) lerEmissao(X, IT[+b.dataset.lercola], fs, ctx, desenha); else X.aviso('Não tem imagem copiada. Tire o print da emissão, toque nele e escolha Copiar.');
+      } catch (_) { X.aviso('O navegador não liberou a colagem. Use Escolher da galeria ou Ctrl+V.'); }
+    });
+    el.querySelectorAll('[data-lerarq]').forEach(e => e.onchange = () => { const fs = [...e.files]; e.value = ''; lerEmissao(X, IT[+e.dataset.lerarq], fs, ctx, desenha); });
+    el.querySelectorAll('[data-clficha]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.clficha]; if (ctx.verFicha) ctx.verFicha(x.cliente_gestao_id || (ctx.gestao && ctx.gestao.cliente_id)); });
+    el.querySelectorAll('[data-clatual]').forEach(b => b.onclick = async () => { if (!ctx.lancarCliente) return; b.disabled = true; await ctx.lancarCliente(IT[+b.dataset.clatual]); desenha(); });
+    el.querySelectorAll('[data-clcanc]').forEach(b => b.onclick = async () => {
+      const x = IT[+b.dataset.clcanc]; if (!ctx.cancelarCliente) return;
+      if (!confirm(x.gestao_manual ? 'Cancelar esta emissão com milhas do cliente?\n\nO voo sai do check-in. O Uso de milhas que já estava lançado à mão continua na ficha como está: se precisar, ajuste na Gestão.'
+        : 'Cancelar esta emissão com milhas do cliente?\n\nNada é apagado: o Uso de milhas fica marcado como cancelado, as milhas voltam ao saldo da carteira, a economia sai do painel do cliente e o voo sai do check-in. Taxa de cancelamento do programa, se houver, a equipe lança à parte.')) return;
+      b.disabled = true; await ctx.cancelarCliente(x); desenha(); });
     // custo por trecho
     el.querySelectorAll('[data-ctliga]').forEach(e => e.onchange = () => { const x = IT[+e.dataset.ctliga]; x.ct_on = e.checked; if (e.checked && !(x.ct || []).length) x.ct = null; desenha(); });
     el.querySelectorAll('[data-ctmais]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.ctmais], u = x.ct[x.ct.length - 1] || {}; x.ct.push({ o: u.d || '', d: '', data: '', pax: u.pax || '' }); desenha(); });
@@ -293,7 +480,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     el.querySelectorAll('[data-print]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.print]; x.print ? verArquivo(X, x.print) : anexar(X, 'print', x, desenha); });
     el.querySelectorAll('[data-printtroca]').forEach(b => b.onclick = () => anexar(X, 'print', IT[+b.dataset.printtroca], desenha));
     el.querySelectorAll('[data-printcola]').forEach(b => b.onclick = () => colar(X, 'print', IT[+b.dataset.printcola], desenha));
-    IT._proxAnexo = () => { const x = IT.find(y => ehVoo(y) && !y.print && !enviado(y)); return x ? { tipo: 'print', alvo: x, depois: desenha } : null; };
+    IT._proxAnexo = () => { const x = IT.find(y => ehVoo(y) && !y.print && !enviado(y) && !y.cancelado_em); return x ? (ehCliente(x) ? { tipo: 'ler', alvo: x, depois: desenha, ler: (f) => lerEmissao(X, x, [f], ctx, desenha) } : { tipo: 'print', alvo: x, depois: desenha }) : null; };
     resumo();
   };
   desenha();
@@ -350,7 +537,7 @@ export function ligarColarCard(X, alvoFn) {
     const a = alvoFn(); if (!a) { document.removeEventListener('paste', colarCard); colarCard = null; return; }
     if (/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '') && !(e.clipboardData && [...e.clipboardData.items].some(x => x.kind === 'file'))) return;
     const f = [...((e.clipboardData && e.clipboardData.items) || [])].find(x => x.kind === 'file' && /^image\/|pdf/.test(x.type));
-    if (!f) return; e.preventDefault(); const d = a(); if (d) subir(X, d.tipo, d.alvo, d.depois, f.getAsFile());
+    if (!f) return; e.preventDefault(); const d = a(); if (d && d.ler) { if (/^image\//.test(f.type)) d.ler(f.getAsFile()); else subir(X, 'print', d.alvo, d.depois, f.getAsFile()); } else if (d) subir(X, d.tipo, d.alvo, d.depois, f.getAsFile());
   };
   document.addEventListener('paste', colarCard);
 }
@@ -458,7 +645,8 @@ export async function enviarParaPlanilha(X, r, IT, F) {
   const doc = doc0 && doc0.cpf ? doc0 : paxComprador ? { cpf: paxComprador.cpf } : doc0;
   const vendedor = X.nomeTime(r.assumido_por || r.responsavel_id) || '';
   const hoje = new Date(); const dataNeg = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
-  const novos = IT.filter(x => !enviado(x));
+  // emissão com milhas do cliente da Gestão não é venda: nunca vai para a planilha
+  const novos = IT.filter(x => !enviado(x) && !ehCliente(x));
   const linhas = novos.map(x => {
     const id = uuid(), milhas = usaMilhas(x);
     return { id, atendimento_id: r.id, item: IT.indexOf(x), dados: {
@@ -491,7 +679,7 @@ export async function enviarParaPlanilha(X, r, IT, F) {
 }
 
 // horário de saída de cada emissão de voo (ida e volta/último trecho): é o que faz o aviso de check-in sair 24 h antes.
-// Sem horário, o aviso sai à meia-noite do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
+// Sem horário (vendas antigas), o aviso sai às 7h do dia anterior. Fica numa tabela própria, ligada pelo ID sistema da emissão.
 // O horário digitado é o local do aeroporto de saída; o fuso dele vai junto para o aviso converter para Brasília.
 let FUSOS = null;
 export async function fusoDe(cod) {
@@ -516,15 +704,9 @@ export async function salvarHorarios(X, L) {
 export async function salvarVoos(X, L) {
   const rows = [];
   for (const { id, x } of L.filter(({ x }) => ehVoo(x))) {
-    // rota e datas como estão no fechamento (podem ter mudado desde a cotação); o horário de cada voo vem da cotação quando bate a rota
-    const ct = Array.isArray(x.ct) ? x.ct : [];
-    let ls = (x.ct_on && ct.length ? ct : linhasPadrao(x, { tipoPadrao: x.tipo_trecho || 'iv' })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
-    ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
-    ls = ls.filter(l => l.data);
+    // rota, datas e horários como estão no fechamento (podem ter mudado desde a cotação)
+    const ls = voosDaEmissao(x).filter(l => l.data);
     if (!ls.length) continue;
-    // horário digitado no fechamento vale para o primeiro e o último voo
-    if (x.hora_ida) ls[0].hora = x.hora_ida;
-    if (ls.length > 1 && x.tipo_trecho !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
     for (let n = 0; n < ls.length; n++) { const l = ls[n]; rows.push({ emissao_id: String(id), n: n + 1, origem: l.o || null, destino: l.d || null, data: l.data, hora: l.hora || null, tz: await fusoDe(l.o) }); }
   }
   if (!rows.length) return;
@@ -575,4 +757,129 @@ export async function salvarPassageiros(X, itens) {
       }
     } catch (_) { /* a venda segue; a ficha pode ser completada depois no CRM */ }
   }
+}
+
+// ---------- emissão com milhas do cliente: leitura do print, lançamento na Gestão, voos e cancelamento ----------
+const lerDataURL = (file) => new Promise(ok => { const img = new Image(); img.onload = () => { const k = Math.min(1, 2400 / Math.max(img.width, img.height)); const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); ok(cv.toDataURL('image/jpeg', 0.88)); URL.revokeObjectURL(img.src); }; img.onerror = () => ok(null); img.src = URL.createObjectURL(file); });
+// "SANTOS/ANA MARIA MRS" (como as companhias escrevem) vira "Ana Maria Santos"
+function nomePax(n) {
+  let t = String(n || '').trim(); const m = /^([^/]+)\/(.+)$/.exec(t);
+  if (m) t = m[2].replace(/\s+(MR|MRS|MS|MISS|MSTR|SR|SRA|CHD|INF)\.?$/i, '') + ' ' + m[1];
+  return t.toLowerCase().replace(/\s+/g, ' ').replace(/(^|\s)(\S)/g, (a, b, c) => b + c.toUpperCase()).replace(/\s(Da|De|Do|Das|Dos|E)(?=\s)/g, w => w.toLowerCase());
+}
+const GRUPOS_PROG = [['azul', 'tudoazul', 'azulfidelidade'], ['latampass', 'latam', 'multiplus'], ['smiles', 'golsmiles'], ['tapmilesgo', 'milesgo', 'tap'], ['livelo'], ['esfera'], ['aadvantage'], ['iberiaplus', 'iberia'], ['qatarprivilegeclub', 'qatar'], ['britishairways', 'avios']];
+function casarPrograma(nome, G) {
+  const L = (G && G.programas) || [], k = normP(nome), g = GRUPOS_PROG.find(gr => gr.some(z => k.includes(z)));
+  const p = L.find(q => normP(q.programa) === k) || (g && L.find(q => g.some(z => normP(q.programa).includes(z))));
+  return p ? p.programa : String(nome || '').trim();
+}
+function aplicarLeitura(X, x, d, ctx) {
+  if (d.programa) x.programa = casarPrograma(d.programa, ctx.gestao);
+  if (+d.milhas > 0) x.milhas = Math.round(+d.milhas);
+  if (d.taxas !== null && d.taxas !== undefined && +d.taxas >= 0) x.taxas = r2(+d.taxas);
+  if (d.localizador) x.localizador = String(d.localizador).toUpperCase();
+  if (d.companhia_emissora) x.cia_emissora = d.companhia_emissora;
+  if (d.cabine) x.cabine = d.cabine;
+  const tr = (d.trechos || []).filter(v => v.origem || v.destino);
+  if (tr.length) {
+    x.voos = tr.map(v => ({ o: up3(v.origem), d: up3(v.destino), data: v.data || '', hora: v.saida || '' }));
+    const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && !x.cia_voo) x.cia_voo = op;
+    cabecalhoCliente(x);
+  }
+  // passageiros do print, na ordem do print; quem já tem ficha traz CPF e nascimento
+  const P = (d.passageiros || []).map(nomePax).filter(n => n.includes(' '));
+  if (P.length) {
+    const ant = Array.isArray(x.pax) ? x.pax : [], n = (t) => normP(t);
+    x.pax = P.map(nm => {
+      const ja = ant.find(p => n(p.nome) === n(nm)); if (ja) return ja;
+      const p = { nome: nm, cpf: '', nasc: '' }, f = acharPessoa(X.D, { nome: nm, exato: true });
+      if (f) { p.nome = f.nome || nm; p.pessoa_id = f.id; const dc = (X.D.docs || []).find(o => o.pessoa_id === f.id); if (dc && dc.cpf) p.cpf = fmtCpf(dc.cpf); if (f.nascimento) p.nasc = f.nascimento; }
+      return p;
+    });
+    x.passageiros = P.length;
+  }
+  x.lido_em = new Date().toISOString(); x.lido_obs = d.observacao || '';
+}
+export async function lerEmissao(X, x, files, ctx, depois) {
+  files = [...(files || [])].filter(f => f && /^image\//.test(f.type)).slice(0, 4);
+  if (!files.length) { X.aviso('Escolha uma imagem da emissão.'); return; }
+  X.aviso(files.length > 1 ? `Lendo ${files.length} prints...` : 'Lendo o print...');
+  const imagens = (await Promise.all(files.map(lerDataURL))).filter(Boolean);
+  const { data, error } = await X.sb.functions.invoke('ler-emissao', { body: { imagens } });
+  let msg = data && data.erro;
+  if (!msg && error && error.context && typeof error.context.json === 'function') { try { msg = (await error.context.json()).erro; } catch (_) { /* sem corpo */ } }
+  if (!msg && error && error.context && error.context.status === 404) msg = 'A leitura do print da emissão ainda não está publicada. Preencha à mão.';
+  if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou preencha à mão.'); return; }
+  aplicarLeitura(X, x, data, ctx);
+  depois();
+  if (!x.print) await subir(X, 'print', x, depois, files[0]);
+  if (X.rascunho) X.rascunho(true);
+  X.aviso('Print lido. Confira os campos e digite o valor pagante.');
+}
+// cada voo da emissão vira uma linha em voos_emissao (mesma tabela das vendas): check-in voo a voo e bilhete obrigatório
+export async function salvarVoosCliente(X, x) {
+  const rows = [], V = voosCliente(x).filter(v => v.data);
+  for (let k = 0; k < V.length; k++) { const v = V[k]; rows.push({ emissao_id: String(x.ref), n: k + 1, origem: up3(v.o) || null, destino: up3(v.d) || null, data: v.data, hora: v.hora || null, tz: await fusoDe(v.o) }); }
+  if (!rows.length) return { ok: false, erro: 'sem voos com data' };
+  const { error } = await X.sb.from('voos_emissao').upsert(rows);
+  if (error) return { ok: false, erro: error.message };
+  X.D.trechos = X.D.trechos || {}; X.D.trechos[String(x.ref)] = rows.map(r => Object.assign({}, ((X.D.trechos[String(x.ref)] || []).find(o => o.n === r.n) || {}), r));
+  return { ok: true };
+}
+// lança (ou atualiza) a emissão na ficha da Gestão: Uso de milhas, voo e reembolso das taxas quando a Maktub pagou.
+// Se já existir um Uso de milhas lançado à mão igual, pergunta se é o mesmo antes de gravar outro.
+export async function lancarCliente(X, card, x, G) {
+  const cli = (G && G.cliente_id) || x.cliente_gestao_id;
+  if (!cli) return { ok: false, erro: 'Não achei a ficha da Gestão do cliente deste card.' };
+  if (!x.ref) x.ref = uuid();
+  cabecalhoCliente(x);
+  const loc = String(x.localizador || '').toUpperCase();
+  const voo = { comprador: card.cliente || '', contato: card.contato || '', cia_emissora: x.cia_emissora || '', cia_voo: x.cia_voo || '', localizador: loc,
+    origem: x.origem || '', destino: x.destino || '', data_ida: x.data_ida || '', data_volta: x.data_volta || '', passageiros: nPax(x),
+    passageiros_nomes: paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') };
+  if (x.gestao_manual) {
+    // ligado a um Uso de milhas lançado à mão: o lançamento fica como está, só o voo entra no check-in
+    const { error } = await X.sb.from('voos_milhas_cliente').upsert({ id: String(x.ref), atendimento_id: card.id, cliente_id: cli, extrato_id: x.gestao_manual, programa: x.programa || null, ...voo,
+      data_ida: voo.data_ida || null, data_volta: voo.data_volta || null, updated_at: new Date().toISOString() });
+    if (error) return { ok: false, erro: error.message };
+    // taxas pagas pela Maktub continuam como movimento neutro (reembolso a receber)
+    const agora = new Date().toISOString();
+    const rb = x.taxas_quem === 'maktub' && +x.taxas > 0
+      ? await X.sb.from('reembolsos_taxas_gestao').upsert({ emissao_ref: String(x.ref), atendimento_id: card.id, cliente_id: cli, valor: +x.taxas, pago_em: x.taxas_pago_em || x.data_emissao, descricao: `Taxas da emissão ${loc} (${descCliente(x)})`, cancelado_em: null, cancelado_por: null, updated_at: agora }, { onConflict: 'emissao_ref' })
+      : await X.sb.from('reembolsos_taxas_gestao').update({ cancelado_em: agora, cancelado_por: X.meuId, updated_at: agora }).eq('emissao_ref', String(x.ref)).is('cancelado_em', null);
+    if (rb.error) return { ok: false, erro: rb.error.message };
+  } else {
+    const dados = { data: x.data_emissao, programa: x.programa, milhas: +x.milhas, taxas: x.taxas ?? null, pagante: x.pagante ?? null, rex: x.rex ?? null, descricao: descCliente(x), voo,
+      reembolso: x.taxas_quem === 'maktub' && +x.taxas > 0 ? { valor: +x.taxas, pago_em: x.taxas_pago_em || x.data_emissao, descricao: `Taxas da emissão ${loc} (${descCliente(x)})` } : null };
+    const chamar = () => X.sb.rpc('gestao_emissao_cliente_salvar', { p_ref: String(x.ref), p_atendimento: String(card.id), p_cliente: String(cli), p_dados: dados, p_ignorar_duplicado: !!x.dup_ok });
+    let r = await chamar();
+    if (r.error) return { ok: false, erro: r.error.message };
+    if (r.data && r.data.ok === false && Array.isArray(r.data.duplicados) && r.data.duplicados.length) {
+      const d0 = r.data.duplicados[0];
+      const mesmo = confirm(`Já existe um Uso de milhas lançado à mão na ficha da Gestão:\n${ddmm(d0.data)} · ${d0.programa} · ${milFmt(d0.milhas)} milhas${d0.descricao ? ' · ' + d0.descricao : ''}\n\nÉ esta mesma emissão?\n\nOK: é a mesma. O app não lança de novo e só liga o voo ao check-in.\nCancelar: é outra emissão. O app lança mais um Uso de milhas.`);
+      if (mesmo) { x.gestao_manual = d0.id; return lancarCliente(X, card, x, G); }
+      x.dup_ok = true; r = await chamar();
+      if (r.error) return { ok: false, erro: r.error.message };
+    }
+    if (!r.data || !r.data.ok) return { ok: false, erro: 'A Gestão não confirmou o lançamento.' };
+    x.gestao_extrato = r.data.extrato_id;
+  }
+  const v = await salvarVoosCliente(X, x);
+  if (!x.gestao_em) { x.gestao_em = new Date().toISOString(); x.gestao_por = X.meuId; }
+  x.cliente_gestao_id = cli; x.gestao_snap = snapCliente(x);
+  return { ok: true, cliente_id: cli, avisoVoos: v.ok ? '' : 'Os voos não entraram no check-in: ' + v.erro };
+}
+export async function cancelarCliente(X, x) {
+  const agora = new Date().toISOString();
+  if (x.gestao_manual) {
+    // o Uso de milhas lançado à mão não é alterado: só o voo sai do check-in e o reembolso (se houver) fica cancelado
+    const { error } = await X.sb.from('voos_milhas_cliente').update({ cancelado_em: agora, cancelado_por: X.meuId, updated_at: agora }).eq('id', String(x.ref));
+    if (error) return { ok: false, erro: error.message };
+    await X.sb.from('reembolsos_taxas_gestao').update({ cancelado_em: agora, cancelado_por: X.meuId, updated_at: agora }).eq('emissao_ref', String(x.ref)).is('cancelado_em', null);
+  } else {
+    const r = await X.sb.rpc('gestao_emissao_cliente_cancelar', { p_ref: String(x.ref) });
+    if (r.error) return { ok: false, erro: r.error.message };
+  }
+  x.cancelado_em = agora; x.cancelado_por = X.meuId;
+  return { ok: true, cliente_id: x.cliente_gestao_id };
 }

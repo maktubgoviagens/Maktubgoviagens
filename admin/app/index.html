@@ -556,7 +556,7 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=4';
 import * as MKT from '/admin/app/marketing.js?v=23';
-import * as CART from '/admin/app/carteira.js?v=3';
+import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=26';
 import * as ACV from '/admin/app/acervo.js?v=7';
 import * as CRM from '/admin/app/crm.js?v=20';
@@ -565,13 +565,13 @@ import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=11';
 import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
-import * as VENDA from '/admin/app/venda.js?v=23';
+import * as VENDA from '/admin/app/venda.js?v=25';
 import * as ATV from '/admin/app/atividades.js?v=1';
 import * as CMP from '/admin/app/compromissos.js?v=16';
-import * as CX from '/admin/app/caixa.js?v=2';
+import * as CX from '/admin/app/caixa.js?v=3';
 import * as DRE from '/admin/app/dre.js?v=7';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=3';
+import * as IND from '/admin/app/indicacoes.js?v=4';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -681,7 +681,7 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   montarNav();
   lerHash();
   marcarNav();
-  carregar();
+  carregar().then(() => setTimeout(() => recalcularPendentes().catch(() => {}), 3000)).catch(() => {});
   if (!ADMIN) setTimeout(faixaPush, 1500);
 })();
 
@@ -694,7 +694,7 @@ function acoesNovo() {
   const L = [];
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
-  if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar venda', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
+  if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar emissão', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
   if (!pode('comercial') && podeAba('emissoes')) L.push(['Emissão B2B', 'Agência: só emite, sem cotação', () => abrirB2B()]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
@@ -734,7 +734,7 @@ function buscaGeral(q) {
   // número do card: "014", "#14" ou "14" acham o card #014
   const nCard = /^#?\d{1,5}$/.test(String(q).trim()) ? +String(q).replace(/\D/g, '') : null;
   if (pode('comercial')) G.push(['Atendimentos', (D.reunioes || []).filter(r => (nCard && +r.numero === nCard) || semAc([r.cliente, r.trecho, r.contato].join(' ')).includes(k)).slice(0, 6).map(r => [r.cliente, [r.trecho || r.produto, r.resultado === 'Em andamento' ? r.etapa : r.resultado].filter(Boolean).join(' · '), () => abrirAtendimento(r.id)])]);
-  if (pode('gestao')) G.push(['Gestão de Milhas', (D.clientes || []).filter(c => semAc([c.nome_completo, c.email].join(' ')).includes(k) || (dig.length >= 4 && String(c.telefone || c.celular || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(c => [c.nome_completo, 'Carteira da Gestão', () => ir('clientes', () => { CLI = c.id; })])]);
+  if (pode('gestao')) G.push(['Carteira da Gestão', (D.clientes || []).filter(c => semAc([c.nome_completo, c.email].join(' ')).includes(k) || (dig.length >= 4 && String(c.telefone || c.celular || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(c => [c.nome_completo, 'Carteira da Gestão', () => ir('clientes', () => { CLI = c.id; })])]);
   if (podeAba('leads')) G.push(['Leads do site', (D.leads || []).filter(l => semAc([l.nome, l.email, l.destino].join(' ')).includes(k) || (dig.length >= 4 && String(l.whatsapp || l.telefone || '').replace(/\D/g, '').includes(dig))).slice(0, 6).map(l => [l.nome || 'Lead', [l.destino, l.status].filter(Boolean).join(' · '), () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'todos'; })])]);
   if (podeAba('fornecedores')) G.push(['Hotéis e serviços', FORN.lista().filter(f => semAc([f.nome, f.cidade].join(' ')).includes(k)).slice(0, 6).map(f => [f.nome, [FORN.TIPOS[f.tipo], f.cidade].filter(Boolean).join(' · '), () => ir('fornecedores', () => FORN.abrir(f.id))])]);
   return G.filter(g => g[1].length);
@@ -875,7 +875,9 @@ $('pagina').addEventListener('click', async (e) => {
     if (error) { aviso(tec('Não salvou: ' + error.message)); return; }
     r.checkin = feito;
     const lado = n === 1 ? 'ida' : n === R.length ? 'volta' : null;
-    if (lado) { const { error: e2 } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: lado, p_feito: feito }); if (!e2) { const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + lado] = feito; const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + lado] = feito; } }
+    const vMc = (D.voosEm || []).find(x => x.id === b.dataset.id && x.milhas_cliente);
+    if (lado && vMc) { const { error: e3 } = await sb.from('voos_milhas_cliente').update({ ['checkin_' + lado]: feito, updated_at: new Date().toISOString() }).eq('id', b.dataset.id); if (!e3) vMc['checkin_' + lado] = feito; }
+    else if (lado) { const { error: e2 } = await sb.rpc('marcar_checkin', { p_id: b.dataset.id, p_trecho: lado, p_feito: feito }); if (!e2) { const v = D.voosEm.find(x => x.id === b.dataset.id); if (v) v['checkin_' + lado] = feito; const em = D.emissoes.find(x => x.id === b.dataset.id); if (em) em['checkin_' + lado] = feito; } }
     aviso(feito ? 'Check-in marcado como feito.' : 'Check-in desmarcado.'); tela(); return;
   }
   if (feito && !(await perguntarBilhete(tr, refEmissao(b.dataset.id)))) return;
@@ -1134,7 +1136,7 @@ function marcarNav() {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'A pagar', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'A receber', clientes: 'Gestão de Milhas', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1183,7 +1185,7 @@ async function carregar(silencioso, manterTela) {
       G ? sb.from('clientes').select('*').order('nome_completo') : nada,
       G ? sb.from('gestores').select('*') : nada,
       G ? sb.from('programas_milhas').select('*') : nada,
-      G ? sb.from('historico_economia').select('*').gte('data', inicioAno) : nada,
+      G ? sb.from('historico_economia').select('*').is('cancelado_em', null).gte('data', inicioAno) : nada,
       G ? sb.from('voos').select('*').gte('data_voo', iso(ontem)).lte('data_voo', iso(em120)).order('data_voo').order('hora_partida') : nada,
       G ? sb.from('viagens').select('*').gte('data_viagem', iso(ontem)).lte('data_viagem', iso(em120)).order('data_viagem') : nada,
       G ? sb.from('agendamentos_reuniao').select('*').in('status', ['solicitada', 'confirmada']).order('created_at', { ascending: false }).limit(200) : nada,
@@ -1332,7 +1334,7 @@ function eventos(todos) {
   trechosEm().forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: t.pendente,
     t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? (t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '') : t.tr === 'volta' ? ' · volta' : ''}`,
     s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
-    href: (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
+    href: t.v.milhas_cliente ? (t.v.atendimento_id ? '#reunioes/' + t.v.atendimento_id : '') : (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
   D.clientes.filter(c => c.gestao_vencimento && diasPara(c.gestao_vencimento) >= -1 && diasPara(c.gestao_vencimento) <= 120).forEach(c => E.push({ cid: c.id, d: dia(c.gestao_vencimento), hora: '', ic: 'milhas', alerta: diasPara(c.gestao_vencimento) <= 30, t: `Vence o contrato da Gestão: ${c.nome_completo}`, s: 'Reunião de renovação', href: '#clientes/' + c.id }));
   (D.agenda || []).filter(x => x.status === 'Agendada').forEach(x => { const d = new Date(x.data), d0 = new Date(d); d0.setHours(0, 0, 0, 0); E.push({ d: d0, hora: d.toTimeString().slice(0, 5), ic: 'reuniao', t: x.titulo + (x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + x.cliente : ''), s: [x.tipo, (x.participantes || []).map(nomeTime).filter(Boolean).join(', ')].filter(Boolean).join(' · '), href: '#agenda/' + x.id }); });
   vencimentos(90).forEach(({ p, d }) => E.push({ cid: p.cliente_id, d, hora: '', ic: 'milhas', alerta: difDias(d) <= 30, t: `${num(p.vencimento_quantidade)} ${p.unidade || 'milhas'} ${p.programa} vencem`, s: nomeCli(p.cliente_id), href: adminLink(p.cliente_id, 'programas_milhas') }));
@@ -1392,7 +1394,7 @@ function tela() {
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
   if (ABA === 'compromissos') return CMP.tela(P, ctxCMP());
-  if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()) });
+  if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
@@ -1418,6 +1420,7 @@ function telaInicio(P) {
     ['Leads esperando alguém assumir', leadsSemDono().filter(l => !cardDoLead(l)).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins para fazer', checkinsTotal(), () => ir('agenda', () => { AG_VISTA = 'checkins'; })],
+    ...(ADMIN || podeAba('emissoes') ? [['Voos sem horário de saída', voosSemHorario().length, () => { const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
     ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
     ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
@@ -1449,6 +1452,7 @@ function telaInicio(P) {
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
     ${blocoAnivHoje()}
+    ${blocoSemHorario()}
     ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
@@ -1466,6 +1470,7 @@ function telaInicio(P) {
     <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   ligarAnivHoje(P);
+  ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicio(P));
   ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -1491,6 +1496,7 @@ function telaInicioColab(P) {
     ${(() => { const ck = eventos().filter(e => e.ic === 'voo' && e.alerta), pv = pode('comercial') ? posVenda().length : 0;
       return `${pv ? `<div class="pend" style="margin-top:12px"><button data-ir="reunioes"><span>Vendas fechadas aguardando emissão</span><span><b class="tem">${pv}</b><span class="seta">›</span></span></button></div>` : ''}
       ${ck.length ? `<div class="secao">Check-ins para fazer</div>${agrupar(ck)}` : ''}`; })()}
+    ${blocoSemHorario()}
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${blocoAnivHoje()}
     ${blocoPosViagem()}
@@ -1499,6 +1505,7 @@ function telaInicioColab(P) {
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
   if ($('novaReuniao')) $('novaReuniao').onclick = () => escolherAtendimento();
   ligarCardsReuniao(P);
+  ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicioColab(P));
   ligarAnivHoje(P);
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
@@ -1719,7 +1726,7 @@ function telaFormEmissao(P) {
     ${!nova && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) && ((D.trechos || {})[String(e.id)] || []).length ? `<section class="bloco" style="margin-top:12px"><h2>Voos e horários</h2><div class="sub" style="margin-top:-4px">Horário local de saída, como está no bilhete. O aviso de check-in chega 24 h antes de cada voo.</div>
       ${D.trechos[String(e.id)].slice().sort((a, b) => a.n - b.n).map(r => `<div class="duas-col" style="align-items:end"><div class="sub" style="margin:0 0 10px"><b>Voo ${r.n}</b> · ${esc([r.origem, r.destino].filter(Boolean).join(' → '))} · ${dataCurta(dia(r.data))}${r.checkin ? ' · check-in feito' : ''}</div><label class="fl"><span>Saída</span><input type="time" data-hrv="${r.n}" value="${esc(String(r.hora || '').slice(0, 5))}"></label></div>`).join('')}
       <button type="button" class="sec grande" id="hrSalvarV" style="width:100%;margin-top:6px">Salvar horários</button></section>`
-    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega à meia-noite do dia anterior.</div>
+    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega às 7h do dia anterior.</div>
       <div class="duas-col">${e.data_ida ? `<label class="fl"><span>Saída da ida (${dataCurta(dia(e.data_ida))})</span><input type="time" id="hrIda" value="${esc(String(h.hora_ida || '').slice(0, 5))}"></label>` : '<div></div>'}${e.data_volta ? `<label class="fl"><span>Saída da volta (${dataCurta(dia(e.data_volta))})</span><input type="time" id="hrVolta" value="${esc(String(h.hora_volta || '').slice(0, 5))}"></label>` : '<div></div>'}</div>
       <button type="button" class="sec grande" id="hrSalvar" style="width:100%;margin-top:6px">Salvar horário</button></section>`)((D.horas || {})[String(e.id)] || {}) : ''}
     ${travado ? '<div class="config" style="margin-top:12px">Mês fechado: os valores estão travados. Check-in, nota, pagamento e observações continuam editáveis.</div>' : ''}
@@ -2228,6 +2235,11 @@ function eventosCard(r) {
   if (t0) ev.push([t0, doSite(r) ? 'Entrou pelo site' : 'Card aberto', doSite(r) ? '' : (r.origem || '')]);
   if (r.assumido_em) ev.push([r.assumido_em, 'Assumido' + (r.assumido_por ? ' por ' + (nomeTime(r.assumido_por) || '') : ''), '']);
   if (r.primeiro_contato_em) ev.push([r.primeiro_contato_em, '1º contato pelo WhatsApp', '']);
+  (r.itens || []).filter(VENDA.ehCliente).forEach(x => {
+    const rot = [x.origem && x.destino ? `${x.origem} ${x.tipo_trecho === 'iv' ? '⇄' : '→'} ${x.destino}` : '', x.localizador ? 'loc. ' + String(x.localizador).toUpperCase() : ''].filter(Boolean).join(' · ');
+    if (x.gestao_em) ev.push([x.gestao_em, 'Emitido com milhas do cliente', [x.gestao_por ? 'por ' + (nomeTime(x.gestao_por) || '') : '', rot].filter(Boolean).join(' · ')]);
+    if (x.cancelado_em) ev.push([x.cancelado_em, 'Emissão com milhas do cliente cancelada', [x.cancelado_por ? 'por ' + (nomeTime(x.cancelado_por) || '') : '', rot].filter(Boolean).join(' · ')]);
+  });
   Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
   ((M['Follow-up'] || {}).hist || []).forEach(h => ev.push([h.em, 'Follow-up: chamar em ' + (h.retorno ? dataBR(h.retorno) : '-'), [h.por ? 'por ' + (nomeTime(h.por) || '') : '', h.nota || ''].filter(Boolean).join(' · ')]));
   (M._adiamentos || []).forEach(a => { const n = Math.round((dia(a.para) - dia(a.padrao)) / 864e5); ev.push([a.em, 'Retorno marcado depois do padrão', [`padrão ${ddmm(a.padrao)}, marcado para ${ddmm(a.para)} (+${plural(n, 'dia', 'dias')})`, a.de && a.de !== a.padrao ? 'antes estava em ' + ddmm(a.de) : '', a.tipo ? rotPasso(a.tipo) : '', a.por ? 'por ' + (nomeTime(a.por) || '') : ''].filter(Boolean).join(' · ')]); });
@@ -2569,7 +2581,7 @@ function htmlJornadaGestao() {
     else { const ap = agProp(r), passou = ap && tsDe(ap.data) < Date.now(); s = ap ? 'Proposta ' + quandoDiag(ap.data) : 'Sem data da reunião'; c = !ap || passou ? 'al' : 'ok'; prox = passou ? 'Registrar se fechou e por quê' : ap ? 'Apresentar a proposta' : 'Marcar a reunião de proposta'; }
     return `<button class="gjk" data-gj-r="${r.id}"><span class="n">${htmlPrio(r)}${esc(r.cliente)}</span><span class="s ${c}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(quem(r))}</span></button>`;
   };
-  const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Gestor ' + String(g.nome).split(' ')[0] : 'Sem gestor'; };
+  const gestor = (c) => { const g = (D.gestores || []).find(x => x.id === c.gestor_id); return g ? 'Responsável ' + String(g.nome).split(' ')[0] : 'Sem responsável'; };
   const kC = (c, s, cls, prox) => `<button class="gjk" data-gj-c="${c.id}"><span class="n">${esc(c.nome_completo)}</span><span class="s ${cls}">${esc(s)}</span><span class="p">${esc(prox)}</span><span class="q">${esc(gestor(c))}</span></button>`;
   // 4 colunas comerciais + Implantação; a carteira (ativos e renovação) fica na aba Clientes
   const GRUPOS_G = [['Entrada', ['Novo lead', 'Qualificação']], ['Diagnóstico', ['Diagnóstico agendado', 'Diagnóstico feito']], ['Proposta', ['Reunião de proposta']], ['Follow-up', ['Follow-up']]];
@@ -2664,6 +2676,8 @@ const retornosHoje = () => D.reunioes.filter(r => r.resultado === 'Em andamento'
 const mesLocal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 function reunioesDoPeriodo(k, modo) { return D.reunioes.filter(r => modo === 'ano' ? mesLocal(r.data).slice(0, 4) === k.slice(0, 4) : mesLocal(r.data) === k); }
 function conversao(L) {
+  // card só com emissão feita com as milhas do cliente da Gestão não é venda: fica fora da conversão
+  L = L.filter(r => !VENDA.soMilhasCliente(r));
   const fechou = L.filter(r => r.resultado === 'Fechou').length, perdeu = L.filter(r => r.resultado === 'Não fechou').length;
   const decididas = fechou + perdeu;
   return { fechou, perdeu, decididas, andamento: L.filter(r => r.resultado === 'Em andamento').length, taxa: decididas ? fechou / decididas * 100 : null, valor: soma(L.filter(r => r.resultado === 'Fechou'), 'valor_fechado') };
@@ -2676,8 +2690,8 @@ function blocoConv(titulo, L, chave, rotulo) {
 }
 // como os clientes pagam e quanto vai para a maquininha (dado para negociar taxa)
 function blocoPagamentos(L) {
-  const F = L.filter(r => r.resultado === 'Fechou');
-  const val = (r) => { const v = (r.itens || []).reduce((a, x) => a + (+x.venda || 0), 0); return v || +r.valor_fechado || 0; };
+  const F = L.filter(r => r.resultado === 'Fechou' && !VENDA.soMilhasCliente(r));
+  const val = (r) => { const v = (r.itens || []).reduce((a, x) => a + VENDA.vendaDe(x), 0); return v || +r.valor_fechado || 0; };
   const taxa = (r) => r.fech && r.fech.forma === 'cartao' ? +(r.fech.taxa_pct != null ? r.fech.taxa_pct : COT.taxaCartao(+r.fech.parcelas || 1)) || 0 : 0;
   const pix = F.filter(r => r.fech && r.fech.forma === 'pix'), car0 = F.filter(r => r.fech && r.fech.forma === 'cartao' && +r.fech.parcelas);
   // Pix + Cartão: a parte do cartão conta no Cartão (e no custo da maquininha), a parte do Pix soma no valor do Pix
@@ -3205,8 +3219,40 @@ function telaFormReuniao(P) {
       // retrato do card assim que termina de desenhar (com os padrões já preenchidos): é a base para saber se mudou
       setTimeout(() => { f._ultRasc = snap(); }, 0);
     }
-    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
-    EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); });
+    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
+    EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); rotFech(); });
+    // cliente da Gestão dono das milhas: a opção "Milhas do cliente da Gestão" só aparece com contrato ativo.
+    // Vem de uma função do banco (o Comercial nem sempre carrega a lista da Gestão). Não redesenha enquanto alguém digita.
+    ctxI.gestao = null;
+    const pidG = (f.elements.pessoa_id && f.elements.pessoa_id.value) || base.pessoa_id;
+    if (pidG && !nova) sb.rpc('cliente_gestao_da_pessoa', { p_pessoa: String(pidG) }).then(({ data }) => {
+      const g = Array.isArray(data) ? data[0] : data; const el = $('reItens');
+      if (!g || !el || !document.body.contains(el)) return;
+      ctxI.gestao = g;
+      if (el.contains(document.activeElement)) el.addEventListener('focusout', () => setTimeout(() => { if (!el.contains(document.activeElement)) EDIT.desenha(); }, 0), { once: true });
+      else EDIT.desenha();
+    });
+    const cardRef = () => ({ id: base.id, cliente: f.elements.cliente ? f.elements.cliente.value : base.cliente, contato: f.elements.contato ? f.elements.contato.value : base.contato });
+    ctxI.lancarCliente = async (x) => {
+      const r = await VENDA.lancarCliente(XV, cardRef(), x, ctxI.gestao);
+      if (!r.ok) { aviso('Não atualizou na Gestão: ' + r.erro); return; }
+      if (XV.rascunho) XV.rascunho(true);
+      await depoisMilhasCliente([r.cliente_id]); aviso('Atualizado na Gestão.' + (r.avisoVoos ? ' ' + r.avisoVoos : ''));
+    };
+    ctxI.cancelarCliente = async (x) => {
+      const r = await VENDA.cancelarCliente(XV, x);
+      if (!r.ok) { aviso('Não cancelou: ' + r.erro); return; }
+      if (XV.rascunho) XV.rascunho(true);
+      await depoisMilhasCliente([r.cliente_id]); aviso('Emissão cancelada. Nada foi apagado.');
+    };
+    if (ADMIN || pode('gestao')) ctxI.verFicha = (cid) => { if (cid) abrirFicha(cid, 'carteira'); };
+    f._ctxCliente = ctxI;
+    // botão do Fechou: diz o que vai acontecer (planilha, Gestão ou os dois); pagamento só aparece quando há venda
+    function rotFech() { const b = $('enviarPlan'), A = VENDA.aEnviar(IT), soCli = IT.length > 0 && IT.every(VENDA.ehCliente);
+      if ($('reFech')) $('reFech').hidden = soCli;
+      if (!b || b.disabled) return;
+      b.textContent = A.cliente.length && !A.vendas.length ? 'Emitido: lançar na Gestão do cliente' : A.cliente.length ? 'Emitido e pago: enviar para a planilha e lançar na Gestão' : 'Emitido e pago: enviar para a planilha'; }
+    f._rotFech = rotFech; setTimeout(rotFech, 0);
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
       const k = IT.findIndex(x => x.produto === b.dataset.p);
@@ -3229,7 +3275,7 @@ function telaFormReuniao(P) {
       alvo: (forma, n) => { const z = cotFech(); return z ? COT.valorDaOpcao(z.c.dados, z.k, forma, n) : null; },
       aplicarTotal: (v) => {
         // o total novo vale para a venda inteira: serviços já na planilha ficam como estão, o resto é dividido na proporção de hoje
-        const livres = IT.filter(x => !VENDA.enviado(x)); if (!livres.length) return;
+        const livres = IT.filter(x => !VENDA.enviado(x) && !VENDA.ehCliente(x)); if (!livres.length) return;
         const fixo = IT.filter(VENDA.enviado).reduce((a, x) => a + (+x.venda || 0), 0), alvo = v - fixo, soma = livres.reduce((a, x) => a + (+x.venda || 0), 0);
         let resto = alvo; livres.forEach((x, k) => { const nv = k === livres.length - 1 ? Math.round(resto * 100) / 100 : Math.round((soma ? (+x.venda || 0) / soma : 1 / livres.length) * alvo * 100) / 100; resto -= nv; x.venda = nv; });
         EDIT.desenha(); if (f.elements.valor_fechado) f.elements.valor_fechado.value = v;
@@ -3239,25 +3285,27 @@ function telaFormReuniao(P) {
     { const el0 = $('reItens'); VENDA.ligarColarCard(XV, () => document.body.contains(el0) ? () => (IT._proxAnexo && IT._proxAnexo()) || (F._proxAnexo && F._proxAnexo()) : null); }
     // venda: valor integral (um total, rateado entre os serviços pelo custo) ou por serviço (cada um com o seu valor)
     const modoV = () => F.venda_modo || 'total';
+    // emissão com milhas do cliente não é venda: fica fora do rateio e do valor fechado
+    const IV = () => IT.filter(x => !VENDA.ehCliente(x));
     const ratear = () => {
       // com um serviço só, "Valor fechado" e a venda do serviço são o mesmo número
-      if ((IT.length > 1 && modoV() !== 'total') || !IT.length || !f.elements.valor_fechado) return;
+      if ((IV().length > 1 && modoV() !== 'total') || !IV().length || !f.elements.valor_fechado) return;
       const total = Number(String(f.elements.valor_fechado.value || '').replace(',', '.')) || 0; if (!total) return;
-      const livres = IT.filter(x => !VENDA.enviado(x)); if (!livres.length) return;
+      const livres = IV().filter(x => !VENDA.enviado(x)); if (!livres.length) return;
       const fixo = IT.filter(VENDA.enviado).reduce((a, x) => a + (+x.venda || 0), 0), alvo = total - fixo;
       const pesos = livres.map(x => VENDA.custoDe(x) || 0), sp = pesos.reduce((a, b) => a + b, 0);
       let resto = alvo; livres.forEach((x, k) => { const v = k === livres.length - 1 ? Math.round(resto * 100) / 100 : Math.round((sp ? pesos[k] / sp : 1 / livres.length) * alvo * 100) / 100; resto -= v; x.venda = v; });
     };
-    const somaVenda = () => { if ((modoV() === 'servico' || IT.length === 1) && f.elements.valor_fechado) { const v = EDIT.tot().v; if (v) f.elements.valor_fechado.value = v; } };
+    const somaVenda = () => { if ((modoV() === 'servico' || IV().length === 1) && f.elements.valor_fechado) { const v = EDIT.tot().v; if (v) f.elements.valor_fechado.value = v; } };
     const desenhaModo = () => {
       let el = $('vendaModo'); if (!el) { if (!$('reDaCot')) return; $('reDaCot').insertAdjacentHTML('afterend', '<div id="vendaModo"></div>'); el = $('vendaModo'); }
-      el.innerHTML = IT.length > 1 ? `<div class="sub" style="margin:4px 0 0">Valor de venda</div><div class="seg" style="margin:4px 0 6px"><button type="button" data-vm="total" class="${modoV() === 'total' ? 'on' : ''}">Valor integral</button><button type="button" data-vm="servico" class="${modoV() === 'servico' ? 'on' : ''}">Por serviço</button></div><div class="sub" style="margin:0 0 6px">${modoV() === 'total' ? 'Digite o total em "Valor fechado": o app divide entre os serviços pelo custo de cada um.' : 'Digite a venda de cada serviço: o valor fechado é a soma.'}</div>` : '';
+      el.innerHTML = IV().length > 1 ? `<div class="sub" style="margin:4px 0 0">Valor de venda</div><div class="seg" style="margin:4px 0 6px"><button type="button" data-vm="total" class="${modoV() === 'total' ? 'on' : ''}">Valor integral</button><button type="button" data-vm="servico" class="${modoV() === 'servico' ? 'on' : ''}">Por serviço</button></div><div class="sub" style="margin:0 0 6px">${modoV() === 'total' ? 'Digite o total em "Valor fechado": o app divide entre os serviços pelo custo de cada um.' : 'Digite a venda de cada serviço: o valor fechado é a soma.'}</div>` : '';
       el.querySelectorAll('[data-vm]').forEach(b => b.onclick = () => { F.venda_modo = b.dataset.vm; if (F.venda_modo === 'total') ratear(); EDIT.desenha(); somaVenda(); desenhaModo(); });
     };
     desenhaModo();
-    if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (IT.length === 1 || (modoV() === 'total' && IT.length > 1)) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
+    if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (IV().length === 1 || (modoV() === 'total' && IV().length > 1)) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
     $('reItens').addEventListener('input', () => somaVenda());
-    $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IT.length > 1) { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); });
+    $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IV().length > 1) { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); rotFech(); });
     f._ratear = () => { ratear(); EDIT.desenha(); desenhaModo(); };
     // Fechou: a venda vem preenchida da cotação ligada ao card (rota, datas, passageiros, companhia, hotéis e valor)
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
@@ -3309,28 +3357,52 @@ function telaFormReuniao(P) {
   $('voltar').onclick = () => voltarSeguro(GE_FUNIL ? 'gestao' : 'reunioes');
   if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
     const IT = f._itens ? f._itens() : [], Fh = f._fech();
-    const pend = VENDA.pendenciasFechamento({ itens: IT, fech: Fh });
-    if (!IT.filter(x => !VENDA.enviado(x)).length) { aviso('Tudo já foi para a planilha.'); return; }
+    const pend = VENDA.pendenciasFechamento({ itens: IT, fech: Fh }), A = VENDA.aEnviar(IT);
+    if (!A.vendas.length && !A.cliente.length) { aviso('Tudo já foi lançado.'); return; }
     if (pend.length) { $('reFechPend').innerHTML = '<b style="color:var(--alerta)">Antes de enviar, falta:</b><br>' + pend.map(esc).join('<br>'); $('reFechPend').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-    const n = IT.filter(x => !VENDA.enviado(x)).length;
-    if (!confirm(`Enviar ${n} ${n === 1 ? 'serviço' : 'serviços'} para a planilha como emitidos e pagos?`)) return;
-    const antes = IT.map(x => x.planilha_id);
-    $('enviarPlan').disabled = true; $('enviarPlan').textContent = 'Enviando...';
-    const r1 = await VENDA.enviarParaPlanilha(ctxVenda(), { ...base, cliente: f.elements.cliente.value, contato: f.elements.contato.value, pessoa_id: f.elements.pessoa_id.value || base.pessoa_id }, IT, Fh);
-    $('enviarPlan').disabled = false; $('enviarPlan').textContent = 'Emitido e pago: enviar para a planilha';
-    if (!r1.ok) { aviso('Não enviou: ' + r1.erro + (/fila_planilha/.test(r1.erro) ? ' (rode o SQL do processo de cotação)' : '')); return; }
-    const tot = IT.reduce((a, x) => a + (+x.venda || 0), 0);
-    // valor fechado: o que está digitado no campo (antes usava o valor antigo do banco)
+    $('reFechPend').innerHTML = '';
+    const nV = A.vendas.length, nC = A.cliente.length;
+    const partes = [nV ? `enviar ${nV} ${nV === 1 ? 'serviço' : 'serviços'} para a planilha como ${nV === 1 ? 'emitido e pago' : 'emitidos e pagos'}` : '', nC ? `lançar ${nC === 1 ? 'a emissão' : nC + ' emissões'} com milhas do cliente na ficha da Gestão` : ''].filter(Boolean).join(' e ');
+    if (!confirm(partes.charAt(0).toUpperCase() + partes.slice(1) + '?')) return;
+    const antes = IT.map(x => x.planilha_id), bt = $('enviarPlan');
+    bt.disabled = true; bt.textContent = 'Enviando...';
+    const fim = () => { bt.disabled = false; if (f._rotFech) f._rotFech(); };
+    const card = { ...base, cliente: f.elements.cliente.value, contato: f.elements.contato.value, pessoa_id: f.elements.pessoa_id.value || base.pessoa_id };
+    // 1. emissões com milhas do cliente: Uso de milhas na ficha da Gestão, voo no check-in. Não é venda.
+    const clientesG = [], avisosG = [];
+    if (nC) {
+      await VENDA.salvarPassageiros(ctxVenda(), A.cliente);
+      const G = f._ctxCliente ? f._ctxCliente.gestao : null;
+      for (const x of A.cliente) {
+        const r = await VENDA.lancarCliente(ctxVenda(), card, x, G);
+        if (!r.ok) {
+          fim(); await sb.from('atendimentos').update({ itens: IT }).eq('id', base.id);
+          aviso('Não lançou na Gestão: ' + r.erro); return;
+        }
+        clientesG.push(r.cliente_id); if (r.avisoVoos) avisosG.push(r.avisoVoos);
+      }
+    }
+    // 2. vendas da Maktub: planilha, como sempre
+    let r1 = { ok: true, n: 0 };
+    if (nV) {
+      r1 = await VENDA.enviarParaPlanilha(ctxVenda(), card, IT, Fh);
+      if (!r1.ok) { fim(); if (nC) await sb.from('atendimentos').update({ itens: IT }).eq('id', base.id); aviso('Não enviou: ' + r1.erro + (/fila_planilha/.test(r1.erro) ? ' (rode o SQL do processo de cotação)' : '')); return; }
+    }
+    fim();
+    // valor fechado: só a parte vendida (o que está digitado no campo, ou a soma das vendas)
+    const tot = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0);
     const vfCampo = f.elements.valor_fechado && f.elements.valor_fechado.value.trim() ? Number(f.elements.valor_fechado.value.trim().replace(',', '.')) : null;
-    const up = await sb.from('atendimentos').update({ itens: IT, fech: Fh, resultado: 'Fechou', etapa: 'Fechou', valor_fechado: vfCampo || base.valor_fechado || tot || null }).eq('id', base.id).select().single();
+    const soCli = IT.every(VENDA.ehCliente);
+    const up = await sb.from('atendimentos').update({ itens: IT, fech: Fh, resultado: 'Fechou', etapa: 'Fechou', valor_fechado: soCli ? null : (vfCampo || base.valor_fechado || tot || null) }).eq('id', base.id).select().single();
     if (up.error) {
       const novos = IT.filter((x, k) => x.planilha_id && x.planilha_id !== antes[k]).map(x => x.planilha_id);
-      await sb.from('fila_planilha').delete().in('id', novos);
+      if (novos.length) await sb.from('fila_planilha').delete().in('id', novos);
       IT.forEach((x, k) => { if (x.planilha_id !== antes[k]) { delete x.planilha_id; delete x.enviado_em; } });
-      aviso('Não enviou: ' + up.error.message); return;
+      aviso('Não salvou o card: ' + up.error.message + (nC ? ' A emissão com milhas do cliente já está na Gestão; toque de novo para atualizar o card.' : '')); return;
     }
     const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = up.data;
-    aviso(`${r1.n} ${r1.n === 1 ? 'serviço vai' : 'serviços vão'} para a planilha em até 5 minutos.`);
+    if (clientesG.length) await depoisMilhasCliente(clientesG);
+    aviso([nV ? `${r1.n} ${r1.n === 1 ? 'serviço vai' : 'serviços vão'} para a planilha em até 5 minutos.` : '', nC ? (nC === 1 ? 'Emissão lançada na Gestão do cliente.' : 'Emissões lançadas na Gestão do cliente.') : '', ...avisosG].filter(Boolean).join(' '));
     // o card é redesenhado com o que foi enviado; anotações e próximos passos digitados e ainda não salvos voltam para os campos
     const fora = (el) => !el.name || ['etapa', 'resultado', 'valor_fechado', 'pessoa_id'].includes(el.name) || el.closest('#reItens, #reFech, #reProd') || ['checkbox', 'radio', 'file', 'hidden'].includes(el.type);
     const digitado = [...f.elements].filter(el => !fora(el) && el.value).map(el => [el.name, el.value]);
@@ -3894,7 +3966,8 @@ function telaReceber(P) {
         ${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}</div>` : ''}
         ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
       <button class="zap grande" data-ok="${e.id}" style="margin-top:10px;width:100%">Recebido</button>
-    </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div>`;
+    </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div><div id="rbBloco"></div>`;
+  blocoReembolsos();
   $('voltar').onclick = () => voltarA(ANTERIOR || 'financeiro'); // volta para onde a pessoa estava (Início, Financeiro ou Empresa)
   P.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ok;
@@ -3904,6 +3977,36 @@ function telaReceber(P) {
     if (error) { b.disabled = false; b.textContent = 'Recebido'; aviso('Não salvou: ' + error.message); return; }
     const e = D.emissoes.find(x => x.id === id); if (e) e.pago = true;
     aviso('Pagamento marcado como recebido. Vai para a planilha em até 5 minutos.'); telaReceber(P);
+  });
+}
+
+// reembolso das taxas que a Maktub pagou numa emissão com as milhas do cliente da Gestão: movimento neutro,
+// separado das vendas (fora de vendas, metas, comissão, DRE e planilha)
+let RB_CONF = null;
+async function blocoReembolsos() {
+  if (!$('rbBloco')) return;
+  const { data, error } = await sb.from('reembolsos_taxas_gestao').select('*').is('cancelado_em', null).eq('recebido', false).order('pago_em').limit(500);
+  const el = $('rbBloco'); if (!el) return;
+  if (error || !data || !data.length) { el.innerHTML = ''; return; }
+  const nome = (r) => ((D.reunioes || []).find(x => String(x.id) === String(r.atendimento_id)) || {}).cliente || 'Cliente da Gestão';
+  const tot = data.reduce((t, r) => t + (+r.valor || 0), 0);
+  el.innerHTML = `<div class="secao">Reembolso de taxas · Gestão</div>
+    <div class="numeros" style="margin-top:0"><div class="num"><div class="l">Reembolsos a receber</div><div class="v">${brlC(tot)}</div><div class="d">${data.length} ${data.length === 1 ? 'emissão' : 'emissões'} com milhas do cliente</div></div></div>
+    <div class="sub">Taxas que a Maktub pagou em emissões feitas com as milhas do cliente da Gestão. Movimento neutro: fora de vendas, metas, comissão e DRE, e não vai para a planilha.</div>
+    <div class="lista">${data.map(r => `<div class="card">
+      <div class="cab"><div><div class="nome">${esc(nome(r))}</div><span class="tag">Milhas do cliente</span></div><span class="quando">pago em ${dataCurta(dia(r.pago_em))}</span></div>
+      <div class="info"><div><span>Valor:</span> ${brl2(r.valor)}</div>${r.descricao ? `<div>${esc(r.descricao)}</div>` : ''}${r.atendimento_id ? `<div><a href="#reunioes/${esc(r.atendimento_id)}">Abrir o card</a></div>` : ''}</div>
+      <button class="zap grande" data-rbok="${esc(r.id)}" style="margin-top:10px;width:100%">Reembolso recebido</button>
+    </div>`).join('')}</div>`;
+  el.querySelectorAll('[data-rbok]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.rbok;
+    if (RB_CONF !== id) { RB_CONF = id; b.textContent = 'Toque de novo para confirmar'; return; }
+    RB_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
+    const agora = new Date().toISOString();
+    const { error: e } = await sb.from('reembolsos_taxas_gestao').update({ recebido: true, recebido_em: agora, recebido_por: D.meuId, updated_at: agora }).eq('id', id);
+    if (e) { b.disabled = false; b.textContent = 'Reembolso recebido'; aviso('Não salvou: ' + e.message); return; }
+    if (typeof CX.recarregar === 'function') CX.recarregar();
+    aviso('Reembolso marcado como recebido. Não vai para a planilha.'); blocoReembolsos();
   });
 }
 
@@ -3944,8 +4047,8 @@ let EMP_TOP = 'fat', PNL_PER = 'mes', PNL_REF = null, PNL_ABA = 'vendas', PNL_CO
 const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['indicacoes', 'leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e empréstimos para o caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
-    ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site e avaliações no Google'],
+    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
@@ -3954,7 +4057,7 @@ function telaEmpresa(P) {
   const it = itensEmpresa();
   P.innerHTML = `
     <h1 class="titulo">Empresa</h1>
-    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro'], ['receber', 'A receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
+    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe e acessos'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
     ${verNum ? '<div id="painelEmp"><div class="vazio">Carregando o painel...</div></div>' : ''}
     ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
     ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
@@ -4233,6 +4336,16 @@ async function carregarAgendaEm() {
   const iso = (d) => isoLocal(d);
   const r = await sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) });
   D.voosEm = r.data || [];
+  // voos emitidos com as milhas do cliente da Gestão: não são venda (não estão em emissoes), mas têm check-in e bilhete como os outros
+  { const de = iso(new Date(+HOJE() - 864e5)), ate = iso(new Date(+HOJE() + 120 * 864e5));
+    const c = await sb.from('voos_milhas_cliente').select('*').is('cancelado_em', null).lte('data_ida', ate).or(`data_volta.gte.${de},data_ida.gte.${de}`).limit(2000);
+    if (!c.error) {
+      const ids = new Set((c.data || []).map(v => String(v.id)));
+      D.voosEm = D.voosEm.filter(v => !ids.has(String(v.id))).concat((c.data || []).map(v => { const P = String(v.passageiros_nomes || '').split(';').map(x => x.trim()).filter(Boolean);
+        return { id: String(v.id), milhas_cliente: true, atendimento_id: v.atendimento_id, passageiro: P.length ? P[0] + (P.length > 1 ? ` e mais ${P.length - 1}` : '') : (v.comprador || ''), contato: v.contato || '',
+          cia: v.cia_voo || v.cia_emissora || '', localizador: v.localizador || '', origem: v.origem, destino: v.destino, data_ida: v.data_ida, data_volta: v.data_volta, checkin_ida: !!v.checkin_ida, checkin_volta: !!v.checkin_volta, vendedor: 'milhas do cliente' }; }));
+    }
+  }
   { const h = await sb.from('voo_horarios').select('*'); D.horas = h.error ? null : Object.fromEntries((h.data || []).map(x => [String(x.emissao_id), x])); }
   { const t = await sb.from('voos_emissao').select('*'); if (!t.error) { D.trechos = {}; (t.data || []).forEach(x => (D.trechos[String(x.emissao_id)] = D.trechos[String(x.emissao_id)] || []).push(x)); } else D.trechos = null; }
   if (D.emissoes && D.emissoes.length) marcarCheckinB2B();
@@ -4277,6 +4390,10 @@ function instanteVoo(iso, hhmm, tz) {
     try { const loc = new Date(new Date(utc).toLocaleString('en-US', { timeZone: tz || 'America/Sao_Paulo' })), ref = new Date(new Date(utc).toLocaleString('en-US', { timeZone: 'UTC' })); return utc - (loc - ref); } catch (__) { return utc + 3 * 36e5; }
   }
 }
+// voo sem horário de saída: check-in pendente no dia do voo e, a partir das 7h (horário de Brasília), no dia anterior.
+// Mesma regra do aviso no celular e no Telegram (avisos_checkin_24h no servidor).
+const horaBrasilia = () => { try { return +new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' }).format(new Date()); } catch (_) { return new Date().getHours(); } };
+const pendSemHora = (k) => k === 0 || (k === 1 && horaBrasilia() >= 7);
 /* trechos de voo das emissões (todo o time vê) */
 function trechosEm() {
   const T = [];
@@ -4288,7 +4405,7 @@ function trechosEm() {
       R.forEach(r => {
         const d = dia(r.data), k = difDias(d); if (k < -1) return;
         const hr = r.hora ? String(r.hora).slice(0, 5) : '', feito = !!r.checkin;
-        let pend = !feito && k >= 0 && k <= 2;
+        let pend = !feito && pendSemHora(k);
         if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
         T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, de: r.origem, para: r.destino, v });
       });
@@ -4299,7 +4416,7 @@ function trechosEm() {
       const d = dia(data), k = difDias(d);
       if (k < -1) return;
       const H = (D.horas || {})[String(v.id)] || {}, hr = H['hora_' + tr];
-      let pend = !feito && k >= 0 && k <= 2;
+      let pend = !feito && pendSemHora(k);
       if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
       T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, de, para, v });
     });
@@ -4307,6 +4424,27 @@ function trechosEm() {
   return T;
 }
 const checkinsEm = () => trechosEm().filter(t => t.pendente);
+// voos que ainda vão acontecer e não têm horário de saída (vendas antigas): sem horário, o aviso de check-in só chega às 7h do dia anterior
+function voosSemHorario() {
+  const L = [];
+  (D.voosEm || []).forEach(v => {
+    if (v.milhas_cliente) return;
+    const em = (D.emissoes || []).find(x => x.id === v.id); if (B2B.ehB2B(em) || B2B.ehCancelada(em, D)) return;
+    const R = ((D.trechos || {})[String(v.id)] || []).slice().sort((a, b) => a.n - b.n), H = (D.horas || {})[String(v.id)] || {};
+    const falta = R.length
+      ? R.filter(r => r.data && !r.hora && !r.checkin && difDias(dia(r.data)) >= 0).map(r => ({ d: dia(r.data), de: r.origem, para: r.destino }))
+      : [['ida', v.data_ida, v.origem, v.destino], ['volta', v.data_volta, v.destino, v.origem]].filter(([tr, data]) => data && !v['checkin_' + tr] && !H['hora_' + tr] && difDias(dia(data)) >= 0).map(([, data, de, para]) => ({ d: dia(data), de, para }));
+    if (falta.length) L.push({ v, em, falta, d: falta[0].d });
+  });
+  return L.sort((a, b) => a.d - b.d);
+}
+function blocoSemHorario() {
+  if (!(ADMIN || podeAba('emissoes'))) return '';
+  const L = voosSemHorario(); if (!L.length) return '';
+  const linha = ({ v, em, falta }) => `<button type="button" class="lin" data-semhr="${esc(v.id)}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--linha);padding:8px 0;cursor:pointer;font:inherit;color:inherit"><span>${esc((em && em.comprador) || v.passageiro || 'Passageiro')}${v.localizador ? ' · ' + esc(String(v.localizador).toUpperCase()) : ''}<small style="display:block;color:var(--tinta-3)">${falta.map(f => `${esc(f.de || '?')} → ${esc(f.para || '?')} ${dataCurta(f.d)}`).join(' · ')}</small></span><span class="seta">›</span></button>`;
+  return `<div class="secao" id="semHorario">Voos sem horário de saída</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin:0 0 6px">Vendas sem o horário do voo: o aviso de check-in só chega às 7h do dia anterior. Toque e complete o horário como está no bilhete.</div>${L.slice(0, 8).map(linha).join('')}${L.length > 8 ? `<details><summary class="sub" style="cursor:pointer;margin-top:6px">Mais ${L.length - 8}</summary>${L.slice(8).map(linha).join('')}</details>` : ''}</section>`;
+}
+function ligarSemHorario(P) { P.querySelectorAll('[data-semhr]').forEach(b => b.onclick = () => ir('emissoes', () => { EM_ED = b.dataset.semhr; })); }
 
 /* ---------- leads ---------- */
 // talentos não têm status: o "novo" é o que este aparelho ainda não abriu
@@ -4559,7 +4697,7 @@ function htmlBaseMes() {
   const L = (D.clientes || []).filter(c => precisaBase(c, k) && vejoBase(c)).map(c => ({ c, f: confDoMes(c, k) }));
   if (!L.length) return '';
   const linha = ({ c }) => `<div class="kbl"><span>${esc(c.nome_completo)}${gest(c)}</span><button class="zap" type="button" data-base="${c.id}">Alimentar</button></div>`;
-  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'gestor ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem gestor'}</small>` : '';
+  const gest = (c) => ADMIN ? ` <small>${gestorDe(c) ? 'responsável ' + esc(String(gestorDe(c).nome).split(' ')[0]) : 'sem responsável'}</small>` : '';
   // primeiro quem tem o dia planejado mais cedo; sem dia planejado vai para o fim
   const falta = L.filter(x => !x.f).sort((a, b) => (Number(a.c.dia_saldos) || 99) - (Number(b.c.dia_saldos) || 99) || String(a.c.nome_completo).localeCompare(String(b.c.nome_completo)));
   const feitas = L.filter(x => x.f).sort((a, b) => String(b.f.feita_em).localeCompare(String(a.f.feita_em)));
@@ -4713,7 +4851,7 @@ function telaGestao(P) {
 
     ${htmlPedidosDiagnostico()}
 
-    <div class="secao">Carteira de clientes</div>
+    <div class="secao">Carteira da Gestão</div>
     <div class="numeros" style="margin-top:0">
       <div class="num destaque"><div class="l">Carteira sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
@@ -4721,7 +4859,7 @@ function telaGestao(P) {
       <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
     </div>
     <div class="pend" style="margin-top:10px">
-      <button data-g="clientes"><span>Carteira de clientes</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
+      <button data-g="clientes"><span>Carteira da Gestão</span><span><b>${D.clientes.length}</b><span class="seta">›</span></span></button>
       <button data-g="implantacao"><span>Onboarding e tarefas<small style="display:block;font-size:12px;color:var(--tinta-3)">Checklist D0 a D7, cartões e dia dos saldos, na ficha de cada cliente</small></span><span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b><span class="seta">›</span></span></button>
       <button data-g="funil"><span>Funil de leads</span><span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b><span class="seta">›</span></span></button>
     </div>
@@ -4897,7 +5035,7 @@ function telaFicha(P, id) {
     <button class="voltar" id="voltar">‹ Voltar</button>
     <h1 class="titulo" style="margin-top:6px">${esc(c.nome_completo)}</h1>
     ${(pf => pf && podeAba('crm') ? CRM.abasFicha('gestao') + CRM.resumoPessoa(D, pf) : '')((D.pessoas || []).find(x => x.cliente_id === c.id))}
-    <div class="sub">${g ? 'Gestor: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
+    <div class="sub">${g ? 'Responsável: ' + esc(g.nome) + ' · ' : ''}${c.ultima_atualizacao ? 'painel atualizado em ' + new Date(c.ultima_atualizacao).toLocaleDateString('pt-BR') : 'painel nunca atualizado'}${c.conferencia_em ? ' · conferido em ' + new Date(c.conferencia_em).toLocaleDateString('pt-BR') : ''}</div>
     <div style="margin-top:8px">${htmlCiclo(c, cicloCliente(c))}${(() => { const T = tarefasOb(c.id), f = T.filter(t => t.feito).length; return T.length && f < T.length ? ' ' + pilula(false, `Onboarding ${f} de ${T.length}`) : ''; })()}</div>
     <div class="seg fseg" id="fiAbas">${abas.map(([k, l]) => `<button data-a="${k}" class="${FI_ABA === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="fiCorpo"></div>`;
@@ -4964,7 +5102,7 @@ async function fiCarteira(el, c) {
     <div class="secao">Por programa</div>
     <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
     <div class="secao">Últimos lançamentos</div>
-    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}<button class="mini" data-del="${x.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref ? '' : `<button class="mini" data-del="${x.id}">excluir</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
       <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
   el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -4978,6 +5116,28 @@ async function fiCarteira(el, c) {
   });
   if (FI_FORM) formCarteira(c);
 }
+// emissão com milhas do cliente gravada ou cancelada no card: quem tem acesso à Gestão recalcula o painel do cliente na hora.
+// Sem esse acesso, o banco guarda a marca (painel_pendente_desde) e o app de quem tem acesso recalcula sozinho ao abrir.
+async function recalcularPainel(cid) {
+  try { await CART.syncCarteira(cid); } catch (_) { return false; }
+  const agora = new Date().toISOString();
+  await sb.from('extrato_milhas').update({ painel_pendente_desde: null }).eq('cliente_id', cid).not('painel_pendente_desde', 'is', null);
+  await sb.from('clientes').update({ ultima_atualizacao: agora }).eq('id', cid);
+  const c = (D.clientes || []).find(x => x.id === cid); if (c) { c.ultima_atualizacao = agora; c._W = null; }
+  return true;
+}
+async function depoisMilhasCliente(ids) {
+  carregarAgendaEm().catch(() => {});
+  if (!(ADMIN || pode('gestao'))) return;
+  for (const cid of [...new Set((ids || []).filter(Boolean))]) await recalcularPainel(cid);
+}
+let PEND_PAINEL_FEITO = false;
+async function recalcularPendentes() {
+  if (PEND_PAINEL_FEITO || !(ADMIN || pode('gestao'))) return; PEND_PAINEL_FEITO = true;
+  const { data, error } = await sb.from('extrato_milhas').select('cliente_id').not('painel_pendente_desde', 'is', null).limit(500);
+  if (error || !data || !data.length) return;
+  for (const cid of [...new Set(data.map(x => x.cliente_id))]) await recalcularPainel(cid);
+}
 async function depoisDaCarteira(c, msg) {
   // o painel do cliente guarda saldos, custo médio e economia calculados a partir do extrato, em várias tabelas.
   // Se o recálculo falhar no meio, os números do painel não batem entre si: tenta de novo e, se continuar, avisa sem sumir.
@@ -4988,7 +5148,7 @@ async function depoisDaCarteira(c, msg) {
   const pr = await sb.from('programas_milhas').select('*').eq('cliente_id', c.id);
   if (!pr.error) D.progs = D.progs.filter(p => p.cliente_id !== c.id).concat(pr.data || []);
   D.extMes = (D.extMes || []).concat([{ cliente_id: c.id, created_at: agora }]);
-  const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).gte('data', new Date().getFullYear() + '-01-01');
+  const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).is('cancelado_em', null).gte('data', new Date().getFullYear() + '-01-01');
   if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []);
   await gtMarcarChave(c, 'carteira');
   FI_FORM = null;
@@ -5426,7 +5586,7 @@ async function fiRelatorio(el, c) {
     <div class="mesnav" id="fiMes" style="margin-top:12px"><button data-n="-1">‹</button><span>${mesNome(mes)}</span><button data-n="1">›</button></div>
     <div class="sub">${r.id ? (r.publicado ? '<b style="color:var(--verde)">Publicada</b>: o cliente já vê esta carta.' : '<b style="color:var(--alerta)">Rascunho</b>: o cliente ainda não vê.') : 'Sem carta neste mês.'} Os números do relatório saem sozinhos da carteira e das economias.</div>
     <form class="bloco form" id="fRel">
-      <label class="fl"><span>Carta do gestor</span><textarea name="carta_gestor" rows="8" placeholder="Como foi o mês, o que foi conquistado e o que vem a seguir.">${esc(r.carta_gestor || '')}</textarea></label>
+      <label class="fl"><span>Carta da equipe</span><textarea name="carta_gestor" rows="8" placeholder="Como foi o mês, o que foi conquistado e o que vem a seguir.">${esc(r.carta_gestor || '')}</textarea></label>
       <label class="fl"><span>Destaques (um por linha)</span><textarea name="destaques" rows="3">${esc(r.destaques || '')}</textarea></label>
       <label class="fl"><span>Próximos passos (um por linha)</span><textarea name="proximos_passos" rows="3">${esc(r.proximos_passos || '')}</textarea></label>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="submit" data-pub="1" style="flex:2">${r.publicado ? 'Salvar publicada' : 'Salvar e publicar'}</button><button class="sec" type="submit" data-pub="0" style="flex:1">Rascunho</button></div>
