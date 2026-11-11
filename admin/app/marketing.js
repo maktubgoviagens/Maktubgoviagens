@@ -292,7 +292,7 @@ export function tela(P, ctx) {
   if (VIEW === 'ideias') html = vIdeias();
   if (VIEW === 'tarefas') html = vTarefas();
   const topo = X.COORD
-    ? `${X.so ? '' : '<button class="voltar" id="mkVoltar">‹ Empresa</button>'}<h1 class="titulo" style="margin-top:6px">Marketing <em>da Maktub</em></h1>${seg}`
+    ? `${X.so ? '' : '<button class="voltar" id="mkVoltar">‹ Mais</button>'}<h1 class="titulo" style="margin-top:6px">Marketing <em>da Maktub</em></h1>${seg}`
     : (VIEW === 'semana' ? '' : `<h1 class="titulo">Estúdio de <em>conteúdo</em></h1>`) + (VIEW === 'semana' ? '' : seg);
   P.innerHTML = topo + html + (X.so ? sairBtn() : '');
   if (VIEW === 'semana') { const h = P.querySelector('.mk-hero'); if (h) h.insertAdjacentHTML('afterend', seg); }
@@ -942,7 +942,7 @@ function arrastavel(P) {
 
 function ligar(P) {
   const q = (s) => P.querySelectorAll(s), by = (id) => document.getElementById(id);
-  if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('empresa');
+  if (by('mkVoltar')) by('mkVoltar').onclick = () => X.ir('mais');
   q('[data-v]').forEach(b => b.onclick = () => { if (VIEW === b.dataset.v || !X.sairOk()) return; VIEW = b.dataset.v; DIA = null; history.pushState(null, '', endereco()); rerender(); scrollTo(0, 0); });
   q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); abrirPost(b.dataset.p); });
   q('[data-novo]').forEach(b => b.onclick = () => abrirPost('nova', { status: b.dataset.novo }));

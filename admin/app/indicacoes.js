@@ -419,8 +419,8 @@ export async function telaIndicacoes(P, X, opt = {}) {
   if (!REF) REF = iso(new Date());
   const MODO = emb ? opt.per : PER, REFX = emb ? opt.ref : REF;
   const em = (id) => P.querySelector('#' + id);
-  P.innerHTML = emb ? '<div class="vazio">Carregando...</div>' : `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1><div class="vazio">Carregando...</div>`;
-  if (!emb) $('voltar').onclick = () => X.ir('empresa');
+  P.innerHTML = emb ? '<div class="vazio">Carregando...</div>' : `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1><div class="vazio">Carregando...</div>`;
+  if (!emb) $('voltar').onclick = () => X.ir('mais');
   if (!(X.D.pessoas || []).length || !('origem_canal' in ((X.D.pessoas || [])[0] || {}))) {
     P.querySelector('.vazio').textContent = X.ADMIN ? 'Rode o 75-origem-e-indicacoes.sql no Supabase para ativar.' : 'Recurso ainda não ativado. Fale com o administrador.'; return;
   }
@@ -447,7 +447,7 @@ export async function telaIndicacoes(P, X, opt = {}) {
       <div class="s">${vd.length} ${vd.length === 1 ? 'venda' : 'vendas'} no período${V && vd.length ? ' · lucro da Maktub ' + brl2(vd.reduce((t, e) => t + (+e.lucro_liquido || 0), 0)) + ' · repasse ' + brl2(vd.reduce((t, e) => t + (+e.repasse || 0), 0)) : ''}${nivel > 1 ? ' · comissão indireta R$ 0,00' : ''}</div>
       ${fs.map(f => noArv(f, nivel + 1, vistos)).join('')}</div>`;
   };
-  P.innerHTML = `${emb ? '' : `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1>
+  P.innerHTML = `${emb ? '' : `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Indicações <em>e origem</em></h1>
     <div class="ind-per"><div class="seg" id="indPer">${[['semana', 'Semana'], ['mes', 'Mês'], ['ano', 'Ano'], ['tudo', 'Desde o início']].map(([k, l]) => `<button data-p="${k}" class="${PER === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       ${PER === 'tudo' ? '' : `<div class="mesnav" id="indNav" style="margin:0;flex:1 1 260px"><button data-n="-1">‹</button><span>${esc(per.nome)}</span><button data-n="1">›</button></div>`}</div>
     ${PER === 'semana' ? '<div class="sub">Semana de quarta a terça. Na virada do mês, a semana é cortada no último dia do mês.</div>' : ''}`}
@@ -485,7 +485,7 @@ export async function telaIndicacoes(P, X, opt = {}) {
       <div class="ind-nota">Indicou, fecharam e conversão contam desde o início. Vendas, ${V ? 'faturamento, lucro, comissão e ' : ''}Gestão seguem o período (Gestão pela data de assinatura do contrato). Toque no nome para ver a árvore.${R.orfaos ? ` ${R.orfaos} ${R.orfaos === 1 ? 'pessoa aponta' : 'pessoas apontam'} para uma ficha de quem indicou que não existe mais: um administrador precisa corrigir.` : ''}</div>
     </section>`;
   if (!emb) {
-    $('voltar').onclick = () => X.ir('empresa');
+    $('voltar').onclick = () => X.ir('mais');
     $('indPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PER = b.dataset.p; telaIndicacoes(P, X); } };
     if ($('indNav')) $('indNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { mover(+b.dataset.n); telaIndicacoes(P, X); } };
   }

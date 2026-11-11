@@ -559,8 +559,8 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import * as OPM from '/admin/app/op-milhas.js?v=4';
-import * as MKT from '/admin/app/marketing.js?v=23';
+import * as OPM from '/admin/app/op-milhas.js?v=5';
+import * as MKT from '/admin/app/marketing.js?v=24';
 import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=26';
 import * as ACV from '/admin/app/acervo.js?v=8';
@@ -571,12 +571,12 @@ import * as FORN from '/admin/app/fornecedores.js?v=12';
 import * as COT from '/admin/app/cotador.js?v=52';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=25';
-import * as ATV from '/admin/app/atividades.js?v=1';
-import * as CMP from '/admin/app/compromissos.js?v=16';
-import * as CX from '/admin/app/caixa.js?v=3';
-import * as DRE from '/admin/app/dre.js?v=7';
+import * as ATV from '/admin/app/atividades.js?v=2';
+import * as CMP from '/admin/app/compromissos.js?v=17';
+import * as CX from '/admin/app/caixa.js?v=4';
+import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=4';
+import * as IND from '/admin/app/indicacoes.js?v=5';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1104,7 +1104,7 @@ function atalhosComercial() {
   return L.length ? `<div class="gatalhos">${L.join('')}</div>` : '';
 }
 window.irLeads = () => ir('leads');
-const voltarCom = () => podeAba('reunioes') ? ['reunioes', 'Comercial'] : ['empresa', 'Empresa'];
+const voltarCom = () => podeAba('reunioes') ? ['reunioes', 'Comercial'] : ['mais', 'Mais'];
 window.irAcervo = () => ir('acervo');
 window.irFornecedores = () => ir('fornecedores', () => FORN.abrir(null));
 // cotação montada no cotador: o card do funil anda sozinho.
@@ -2087,7 +2087,7 @@ async function telaAvisos(P) {
     </section>`}
     <div class="secao">Histórico ${D.avisos.length ? `<span>${D.avisos.length} mais recentes</span>` : ''}</div>
     <div id="lista">${D.avisos.length ? D.avisos.map(htmlAviso).join('') : '<div class="vazio">Nenhum aviso ainda.</div>'}</div>`;
-  $('voltar').onclick = () => { if (ANTERIOR) { ANTERIOR = null; history.back(); } else ir('empresa'); };
+  $('voltar').onclick = () => { if (ANTERIOR) { ANTERIOR = null; history.back(); } else ir('mais'); };
   ligarAvisos(P);
   if (D.avisos.length && D.avSit && D.avisos[0].id > (D.avSit.visto_ate || 0)) {
     const ate = D.avisos[0].id;
@@ -2135,9 +2135,9 @@ function blocoMetasColab(m) {
 }
 let MT_MES = mesKey(new Date());
 async function telaMetas(P) {
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   const mesPedido = MT_MES;
   const { data: m, error } = await sb.rpc('metas_progresso', { p_mes: mesPedido + '-01' });
   // tocou rápido nas setas: a resposta de um mês anterior chegou depois e é descartada
@@ -2145,7 +2145,7 @@ async function telaMetas(P) {
   if (error) { P.querySelector('.vazio').textContent = tec('Metas ainda não ativadas no Supabase. Rode o 9-funil-e-metas.sql.'); return; }
   const e = m.empresa || {};
   const v = (x) => x === null || x === undefined ? '' : x;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Metas do <em>mês</em></h1>
     <div class="mesnav" id="mtMes"><button data-n="-1">‹</button><span>${mesNome(MT_MES)}</span><button data-n="1">›</button></div>
     <div class="secao">Progresso das metas</div>
     ${blocoMetasAdmin({ ...m }, false).replace(/<div class="secao">.*?<\/div>/, '')}
@@ -2172,7 +2172,7 @@ async function telaMetas(P) {
       <div class="sub">Deixe em branco o que não tiver meta. O time vê só a porcentagem das metas da Maktub e a própria meta. Quando uma meta da Maktub é batida, você recebe um aviso.</div>
       <div class="sub" id="msgMeta"></div>
     </form>` : ''}`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   $('mtMes').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { MT_MES = mesMais(MT_MES, +b.dataset.n); telaMetas(P); } };
   if (!ADMIN) return;
   $('abrirMetas').onclick = () => { $('fMeta').hidden = false; $('abrirMetas').hidden = true; $('fMeta').scrollIntoView({ behavior: 'smooth' }); };
@@ -3624,7 +3624,7 @@ function telaFinanceiro(P) {
     meses = `<section class="bloco"><h2>Lucro líquido por mês</h2>${barras(arr)}</section>`;
   }
   P.innerHTML = `
-    <h1 class="titulo">Financeiro da <em>operação</em></h1>${infoSinc()}
+    <h1 class="titulo">Financeiro das <em>vendas</em></h1>${infoSinc()}
     <div class="seg" id="finModo"><button data-m="mes" class="${FIN_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${FIN_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${FIN_MODO === 'mes' ? seletorMes('finMes') : `<div class="mesnav" id="finMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
@@ -3682,13 +3682,13 @@ function mostrarLinkAcesso(el, nome, link) {
   el.querySelector('[data-copiar]').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Mensagem copiada.'); } catch (_) { aviso('Não deu para copiar. Use o botão do WhatsApp.'); } };
 }
 async function telaAcessos(P) {
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => voltarA('mais');
   const { data, error } = await sb.rpc('equipe_acessos_listar');
   if (ABA !== 'acessos') return;
   if (error) { P.querySelector('.vazio').textContent = tec('Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'); return; }
   const L = data || [], admins = L.filter(p => p.papel === 'admin' && p.ativo);
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
     <div class="sub">${admins.map(p => esc(String(p.nome).split(' ')[0])).join(' e ')} ${admins.length === 1 ? 'é administrador' : 'são administradores'}: veem e controlam tudo, inclusive esta tela. Para cada colaborador, você escolhe o que ele vê e faz.</div>
     <button class="zap grande" id="acNovoB" style="margin-top:12px;width:100%">${AC_NOVO ? 'Fechar' : '+ Adicionar pessoa'}</button>
     ${AC_NOVO ? `<form class="bloco form" id="fAc">
@@ -3708,7 +3708,7 @@ async function telaAcessos(P) {
       ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
     </form>`; }).join('')}</div>
     <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
   P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (['mkt_aprovar', 'mkt_delegar'].includes(k) && c.checked); }); aviso('Só o marketing marcado (a coordenação e a distribuição de tarefas, se já estavam marcadas, continuam). Salve para valer.'); });
   // retrato de cada pessoa como veio do banco: serve para saber o que foi mexido e ainda não salvo
@@ -3826,13 +3826,13 @@ const mesCurto = (d) => { const k = String(d).slice(0, 7); const [y, m] = k.spli
 const periodoFixa = (x) => 'desde ' + mesCurto(x.desde) + (x.ate ? ' até ' + mesCurto(x.ate) : ' · sem data de término');
 async function telaCustos(P) {
   const hoje = mesKey(new Date());
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1><div class="vazio">Carregando...</div>`;
+  $('voltar').onclick = () => voltarA('mais');
   const [sl, fx] = await Promise.all([sb.rpc('salarios_listar'), sb.from('despesas_fixas').select('*').order('desde', { ascending: false })]);
   if (ABA !== 'custos') return;
   if (sl.error || fx.error) { P.querySelector('.vazio').textContent = tec('Rode o 27-dre-e-salarios.sql no Supabase para ativar.'); return; }
   const fixas = fx.data || [], ativa = (x) => !x.ate || String(x.ate).slice(0, 7) >= hoje;
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Salários e <em>despesas fixas</em></h1>
     <div class="sub">Tudo aqui entra sozinho no DRE de cada mês. A comissão continua automática.</div>
     <div class="secao">Salário fixo de cada pessoa</div>
     <div class="lista" style="margin-top:0">${(sl.data || []).map(p => `<form class="card form" data-sal="${p.user_id}">
@@ -3858,7 +3858,7 @@ async function telaCustos(P) {
       <div class="duas-col"><label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>${campo('desde', 'Começa em', hoje, 'month', 'required')}</div>
       ${campo('dia_vencimento', 'Dia do vencimento (opcional, para o lembrete)', '', 'number', 'min="1" max="31"')}
       <button class="zap" type="submit" style="margin-top:8px;width:100%">Adicionar</button></form>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   P.querySelectorAll('[data-sal]').forEach(f => f.onsubmit = async (ev) => {
     ev.preventDefault();
     const { error } = await sb.rpc('salario_definir', { p_user: f.dataset.sal, p_valor: Number(String(f.elements.valor.value || 0).replace(',', '.')), p_desde: (f.elements.desde.value || hoje) + '-01' });
@@ -3905,7 +3905,7 @@ function telaPagar(P) {
   const L = aPagar().sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
   const grupos = {}; L.forEach(e => { const f = fichaFornecedor(e.fornecedor), k = f ? 'f:' + f.id : 'n:' + nNome(e.fornecedor); (grupos[k] = grupos[k] || { nome: f ? f.nome : (e.fornecedor || 'Fornecedor não informado'), ficha: f, L: [] }).L.push(e); });
   const G = Object.entries(grupos).sort((a, b) => soma(b[1].L, 'custo') - soma(a[1].L, 'custo'));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Empresa</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
+  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A pagar</div><div class="v">${brlC(soma(L, 'custo'))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'} · ${G.length} ${G.length === 1 ? 'fornecedor' : 'fornecedores'}</div></div>
       <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(aReceberCli), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
@@ -3915,7 +3915,7 @@ function telaPagar(P) {
     ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
       ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
       ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   const marcar = async (ids, msg) => {
     const agora = new Date().toISOString(), feitos = []; let erro = '';
     for (let i = 0; i < ids.length; i += 100) {
@@ -4261,7 +4261,7 @@ function abaFinanceiro(L, E) {
 /* ---------- equipe, parceiros e regras (administradores) ---------- */
 function telaEquipe(P) {
   P.innerHTML = `
-    <button class="voltar" id="voltar">‹ Empresa</button>
+    <button class="voltar" id="voltar">‹ Mais</button>
     <h1 class="titulo" style="margin-top:6px">Comissões e <em>regras</em></h1>
     <div class="sub">Quem entra no app e o que cada pessoa vê ficam em <a href="#acessos" id="irAcessos">Equipe e acessos</a>.</div>
     <div class="secao">Comissão de cada pessoa</div>
@@ -4299,7 +4299,7 @@ function telaEquipe(P) {
       <div class="sub">Na cotação rápida, o vendedor digita o mínimo que a Maktub quer receber. O cartão sai em até essas vezes sem juros e o Pix com esse desconto.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar taxas</button>
     </form>`;
-  $('voltar').onclick = () => voltarA('empresa');
+  $('voltar').onclick = () => voltarA('mais');
   P.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
     const c = b.closest('[data-u]'), u = b.dataset.salvar;
     const { error } = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: c.querySelector('[name=papel]').value, p_pct: Number(c.querySelector('[name=pct]').value || 0), p_ativo: c.querySelector('[name=ativo]').checked });
