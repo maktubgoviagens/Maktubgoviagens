@@ -297,8 +297,11 @@ function tituloVoo(X, x, IT) {
 }
 // um trecho que foi emitido à parte (outra companhia, outro localizador) vira outra emissão, com o próprio custo
 function separarTrecho(IT, i, k) {
-  const x = IT[i], l = x.ct.splice(k, 1)[0];
-  const novo = { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', origem: up3(l.o), destino: up3(l.d), data_ida: l.data || null, passageiros: +l.pax || null, pago_em: 'milhas' };
+  const x = IT[i], ls0 = voosDaEmissao(x), l = x.ct.splice(k, 1)[0];
+  // o horário de saída de cada voo vai junto: o trecho separado leva o dele e a emissão que ficou recalcula ida e volta
+  const hs = ls0.map(v => v.hora || ''); hs.splice(k, 1);
+  const novo = { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', origem: up3(l.o), destino: up3(l.d), data_ida: l.data || null, hora_ida: (ls0[k] && ls0[k].hora) || l.hora || '', passageiros: +l.pax || null, pago_em: 'milhas' };
+  x.hrs = hs.slice(); x.hora_ida = hs[0] || ''; x.hora_volta = hs.length > 1 ? hs[hs.length - 1] : '';
   // a emissão que ficou: rota e datas pelos trechos que sobraram
   const r = x.ct; if (r.length === 1) { x.tipo_trecho = 'ida'; x.origem = up3(r[0].o); x.destino = up3(r[0].d); x.data_ida = r[0].data || x.data_ida; x.data_volta = null; x.ct_on = false; }
   else if (r.length === 2 && up3(r[1].d) === up3(r[0].o)) { x.tipo_trecho = 'iv'; x.origem = up3(r[0].o); x.destino = up3(r[0].d); x.data_ida = r[0].data || null; x.data_volta = r[1].data || null; x.ct_on = false; }
