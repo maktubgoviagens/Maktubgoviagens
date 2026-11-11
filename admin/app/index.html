@@ -1043,11 +1043,18 @@ function navItens() {
 let OP_ULT = 'emissoes';
 const OP_ABAS = ['emissoes', 'agenda'];
 const EMP_ABAS = ['marketing', 'fornecedores', 'empresa', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'acessos', 'avisos', 'site', 'acervo', 'opmilhas', 'leads', 'mais', 'comissao', 'atividades', 'indicacoes'];
+// Operação: Emissões | Agenda | Check-ins (os check-ins são uma vista da Agenda; antes só abriam pelo Início)
 function segOp(atual) {
-  if (!(podeAba('emissoes') && podeAba('agenda'))) return '';
-  return `<div class="seg" id="segOp" style="margin:0 0 14px"><button data-op="emissoes" class="${atual === 'emissoes' ? 'on' : ''}">Emissões</button><button data-op="agenda" class="${atual === 'agenda' ? 'on' : ''}">Agenda</button></div>`;
+  const L = [podeAba('emissoes') && ['emissoes', 'Emissões'], podeAba('agenda') && ['agenda', 'Agenda'], podeAba('agenda') && ['checkins', 'Check-ins' + (checkinsTotal() ? ' · ' + checkinsTotal() : '')]].filter(Boolean);
+  if (L.length < 2) return '';
+  return `<div class="seg" id="segOp" style="margin:0 0 14px">${L.map(([k, t]) => `<button data-op="${k}" class="${atual === k ? 'on' : ''}">${t}</button>`).join('')}</div>`;
 }
-document.addEventListener('click', (e) => { const b = e.target.closest('#segOp [data-op]'); if (b && b.dataset.op !== ABA) ir(b.dataset.op); });
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#segOp [data-op]'); if (!b) return;
+  const op = b.dataset.op, atual = ABA === 'agenda' && AG_VISTA === 'checkins' ? 'checkins' : ABA;
+  if (op === atual) return;
+  if (op === 'checkins') ir('agenda', () => { AG_VISTA = 'checkins'; }); else ir(op);
+});
 function montarNav() {
   const itens = navItens();
   $('nav').classList.toggle('seis', itens.length > 5);
@@ -5997,7 +6004,7 @@ function telaAgenda(P) {
   if (AG_VISTA === 'reunioes') return telaReunioesAgenda(P);
   if (AG_VISTA === 'checkins') {
     const E = eventos().filter(e => e.ic === 'voo' && e.alerta);
-    P.innerHTML = `<button class="voltar" id="voltarCk">‹ Agenda</button><h1 class="titulo" style="margin-top:6px">Check-ins <em>para fazer</em></h1>
+    P.innerHTML = `${segOp('checkins')}<button class="voltar" id="voltarCk">‹ Agenda</button><h1 class="titulo" style="margin-top:6px">Check-ins <em>para fazer</em></h1>
       <div class="sub">Voos nas próximas 48 horas sem check-in marcado. Faça o check-in, envie o bilhete ao cliente e marque aqui.</div>
       <div style="margin-top:6px">${E.length ? agrupar(E) : '<div class="vazio" style="margin-top:14px">Nenhum check-in pendente.</div>'}</div>`;
     $('voltarCk').onclick = () => { AG_VISTA = 'tudo'; telaAgenda(P); };
