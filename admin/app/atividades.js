@@ -4,6 +4,14 @@
 // Os dados vêm da tabela log_atividades, alimentada por gatilhos no banco (log_atividades.sql).
 
 let VISTA = 'dia', DIA = null, QUEM = null, PERIODO = 30, CACHE = {};
+// a gerente vê a equipe sem os sócios: o banco (log_periodo) já filtra; aqui só se monta a lista de pessoas
+let ATORES = null;
+async function atoresDaEquipe(sb) {
+  if (ATORES && Date.now() - ATORES.t < 300e3) return ATORES.ids;
+  const { data } = await sb.rpc('log_periodo', { p_ini: new Date(Date.now() - 60 * 864e5).toISOString(), p_fim: new Date(Date.now() + 864e5).toISOString(), p_user: null, p_tabela: null });
+  ATORES = { t: Date.now(), ids: [...new Set((data || []).map(l => l.ator).filter(Boolean))] };
+  return ATORES.ids;
+}
 
 const pad = (n) => String(n).padStart(2, '0');
 const isoLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -78,14 +86,16 @@ async function buscar(sb, ini, fim, quem) {
 }
 
 export async function tela(P, ctx) {
-  const { $, esc, ADMIN, D } = ctx;
+  const { $, esc, ADMIN, GER, D } = ctx, EQ = ADMIN || GER;
   if (!DIA) DIA = isoLocal(new Date());
-  if (!ADMIN) QUEM = ctx.meuId;
+  if (!EQ) QUEM = ctx.meuId;
   else if (QUEM === null) QUEM = ctx.meuId;
-  const time = (D.time || []).filter(t => t.user_id);
-  const pessoas = ADMIN ? `<div class="chips" id="atQuem" style="margin-top:10px">${[['todos', 'Todos'], ...time.map(t => [t.user_id, String(t.nome || '').split(' ')[0]])].map(([k, n]) => `<button data-q="${k}" class="${(QUEM || 'todos') === k ? 'on' : ''}">${esc(n)}</button>`).join('')}</div>` : '';
+  let time = (D.time || []).filter(t => t.user_id);
+  if (GER) { const ids = await atoresDaEquipe(ctx.sb); time = time.filter(t => t.user_id === ctx.meuId || ids.includes(t.user_id)); if (QUEM && !time.some(t => t.user_id === QUEM)) QUEM = ctx.meuId; }
+  if (ctx.aba() !== 'atividades') return;
+  const pessoas = EQ ? `<div class="chips" id="atQuem" style="margin-top:10px">${[['todos', 'Todos'], ...time.map(t => [t.user_id, String(t.nome || '').split(' ')[0]])].map(([k, n]) => `<button data-q="${k}" class="${(QUEM || 'todos') === k ? 'on' : ''}">${esc(n)}</button>`).join('')}</div>` : '';
   P.innerHTML = `${ADMIN ? '<button class="voltar" id="voltar">‹ Mais</button>' : '<button class="voltar" id="voltar">‹ Voltar</button>'}
-    <h1 class="titulo" style="margin-top:6px">${ADMIN ? 'Atividades da <em>equipe</em>' : 'Minhas <em>atividades</em>'}</h1>
+    <h1 class="titulo" style="margin-top:6px">${EQ ? 'Atividades da <em>equipe</em>' : 'Minhas <em>atividades</em>'}</h1>${GER ? '<div class="sub">A equipe, sem as atividades dos sócios.</div>' : ''}
     <div class="seg" id="atVista" style="margin-top:10px"><button data-v="dia" class="${VISTA === 'dia' ? 'on' : ''}">Dia a dia</button><button data-v="tempos" class="${VISTA === 'tempos' ? 'on' : ''}">Tempo por etapa</button></div>
     ${pessoas}<div id="atCorpo"><div class="vazio">Carregando...</div></div>`;
   $('voltar').onclick = () => ctx.ir(ADMIN ? 'mais' : 'inicio');
@@ -97,7 +107,7 @@ export async function tela(P, ctx) {
 }
 
 async function telaDia(C, ctx, P) {
-  const { $, esc, ADMIN, D, nomeTime } = ctx;
+  const { $, esc, ADMIN, GER, D, nomeTime } = ctx;
   const d0 = deISO(DIA), d1 = new Date(+d0 + 864e5 + 3600e3); d1.setHours(0, 0, 0, 0);
   const hoje = DIA === isoLocal(new Date());
   const nav = `<div class="mesnav" id="atDia" style="margin-top:12px"><button data-n="-1">‹</button><span>${hoje ? 'Hoje' : d0.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}</span><button data-n="1" ${hoje ? 'disabled style="opacity:.3"' : ''}>›</button></div>`;
@@ -112,7 +122,7 @@ async function telaDia(C, ctx, P) {
   }
   const L = r.data.filter(l => l.ator);
   const porArea = {}; L.forEach(l => { const a = area(l); porArea[a] = (porArea[a] || 0) + 1; });
-  const todos = ADMIN && !QUEM;
+  const todos = (ADMIN || GER) && !QUEM;
   const linhas = L.slice().reverse().map(l => `<div class="conv" style="grid-template-columns:auto 1fr;align-items:baseline">
       <b style="font-size:13px">${hora(l.ts)}</b><span>${esc(frase(l))}</span>
       <small>${esc(area(l))}${todos ? ' · ' + esc(String(nomeTime(l.ator) || 'Equipe').split(' ')[0]) : ''}</small></div>`).join('');
@@ -162,7 +172,8 @@ function trilhas(L) {
 }
 
 async function telaTempos(C, ctx) {
-  const { $, esc, ADMIN, D, nomeTime } = ctx;
+  const { $, esc, ADMIN, GER, D, nomeTime } = ctx, EQ = ADMIN || GER;
+  const socio = GER && ATORES ? (k) => k !== ctx.meuId && !ATORES.ids.includes(k) : () => false;
   const per = `<div class="seg" id="atPer" style="margin-top:12px">${[[7, '7 dias'], [30, '30 dias'], [90, '90 dias']].map(([k, t]) => `<button data-p="${k}" class="${PERIODO === k ? 'on' : ''}">${t}</button>`).join('')}</div>`;
   C.innerHTML = per + '<div class="vazio">Calculando...</div>';
   const ligar = () => { $('atPer').onclick = (e) => { const b = e.target.closest('[data-p]'); if (b) { PERIODO = Number(b.dataset.p); telaTempos(C, ctx); } }; };
@@ -173,7 +184,7 @@ async function telaTempos(C, ctx) {
   if (error) { C.innerHTML = per + `<div class="vazio">${/log_atendimentos|does not exist/i.test(error.message) ? 'O registro de atividades ainda não foi ativado no banco.' : 'Não carregou: ' + esc(error.message)}</div>`; return ligar(); }
   const atual = Object.fromEntries((D.reunioes || []).map(x => [String(x.id), x]));
   let T = trilhas(data || []).map(t => { const a = atual[t.id]; return Object.assign(t, { resp: (a && a.responsavel_id) || t.resp || t.ator, gestao: a ? a.produto === 'Gestão de Milhas' : t.gestao, cliente: a ? a.cliente : '' }); });
-  if (ADMIN && QUEM) T = T.filter(t => t.resp === QUEM);
+  if (EQ && QUEM) T = T.filter(t => t.resp === QUEM);
   const agora = Date.now();
   const bloco = (gestao) => {
     const LT = T.filter(t => t.gestao === gestao);
@@ -200,7 +211,7 @@ async function telaTempos(C, ctx) {
       <div class="sub" style="margin-bottom:6px">${LT.length} ${LT.length === 1 ? 'atendimento medido' : 'atendimentos medidos'} · ${decidiu} com decisão${decidiu ? ' · conversão ' + Math.round(fechou / decidiu * 100) + '%' : ''}</div>
       ${etapas.map(e => { const v = tempos[e] || []; const md = mediana(v); return `<div class="conv"><span>${esc(desc[e])}</span><b>${md === null ? '-' : dur(md)}</b><span class="m"><i style="width:${md ? Math.max(3, md / maxMed * 100) : 0}%"></i></span><small>${v.length ? `mediana de ${v.length} · média ${dur(media(v))} · mais lento ${dur(Math.max(...v))}` : 'ainda sem medição'}</small></div>`; }).join('')}
       <div class="conv"><span>Ciclo completo, do pedido à decisão</span><b>${ciclos.length ? dur(mediana(ciclos)) : '-'}</b><small>${ciclos.length ? 'mediana de ' + ciclos.length + ' · média ' + dur(media(ciclos)) : 'ainda sem decisões'}</small></div>
-      ${ADMIN && !QUEM && Object.keys(porPessoa).length > 1 ? `<details style="margin-top:8px"><summary>Por pessoa</summary>${Object.entries(porPessoa).map(([k, x]) => `<div style="padding:8px 0;border-top:1px solid var(--linha)"><b style="color:var(--verde);font-weight:600">${esc(String(nomeTime(k) || 'Sem responsável').split(' ')[0])}</b><div class="sub">${etapas.filter(e => x[e]).map(e => esc(e) + ': ' + dur(mediana(x[e])) + ' (' + x[e].length + ')').join(' · ') || '-'}</div></div>`).join('')}</details>` : ''}
+      ${EQ && !QUEM && Object.keys(porPessoa).filter(k => !socio(k)).length > 1 ? `<details style="margin-top:8px"><summary>Por pessoa</summary>${Object.entries(porPessoa).filter(([k]) => !socio(k)).map(([k, x]) => `<div style="padding:8px 0;border-top:1px solid var(--linha)"><b style="color:var(--verde);font-weight:600">${esc(String(nomeTime(k) || 'Sem responsável').split(' ')[0])}</b><div class="sub">${etapas.filter(e => x[e]).map(e => esc(e) + ': ' + dur(mediana(x[e])) + ' (' + x[e].length + ')').join(' · ') || '-'}</div></div>`).join('')}</details>` : ''}
       ${parados.length ? `<details style="margin-top:8px"><summary>Parados agora (${parados.length})</summary>${parados.slice(0, 30).map(p => `<button class="lin" data-at="${p.t.id}" style="padding:8px 0;display:flex;justify-content:space-between;gap:8px"><span>${esc(p.t.cliente || 'Atendimento')} · ${esc(p.etapa)}</span><span style="color:${p.ms > 2 * 864e5 ? 'var(--alerta)' : 'var(--tinta-2)'};white-space:nowrap">há ${dur(p.ms)}</span></button>`).join('')}</details>` : ''}
     </section>`;
   };
