@@ -569,15 +569,15 @@ import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=13';
-import * as COT from '/admin/app/cotador.js?v=52';
+import * as COT from '/admin/app/cotador.js?v=54';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
-import * as VENDA from '/admin/app/venda.js?v=27';
+import * as VENDA from '/admin/app/venda.js?v=28';
 import * as ATV from '/admin/app/atividades.js?v=2';
 import * as CMP from '/admin/app/compromissos.js?v=18';
 import * as CX from '/admin/app/caixa.js?v=4';
 import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=5';
+import * as IND from '/admin/app/indicacoes.js?v=6';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1198,11 +1198,12 @@ async function carregar(silencioso, manterTela) {
       sb.rpc('parceiros_ativos'),
       sb.rpc('time_nomes'),
       carregarAgendaEm(),
-      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000),
+      // arquivados (87-arquivar-cards-cotacoes-fichas.sql) não entram em telas, contas nem indicadores
+      sb.from('atendimentos').select('*').is('arquivado_em', null).gte('data', desde).order('data', { ascending: false }).limit(3000),
       // calendário: quem não tem a carteira da Gestão recebe só nome, vencimento, congelamento e onboarding (78-calendario-renovacoes.sql)
       !pode('gestao') && podeAba('reunioes') ? sb.rpc('calendario_renovacoes') : nada
     ]),
-    podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000) : null,
+    podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').is('arquivado_em', null).order('atualizado_em', { ascending: false }).limit(3000) : null,
     sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000),
     sb.rpc('ticktick_situacao'),
     sb.rpc('cal_links'),
@@ -1238,7 +1239,7 @@ async function carregar(silencioso, manterTela) {
       sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
     ]) : null,
     CRMok ? Promise.all([
-      sb.from('pessoas').select('*').order('nome').limit(10000),
+      sb.from('pessoas').select('*').is('arquivado_em', null).order('nome').limit(10000),
       pode('emissoes') ? sb.from('pessoas_documentos').select('*').limit(10000) : nada,
       sb.from('pessoas_vinculos').select('*').limit(10000),
       pode('emissoes') ? sb.from('emissao_passageiros').select('*').limit(20000) : nada,
@@ -3241,7 +3242,7 @@ function telaFormReuniao(P) {
     const base0 = Array.isArray(r.itens) && r.itens.length ? r.itens : String(r.produto || '').split(' + ').filter(Boolean).map(p => ({ produto: p, custo: null, venda: null }));
     const IT = JSON.parse(JSON.stringify(base0));
     // cotações do card: declaradas antes de tudo que as usa (o bloco de pagamento consulta a cotação ao abrir)
-    const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null;
+    const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null, ESC = null;
     const XV = ctxVenda();
     // custo e lucro bruto do card: administração, gerente ou quem é o responsável (quem digita o custo)
     XV.verMargem = ADMIN || VER_MARGEM() || nova || base.responsavel_id === D.meuId;
@@ -3350,7 +3351,7 @@ function telaFormReuniao(P) {
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
     const desenhaCot = () => {
       const el = $('reDaCot'), ops = opsCot(); if (!el) return;
-      el.innerHTML = ops.length ? `<div class="config" style="margin:6px 0 8px"><b>${SEL ? 'Venda preenchida com a cotação' : ops.length > 1 ? 'Qual cotação o cliente fechou?' : 'Preencher a venda com a cotação do card'}</b>${ops.map(({ c, k, o }) => `<button type="button" data-dacot="${c.id}|${k}" class="${SEL === c.id + '|' + k ? 'zap' : 'sec'}" style="width:100%;margin-top:6px;text-align:left">${esc(c.titulo || 'Cotação')}${o.nome ? ' · ' + esc(o.nome) : ''}${o.valor ? ' · ' + brl2(o.valor) : ''}</button>`).join('')}<div class="sub" style="margin:6px 0 0">${SEL ? `Puxado da ${CDADOS && SEL.startsWith(CDADOS[0].id + '|') ? 'última cotação enviada' : 'cotação escolhida'}. Se o cliente fechou outra, toque nela. Custo, localizador e print ficam para quando emitir.` : 'Toque na que o cliente fechou.'}</div></div>` : '';
+      el.innerHTML = ops.length ? `<div class="config" style="margin:6px 0 8px"><b>${SEL ? 'Venda preenchida com a cotação' : ops.length > 1 ? 'Qual cotação o cliente fechou?' : 'Preencher a venda com a cotação do card'}</b>${ESC && SEL !== ESC.sel ? `<div class="sub" style="margin:6px 0 0">No link, o cliente escolheu ${esc(ESC.c.titulo || 'a cotação')}${(o => o && o.nome ? ' · ' + esc(o.nome) : ' · Opção ' + (ESC.k + 1))(COT.opcoesCotacao(ESC.c.dados)[ESC.k])}.</div>` : ''}${ops.map(({ c, k, o }) => `<button type="button" data-dacot="${c.id}|${k}" class="${SEL === c.id + '|' + k ? 'zap' : 'sec'}" style="width:100%;margin-top:6px;text-align:left">${esc(c.titulo || 'Cotação')}${o.nome ? ' · ' + esc(o.nome) : ''}${o.valor ? ' · ' + brl2(o.valor) : ''}</button>`).join('')}<div class="sub" style="margin:6px 0 0">${SEL ? `Puxado da ${ESC && SEL === ESC.sel ? 'opção que o cliente escolheu no link, em ' + new Date(ESC.em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : CDADOS && SEL.startsWith(CDADOS[0].id + '|') ? 'última cotação enviada' : 'cotação escolhida'}. Se o cliente fechou outra, toque nela. Custo, localizador e print ficam para quando emitir.` : 'Toque na que o cliente fechou.'}</div></div>` : '';
       el.querySelectorAll('[data-dacot]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.dacot.split('|'); aplicarCot(CDADOS.find(c => String(c.id) === id), +k); });
     };
     const aplicarCot = (c, k, auto) => {
@@ -3370,9 +3371,15 @@ function telaFormReuniao(P) {
       if (!CDADOS) { const q = await sb.from('propostas').select('id,titulo,modelo,dados,atualizado_em').in('id', CD.map(c => c.id)).order('atualizado_em', { ascending: false }); CDADOS = q.error ? [] : (q.data || []);
         // a primeira é a última cotação enviada ao cliente (pelo histórico de envios); sem envio, a mais recente
         const quando = (c) => { const H = (c.dados && c.dados.historico) || []; return String((H[H.length - 1] || {}).em || c.atualizado_em || ''); };
-        CDADOS.sort((a, b) => quando(b).localeCompare(quando(a))); }
+        CDADOS.sort((a, b) => quando(b).localeCompare(quando(a)));
+        // o cliente tocou em "quero a opção X" no link: a escolha mais recente vem primeiro
+        const refs = CDADOS.map(c => c.dados && c.dados.escolha_ref).filter(Boolean);
+        if (refs.length) { const e = await sb.from('cotacao_escolhas').select('ref,opcao,criado_em').in('ref', refs).order('criado_em', { ascending: false }).limit(1);
+          const x = !e.error && e.data && e.data[0], c = x && CDADOS.find(c => c.dados.escolha_ref === x.ref);
+          if (c && COT.opcoesCotacao(c.dados)[x.opcao - 1]) ESC = { sel: c.id + '|' + (x.opcao - 1), c, k: x.opcao - 1, em: x.criado_em }; } }
       const ops = opsCot(), vazio = !IT.some(x => x.venda || x.custo || x.localizador || VENDA.enviado(x));
-      if (!SEL && vazio && ops.length) aplicarCot(ops[0].c, ops[0].k, true); else desenhaCot();
+      if (!SEL && vazio && ESC) aplicarCot(ESC.c, ESC.k, true);
+      else if (!SEL && vazio && ops.length) aplicarCot(ops[0].c, ops[0].k, true); else desenhaCot();
     };
     // Fechou em dois passos. No Fechou: a opção da cotação, o valor e a forma de pagamento.
     // Os dados da emissão (custo, localizador, passageiros, print) ficam para o passo Emitiu, quando a passagem sai.

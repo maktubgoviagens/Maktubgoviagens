@@ -19,6 +19,12 @@ const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d
   if (vs[1] && PRE.volta && 'data' in vs[1] && !vs[1].data) vs[1].data = PRE.volta;
   return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
+// "quero a opção X" no link: grava a escolha no banco (função cotacao_escolher) e a equipe recebe o aviso.
+// Só entra no HTML do link enviado ao cliente (não na prévia nem no arquivo baixado), e nunca segura o WhatsApp.
+let COM_ESCOLHA = false;
+const scriptEscolha = () => !COM_ESCOLHA || !S.escolha_ref ? '' : `<script>(function(){var R=${JSON.stringify(S.escolha_ref)},K='sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('[data-esc]'):null;if(!a)return;
+try{fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/cotacao_escolher',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:K},body:JSON.stringify({p_ref:R,p_opcao:+a.getAttribute('data-esc')||1,p_nome:a.getAttribute('data-escnome')||null})}).catch(function(){});}catch(x){}},true);})();</script>`;
 // contatos clicáveis no rodapé de toda cotação: WhatsApp, Instagram e site (com origem "cotacao" para medir no Analytics)
 const INSTA = 'maktubgo_', SITE = 'maktubgo.com.br', SITE_URL = 'https://www.maktubgo.com.br/?utm_source=cotacao&utm_medium=link';
 const ctLinks = (cor) => { const a = (href, t) => `<a href="${href}" target="_blank" rel="noopener" style="color:${cor || 'inherit'};text-decoration:none">${t}</a>`;
@@ -261,7 +267,7 @@ async function lista(P, X) {
   $('novoGo').onclick = () => comCard(P, X, () => { S = comPre(NOVO_GO()); PRE = null; ir(X, 'novo'); });
   $('novoCorp').onclick = () => comCard(P, X, () => { S = comPre(NOVO_CORP()); PRE = null; ir(X, 'novo'); });
   $('novoRap').onclick = () => comCard(P, X, () => { S = comPre(NOVO_RAP()); PRE = null; ir(X, 'novo'); });
-  const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').order('atualizado_em', { ascending: false }).limit(300);
+  const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').is('arquivado_em', null).order('atualizado_em', { ascending: false }).limit(300);
   if (!$('lsC')) return;
   if (r.error) { $('lsC').innerHTML = '<div class="config">Rode o 1-cotador.sql no Supabase para guardar as cotações. Dá para montar e baixar mesmo sem ele.</div>'; LISTA = []; return; }
   LISTA = r.data || [];
@@ -328,7 +334,7 @@ function editor(P, X) {
   $('salvarC').onclick = () => comCardNaCotacao(P, X, () => salvar(X));
   $('acervoC').onclick = () => acervo(X);
   $('linkC').onclick = () => comCardNaCotacao(P, X, () => gerarLink(X));
-  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; delete S.historico; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
+  if ($('duplicarC')) $('duplicarC').onclick = () => { delete S._id; delete S.reuniao_id; delete S.link_slug; delete S.slug; delete S.historico; delete S.escolha_ref; if (S.modelo === 'go') { S.para = ''; S.nomeZap = ''; } else { S.passageiro = ''; S.codigo = ''; } S.consulta = hoje(); ED = 'novo'; history.replaceState(null, '', '#cotador/novo'); editor(P, X); X.aviso('Cópia criada. Ligue ao card do outro cliente e ajuste.'); };
 }
 
 // X de um trecho na Maktub Go (opcoes.N.voos#j) ou na corporativa (voos#j, extras.N.voos#j)
@@ -622,7 +628,9 @@ async function gerarLink(X) {
   const fim = () => { b.disabled = false; b.textContent = rot; };
   if (slug && await existeNoSite(slug)) { fim(); return troque(); }
   b.textContent = 'Gerando...';
-  const row = { html: S.modelo === 'rapida' ? htmlRapida() : gerar(X), titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
+  if (!S.escolha_ref) S.escolha_ref = crypto.randomUUID();
+  COM_ESCOLHA = true; let html; try { html = S.modelo === 'rapida' ? htmlRapida() : gerar(X); } finally { COM_ESCOLHA = false; }
+  const row = { html, titulo: tituloDe(), cliente: clienteDe() || null }; if (slug) row.slug = slug;
   // mesma cotação e mesmo nome: atualiza o link que o cliente já recebeu
   const atualizar = slug && S.link_slug === slug;
   const r = atualizar
@@ -775,7 +783,7 @@ function gerarGo(X) {
     box += inc.length || carros.length ? `<ul class="lista">${inc.map(l => `<li>${h(l)}</li>`).join('')}${carros.length ? `<li data-licarro hidden>Aluguel de carro conforme a opção escolhida</li>` : ''}</ul>` : '';
     s += `<section class="invest" data-op="${n}" data-base="${p.cartao}"><div class="wrap"><div class="titulo-sec"><div class="kicker" style="color:var(--dourado)">Investimento</div><h2>${h(nomeOp)}</h2></div><div class="invest-box">${box}</div>
       <p class="urgencia">Tarifas aéreas mudam a qualquer momento e podem ficar indisponíveis nas próximas horas. Se essa viagem faz sentido pra ${vcs}, o melhor momento é agora.</p>
-      <a class="cta" data-cta="${n}" href="#" target="_blank" rel="noopener">${h(o.cta || 'Quero seguir com essa viagem')}</a><p class="cta-leg">Você fala direto com o nosso time pelo WhatsApp.</p></div></section>`;
+      <a class="cta" data-cta="${n}" data-esc="${n}" data-escnome="${h(o.nome || '')}" href="#" target="_blank" rel="noopener">${h(o.cta || 'Quero seguir com essa viagem')}</a><p class="cta-leg">Você fala direto com o nosso time pelo WhatsApp.</p></div></section>`;
     return `<div class="painel${i === 0 ? ' ativo' : ''}" id="op${n}">${s}</div>`;
   };
   const avisos = [`Proposta inicial com valores de referência consultados em ${S.consulta ? S.consulta.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR')}.`];
@@ -810,7 +818,7 @@ function atualizar(sec){var n=sec.dataset.op,base=parseFloat(sec.dataset.base)||
 document.querySelectorAll('.invest[data-op]').forEach(function(sec){atualizar(sec);});
 document.querySelectorAll('input[type=radio][name^="carro"]').forEach(function(i){i.addEventListener('change',function(){atualizar(i.closest('.painel').querySelector('.invest'));});});
 document.querySelectorAll('.opt').forEach(function(b){b.addEventListener('click',function(){var op=b.dataset.op;document.querySelectorAll('.opt').forEach(function(x){x.setAttribute('aria-selected',x.dataset.op===op?'true':'false');});document.querySelectorAll('.painel').forEach(function(p){p.classList.toggle('ativo',p.id==='op'+op);});window.scrollTo({top:document.querySelector('.seletor').offsetTop,behavior:'smooth'});});});
-</script></body></html>`;
+</script>${scriptEscolha()}</body></html>`;
 }
 
 /* ================= geração: Maktub Corporativo ================= */
@@ -827,7 +835,7 @@ function gerarCorp() {
   const val = S.validade ? S.validade.split('-').reverse().join('/') : '';
   const zapTxt = (n) => `Olá, Maktub! Sobre a cotação ${S.codigo || ''}${S.passageiro ? ' de ' + S.passageiro : ''}: quero seguir com ${n ? 'a Opção ' + n : 'a emissão'}.`;
   const resumo = (o, n) => `<div class="resumo"><div class="rot">${n ? 'Opção ' + n : 'Resumo da cotação'}</div><div class="p">VALOR TOTAL · ${pax} ${pax === 1 ? 'PASSAGEIRO' : 'PASSAGEIROS'}</div>${o.de > o.por ? `<div class="de">De <s>${brl(o.de)}</s></div>` : ''}<div class="por">${o.de > o.por ? 'Por ' : ''}${brl(o.por)}</div><div class="forma">${h(S.forma)}</div>${o.de > o.por ? `<div class="eco">Economia de ${brl(o.de - o.por)}</div>` : ''}<hr><small>Tarifas e disponibilidade confirmadas somente no momento da emissão.</small></div>
-<a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(zapTxt(n))}" target="_blank" rel="noopener">${n ? 'QUERO A OPÇÃO ' + n : 'FALE COM O ESPECIALISTA'} · WHATSAPP ${ZAP_TXT}</a>`;
+<a class="cta" data-esc="${n || 1}" data-escnome="${h(o.nome || '')}" href="https://wa.me/${ZAP}?text=${encodeURIComponent(zapTxt(n))}" target="_blank" rel="noopener">${n ? 'QUERO A OPÇÃO ' + n : 'FALE COM O ESPECIALISTA'} · WHATSAPP ${ZAP_TXT}</a>`;
   const dataCab = (iso) => { const d = dt(iso); return d ? `${SEMANA[d.getDay()]} · ${iso.split('-').reverse().join('/')}`.toUpperCase() : ''; };
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(S.passageiro ? 'Cotação para ' + String(S.passageiro).trim().split(/\s+/)[0] : (S.codigo || 'Cotação'))} · ${GO ? 'Maktub Go' : 'Maktub Corporativo'}</title>
 <style>:root{--v:#1B4332;--v2:#245a3b;--d:#A88B4A;--c:#F3F1EA;--b:#F3EAD2;--t:#1f2a24;--s:#5b625d;--l:#d9d2bf}
@@ -865,7 +873,7 @@ ${S.bagagem ? `<div class="caixa"><div class="rot">Bagagem incluída</div><div s
 ${S.print ? `<div class="caixa print"><div class="rot">Valor no site ${S.cia ? 'da ' + h(S.cia) : 'da companhia'}</div><img src="${S.print}" alt="Valor no site da companhia"></div>` : ''}
 ${multi ? '' : resumo(OPS[0], 0)}
 <p class="cond">${h(S.bagagem ? 'Inclui ' + S.bagagem.charAt(0).toLowerCase() + S.bagagem.slice(1) + '. ' : '')}${h(S.rodape)}</p></div>
-<footer><div class="w"><div><b>${GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO'}</b><span class="g">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</span></div><div class="r">${ctLinks()}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer>${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.offsetTop-10,behavior:'smooth'})}})</script>` : ''}</body></html>`;
+<footer><div class="w"><div><b>${GO ? 'MAKTUB GO' : 'MAKTUB CORPORATIVO'}</b><span class="g">${GO ? 'Alfaiataria de Viagens' : 'Viagens a trabalho, resolvidas.'}</span></div><div class="r">${ctLinks()}<br>${S.codigo ? `<span class="g">Cotação ${h(S.codigo)}</span>` : ''}</div></div></footer>${multi ? `<script>document.querySelectorAll('.aba').forEach(function(b){b.onclick=function(){var n=b.dataset.op;document.querySelectorAll('.aba').forEach(function(x){x.setAttribute('aria-selected',x===b)});document.querySelectorAll('.op').forEach(function(s){s.hidden=s.dataset.op!==n});var a=document.querySelector('.abas');if(a)window.scrollTo({top:a.offsetTop-10,behavior:'smooth'})}})</script>` : ''}${scriptEscolha()}</body></html>`;
 }
 // usado em testes e para gerar a partir de dados salvos
 export function gerarHTML(dados) { const antes = S; S = dados; try { return gerar({}); } finally { S = antes; } }
@@ -1364,7 +1372,7 @@ ${tr}
     <div class="p">${h(I.total)}</div>
     ${I.descTxt ? `<div class="desc">${h(I.descTxt)}</div>` : ''}
     <div class="d">${I.cc ? I.pagto.map(t => `<b style="color:var(--creme);font-weight:500">${h(t)}</b>`).join('<br>') : I.pagto.map(h).join(' &nbsp;·&nbsp; ')}</div>
-    <a class="cta" href="https://wa.me/${ZAP}?text=${encodeURIComponent(I.zapTxt)}" target="_blank" rel="noopener">Quero fechar esta viagem</a>
+    <a class="cta" data-esc="1" href="https://wa.me/${ZAP}?text=${encodeURIComponent(I.zapTxt)}" target="_blank" rel="noopener">Quero fechar esta viagem</a>
     <div class="cta-sub">Abre o WhatsApp da Maktub com a sua mensagem pronta</div>
   </div>
   <div class="nota">
@@ -1378,7 +1386,7 @@ ${tr}
     <div class="ct">${ctLinks()}</div>
   </div>
 </div>
-</body></html>`;
+${scriptEscolha()}</body></html>`;
 }
 // fontes do desenho: Jost do app e a Cormorant com algarismos alinhados (iguais aos do modelo)
 let FONTES = null;
