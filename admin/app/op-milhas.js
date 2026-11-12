@@ -51,7 +51,7 @@ export async function telaOpMilhas(P, X) {
       <div class="num"><div class="l">Milheiro de custo</div><div class="v">${brl2(custoMed)}</div><div class="d">média ponderada</div></div>
       <div class="num"><div class="l">Milheiro de venda</div><div class="v">${brl2(vendaMed)}</div><div class="d">para a Maktub</div></div>
     </div>
-    ${OM_PROG === 'todos' ? `<section class="bloco"><h2>Resultado dos sócios em ${OM_ANO}</h2>
+    ${OM_PROG === 'todos' && X.admin ? `<section class="bloco"><h2>Resultado dos sócios em ${OM_ANO}</h2>
       <div class="lin"><span>Operação de milhas (projeção)</span><span>${brl2(prev)}</span></div>
       <div class="lin"><span>Lucro líquido da Maktub nas vendas</span><span>${brl2(lucroEmp)}</span></div>
       <div class="lin" style="font-weight:600;color:var(--verde)"><span>Total</span><span>${brl2(prev + lucroEmp)}</span></div>

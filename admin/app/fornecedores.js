@@ -84,7 +84,7 @@ function ficha(P, X) {
       <div class="num"><div class="l">Indicariam</div><div class="v">${nInd ? Math.round(ind / nInd * 100) + '%' : '-'}</div><div class="d">${nInd ? `${ind} de ${nInd}` : 'sem resposta'}</div></div>
     </div>
     <div class="botoes4" style="margin-top:12px"><button class="zap" id="avaliarEste">Registrar avaliação</button><button class="sec" id="editarF">Editar</button></div>
-    <section class="bloco"><h2>Ficha Maktub</h2>${blocoMaktub(f, esc, X.admin)}</section>
+    <section class="bloco"><h2>Ficha Maktub</h2>${blocoMaktub(f, esc, X.admin || X.gerente)}</section>
     <section class="bloco" id="blGoogle"><h2>No Google</h2>${blocoGoogle(f, esc)}</section>
     ${f.contato || f.site || f.observacoes ? `<section class="bloco"><h2>Outros dados</h2>
       ${f.contato ? `<div class="lin"><span>Contato</span><span style="white-space:normal;text-align:right">${esc(f.contato)}</span></div>` : ''}
