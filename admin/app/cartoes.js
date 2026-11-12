@@ -1,7 +1,7 @@
 // Maktub Go: base de cartões do mercado e cartões dos clientes da Gestão.
 // As contas (anuidade que paga, isenção pelo gasto, pontos e valor no ano) são feitas aqui, por fórmula, sem IA.
 import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
-import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=8';
+import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=10';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
 
@@ -620,7 +620,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
         ${x.observacao_interna ? `<small style="display:block;color:var(--tinta-3);font-size:12px">${esc(x.observacao_interna)}</small>` : ''}</span>
       <span style="text-align:right">${n(x.limite) !== null ? brl(x.limite) : 'limite a confirmar'}${res ? '<br>' + res : ''}<br>${!cat ? `<button class="mini" data-cb="${x.id}">cadastrar na base</button>` : ''}<button class="mini" data-ce="${x.id}">editar</button><button class="mini" data-cd="${x.id}">excluir</button></span></div>${!cat ? `<div data-cbf="${x.id}" hidden></div>` : ''}`;
   };
-  box.innerHTML = (C.length ? `<div class="numeros" style="margin:0 0 6px">
+  box.innerHTML = (X.abrirCalc ? '<button class="sec" type="button" data-calc style="width:100%;margin:0 0 10px">Abrir na calculadora de cartões</button><div data-sims></div>' : '') + (C.length ? `<div class="numeros" style="margin:0 0 6px">
         <div class="num"><div class="l">Limite total</div><div class="v">${brl(tot.limite)}</div><div class="d">${C.length === 1 ? '1 cartão' : num(C.length) + ' cartões'}</div></div>
         <div class="num" data-fx="anu" role="button" tabindex="0" style="cursor:pointer"><div class="l">Anuidades no ano</div><div class="v">${brl(tot.custo)}</div><div class="d">${tot.semAnu ? `${tot.semAnu} sem anuidade conhecida` : 'com as isenções pelo gasto'}${tot.economia ? ` · economia de ${brl(tot.economia)} no ano` : ''}</div></div>
         <div class="num"><div class="l">Valor dos pontos no ano</div><div class="v">${brl(tot.valor)}</div><div class="d">${num(Math.round(tot.pontos))} pts pelo gasto informado</div></div>
@@ -749,6 +749,14 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
       secaoCliente(box, c, X, onPrimeiro);
     };
   });
+  { const bc = box.querySelector('[data-calc]'); if (bc) bc.onclick = () => X.abrirCalc(c.id); }
+  // simulações da calculadora (do cliente e dos cards de lead dele): ponto de partida do estudo; tocar abre a calculadora
+  if (X.simulacoes && box.querySelector('[data-sims]')) X.simulacoes.listar(c.id).then(L => {
+    const el = box.querySelector('[data-sims]'); if (!el || !L || !L.length) return;
+    el.innerHTML = `<div class="sub" style="font-size:13px;margin:0 0 4px">Simulações da calculadora</div>${L.slice(0, 5).map(x => `<button type="button" class="lin" data-simab style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer;font-size:16px">
+      <span>${esc(X.simulacoes.resumo(x))}<small style="display:block;color:var(--tinta-3);font-size:13px">${esc(X.simulacoes.rodape(x))}</small></span></button>`).join('')}<div style="height:10px"></div>`;
+    el.querySelectorAll('[data-simab]').forEach(b => b.onclick = () => X.abrirCalc(c.id));
+  });
   box.querySelectorAll('[data-ce]').forEach(b => b.onclick = () => { const x = C.find(y => y.id === b.dataset.ce); const d = box.querySelector('#cxForm'); d.open = true; d.querySelector('summary').textContent = 'Editar cartão'; desenharForm(x); d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   box.querySelectorAll('[data-cd]').forEach(b => b.onclick = async () => {
     if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
@@ -764,7 +772,7 @@ const FAIXA_INV = [['', 'Não informado'], ['ate_50k', 'Até R$ 50 mil'], ['50k_
 const FAIXA_RENDA = [['', 'Não informada'], ['ate_15k', 'Até R$ 15 mil'], ['15k_30k', 'De R$ 15 mil a R$ 30 mil'], ['30k_50k', 'De R$ 30 mil a R$ 50 mil'], ['50k_100k', 'De R$ 50 mil a R$ 100 mil'], ['acima_100k', 'Acima de R$ 100 mil']];
 const rotFaixa = (L, v) => (L.find(x => x[0] === v) || [])[1] || '';
 // "45000", "45.000", "R$ 45.000,00", "45 mil" viram número; faixas ("de 20 a 50 mil") ficam só como dica
-function numeroSolto(t) {
+export function numeroSolto(t) {
   const s = String(t || '').toLowerCase().replace(/r\$/g, '').trim();
   let m = s.match(/^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?$/); if (m) return Number(m[1].replace(/\./g, '') + (m[2] ? '.' + m[2] : ''));
   m = s.match(/^(\d+(?:,\d+)?)\s*mil$/); return m ? Number(m[1].replace(',', '.')) * 1000 : null;

@@ -5,31 +5,12 @@
 // Cada caminho é uma combinação: o cartão principal recebe o gasto até o limite; o que passa vai para o
 // melhor cartão de apoio que o cliente já tem. As prioridades da equipe (em ordem) definem a ordem dos caminhos.
 
-const n = (x) => x === null || x === undefined || x === '' ? null : Number(x);
-const chave = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-// família do programa: as três companhias pelo nome; os programas de banco pelo próprio nome
-const familia = (t) => { const k = chave(t); return /smiles|^gol/.test(k) ? 'smiles' : /latam/.test(k) ? 'latam' : /azul/.test(k) ? 'azul' : k; };
-const NOME_FAM = { smiles: 'Smiles', latam: 'LATAM Pass', azul: 'Azul Fidelidade' };
-// premissa declarada: Livelo e Esfera transferem para as três companhias
-const TRANSFERE_PARA_AS_TRES = /livelo|esfera/;
+import { n, chave, familia, NOME_FAM, destino, refDe as refDeM, contaCartao } from '/admin/app/cartoes-motor.js?v=1';
 const FAIXA_RENDA = { ate_15k: [0, 15000], '15k_30k': [15000, 30000], '30k_50k': [30000, 50000], '50k_100k': [50000, 100000], acima_100k: [100000, Infinity] };
 const FAIXA_INV = { ate_50k: [0, 50000], '50k_250k': [50000, 250000], '250k_1m': [250000, 1e6], '1m_5m': [1e6, 5e6], acima_5m: [5e6, Infinity] };
 const REDES = [['priority_pass', 'Priority Pass', /priority/i], ['loungekey', 'LoungeKey', /loungekey|airport experiences/i], ['dragonpass', 'DragonPass', /dragon|airport companion/i]];
 const brl = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 
-// para onde vão os pontos do cartão e se chegam no programa preferido
-function destino(b, pref) {
-  const tipo = b.tipo_destino, txt = chave((b.destino_pontos || '') + ' ' + (b.programa || ''));
-  if (tipo === 'cashback' || b.pontos_moeda === 'PCT') return { modo: 'cashback' };
-  if (tipo === 'nenhum') return { modo: 'nenhum' };
-  // programa próprio do cartão: o nome antes da lista de parceiros, ex.: "Curtaí (LATAM Pass, Smiles...)" é Curtaí
-  const proprio = familia(String(b.programa || b.destino_pontos || '').split(/[(;]/)[0]);
-  if (proprio && proprio === pref) return { modo: 'direto' };
-  const vai = (pref === 'smiles' && /smiles/.test(txt)) || (pref === 'latam' && /latam/.test(txt)) || (pref === 'azul' && /azul/.test(txt))
-    || (['smiles', 'latam', 'azul'].includes(pref) && TRANSFERE_PARA_AS_TRES.test(txt)) || (pref && txt.includes(pref));
-  if (tipo === 'aerea_direta' || tipo === 'companhia_aerea') return { modo: 'outro', programa: b.destino_pontos || b.programa };
-  return vai ? { modo: 'transferido', premissa: !/smiles|latam|azul/.test(txt) && TRANSFERE_PARA_AS_TRES.test(txt) } : { modo: 'outro', programa: b.destino_pontos || b.programa };
-}
 // o cliente consegue pedir hoje? Pelas exigências do cartão contra as faixas do perfil e dos bancos (só indicação: quem aprova é o banco)
 function podePedir(b, perfil, bancosCli, jaTem) {
   if (jaTem) return { r: 'já tem', motivo: '' };
@@ -70,7 +51,7 @@ export function simular(E) {
   const bonus = rb ? n(rb.valor) : 0;
   if (!rb && ['smiles', 'latam', 'azul'].includes(pref)) avisos.push(`Sem bônus de transferência cadastrado para ${prefNome}: pontos de banco contam 1 para 1.`);
   // milheiro de referência de qualquer programa (o preferido e os outros, para pontos que vão para outro programa)
-  const refDe = (prog) => { const f = familia(String(prog || '').split(/[(;]/)[0]); const k = Object.keys(refs || {}).find(x => familia(x) === f); return k ? refs[k] : null; };
+  const refDe = (prog) => refDeM(refs, prog);
   const milheiro = refDe(pref);
   if (milheiro === null) avisos.push(`Sem valor do milheiro de ${prefNome || 'programa preferido'}: valor em reais não calculado.`);
   if (!(cotacao > 0)) avisos.push('Sem cotação do dólar na Base de cartões: pontos por dólar não calculados.');
@@ -111,31 +92,13 @@ export function simular(E) {
       nota: ilimitado && cumpre ? 0.5 + 0.5 * cobertura : limitado ? 0.2 : 0 };
   };
 
-  // conta de um cartão com um gasto mensal
+  // conta de um cartão com um gasto mensal (todo nacional): o motor compartilhado com a calculadora de cartões
+  const ctxM = { calc, cotacao, refs, normProg, pref, prefNome, bonus, milheiro };
   const conta = (b, g, jaTem) => {
-    const k = calc({ gasto_medio_mes: g }, b, cotacao, refs, normProg), d = destino(b, pref), notas = [], fontes = ['base de cartões'];
-    const pts = n(b.pts_nacional) ?? n(b.pontos_por);
-    let pontos = null, milhas = 0, valor = null, outro = null;
-    if (d.modo === 'cashback') { valor = k.valor; notas.push('cartão de cashback: retorno em dinheiro, não gera milhas'); }
-    else if (pts && g > 0) {
-      pontos = b.pontos_moeda === 'BRL' ? g * 12 * pts : cotacao > 0 ? g * 12 * pts / cotacao : null;
-      if (pontos !== null) {
-        if (d.modo === 'direto') milhas = pontos;
-        else if (d.modo === 'transferido') { milhas = pontos * (1 + bonus / 100); if (bonus) fontes.push('regra da casa (bônus de transferência)'); if (d.premissa) notas.push(`considerado que ${/esfera/.test(chave(b.destino_pontos || b.programa)) ? 'Esfera' : 'Livelo'} transfere para ${prefNome}`); }
-        if (milheiro !== null && milhas) { valor = milhas * milheiro / 1000; fontes.push('valor do milheiro'); }
-        if (d.modo === 'outro') {
-          // pontos que vão para outro programa: valem pelo milheiro de referência desse programa
-          const ref = refDe(d.programa); outro = { programa: d.programa || 'outro programa', pontos: Math.round(pontos), valor: ref !== null ? pontos * ref / 1000 : null };
-          if (outro.valor !== null) { valor = outro.valor; fontes.push('valor do milheiro'); }
-          notas.push(`os pontos vão para ${outro.programa}, não para ${prefNome}` + (outro.valor === null ? ' (sem milheiro de referência desse programa)' : ''));
-        }
-        if (d.modo === 'nenhum') notas.push('sem programa de pontos');
-      }
-    } else if (!pts && d.modo !== 'nenhum') notas.push('pontuação não informada na base');
-    if (n(b.pts_condicional) === null && b.pts_condicional) notas.push('pontuação com condição: ' + b.pts_condicional);
-    const sala = salaInfo(b, g); if (sala.redes.length) fontes.push('salas VIP');
-    return { pontos, milhas: Math.round(milhas), outro, valor, anuidade: k.custo, cheia: k.cheia, isenta: k.isentaGasto, minimo: k.minimo, reduzida: k.reduzida,
-      saldo: valor !== null && k.custo !== null ? valor - k.custo : null, sala, notas, fontes, pedir: podePedir(b, perfil, bancosCli, jaTem) };
+    const c = contaCartao(b, g, 0, ctxM), sala = salaInfo(b, g);
+    if (sala.redes.length) c.fontes.push('salas VIP');
+    return { pontos: c.pontos, milhas: c.milhas, outro: c.outro, valor: c.valor, anuidade: c.anuidade, cheia: c.cheia, isenta: c.isenta, minimo: c.minimo, reduzida: c.reduzida,
+      saldo: c.saldo, sala, notas: c.notas, fontes: c.fontes, pedir: podePedir(b, perfil, bancosCli, jaTem) };
   };
 
   // próximo degrau: segmento atual do cliente no banco do cartão e o seguinte; e o próximo cartão da família
