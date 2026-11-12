@@ -581,22 +581,22 @@ const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
 const ehGravacao = (u, m) => m !== 'GET' && m !== 'HEAD' && (!u.includes('/rpc/') || RPC_GRAVA.test(u.split('/rpc/')[1]));
-let GRAVANDO = 0, GRAVA_FUNDO = 0; // GRAVA_FUNDO: rascunho automático de uma parte da tela (não quer dizer que a tela toda foi salva)
+let GRAVANDO = 0, GRAVA_FUNDO = 0, GRAVANDO_FRENTE = 0; // GRAVANDO_FRENTE: só o que a pessoa mandou salvar (fora o rascunho automático) // GRAVA_FUNDO: rascunho automático de uma parte da tela (não quer dizer que a tela toda foi salva)
 const fetchApp = async (url, o = {}) => {
-  const m = String(o.method || 'GET').toUpperCase(), u = String(url), grava = ehGravacao(u, m);
-  if (grava) GRAVANDO++;
+  const m = String(o.method || 'GET').toUpperCase(), u = String(url), grava = ehGravacao(u, m), frente = grava && !GRAVA_FUNDO;
+  if (grava) GRAVANDO++; if (frente) GRAVANDO_FRENTE++;
   try {
     const r = await fetch(url, o);
     try { if (r.ok && grava && !GRAVA_FUNDO && u.includes('/rest/v1/')) PREENCHIDO = false; } catch (_) {}
     return r;
-  } finally { if (grava) GRAVANDO--; }
+  } finally { if (grava) GRAVANDO--; if (frente) GRAVANDO_FRENTE--; }
 };
 /* toque duplo: o segundo toque no mesmo botão (ou o segundo Enter no mesmo formulário), enquanto a gravação
    do primeiro ainda está indo para o servidor, é ignorado. Evita pagamento, despesa, reunião ou cadastro em dobro. */
 let ULT_TOQUE = null, ULT_ENVIO = null;
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button, input[type=submit]'); if (!b) return;
-  if (b === ULT_TOQUE && GRAVANDO > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (b === ULT_TOQUE && GRAVANDO_FRENTE > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   ULT_TOQUE = b;
 }, true);
 /* segurança: link com javascript: (ou página em data:) colado em qualquer campo nunca roda ao ser tocado.
@@ -607,7 +607,7 @@ document.addEventListener('click', (e) => {
   if (/^(javascript|vbscript):/.test(h) || (/^data:/.test(h) && !/^data:(image\/|application\/pdf)/.test(h))) { e.preventDefault(); e.stopImmediatePropagation(); aviso('Esse link não é um endereço de internet e foi bloqueado.'); }
 }, true);
 document.addEventListener('submit', (e) => {
-  if (e.target === ULT_ENVIO && GRAVANDO > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (e.target === ULT_ENVIO && GRAVANDO_FRENTE > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   ULT_ENVIO = e.target;
 }, true);
 const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: fetchApp } });
@@ -3087,7 +3087,7 @@ function telaFormReuniao(P) {
       <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
       ${campo('data', 'Data e hora ' + fusoRotulo(), dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
-      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div>`}
+      ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}
       ${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
       <div class="grupo">Cliente</div>
       ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
@@ -3104,7 +3104,7 @@ function telaFormReuniao(P) {
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
-      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reFech"></div><div id="reDaCot"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitido e pago: enviar para a planilha</button>' : ''}`}</div>
+      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="sec grande" type="button" id="reEmitiu" style="width:100%;margin-top:8px" hidden>Emitiu? Preencher os dados da emissão</button><button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitiu: enviar para a planilha</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       <div id="blAndamento">
         ${campo('valor_estimado', G ? 'Valor potencial (R$)' : 'Valor cotado (R$)', r.valor_estimado, 'number')}
@@ -3140,7 +3140,7 @@ function telaFormReuniao(P) {
       <div class="sub" id="msgRe"></div>
     </form>`;
   const f = $('fRe');
-  const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); };
+  const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
   // reunião abre sozinha na gestão de milhas, em viagem montada (Roteiro marcado ou 3+ produtos) ou quando o card já tem reunião; passagem avulsa fica limpa
@@ -3284,7 +3284,7 @@ function telaFormReuniao(P) {
     function rotFech() { const b = $('enviarPlan'), A = VENDA.aEnviar(IT), soCli = IT.length > 0 && IT.every(VENDA.ehCliente);
       if ($('reFech')) $('reFech').hidden = soCli;
       if (!b || b.disabled) return;
-      b.textContent = A.cliente.length && !A.vendas.length ? 'Emitido: lançar na Gestão do cliente' : A.cliente.length ? 'Emitido e pago: enviar para a planilha e lançar na Gestão' : 'Emitido e pago: enviar para a planilha'; }
+      b.textContent = A.cliente.length && !A.vendas.length ? 'Emitiu: lançar na Gestão do cliente' : A.cliente.length ? 'Emitiu: enviar para a planilha e lançar na Gestão' : 'Emitiu: enviar para a planilha'; }
     f._rotFech = rotFech; setTimeout(rotFech, 0);
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
@@ -3344,14 +3344,14 @@ function telaFormReuniao(P) {
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
     const desenhaCot = () => {
       const el = $('reDaCot'), ops = opsCot(); if (!el) return;
-      el.innerHTML = ops.length ? `<div class="config" style="margin:6px 0 8px"><b>${SEL ? 'Venda preenchida com a cotação' : ops.length > 1 ? 'Qual cotação o cliente fechou?' : 'Preencher a venda com a cotação do card'}</b>${ops.map(({ c, k, o }) => `<button type="button" data-dacot="${c.id}|${k}" class="${SEL === c.id + '|' + k ? 'zap' : 'sec'}" style="width:100%;margin-top:6px;text-align:left">${esc(c.titulo || 'Cotação')}${o.nome ? ' · ' + esc(o.nome) : ''}${o.valor ? ' · ' + brl2(o.valor) : ''}</button>`).join('')}<div class="sub" style="margin:6px 0 0">${SEL ? `Puxado da ${CDADOS && SEL.startsWith(CDADOS[0].id + '|') ? 'última cotação enviada' : 'cotação escolhida'}. Se o cliente fechou outra, toque nela. Complete o custo de cada serviço, o localizador e o print da tarifa.` : 'Toque na que o cliente fechou.'}</div></div>` : '';
+      el.innerHTML = ops.length ? `<div class="config" style="margin:6px 0 8px"><b>${SEL ? 'Venda preenchida com a cotação' : ops.length > 1 ? 'Qual cotação o cliente fechou?' : 'Preencher a venda com a cotação do card'}</b>${ops.map(({ c, k, o }) => `<button type="button" data-dacot="${c.id}|${k}" class="${SEL === c.id + '|' + k ? 'zap' : 'sec'}" style="width:100%;margin-top:6px;text-align:left">${esc(c.titulo || 'Cotação')}${o.nome ? ' · ' + esc(o.nome) : ''}${o.valor ? ' · ' + brl2(o.valor) : ''}</button>`).join('')}<div class="sub" style="margin:6px 0 0">${SEL ? `Puxado da ${CDADOS && SEL.startsWith(CDADOS[0].id + '|') ? 'última cotação enviada' : 'cotação escolhida'}. Se o cliente fechou outra, toque nela. Custo, localizador e print ficam para quando emitir.` : 'Toque na que o cliente fechou.'}</div></div>` : '';
       el.querySelectorAll('[data-dacot]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.dacot.split('|'); aplicarCot(CDADOS.find(c => String(c.id) === id), +k); });
     };
     const aplicarCot = (c, k, auto) => {
       if (IT.some(VENDA.enviado)) { aviso('Esse fechamento já tem serviço na planilha.'); return; }
       const z = COT.itensDaCotacao(c.dados, k);
       if (!z.itens.length) { aviso('Essa cotação não tem voos nem hotéis para trazer. Preencha os serviços abaixo.'); return; }
-      IT.splice(0, IT.length, ...z.itens); marcar(); EDIT.desenha();
+      IT.splice(0, IT.length, ...z.itens); marcar(); EDIT.desenha(); if (f._modoFech) f._modoFech();
       if (z.valor && f.elements.valor_fechado) f.elements.valor_fechado.value = z.valor;
       if (f._ratear) f._ratear();
       if (FECH) FECH.desenha();
@@ -3368,6 +3368,24 @@ function telaFormReuniao(P) {
       const ops = opsCot(), vazio = !IT.some(x => x.venda || x.custo || x.localizador || VENDA.enviado(x));
       if (!SEL && vazio && ops.length) aplicarCot(ops[0].c, ops[0].k, true); else desenhaCot();
     };
+    // Fechou em dois passos. No Fechou: a opção da cotação, o valor e a forma de pagamento.
+    // Os dados da emissão (custo, localizador, passageiros, print) ficam para o passo Emitiu, quando a passagem sai.
+    let EMITIR = false;
+    const resumoFech = () => {
+      const el = $('reResumoFech'); if (!el) return;
+      const L = IT.filter(x => !x.cancelado_em);
+      el.innerHTML = L.length ? `<div class="bloco" style="margin:6px 0 10px;padding:10px 12px">${L.map(x => `<div class="lin" style="align-items:flex-start"><span>${esc(x.produto || 'Serviço')}${x.origem || x.destino ? ' · ' + esc([x.origem, x.destino].filter(Boolean).join(' → ')) : x.nome ? ' · ' + esc(x.nome) : ''}${x.data_ida ? '<br><small style="color:var(--tinta-3)">' + dataCurta(dia(x.data_ida)) + (x.data_volta ? ' a ' + dataCurta(dia(x.data_volta)) : '') + (x.passageiros ? ' · ' + x.passageiros + (+x.passageiros === 1 ? ' passageiro' : ' passageiros') : '') + '</small>' : ''}</span><span>${x.venda ? brl2(x.venda) : ''}</span></div>`).join('')}</div>`
+        : '<div class="sub" style="margin:6px 0 10px">Sem serviço ainda. Ligue uma cotação ao card ou toque em "Emitiu" para preencher.</div>';
+    };
+    f._modoFech = () => {
+      const so = f.elements.etapa.value === 'Fechou' && !IT.some(VENDA.enviado) && !EMITIR;
+      if ($('reServicos')) $('reServicos').hidden = so;
+      if ($('reResumoFech')) $('reResumoFech').hidden = !so;
+      if ($('reEmitiu')) $('reEmitiu').hidden = !so;
+      if ($('enviarPlan')) $('enviarPlan').hidden = so;
+      if (so) resumoFech();
+    };
+    if ($('reEmitiu')) $('reEmitiu').onclick = () => { EMITIR = true; f._modoFech(); const el = $('reServicos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
   f._fech = () => F;
   if ($('segIV')) {
@@ -3480,6 +3498,11 @@ function telaFormReuniao(P) {
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (IT) { row.itens = IT; if (res === 'Fechou' && row.valor_fechado == null) { const v = IT.reduce((a, x) => a + (+x.venda || 0), 0); if (v) row.valor_fechado = v; } }
     if (!G) { row.fech = f._fech(); if (f.elements.cotacao_inicio) row.cotacao_inicio = g('cotacao_inicio') || null; }
+    // ao virar Fechou: forma de pagamento obrigatória (quando há venda da Maktub) e a data do Fechou gravada sozinha
+    if (res === 'Fechou' && base.resultado !== 'Fechou') {
+      if (!G && (IT || []).some(x => !VENDA.ehCliente(x) && !x.cancelado_em) && !(row.fech && row.fech.forma)) { $('msgRe').textContent = 'Escolha a forma de pagamento do cliente.'; const e = $('reFech'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+      if (!base.fechado_em) row.fechado_em = new Date().toISOString();
+    }
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     if (ADMIN || GER()) row.responsavel_id = g('responsavel_id') || null; else if (nova) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
