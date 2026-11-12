@@ -4054,7 +4054,7 @@ const MAIS_GRUPOS = () => [
   ['Marketing', [['marketing', 'Marketing: posts, aprovação e estratégia']]]
 ];
 // não consulta a barra (a barra consulta o Mais): o índice mostra tudo o que a pessoa pode abrir
-const itemMaisOk = ([k]) => podeAba(k) && !(ADMIN && k === 'comissao');
+const itemMaisOk = ([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
 function itensMais() { return MAIS_GRUPOS().flatMap(([, L]) => L).filter(itemMaisOk); }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
 function telaMais(P) {
