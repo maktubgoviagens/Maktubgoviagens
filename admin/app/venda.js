@@ -363,11 +363,22 @@ function htmlTrechos(X, x, i, trava, ctx) {
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
 }
 
+// quem viaja com o cliente: a ficha do cliente do card e as fichas ligadas a ela (família, quem viaja junto)
+const nrmNome = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+function familiaDe(X, ctx) {
+  const P = (X.D && X.D.pessoas) || [];
+  const cli = (ctx && ctx.pessoaId && P.find(o => o.id === ctx.pessoaId)) || (ctx && ctx.cliente ? P.find(o => nrmNome(o.nome) === nrmNome(ctx.cliente)) : null);
+  if (!cli) return [];
+  const ids = [cli.id, ...((X.D && X.D.vinculos) || []).filter(v => v.pessoa_a === cli.id || v.pessoa_b === cli.id).map(v => v.pessoa_a === cli.id ? v.pessoa_b : v.pessoa_a)];
+  return [...new Set(ids)].map(id => P.find(o => o.id === id)).filter(Boolean);
+}
 // um bloco por passageiro: nome (puxa da ficha), CPF e nascimento
 function htmlPax(X, x, i, trava, ctx) {
   const L = paxAjustado(x); if (!L.length) return '';
   const cli = ctx && ctx.cliente ? String(ctx.cliente).trim() : '';
-  return `<div class="sub" style="margin:6px 0 0">Dados dos passageiros (${L.length})</div>${cli && !trava ? `<label class="fc" style="margin:6px 0"><input type="checkbox" data-clipax="${i}" ${x.cliente_pax ? 'checked' : ''}><span>O cliente (${X.esc(cli.split(' ')[0])}) é o passageiro 1</span></label>` : ''}${L.map((p, k) => {
+  const fam = trava ? [] : familiaDe(X, ctx), usados = new Set(L.map(p => p.pessoa_id).filter(Boolean));
+  const chipsFam = fam.length ? `<div class="sub" style="margin:6px 0 2px">Toque em quem viaja (nome, CPF e nascimento vêm da ficha):</div><div class="chips" style="flex-wrap:wrap;margin-bottom:4px">${fam.map(o => `<button type="button" data-paxfam="${i}|${X.esc(o.id)}" class="${usados.has(o.id) ? 'on' : ''}">${X.esc(o.nome)}</button>`).join('')}</div>` : '';
+  return `<div class="sub" style="margin:6px 0 0">Dados dos passageiros (${L.length})</div>${chipsFam}${cli && !trava && !fam.length ? `<label class="fc" style="margin:6px 0"><input type="checkbox" data-clipax="${i}" ${x.cliente_pax ? 'checked' : ''}><span>O cliente (${X.esc(cli.split(' ')[0])}) é o passageiro 1</span></label>` : ''}${L.map((p, k) => {
     const ok = String(p.nome || '').trim().includes(' ') && cpfValido(p.cpf) && p.nasc;
     return `<div style="border-left:3px solid ${ok ? 'var(--verde)' : 'var(--linha)'};padding-left:8px;margin:6px 0">
       <label class="fl"><span>Passageiro ${k + 1}: nome completo</span><input data-pax="${i}|${k}|nome" value="${X.esc(p.nome || '')}" list="dlPaxV" ${trava ? 'disabled' : ''}></label>
@@ -478,6 +489,19 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         x.pax[0] = { nome: (f && f.nome) || String(ctx.cliente || '').trim(), cpf: d && d.cpf ? fmtCpf(d.cpf) : '', nasc: (f && f.nascimento) || '', ...(f ? { pessoa_id: f.id } : {}) };
         if (!x.pax[0].cpf || !x.pax[0].nasc) X.aviso('Complete o que faltar do passageiro 1: a ficha do cliente não tem ' + [!x.pax[0].cpf && 'CPF', !x.pax[0].nasc && 'nascimento'].filter(Boolean).join(' nem ') + '.');
       } else x.pax[0] = { nome: '', cpf: '', nasc: '' };
+      desenha();
+    });
+    // passageiro da ficha com um toque: preenche a primeira vaga em branco (ou tira, se já está)
+    el.querySelectorAll('[data-paxfam]').forEach(b => b.onclick = () => {
+      const [i, id] = b.dataset.paxfam.split('|'), x = IT[+i]; paxAjustado(x);
+      const ja = x.pax.findIndex(p => p.pessoa_id === id);
+      if (ja >= 0) { x.pax[ja] = { nome: '', cpf: '', nasc: '' }; desenha(); return; }
+      const k = x.pax.findIndex(p => !String(p.nome || '').trim());
+      if (k < 0) { X.aviso('Todas as vagas de passageiro estão preenchidas. Aumente o número de passageiros para incluir mais alguém.'); return; }
+      const f = ((X.D && X.D.pessoas) || []).find(o => o.id === id); if (!f) return;
+      const d = ((X.D && X.D.docs) || []).find(o => o.pessoa_id === f.id);
+      x.pax[k] = { nome: f.nome, cpf: d && d.cpf ? fmtCpf(d.cpf) : '', nasc: f.nascimento || '', pessoa_id: f.id };
+      if (!x.pax[k].cpf || !x.pax[k].nasc) X.aviso('Complete o que faltar de ' + String(f.nome).split(' ')[0] + ': a ficha não tem ' + [!x.pax[k].cpf && 'CPF', !x.pax[k].nasc && 'nascimento'].filter(Boolean).join(' nem ') + '.');
       desenha();
     });
     el.querySelectorAll('[data-print]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.print]; x.print ? verArquivo(X, x.print) : anexar(X, 'print', x, desenha); });
