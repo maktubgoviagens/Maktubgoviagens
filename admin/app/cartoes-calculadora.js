@@ -29,7 +29,9 @@ function css() {
   if (document.getElementById('calcCss')) return;
   const st = document.createElement('style'); st.id = 'calcCss';
   st.textContent = `
+body.calc-largo{--conteudo:1180px}
 body.calc-largo .pagina{max-width:1180px}
+body.calc-apresenta .pagina{margin-left:auto!important;margin-right:auto!important}
 .calc{--cv:#193826;--co:#715E32;--co2:#B49755;--co3:#A88B4A;--cc:#EBE0C4;--cf:#F7F3EA;--ct:#2B2B26}
 .calc .ent{background:#fff;border:1px solid var(--linha);padding:14px;margin-top:12px}
 .calc .ent .lin2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -62,6 +64,10 @@ body.calc-largo .pagina{max-width:1180px}
 .calc .barra{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .calc .barra button{flex:1;min-width:150px}
 .calc .sair{display:none}
+.calc .salvas{margin-top:16px}
+.calc .salvas button.sv{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--linha);border-top:0;padding:10px 12px;font-size:16px;cursor:pointer}
+.calc .salvas button.sv:first-of-type{border-top:1px solid var(--linha)}
+.calc .salvas small{display:block;font-size:13px;color:var(--tinta-3)}
 @media (min-width:900px){.calc .cols{grid-template-columns:repeat(4,1fr)}.calc .ent .lin4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}}
 body.calc-apresenta{background:#F7F3EA}
 body.calc-apresenta .topo,body.calc-apresenta .nav,body.calc-apresenta #fab,body.calc-apresenta .fab,body.calc-apresenta .calc [data-int],body.calc-apresenta .voltar{display:none!important}
@@ -140,10 +146,64 @@ export async function tela(P, X) {
     </section>
     <div id="cRes"></div>
     <div class="barra" data-int><button class="zap" type="button" id="cApres">Modo apresentação</button>${S.modo !== 'avulsa' ? '<button class="sec" type="button" id="cSalvar">Salvar simulação</button>' : ''}</div>
+    <div class="salvas" id="cSalvas" data-int></div>
   </div>`;
   ligar(P, X);
   desenharAtual(P, X); desenharBancos(P, X); desenharResultado(P, X);
+  if (S.modo !== 'avulsa') desenharSalvas(P, X);
 }
+
+/* ---------- simulações salvas (tabela simulacoes_cartoes, 88-simulacoes-cartoes.sql) ---------- */
+// resumo de um cartão para guardar: só o que a tela mostrou
+const fotoCartao = (x) => !x ? null : x.nenhum ? { nenhum: true, cartao: 'Sem cartão que pontua', pontos: 0, valor: 0, anuidade: 0, resultado: 0 }
+  : { catalogo_id: x.b.id, cartao: nomeB(x.b), pontos: x.pontos, programa: x.programa || null, valor: x.valor, anuidade: x.anuidade, isenta: !!(x.c && x.c.isenta), resultado: x.saldo, a_confirmar: !!x.a_confirmar, escolhido_pela_equipe: !!x.trocado };
+async function salvar(P, X) {
+  const U = S.ultimo;
+  if (!U || !U.G.total) { X.aviso('Informe o gasto mensal antes de salvar.'); return; }
+  if (!U.atual) { X.aviso('Marque o cartão que a pessoa usa hoje antes de salvar.'); return; }
+  const bt = P.querySelector('#cSalvar'); if (bt) bt.disabled = true;
+  const destaque = (P.querySelector('.faixa .t') || {}).textContent || '';
+  const row = {
+    cliente_id: S.modo === 'cliente' ? S.id : null, atendimento_id: S.modo === 'lead' ? S.id : null, nome: S.nome || null, criado_por: X.D.meuId || null,
+    entrada: { gasto_mes: U.G.total, gasto_nacional: U.G.gNac, gasto_internacional: U.G.gInt, internacional_digitado: S.intVal, internacional_modo: S.intModo, cartao_atual: S.atual,
+      programa: S.prog, programa_nome: U.ctx.prefNome || 'O que o cartão usar', so_vip_ilimitada: S.soVip, esconder_convite: S.semConvite, bancos: S.bancos, trocas: S.trocas,
+      cotacao_dolar: U.ctx.cotacao, milheiro: U.ctx.milheiro, bonus_transferencia: U.ctx.bonus },
+    resultado: { atual: fotoCartao(U.atual), opcoes: U.tres.map(fotoCartao), destaque: U.melhor ? { catalogo_id: U.melhor.b.id, cartao: nomeB(U.melhor.b) } : null, texto_destaque: destaque.trim() },
+  };
+  const r = await X.sb.from('simulacoes_cartoes').insert(row).select().single();
+  if (bt) bt.disabled = false;
+  if (r.error) { X.aviso(/simulacoes_cartoes/.test(r.error.message) ? X.tec('Para salvar simulações, rode no Supabase o 88-simulacoes-cartoes.sql.') : 'Não salvou: ' + X.limparTec(r.error.message)); return; }
+  X.aviso('Simulação salva.');
+  desenharSalvas(P, X);
+}
+// lista do cliente (e dos cards de lead ligados a ele) ou do lead; tocar numa traz as entradas de volta, sem recarregar a página
+async function desenharSalvas(P, X) {
+  const box = P.querySelector('#cSalvas'); if (!box) return;
+  const L = await listarSimulacoes(X, S.modo === 'cliente' ? { cliente: S.id } : { lead: S.id });
+  if (!box.isConnected) return;
+  if (L === null) { box.innerHTML = ''; return; }
+  box.innerHTML = L.length ? `<div class="secao" style="margin-top:8px">Simulações salvas</div>${L.map(x => `<button type="button" class="sv" data-sv="${X.esc(x.id)}">${X.esc(resumoSimulacao(x))}<small>${X.esc(rodapeSimulacao(x, X))}</small></button>`).join('')}
+    <div class="sub" style="font-size:13px">Tocar numa simulação traz as entradas dela de volta. A conta é refeita com a base de hoje.</div>` : '';
+  box.querySelectorAll('[data-sv]').forEach(b => b.onclick = () => {
+    const x = L.find(y => String(y.id) === b.dataset.sv), e = (x && x.entrada) || {};
+    Object.assign(S, { gasto: e.gasto_mes ? String(e.gasto_mes) : '', intVal: e.internacional_digitado || '', intModo: e.internacional_modo || 'pct', atual: e.cartao_atual || null, prog: e.programa || 'livre',
+      soVip: !!e.so_vip_ilimitada, semConvite: !!e.esconder_convite, bancos: e.bancos || [], trocas: e.trocas || {}, trocando: null });
+    tela(P, X); scrollTo(0, 0); X.aviso('Simulação carregada.');
+  });
+}
+export async function listarSimulacoes(X, { cliente, lead }) {
+  let q = X.sb.from('simulacoes_cartoes').select('*').order('criado_em', { ascending: false }).limit(20);
+  if (lead) q = q.eq('atendimento_id', lead);
+  else {
+    const cards = X.cardsDoCliente ? X.cardsDoCliente(cliente) : [];
+    q = cards.length ? q.or(`cliente_id.eq.${cliente},atendimento_id.in.(${cards.join(',')})`) : q.eq('cliente_id', cliente);
+  }
+  const r = await q;
+  return r.error ? null : (r.data || []);
+}
+export const resumoSimulacao = (x) => { const e = x.entrada || {}, R = x.resultado || {}, a = R.atual, d = R.destaque;
+  return [e.gasto_mes ? brl(e.gasto_mes) + ' por mês' : '', a ? a.cartao : '', d ? 'melhor: ' + d.cartao : ''].filter(Boolean).join(' · '); };
+export const rodapeSimulacao = (x, X) => [new Date(x.criado_em).toLocaleDateString('pt-BR'), X.nomeTime ? X.nomeTime(x.criado_por) : '', x.atendimento_id && !x.cliente_id ? 'no card do lead' + (x.nome ? ' ' + x.nome : '') : '', (x.entrada || {}).programa_nome || ''].filter(Boolean).join(' · ');
 
 function voltar(X) {
   inicio();
@@ -172,7 +232,7 @@ function ligar(P, X) {
     X.aviso('Cotação salva.'); desenharResultado(P, X);
   };
   if ($q('#cLigar')) $q('#cLigar').onclick = () => { S.ligando = !S.ligando; desenharLigar(P, X); };
-  if ($q('#cSalvar')) $q('#cSalvar').onclick = () => X.aviso(X.tec('Para salvar simulações, rode no Supabase o 87-simulacoes-cartoes.sql.'));
+  if ($q('#cSalvar')) $q('#cSalvar').onclick = () => salvar(P, X);
 }
 
 // avulsa: liga a simulação a um lead da Gestão (para salvar e para puxar o gasto da qualificação)

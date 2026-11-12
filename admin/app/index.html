@@ -562,8 +562,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=6';
 import * as MKT from '/admin/app/marketing.js?v=24';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=27';
-import * as CALC from '/admin/app/cartoes-calculadora.js?v=1';
+import * as CARTOES from '/admin/app/cartoes.js?v=28';
+import * as CALC from '/admin/app/cartoes-calculadora.js?v=2';
 import * as ACV from '/admin/app/acervo.js?v=8';
 import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
@@ -1431,7 +1431,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
-  if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead });
+  if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead, nomeTime, cardsDoCliente });
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, admin: ADMIN, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -5956,8 +5956,11 @@ function dadosDiag(c) {
 function abrirCalc(modo, id) { ir('calccartoes', () => CALC.abrir(modo, id)); }
 // gasto mensal do lead em número: o da qualificação do SDR ou o do formulário de diagnóstico
 function gastoDoLead(r) { const q = (r && r.qualificacao) || {}, so = solDoCard(r) || {}; return CARTOES.numeroSolto(q.gasto) || CARTOES.numeroSolto(so.gasto_mensal) || null; }
+// cards de lead da Gestão ligados ao cliente (o mesmo critério do dadosDiag): as simulações feitas no lead aparecem na ficha
+function cardsDoCliente(cid) { const pfs = (D.pessoas || []).filter(p => p.cliente_id === cid).map(p => p.id); return (D.reunioes || []).filter(r => ehGestao(r) && (pfs.includes(r.pessoa_id) || (clienteGestaoDe(r) || {}).id === cid)).map(r => r.id); }
+const simulacoesCtx = () => ({ listar: (cid) => CALC.listarSimulacoes({ sb, cardsDoCliente }, { cliente: cid }), resumo: CALC.resumoSimulacao, rodape: (x) => CALC.rodapeSimulacao(x, { nomeTime }) });
 function fiCartoes(el, c) {
-  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag, abrirCalc: podeAba('calccartoes') ? (id) => abrirCalc('cliente', id) : null }, async () => {
+  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag, abrirCalc: podeAba('calccartoes') ? (id) => abrirCalc('cliente', id) : null, simulacoes: podeAba('calccartoes') ? simulacoesCtx() : null }, async () => {
     if ((D.gtar || []).some(t => String(t.cliente_id) === String(c.id) && t.chave === 'cartoes' && !t.feito)) await gtMarcarChave(c, 'cartoes');
   });
 }
