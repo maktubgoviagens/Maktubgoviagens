@@ -437,6 +437,63 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
   .numeros{grid-template-columns:repeat(4,1fr)}
   .duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 }
+
+/* ============ computador (1024px ou mais) ============
+   Só visual: nenhuma função muda. O celular e o tablet continuam exatamente como estão.
+   Menu de baixo vira menu lateral fixo; o conteúdo usa a largura da tela até 1280px. */
+@media (min-width:1024px){
+  :root{--lado:232px;--topo-h:58px;--conteudo:1280px}
+  /* menu lateral */
+  .nav{top:var(--topo-h);right:auto;bottom:0;width:var(--lado);flex-direction:column;gap:2px;padding:18px 12px;border-top:0;border-right:1px solid var(--linha);overflow-y:auto}
+  .nav button,.nav.seis button{flex:none;height:46px;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 14px;font-size:14px;letter-spacing:.02em;border-radius:6px}
+  .nav button:hover{background:var(--creme)}
+  .nav button.on{background:var(--creme-2)}
+  .nav button.on::before{top:10px;bottom:10px;left:0;right:auto;width:3px;height:auto;border-radius:0 2px 2px 0}
+  .nav svg{width:20px;height:20px;flex:none}
+  .nav .bola{top:50%;left:auto;right:12px;transform:translateY(-50%)}
+  /* conteúdo ao lado do menu, centralizado no espaço que sobra */
+  .pagina{margin:0 0 0 calc(var(--lado) + max(0px, (100% - var(--lado) - var(--conteudo)) / 2));max-width:var(--conteudo);padding:28px 40px 56px}
+  body.com-fab .pagina{padding-bottom:110px}
+  .faixa-push{max-width:calc(var(--conteudo) - 80px);margin:16px 0 0 calc(var(--lado) + 40px + max(0px, (100% - var(--lado) - var(--conteudo)) / 2))}
+  /* quem não tem menu (acesso só ao Marketing) usa a tela inteira, centralizada */
+  #app:has(> .nav[hidden]) .pagina{margin-left:auto;margin-right:auto}
+  #app:has(> .nav[hidden]) .faixa-push{margin-left:auto;margin-right:auto}
+  #app:has(> .nav[hidden]) .aviso,#app:has(> .nav[hidden]) ~ .aviso{left:50%}
+  .titulo{font-size:36px}
+  .fab{right:32px;bottom:32px}
+  .aviso{bottom:28px;left:calc(50% + var(--lado) / 2)}
+  #faixaVersao{left:calc(var(--lado) + 24px)!important;right:auto!important;bottom:24px!important;max-width:560px}
+  /* folhas que sobem de baixo viram janelas no centro */
+  .folha-caixa{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(640px,92vw);max-height:84vh;border-radius:12px;padding:22px 24px;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+  .folha-caixa.busca-caixa{top:84px;transform:translateX(-50%);width:min(720px,92vw);padding-top:20px}
+  /* números e indicadores com mais colunas */
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .kpis.k3{grid-template-columns:repeat(3,1fr)}
+  .gatalhos{grid-template-columns:repeat(4,1fr)}
+  .numeros .num .v{font-size:32px}
+  /* listas de cartões em duas colunas (as emissões ficam em uma, porque cada card tem a linha de checks logo abaixo) */
+  .lista:not(:has(> .emchk)){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+  .lista > .vazio{grid-column:1/-1}
+  /* kanban: todas as etapas lado a lado, sem precisar deslizar */
+  .kanban{margin:0;padding:2px 0 10px;scroll-snap-type:none}
+  .kcol{flex:1 1 0;min-width:210px;max-width:none}
+  .gj{margin:0;padding:12px 0 6px}
+  .gjc{flex:1 1 220px}
+  .prazo-col{flex:1 1 0}
+  /* formulários em duas colunas: campos simples lado a lado; títulos, textos longos e caixas ocupam a linha toda */
+  .pagina form.form:not(.card){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;align-items:end}
+  .pagina form.form:not(.card) > *{grid-column:1/-1}
+  .pagina form.form:not(.card) > .fl:not(:has(textarea)){grid-column:auto}
+  /* início: duas colunas (o que pede ação à esquerda, números e agenda à direita) */
+  .ini-grade{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 40px;align-items:start}
+  .ini-grade .numeros{grid-template-columns:1fr 1fr}
+  /* mais: grupos em duas colunas */
+  .mais-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;align-items:start}
+  /* cotação rápida: prévia da imagem fixa ao lado do formulário */
+  .pagina:has(> #rpPrevia){display:grid;grid-template-columns:minmax(0,1fr) 400px;column-gap:40px;align-content:start}
+  .pagina:has(> #rpPrevia) > *{grid-column:1}
+  .pagina:has(> #rpPrevia) > #rpPrevia{grid-column:2;grid-row:1 / span 40;align-self:start;position:sticky;top:calc(var(--topo-h) + 20px);margin-top:0!important}
+}
 </style>
 </head>
 <body>
@@ -1476,6 +1533,7 @@ function telaInicio(P) {
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    <div class="ini-grade"><div class="ini-a">
     ${blocoGravar()}
     ${blocoReunioes(reun)}
     <div class="secao">Precisa de você</div>
@@ -1486,6 +1544,7 @@ function telaInicio(P) {
     ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
+    </div><div class="ini-b">
     ${blocoMetasAdmin(D.metas, true)}
     <div class="secao">A Maktub hoje</div>
     <div class="numeros">
@@ -1497,7 +1556,8 @@ function telaInicio(P) {
     <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
     <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
-    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
+    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>
+    </div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   ligarAnivHoje(P);
   ligarSemHorario(P);
@@ -4086,9 +4146,9 @@ function telaMais(P) {
   const arquivo = [podeAba('opmilhas') && '<button data-ir="opmilhas"><span>Operação de milhas dos sócios</span><span class="seta">›</span></button>',
     podeAba('emissoes') && '<button data-b2b><span>Emissão B2B para agências<small style="display:block;font-size:13px;color:var(--tinta-3)">Fora de uso, mas continua funcionando. O histórico fica em Emissões</small></span><span class="seta">›</span></button>'].filter(Boolean);
   P.innerHTML = `<h1 class="titulo">Mais</h1>
-    ${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div>` : ''; }).join('')}
-    ${ADMIN ? `<div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
+    <div class="mais-grade">${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div><div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div></div>` : ''; }).join('')}
+    ${ADMIN ? `<div><div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div></div>` : ''}</div>
     ${arquivo.length ? `<details class="gsec" style="margin-top:18px"><summary><span>Arquivo<small>O que saiu do dia a dia, mas continua guardado</small></span></summary><div class="pend" style="margin-top:10px">${arquivo.join('')}</div></details>` : ''}
     <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
