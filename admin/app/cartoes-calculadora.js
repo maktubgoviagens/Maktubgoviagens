@@ -137,6 +137,7 @@ export async function tela(P, X) {
         <div><span class="rot">Quanto disso é internacional</span><div style="display:flex;gap:6px"><input type="text" inputmode="decimal" id="cInt" value="${esc(S.intVal)}" placeholder="0" data-livre style="flex:1"><select id="cIntModo" style="width:80px" data-livre><option value="pct"${S.intModo === 'pct' ? ' selected' : ''}>%</option><option value="rs"${S.intModo === 'rs' ? ' selected' : ''}>R$</option></select></div></div>
         <label class="fl"><span>Programa de destino dos pontos</span><select id="cProg" data-livre>${PROGS.map(([k, l]) => `<option value="${k}"${S.prog === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <label class="fl"><span>Cotação de referência do dólar (R$)</span><div style="display:flex;gap:6px"><input type="text" inputmode="decimal" id="cCot" value="${cot ?? ''}" placeholder="Ex.: 5,40" data-livre style="flex:1"><button class="sec" type="button" id="cCotOk" style="height:44px">Salvar</button></div></label>
+        <div class="sub" id="cCotInfo" style="font-size:13px;grid-column:1/-1;margin-top:-4px">${esc(origemDolar(X.D.cfg))}</div>
       </div>
       <div style="margin-top:12px"><span class="rot">Cartão que usa hoje</span><div id="cAtualBox"></div></div>
       <div style="margin-top:12px"><span class="rot">Filtros (opcionais)</span>
@@ -205,6 +206,18 @@ export const resumoSimulacao = (x) => { const e = x.entrada || {}, R = x.resulta
   return [e.gasto_mes ? brl(e.gasto_mes) + ' por mês' : '', a ? a.cartao : '', d ? 'melhor: ' + d.cartao : ''].filter(Boolean).join(' · '); };
 export const rodapeSimulacao = (x, X) => [new Date(x.criado_em).toLocaleDateString('pt-BR'), X.nomeTime ? X.nomeTime(x.criado_por) : '', x.atendimento_id && !x.cliente_id ? 'no card do lead' + (x.nome ? ' ' + x.nome : '') : '', (x.entrada || {}).programa_nome || ''].filter(Boolean).join(' · ');
 
+// de onde veio o dólar: a busca automática dos dias úteis (89-cotacao-dolar-diaria.sql) grava o maior entre PTAX e turismo
+const NOME_FONTE = { ptax: 'PTAX de venda do Banco Central', turismo: 'dólar turismo' };
+function origemDolar(cfg) {
+  const v = cfg && n(cfg.cotacao_dolar), i = cfg && cfg.cotacao_dolar_info;
+  if (!(v > 0)) return 'Sem cotação: preencha à mão ou aguarde a busca automática do próximo dia útil.';
+  if (!i || !i.fonte || !i[i.fonte] || Math.abs(n(i[i.fonte].valor) - v) > 0.00005) return 'Cotação informada à mão pela equipe. A busca automática dos dias úteis grava por cima.';
+  const quando = new Date(i.atualizado_em).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const outra = i.fonte === 'ptax' ? i.turismo : i.ptax, nomeOutra = i.fonte === 'ptax' ? 'turismo' : 'PTAX';
+  return `${NOME_FONTE[i.fonte] || i.fonte}, buscado sozinho em ${quando}; usamos sempre o maior dólar do dia.`
+    + (outra ? ` ${nomeOutra[0].toUpperCase() + nomeOutra.slice(1)}: R$ ${String(outra.valor).replace('.', ',')}.` : ` O ${nomeOutra} não respondeu nessa busca.`);
+}
+
 function voltar(X) {
   inicio();
   if (S.modo === 'cliente' && S.id) return X.abrirFicha(S.id, 'cartoes');
@@ -229,6 +242,7 @@ function ligar(P, X) {
     const { error } = await X.sb.from('configuracoes').update({ cotacao_dolar: v }).eq('id', 1);
     if (error) { X.aviso('Não salvou: ' + X.limparTec(error.message)); return; }
     if (X.D.cfg) X.D.cfg.cotacao_dolar = v;
+    const ci = $q('#cCotInfo'); if (ci) ci.textContent = origemDolar(X.D.cfg);
     X.aviso('Cotação salva.'); desenharResultado(P, X);
   };
   if ($q('#cLigar')) $q('#cLigar').onclick = () => { S.ligando = !S.ligando; desenharLigar(P, X); };
