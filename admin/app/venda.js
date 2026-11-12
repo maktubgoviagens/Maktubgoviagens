@@ -383,7 +383,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   const linhaCliente = () => { const L = IT.filter(x => ehCliente(x) && !x.cancelado_em); if (!L.length) return '';
     const porProg = {}; L.forEach(x => { const k = String(x.programa || 'milhas').trim(); porProg[k] = (porProg[k] || 0) + (+x.milhas || 0); });
     return `<div class="lin"><span>Com milhas do cliente</span><span>${Object.entries(porProg).map(([k, v]) => v ? milFmt(v) + ' ' + X.esc(k) : 'a preencher').join(' + ')}</span></div><div class="sub" style="margin:0">Fora de metas, comissão e planilha.</div>`; };
-  const resumo = () => { const t = tot(); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div><div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
+  const resumo = () => { const t = tot(); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div>${X.verMargem === false ? '' : `<div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>`}` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
   const padroes = () => IT.forEach(x => {
     if (enviado(x)) return;
     if (ehCliente(x)) { prepararCliente(x, ctx); cabecalhoCliente(x); return; }
