@@ -568,7 +568,7 @@ import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=13';
-import * as COT from '/admin/app/cotador.js?v=52';
+import * as COT from '/admin/app/cotador.js?v=53';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=27';
 import * as ATV from '/admin/app/atividades.js?v=2';
@@ -576,7 +576,7 @@ import * as CMP from '/admin/app/compromissos.js?v=18';
 import * as CX from '/admin/app/caixa.js?v=4';
 import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=5';
+import * as IND from '/admin/app/indicacoes.js?v=6';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1196,11 +1196,12 @@ async function carregar(silencioso, manterTela) {
       sb.rpc('parceiros_ativos'),
       sb.rpc('time_nomes'),
       carregarAgendaEm(),
-      sb.from('atendimentos').select('*').gte('data', desde).order('data', { ascending: false }).limit(3000),
+      // arquivados (87-arquivar-cards-cotacoes-fichas.sql) não entram em telas, contas nem indicadores
+      sb.from('atendimentos').select('*').is('arquivado_em', null).gte('data', desde).order('data', { ascending: false }).limit(3000),
       // calendário: quem não tem a carteira da Gestão recebe só nome, vencimento, congelamento e onboarding (78-calendario-renovacoes.sql)
       !pode('gestao') && podeAba('reunioes') ? sb.rpc('calendario_renovacoes') : nada
     ]),
-    podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').order('atualizado_em', { ascending: false }).limit(3000) : null,
+    podeAba('cotador') ? sb.from('propostas').select('id,titulo,modelo,atualizado_em,reuniao_id:dados->>reuniao_id,hist:dados->historico').is('arquivado_em', null).order('atualizado_em', { ascending: false }).limit(3000) : null,
     sb.from('agenda_reunioes').select('*').gte('data', desde).order('data', { ascending: false }).limit(5000),
     sb.rpc('ticktick_situacao'),
     sb.rpc('cal_links'),
@@ -1236,7 +1237,7 @@ async function carregar(silencioso, manterTela) {
       sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
     ]) : null,
     CRMok ? Promise.all([
-      sb.from('pessoas').select('*').order('nome').limit(10000),
+      sb.from('pessoas').select('*').is('arquivado_em', null).order('nome').limit(10000),
       pode('emissoes') ? sb.from('pessoas_documentos').select('*').limit(10000) : nada,
       sb.from('pessoas_vinculos').select('*').limit(10000),
       pode('emissoes') ? sb.from('emissao_passageiros').select('*').limit(20000) : nada,

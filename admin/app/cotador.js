@@ -261,7 +261,7 @@ async function lista(P, X) {
   $('novoGo').onclick = () => comCard(P, X, () => { S = comPre(NOVO_GO()); PRE = null; ir(X, 'novo'); });
   $('novoCorp').onclick = () => comCard(P, X, () => { S = comPre(NOVO_CORP()); PRE = null; ir(X, 'novo'); });
   $('novoRap').onclick = () => comCard(P, X, () => { S = comPre(NOVO_RAP()); PRE = null; ir(X, 'novo'); });
-  const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').order('atualizado_em', { ascending: false }).limit(300);
+  const r = await sb.from('propostas').select('id,modelo,titulo,cliente,destino,atualizado_em,dados').is('arquivado_em', null).order('atualizado_em', { ascending: false }).limit(300);
   if (!$('lsC')) return;
   if (r.error) { $('lsC').innerHTML = '<div class="config">Rode o 1-cotador.sql no Supabase para guardar as cotações. Dá para montar e baixar mesmo sem ele.</div>'; LISTA = []; return; }
   LISTA = r.data || [];

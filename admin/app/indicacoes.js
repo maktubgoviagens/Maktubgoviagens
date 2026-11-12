@@ -43,7 +43,7 @@ async function carregar(X) {
     X.sb.from('emissoes').select('id,pessoa_id,data_negociacao,valor_receber,lucro_liquido,repasse,parceiro_id,parceiro_app,parceiro_pct,parceiro_pct_app,comprador,sobrenome,localizador,servico,servico_app,origem,destino').order('data_negociacao').limit(20000),
     X.sb.from('contratos').select('id,pessoa_id,cliente_id,status,assinado_em,cortesia:dados->cortesia').limit(5000),
     X.sb.from('parceiros').select('*').limit(5000),
-    X.sb.from('atendimentos').select('pessoa_id,origem,data').not('pessoa_id', 'is', null).order('data').limit(20000)
+    X.sb.from('atendimentos').select('pessoa_id,origem,data').is('arquivado_em', null).not('pessoa_id', 'is', null).order('data').limit(20000)
   ]);
   CACHE = {
     vendas: v.error ? (X.D.emissoes || []).filter(e => !e.outra) : (v.data || []),
