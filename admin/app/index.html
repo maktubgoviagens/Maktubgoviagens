@@ -971,7 +971,7 @@ import * as FORN from '/admin/app/fornecedores.js?v=13';
 import * as COT from '/admin/app/cotador.js?v=54';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=5';
 import * as VENDA from '/admin/app/venda.js?v=28';
-import * as ATV from '/admin/app/atividades.js?v=2';
+import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=18';
 import * as CX from '/admin/app/caixa.js?v=4';
 import * as DRE from '/admin/app/dre.js?v=8';
@@ -1821,7 +1821,7 @@ function tela() {
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
-  if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
+  if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, GER: GER(), meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
@@ -4484,7 +4484,7 @@ async function blocoReembolsos() {
 /* ---------- mais (administradores) ---------- */
 // Mais: índice de tudo o que a pessoa pode abrir, por assunto. Cada item continua passando por podeAba (permissões iguais).
 const MAIS_GRUPOS = () => [
-  ['Números', [['empresa', 'Painel da empresa: números, metas e atalhos'], ['indicacoes', 'Indicações e origem dos clientes'], ['metas', 'Metas do mês'], ['site', 'Números do site'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']]],
+  ['Números', [['empresa', 'Painel da empresa: números, metas e atalhos'], ['indicacoes', 'Indicações e origem dos clientes'], ['metas', 'Metas do mês'], ['site', 'Números do site'], ['atividades', ADMIN || GER() ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']]],
   ['Clientes', [['crm', 'Clientes: fichas, família e cadastro', ADMIN ? (D.dups || []).length : 0], ['origens', 'Origens para marcar', IND.pendentes(ctxIND())], ['clientes', 'Carteira da Gestão'], ['cartoesbase', 'Base de cartões']]],
   ['Vendas', [['reunioes', 'Comercial: funil e atendimentos'], ['cotador', 'Cotações'], ['leads', 'Leads do site', LE_NOVOS()], ['fornecedores', 'Hotéis e serviços'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['emissoes', 'Emissões'], ['agenda', 'Agenda da operação']]],
   ['Dinheiro', [['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['dre', 'DRE da empresa: geral e detalhado'], ['custos', 'Salários e despesas fixas'], ['equipe', 'Comissões e regras'], ['comissao', 'Minha comissão']]],
@@ -4520,7 +4520,7 @@ function itensEmpresa() {
   return [
     ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
-    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
+    ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN || GER() ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
   ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
