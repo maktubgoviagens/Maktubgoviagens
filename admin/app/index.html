@@ -562,7 +562,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=6';
 import * as MKT from '/admin/app/marketing.js?v=24';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=26';
+import * as CARTOES from '/admin/app/cartoes.js?v=27';
+import * as CALC from '/admin/app/cartoes-calculadora.js?v=1';
 import * as ACV from '/admin/app/acervo.js?v=8';
 import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
@@ -977,7 +978,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'calccartoes', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -992,9 +993,9 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 // perfil de marketing (Maju, Jéssica): o que não está salvo fica fechado, então uma permissão nova nunca abre o resto do app sozinha
 const pode = (k) => { if (ADMIN) return true; const P0 = (D.perfil && D.perfil.permissoes) || {}; const v = P0[k]; const mkt = P0.marketing === true || P0.marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { cartoesbase: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], origens: ['comercial', 'emissoes', 'gestao', 'leads'], indicacoes: ['comercial', 'financeiro'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { cartoesbase: 'gestao', calccartoes: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], origens: ['comercial', 'emissoes', 'gestao', 'leads'], indicacoes: ['comercial', 'financeiro'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (soMarketing()) return a === 'marketing'; if (a === 'financeiro') return false; if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'origens', 'indicacoes', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'calccartoes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'origens', 'indicacoes', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
 const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
@@ -1015,6 +1016,7 @@ function lerHash() {
   if (ABA === 'crm') CRM.rota(h);
   if (ABA === 'fornecedores') FORN.rota(h);
   if (ABA === 'cotador') COT.rota(h);
+  if (ABA === 'calccartoes') CALC.rota(h);
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
   GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
@@ -1089,11 +1091,11 @@ function ir(aba, extra) {
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
   // subtelas de Caixa, Operação de milhas, Base de cartões e Despesas fixas voltam ao começo ao entrar pelo menu
-  if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); FX_ED = null; }
+  if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); CALC.inicio(); FX_ED = null; }
   ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
   if (extra) extra();
   // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
-  const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : '';
+  const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : aba === 'calccartoes' ? CALC.hash() : '';
   ANTERIOR = antes; history.pushState(null, '', '#' + aba + sub);
   marcarNav(); tela(); scrollTo(0, 0);
 }
@@ -1161,11 +1163,11 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' || ABA === 'calccartoes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1400,6 +1402,7 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false; PREENCHIDO = false;
   document.body.classList.remove('cal-largo');
+  if (ABA !== 'calccartoes') CALC.inicio();
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
@@ -1427,6 +1430,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
+  if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead });
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, admin: ADMIN, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -2417,6 +2421,7 @@ function htmlTopoGestao(r) {
   else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1) + B('Proposta com IA', 'data-gia="1"'); }
   else if (atual === 4) { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Ainda não decidiu: follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); bt += B('Proposta com IA', 'data-gia="1" style="grid-column:1/-1"'); }
   else { const F = (r.marcos || {})['Follow-up'] || {}, dt = r.proximo_passo_data, dv = dt ? diasPara(dt) : null; t = dt ? (dv < 0 ? 'Follow-up atrasado: era ' + dataBR(dt) : dv === 0 ? 'Chamar o cliente hoje' : 'Chamar o cliente em ' + dataBR(dt) + ' (' + plural(dv, 'dia', 'dias') + ')') : 'Follow-up sem data'; d = F.nota ? 'Combinado: ' + esc(F.nota) : 'Registre o que ficou combinado para a próxima conversa.'; bt = B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Novo follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"'); }
+  if (!perdeu && r.resultado !== 'Fechou' && podeAba('calccartoes')) bt += B('Calculadora de cartões', `data-gcalc="${esc(r.id)}" style="grid-column:1/-1"`);
   const ent = entradaDe(r);
   return `<div id="gTopo"><div class="sub" style="margin-top:4px">SDR ${esc(nomeTime(r.sdr_id) || 'a definir')} · Closer ${esc(nomeTime(r.closer_id) || 'a definir')}${ent ? ' · entrou ' + (Date.now() - tsDe(ent) < 2 * 864e5 ? 'há ' + haTempo(Date.now() - tsDe(ent)) : 'em ' + dataBR(String(ent).slice(0, 10))) : ''}</div>
     <div class="gtr" aria-label="Trilha do cliente">${trilha}</div>
@@ -2536,6 +2541,7 @@ Tom: consultivo, próximo, sem pressa artificial. Economia é um benefício poss
 Estrutura da proposta: 1) o que vimos no diagnóstico, nas palavras do cliente; 2) o plano dos 12 meses; 3) o que muda na vida dele; 4) investimento; 5) próximo passo simples.
 (Edite este texto: é ele que a IA segue em toda proposta.)`;
 function ligarTopoGestao(P) {
+  P.querySelectorAll('[data-gcalc]').forEach(b => b.onclick = () => abrirCalc('lead', b.dataset.gcalc));
   P.querySelectorAll('[data-gia]').forEach(b => b.onclick = () => { const d = P.querySelector('.gsec-ia'); if (!d) return; d.open = true; setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); const g = d.querySelector('[data-pia-gerar]'); if (g && !P._piaAuto) { P._piaAuto = 1; g.click(); } });
   P.querySelectorAll('[data-gir]').forEach(b => b.onclick = () => {
     const bt = $('reRes') && [...$('reRes').children].find(x => x.dataset.v === b.dataset.gir); if (!bt) return;
@@ -4867,6 +4873,7 @@ function telaGestao(P) {
       <button data-g="implantacao"><span>Onboarding</span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b></button>
       <button id="gaPedidos"><span>Pedidos de diagnóstico</span><b class="${sols.length ? 'tem' : ''}">${sols.length}</b></button>
       ${podeAba('cartoesbase') ? '<button data-g="cartoesbase"><span>Base de cartões</span><b>›</b></button>' : ''}
+      ${podeAba('calccartoes') ? '<button data-g="calccartoes"><span>Calculadora de cartões</span><b>›</b></button>' : ''}
     </div>
     ${htmlKpisGestao()}
     ${htmlBaseMes()}
@@ -4955,7 +4962,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   if ($('gaPedidos')) $('gaPedidos').onclick = () => { const d = P.querySelector('details.gsec'), g = $('gePedidos'); if (d) d.open = true; if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   ['geCiclo', 'kpiCiclo', 'gaCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'calccartoes' ? abrirCalc('avulsa') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
@@ -5938,8 +5945,12 @@ function dadosDiag(c) {
   const q = r.qualificacao || {}, so = solDoCard(r) || {};
   return { gasto: q.gasto || so.gasto_mensal || '', pix: so.movimentacao_pix || '', programas: q.programas || so.programas || '', viagens: q.viagens || so.viagens_ano || '' };
 }
+// calculadora de cartões (aba Gestão): avulsa, da ficha do cliente ou do card do lead
+function abrirCalc(modo, id) { ir('calccartoes', () => CALC.abrir(modo, id)); }
+// gasto mensal do lead em número: o da qualificação do SDR ou o do formulário de diagnóstico
+function gastoDoLead(r) { const q = (r && r.qualificacao) || {}, so = solDoCard(r) || {}; return CARTOES.numeroSolto(q.gasto) || CARTOES.numeroSolto(so.gasto_mensal) || null; }
 function fiCartoes(el, c) {
-  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag }, async () => {
+  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag, abrirCalc: podeAba('calccartoes') ? (id) => abrirCalc('cliente', id) : null }, async () => {
     if ((D.gtar || []).some(t => String(t.cliente_id) === String(c.id) && t.chave === 'cartoes' && !t.feito)) await gtMarcarChave(c, 'cartoes');
   });
 }
