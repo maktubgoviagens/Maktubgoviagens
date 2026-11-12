@@ -327,6 +327,37 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 .emchk button.ok .cx{background:var(--verde);border-color:var(--verde);color:#fff}
 .emchk button.conf{border-color:var(--alerta);color:var(--alerta)}
 .fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:50%;border:0;background:var(--verde);color:var(--creme);font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
+.ac-lista{margin-top:16px;background:var(--branco);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+.ac-pes{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;background:none;border:0;border-top:1px solid var(--linha);text-align:left;font:inherit;cursor:pointer;color:var(--tinta)}
+.ac-pes:first-child{border-top:0}.ac-pes b{display:block;font-weight:500;font-size:18px;color:var(--verde)}.ac-pes small{display:block;font-size:14px;color:var(--tinta-3);margin-top:2px}.ac-pes i{font-style:normal;font-size:22px;color:var(--dourado-claro)}
+.ac-add{display:block;width:100%;margin-top:14px;padding:13px;background:none;border:1px dashed var(--dourado-claro);border-radius:12px;font:inherit;font-size:16px;color:var(--dourado);cursor:pointer}
+.ac-blk{margin-top:16px;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:14px 16px}
+.ac-blk h2{font-family:inherit;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);font-weight:500;margin:0 0 6px}.ac-blk p{font-size:16px;line-height:1.5;margin:0}
+.ac-prim{display:block;width:100%;margin-top:16px;padding:15px;background:var(--verde);color:var(--creme);border:0;border-radius:12px;font:inherit;font-size:16px;letter-spacing:.06em;cursor:pointer}
+.ac-prim:disabled{opacity:.6}
+.ac-sec{display:block;width:100%;margin-top:10px;padding:14px;background:var(--branco);color:var(--verde);border:1px solid var(--linha);border-radius:12px;font:inherit;font-size:16px;cursor:pointer}
+.ac-cortar{display:block;margin:22px auto 0;background:none;border:0;font:inherit;font-size:14px;color:var(--alerta);cursor:pointer;padding:8px}
+.ac-gr{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);margin:18px 0 6px}
+.ac-grupo{background:var(--branco);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+.ac-sw{display:grid;grid-template-columns:1fr auto;align-items:center;border-top:1px solid var(--linha)}.ac-sw:first-child{border-top:0}
+.ac-sw label{display:flex;align-items:center;gap:10px;padding:13px 0 13px 14px;cursor:pointer;min-height:52px}
+.ac-sw input{position:absolute;opacity:0;width:1px;height:1px}
+.ac-t{flex:1;font-size:16px;color:var(--tinta)}
+.ac-tg{flex:none;width:44px;height:26px;border-radius:13px;background:#d8d2c3;position:relative;transition:background .15s}.ac-tg:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.ac-sw input:checked+.ac-t+.ac-tg{background:var(--verde)}.ac-sw input:checked+.ac-t+.ac-tg:after{left:21px}
+.ac-sw input:focus-visible+.ac-t+.ac-tg{outline:2px solid var(--dourado);outline-offset:2px}
+.ac-i{width:28px;height:28px;margin:0 12px 0 10px;border:1px solid var(--dourado-claro);border-radius:50%;background:none;color:var(--dourado);font:inherit;font-size:14px;cursor:pointer}.ac-i.on{background:var(--dourado-claro);color:var(--branco)}
+.ac-d{grid-column:1/-1;padding:0 14px 12px;font-size:14px;line-height:1.45;color:var(--tinta-3)}
+.ac-sw.mud{background:#fff7e3}
+.ac-form.admin .ac-grupo:not(:last-of-type) .ac-sw:not([data-k="_admin"]){opacity:.45}
+.ac-link{display:block;margin:14px auto 0;background:none;border:0;font:inherit;font-size:14px;color:var(--dourado);text-decoration:underline;cursor:pointer;padding:8px}
+.ac-barra{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));background:var(--branco);border-top:1px solid var(--linha);padding:10px 16px 12px;z-index:40;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
+.ac-barra small{display:block;text-align:center;font-size:14px;color:var(--tinta-3)}.ac-barra .ac-prim{margin-top:8px}
+body.ac-com-barra #pagina{padding-bottom:150px}
+.ac-ftit{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--verde);margin:4px 0 8px;line-height:1.15}
+.ac-fl{font-size:16px;line-height:1.5;margin:6px 0}.ac-fl .mais{color:var(--verde)}.ac-fl .menos{color:var(--alerta)}.ac-fl b{font-weight:500}
+@media (prefers-reduced-motion:reduce){.ac-tg,.ac-tg:after{transition:none}}
+@media (min-width:1024px){.ac-barra{left:var(--lado);bottom:0}}
 .folha{position:fixed;inset:0;z-index:60}
 .prazos{display:flex;gap:8px;align-items:flex-start;overflow-x:auto;scrollbar-width:none;margin-bottom:6px}.prazos::-webkit-scrollbar{display:none}
 .prazo-col{flex:0 0 46%;min-width:140px;background:var(--branco);border:1px solid var(--linha);padding:8px}
@@ -1064,6 +1095,8 @@ const D = { leads: [], sols: [], tal: [], talErro: null, clientes: [], gestores:
   perfil: null, meuId: null, metas: null, areu: [], agenda: [], tt: null, cal: null, calInfo: null, avisos: [], avSit: null, reunioes: [], reErro: null, emissoes: [], voosEm: [], parc: [], parceirosAdm: [], equipe: [], time: [], fech: [], cfg: null };
 let ADMIN = false;
 let GE_FUNIL = false;
+// Equipe e acessos: pessoa aberta, modo de mudar acessos e cadastro de pessoa nova
+let AC_VER = null, AC_EDIT = false, AC_LISTA = [], AC_NOVO = false;
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
 /* ================= acesso ================= */
@@ -1802,6 +1835,8 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false; PREENCHIDO = false;
   document.body.classList.remove('cal-largo');
+  document.body.classList.remove('ac-com-barra');
+  if (ABA !== 'acessos') { AC_VER = null; AC_EDIT = false; AC_NOVO = false; }
   if (ABA !== 'calccartoes') CALC.inicio();
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
@@ -4111,7 +4146,6 @@ function telaFinanceiro(P) {
 
 
 /* ---------- equipe e acessos (administradores) ---------- */
-let AC_NOVO = false;
 const permPadrao = () => ({ ...PERM_PADRAO });
 const marcado = (perm, k) => { const v = (perm || {})[k], mkt = (perm || {}).marketing === true || (perm || {}).marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 const htmlPerms = (perm, nome) => `<div class="perms">${PERMS.map(([g, L]) => `<div class="pgrupo">${g}</div>${L.map(([k, t, d]) => `<label class="perm"><input type="checkbox" name="${nome || 'p'}_${k}" ${marcado(perm, k) ? 'checked' : ''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}`).join('')}
@@ -4126,81 +4160,157 @@ function mostrarLinkAcesso(el, nome, link) {
     <div class="sub">O link vale por 1 hora e só funciona uma vez. Se passar do prazo, gere outro aqui.</div>`;
   el.querySelector('[data-copiar]').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Mensagem copiada.'); } catch (_) { aviso('Não deu para copiar. Use o botão do WhatsApp.'); } };
 }
+/* Equipe e acessos em três camadas: lista (só nomes), pessoa (só leitura) e mudar acessos.
+   Nada é salvo sem a tela de confirmação, que mostra em uma frase o que muda. */
+const primeiro = (n) => String(n || '').split(' ')[0];
+const titPerm = (k) => (PERM_LISTA.find(p => p[0] === k) || [k, k])[1];
+const juntar = (L) => L.length < 2 ? L.join('') : L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1];
+// lista em frase: só a primeira palavra com maiúscula (siglas e nomes próprios ficam como estão)
+const minus = (t) => /^[A-ZÀ-Ú][a-zà-ú]/.test(t) && !/^Gestão/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+const frase = (L) => { const j = juntar(L.map(minus)); return j ? j[0].toUpperCase() + j.slice(1) : j; };
+function resumoAcesso(p) {
+  if (!p.ativo) return 'Sem acesso';
+  if (p.papel === 'admin') return 'Administração';
+  const on = (k) => marcado(p.permissoes, k);
+  const so = on('marketing') && !PERM_LISTA.some(([k]) => !MKT_JUNTO.includes(k) && on(k));
+  if (so) return 'Marketing';
+  const g = PERMS.filter(([n]) => n !== 'Outros').filter(([, L]) => L.some(([k]) => k !== 'comissao' && on(k))).map(([n], i) => i ? n.replace(/^Comercial|^Operação|^Financeiro|^Marketing/, s => s.toLowerCase()) : n);
+  return (juntar(g) || 'Nenhum acesso marcado') + (on('valores_vendas') ? ' · gerente' : '');
+}
 async function telaAcessos(P) {
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1><div class="vazio">Carregando...</div>`;
-  $('voltar').onclick = () => voltarA('mais');
-  const { data, error } = await sb.rpc('equipe_acessos_listar');
-  if (ABA !== 'acessos') return;
-  if (error) { P.querySelector('.vazio').textContent = tec('Rode o 34-equipe-e-acessos.sql no Supabase para ativar.'); return; }
-  const L = data || [], admins = L.filter(p => p.papel === 'admin' && p.ativo);
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Equipe e <em>acessos</em></h1>
-    <div class="sub">${admins.map(p => esc(String(p.nome).split(' ')[0])).join(' e ')} ${admins.length === 1 ? 'é administrador' : 'são administradores'}: veem e controlam tudo, inclusive esta tela. Para cada colaborador, você escolhe o que ele vê e faz.</div>
-    <button class="zap grande" id="acNovoB" style="margin-top:12px;width:100%">${AC_NOVO ? 'Fechar' : '+ Adicionar pessoa'}</button>
-    ${AC_NOVO ? `<form class="bloco form" id="fAc">
-      <div class="duas-col">${campo('nome', 'Nome', '', 'text', 'required')}${campo('email', 'E-mail de login', '', 'email', 'required')}</div>
-      <div class="duas-col"><label class="fl"><span>Perfil</span><select name="papel"><option value="colaborador">Colaborador</option><option value="admin">Administrador</option></select></label>${campo('pct', 'Comissão (%)', 10, 'number')}</div>
-      <div id="acPerms"><div class="grupo">O que pode ver e fazer</div><button class="sec" type="button" data-somkt="n" style="width:100%;margin:6px 0">Liberar só o marketing</button>${htmlPerms(permPadrao(), 'n')}</div>
-      <button class="zap" type="submit" id="acSalvar" style="margin-top:10px;width:100%">Adicionar e liberar o acesso</button>
-      <div class="sub" id="acMsg">Depois de adicionar, aparece o botão para mandar pelo WhatsApp o link em que a pessoa cria a senha.</div>
-    </form>` : ''}
-    <div class="lista">${L.map(p => { const eu = p.user_id === D.meuId, adm = p.papel === 'admin'; return `<form class="card form" data-u="${p.user_id}">
-      <div class="cab"><div><div class="nome">${esc(p.nome)}</div><div class="sub" style="margin:2px 0 0">${esc(p.email || '')}</div></div><div style="text-align:right">${eu ? '<span class="tag">você</span> ' : ''}<span class="tag ${adm ? 'ouro' : ''}">${adm ? 'Administrador' : 'Colaborador'}</span>${p.ativo ? '' : ' <span class="tag alerta">sem acesso</span>'}</div></div>
-      <div class="sub" style="margin-top:4px">${p.ultimo_acesso ? 'Último acesso em ' + new Date(p.ultimo_acesso).toLocaleDateString('pt-BR') : 'Ainda não entrou no app'}</div>
-      <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Perfil</span><select name="papel" ${eu ? 'disabled' : ''}><option value="colaborador" ${!adm ? 'selected' : ''}>Colaborador</option><option value="admin" ${adm ? 'selected' : ''}>Administrador</option></select></label><input type="hidden" name="pct" value="${esc(p.comissao_pct ?? 0)}"><div class="sub" style="align-self:end;margin:0 0 12px">Comissão: ${pct(p.comissao_pct || 0)} (em Comissões e regras)</div></div>
-      <div class="permbox" ${adm ? 'hidden' : ''}><div class="grupo">O que pode ver e fazer</div><button class="sec" type="button" data-somkt="p" style="width:100%;margin:6px 0">Liberar só o marketing</button>${htmlPerms(p.permissoes, 'p')}</div>
-      <label class="fc"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''} ${eu ? 'disabled' : ''}><span>Acesso ativo</span></label>
-      <button class="sec" type="submit" style="margin-top:8px;width:100%">Salvar ${esc(String(p.nome).split(' ')[0])}</button>
-      ${!eu && p.email && p.ativo ? `<button class="sec" type="button" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}" style="margin-top:8px;width:100%">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
-    </form>`; }).join('')}</div>
-    <div class="sub">O que fica só com administradores é protegido também no banco de dados, não só escondido na tela.</div>`;
-  $('voltar').onclick = () => voltarA('mais');
-  $('acNovoB').onclick = () => { AC_NOVO = !AC_NOVO; telaAcessos(P); };
-  P.querySelectorAll('[data-somkt]').forEach(b => b.onclick = () => { const box = b.closest('form'), n = b.dataset.somkt; PERM_LISTA.forEach(([k]) => { const c = box.querySelector(`[name="${n}_${k}"]`); if (c) c.checked = k === 'marketing' || (['mkt_aprovar', 'mkt_delegar'].includes(k) && c.checked); }); aviso('Só o marketing marcado (a coordenação e a distribuição de tarefas, se já estavam marcadas, continuam). Salve para valer.'); });
-  // retrato de cada pessoa como veio do banco: serve para saber o que foi mexido e ainda não salvo
-  const estadoAc = (f) => JSON.stringify([f.elements.papel.value, f.elements.pct.value, f.elements.ativo.checked, f.querySelector('.permbox') ? lerPerms(f, 'p') : null]);
-  P.querySelectorAll('form[data-u]').forEach(f => { f._ini = estadoAc(f); });
-  P.querySelectorAll('form[data-u]').forEach(f => {
-    f.elements.papel.onchange = () => { f.querySelector('.permbox').hidden = f.elements.papel.value === 'admin'; };
-    f.onsubmit = async (ev) => {
-      ev.preventDefault(); const u = f.dataset.u, antes = L.find(x => x.user_id === u) || {}, nome = String(antes.nome || '').split(' ')[0];
-      // mudanças de peso pedem confirmação: virar administrador (vê salários, DRE e tudo) e cortar o acesso
-      if (f.elements.papel.value === 'admin' && antes.papel !== 'admin' && !confirm(`Tornar ${nome} administrador? Administrador vê e altera tudo: salários, DRE, financeiro e acessos da equipe.`)) return;
-      if (!f.elements.ativo.checked && antes.ativo && !confirm(`Cortar o acesso de ${nome}? A pessoa não consegue mais entrar no app.`)) return;
-      const r1 = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: f.elements.papel.value, p_pct: Number(String(f.elements.pct.value || 0).replace(',', '.')), p_ativo: f.elements.ativo.checked });
-      if (r1.error) { aviso('Não salvou: ' + r1.error.message); return; }
-      if (f.elements.papel.value !== 'admin') { const r2 = await sb.rpc('equipe_permissoes', { p_user: u, p_perm: lerPerms(f, 'p') }); if (r2.error) { aviso('Perfil salvo, mas os acessos não: ' + r2.error.message); return; } }
-      await carregarEquipe(); aviso('Salvo. Vale na próxima vez que a pessoa abrir o app.');
-      // se outra pessoa tem alterações ainda não salvas, não redesenha a tela (isso apagava o que foi marcado nela)
-      f._ini = estadoAc(f);
-      const outraMexida = [...P.querySelectorAll('form[data-u]')].some(x => x !== f && x._ini !== estadoAc(x));
-      if (!outraMexida) telaAcessos(P);
-    };
-  });
-  P.querySelectorAll('[data-link]').forEach(b => b.onclick = async () => {
-    b.disabled = true; b.textContent = 'Gerando o link...';
-    const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body: { acao: 'link', email: b.dataset.link } });
-    b.disabled = false; b.textContent = 'Enviar acesso pelo WhatsApp';
-    const msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
-    if (msg || !r || !r.link) { aviso(/Failed to send|not found|404/i.test(msg || '') ? 'Atualize a função equipe-convidar no Supabase (pacote 24).' : 'Não gerou o link: ' + (msg || 'tente de novo')); return; }
-    mostrarLinkAcesso(b.nextElementSibling, b.dataset.nome, r.link); b.hidden = true;
-  });
-  if ($('fAc')) {
-    const f = $('fAc');
-    f.elements.papel.onchange = () => { $('acPerms').hidden = f.elements.papel.value === 'admin'; };
-    f.onsubmit = async (ev) => {
-      ev.preventDefault();
-      $('acSalvar').disabled = true; $('acSalvar').textContent = 'Liberando...';
-      const body = { nome: f.elements.nome.value.trim(), email: f.elements.email.value.trim(), papel: f.elements.papel.value, comissao_pct: Number(String(f.elements.pct.value || 10).replace(',', '.')), permissoes: f.elements.papel.value === 'admin' ? {} : lerPerms(f, 'n') };
-      const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body });
-      $('acSalvar').disabled = false; $('acSalvar').textContent = 'Adicionar e liberar o acesso';
-      let msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
-      if (msg) { $('acMsg').textContent = /Failed to send|not found|404/i.test(msg) ? 'A função equipe-convidar ainda não foi criada no Supabase. Siga o passo 2 do guia.' : 'Não liberou: ' + msg; $('acMsg').style.color = 'var(--alerta)'; return; }
-      AC_NOVO = false; await carregarEquipe(); await telaAcessos(P);
-      const card = P.querySelector(`[data-link="${CSS.escape(body.email.toLowerCase())}"]`);
-      if (card && r.link) { mostrarLinkAcesso(card.nextElementSibling, body.nome, r.link); card.hidden = true; card.closest('form').scrollIntoView({ behavior: 'smooth' }); }
-      aviso(r.ja_estava ? 'Já estava na equipe: dados atualizados.' : 'Acesso de ' + body.nome.split(' ')[0] + ' liberado. Agora mande o link pelo WhatsApp.');
-    };
+  const cab = (volta, titulo) => `<button class="voltar" id="voltar">‹ ${volta}</button><h1 class="titulo" style="margin-top:6px">${titulo}</h1>`;
+  if (!AC_LISTA.length) P.innerHTML = cab('Mais', 'Equipe e <em>acessos</em>') + '<div class="vazio">Carregando...</div>';
+  if ($('voltar')) $('voltar').onclick = () => voltarA('mais');
+  if (!AC_EDIT) {
+    const { data, error } = await sb.rpc('equipe_acessos_listar');
+    if (ABA !== 'acessos') return;
+    if (error) { P.innerHTML = cab('Mais', 'Equipe e <em>acessos</em>') + `<div class="vazio">${tec('Rode o 34-equipe-e-acessos.sql no Supabase para ativar.')}</div>`; $('voltar').onclick = () => voltarA('mais'); return; }
+    AC_LISTA = data || [];
   }
+  const L = AC_LISTA, pes = AC_VER && L.find(p => p.user_id === AC_VER);
+  if (AC_NOVO) return acNovo(P, cab);
+  if (pes && AC_EDIT) return acEditar(P, cab, pes);
+  if (pes) return acPessoa(P, cab, pes);
+  AC_VER = null;
+  P.innerHTML = cab('Mais', 'Equipe e <em>acessos</em>') + `<div class="sub">Toque em uma pessoa para ver e mudar o acesso.</div>
+    <div class="ac-lista">${L.map(p => `<button type="button" class="ac-pes" data-ver="${p.user_id}"><span><b>${esc(p.nome)}</b><small>${esc(resumoAcesso(p))}${p.user_id === D.meuId ? ' · você' : ''}</small></span><i>›</i></button>`).join('')}</div>
+    <button type="button" class="ac-add" id="acNovoB">+ Adicionar pessoa</button>`;
+  $('voltar').onclick = () => voltarA('mais');
+  P.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => { AC_VER = b.dataset.ver; telaAcessos(P); window.scrollTo(0, 0); });
+  $('acNovoB').onclick = () => { AC_NOVO = true; telaAcessos(P); window.scrollTo(0, 0); };
+}
+function acPessoa(P, cab, p) {
+  const eu = p.user_id === D.meuId, adm = p.papel === 'admin', nome = primeiro(p.nome);
+  const on = PERM_LISTA.filter(([k]) => marcado(p.permissoes, k)).map(([, t]) => t), off = PERM_LISTA.filter(([k]) => !marcado(p.permissoes, k)).map(([, t]) => t);
+  const resto = String(p.nome).split(' ').slice(1).join(' ');
+  P.innerHTML = cab('Equipe', `${esc(nome)}${resto ? ' <em>' + esc(resto) + '</em>' : ''}`) + `
+    <div class="sub">${p.ultimo_acesso ? 'Último acesso em ' + new Date(p.ultimo_acesso).toLocaleDateString('pt-BR') : 'Ainda não entrou no app'}${p.email ? ' · ' + esc(p.email) : ''}</div>
+    ${!p.ativo ? `<div class="ac-blk"><h2>Sem acesso</h2><p>${esc(nome)} não consegue entrar no app.</p></div>`
+      : adm ? `<div class="ac-blk"><h2>Administração</h2><p>Vê e controla tudo, inclusive esta tela, salários, DRE e financeiro.</p></div>`
+      : `<div class="ac-blk"><h2>Pode usar</h2><p>${on.length ? esc(frase(on)) + '.' : 'Nenhum acesso marcado.'}</p></div>
+         <div class="ac-blk"><h2>Não vê</h2><p>${esc(frase(off.concat(['equipe e acessos, comissões e regras, avisos e fechamento do mês'])))}.</p></div>`}
+    ${eu ? '<div class="sub" style="margin-top:14px">Este é o seu acesso. Outra pessoa da administração é quem pode mudá-lo.</div>' : `
+      ${p.ativo ? '<button type="button" class="ac-prim" id="acMudar">Mudar acessos</button>' : '<button type="button" class="ac-prim" id="acReativar">Devolver o acesso</button>'}
+      ${p.ativo && p.email ? `<button type="button" class="ac-sec" data-link="${esc(p.email)}" data-nome="${esc(p.nome)}">Enviar acesso pelo WhatsApp</button><div class="lnk"></div>` : ''}
+      ${p.ativo ? `<button type="button" class="ac-cortar" id="acCortar">Cortar o acesso de ${esc(nome)}</button>` : ''}`}`;
+  $('voltar').onclick = () => { AC_VER = null; telaAcessos(P); };
+  if ($('acMudar')) $('acMudar').onclick = () => { AC_EDIT = true; telaAcessos(P); window.scrollTo(0, 0); };
+  const ativo = async (v) => {
+    const ok = await confirmarFolha(v ? `Devolver o acesso de ${nome}?` : `Cortar o acesso de ${nome}?`, [v ? `${nome} volta a entrar no app com os acessos que já estavam marcados.` : `${nome} não consegue mais entrar no app. Nada do que ${nome} fez é apagado.`], v ? 'Devolver o acesso' : 'Cortar o acesso');
+    if (!ok) return;
+    const r = await sb.rpc('equipe_atualizar', { p_user: p.user_id, p_papel: p.papel, p_pct: Number(p.comissao_pct || 0), p_ativo: v });
+    if (r.error) { aviso('Não salvou: ' + r.error.message); return; }
+    await carregarEquipe(); aviso(v ? 'Acesso devolvido.' : 'Acesso cortado.'); telaAcessos(P);
+  };
+  if ($('acCortar')) $('acCortar').onclick = () => ativo(false);
+  if ($('acReativar')) $('acReativar').onclick = () => ativo(true);
+  P.querySelectorAll('[data-link]').forEach(b => b.onclick = () => gerarLinkAcesso(b));
+}
+async function gerarLinkAcesso(b) {
+  b.disabled = true; b.textContent = 'Gerando o link...';
+  const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body: { acao: 'link', email: b.dataset.link } });
+  b.disabled = false; b.textContent = 'Enviar acesso pelo WhatsApp';
+  const msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
+  if (msg || !r || !r.link) { aviso(/Failed to send|not found|404/i.test(msg || '') ? 'Atualize a função equipe-convidar no Supabase (pacote 24).' : 'Não gerou o link: ' + (msg || 'tente de novo')); return; }
+  mostrarLinkAcesso(b.nextElementSibling, b.dataset.nome, r.link); b.hidden = true;
+}
+// confirmação em folha que sobe de baixo: só grava no botão principal
+function confirmarFolha(titulo, linhas, rotulo) {
+  return new Promise((ok) => {
+    const el = document.createElement('div'); el.className = 'folha';
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${esc(titulo)}</div>${linhas.map(l => `<p class="ac-fl">${l}</p>`).join('')}
+      <button type="button" class="ac-prim" data-r="1">${esc(rotulo)}</button><button type="button" class="ac-sec" data-r="0">Voltar e revisar</button></div>`;
+    const fim = (r) => { el.remove(); ok(r); };
+    el.querySelector('.folha-fundo').onclick = () => fim(false);
+    el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
+    document.body.appendChild(el);
+  });
+}
+// botões de ligar e desligar, só com o nome; a explicação abre no "?"
+const htmlChaves = (perm, adm) => `${PERMS.map(([g, L]) => `<div class="ac-gr">${g}</div><div class="ac-grupo">${L.map(([k, t, d]) => `<div class="ac-sw" data-k="${k}"><label><input type="checkbox" name="k_${k}" ${marcado(perm, k) ? 'checked' : ''}><span class="ac-t">${esc(t)}</span><span class="ac-tg"></span></label><button type="button" class="ac-i" data-i="${k}" aria-label="O que é">?</button><div class="ac-d" hidden>${esc(d)}</div></div>`).join('')}</div>`).join('')}
+  <div class="ac-gr">Perfil</div><div class="ac-grupo"><div class="ac-sw" data-k="_admin"><label><input type="checkbox" name="k__admin" ${adm ? 'checked' : ''}><span class="ac-t">Administração</span><span class="ac-tg"></span></label><button type="button" class="ac-i" data-i="_admin" aria-label="O que é">?</button><div class="ac-d" hidden>Vê e controla tudo: salários, DRE, financeiro e os acessos da equipe. Com isso ligado, as chaves acima deixam de valer.</div></div></div>
+  <button type="button" class="ac-link" data-somkt>Deixar só o marketing</button>`;
+function acEditar(P, cab, p) {
+  const nome = primeiro(p.nome), adm0 = p.papel === 'admin';
+  P.innerHTML = cab('Cancelar', `Acessos de <em>${esc(nome)}</em>`) + `<form id="fAcE" class="ac-form">${htmlChaves(p.permissoes, adm0)}</form>
+    <div class="ac-barra" id="acBarra" hidden><small id="acConta"></small><button type="button" class="ac-prim" id="acRevisar">Revisar e salvar</button></div>`;
+  const f = $('fAcE');
+  const atual = () => ({ adm: f.elements.k__admin.checked, perm: Object.fromEntries(PERM_LISTA.map(([k]) => [k, f.elements['k_' + k].checked])) });
+  const difs = () => { const a = atual(), liga = [], desliga = []; PERM_LISTA.forEach(([k]) => { const v0 = marcado(p.permissoes, k); if (a.perm[k] !== v0) (a.perm[k] ? liga : desliga).push(k); }); return { a, liga, desliga, admMuda: a.adm !== adm0 }; };
+  const desenha = () => { const x = difs(), n = x.liga.length + x.desliga.length + (x.admMuda ? 1 : 0);
+    f.querySelectorAll('.ac-sw').forEach(s => { const k = s.dataset.k; s.classList.toggle('mud', k === '_admin' ? x.admMuda : x.liga.includes(k) || x.desliga.includes(k)); });
+    f.classList.toggle('admin', x.a.adm);
+    $('acBarra').hidden = !n; $('acConta').textContent = n === 1 ? '1 mudança ainda não salva' : n + ' mudanças ainda não salvas';
+    document.body.classList.toggle('ac-com-barra', !!n); };
+  const sair = () => { PREENCHIDO = false; SUJO = false; AC_EDIT = false; document.body.classList.remove('ac-com-barra'); telaAcessos(P); window.scrollTo(0, 0); };
+  f.addEventListener('change', desenha);
+  f.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const d = b.parentElement.querySelector('.ac-d'); d.hidden = !d.hidden; b.classList.toggle('on', !d.hidden); });
+  f.querySelector('[data-somkt]').onclick = () => { PERM_LISTA.forEach(([k]) => { const c = f.elements['k_' + k]; c.checked = k === 'marketing' || (['mkt_aprovar', 'mkt_delegar'].includes(k) && c.checked); }); SUJO = true; PREENCHIDO = true; FORM_PREENCHIDO = f; desenha(); };
+  $('voltar').onclick = async () => { const x = difs(); if ((x.liga.length || x.desliga.length || x.admMuda) && !(await confirmarFolha('Sair sem salvar?', ['O que você mudou nesta tela se perde.'], 'Sair sem salvar'))) return; sair(); };
+  $('acRevisar').onclick = async () => {
+    const x = difs(), L = [];
+    if (x.admMuda) L.push(x.a.adm ? `<span class="menos">Passa a ser da administração:</span> <b>vê e controla tudo, inclusive salários, DRE e financeiro</b>` : `<span class="menos">Deixa a administração</span> e passa a ver só o que estiver ligado`);
+    if (!x.a.adm) { if (x.liga.length) L.push(`<span class="mais">Passa a ver:</span> <b>${esc(frase(x.liga.map(titPerm)))}</b>`); if (x.desliga.length) L.push(`<span class="menos">Deixa de ver:</span> <b>${esc(frase(x.desliga.map(titPerm)))}</b>`); }
+    if (!L.length) L.push('Só as chaves mudaram, mas com a administração ligada elas não valem.');
+    if (!(await confirmarFolha(`Confirmar as mudanças de ${nome}?`, L, 'Confirmar e salvar'))) return;
+    const b = $('acRevisar'); b.disabled = true; b.textContent = 'Salvando...';
+    const r1 = x.admMuda ? await sb.rpc('equipe_atualizar', { p_user: p.user_id, p_papel: x.a.adm ? 'admin' : 'colaborador', p_pct: Number(p.comissao_pct || 0), p_ativo: p.ativo }) : { error: null };
+    if (r1.error) { b.disabled = false; b.textContent = 'Revisar e salvar'; aviso('Não salvou: ' + r1.error.message); return; }
+    if (!x.a.adm) { const r2 = await sb.rpc('equipe_permissoes', { p_user: p.user_id, p_perm: x.a.perm }); if (r2.error) { b.disabled = false; b.textContent = 'Revisar e salvar'; aviso((x.admMuda ? 'Perfil salvo, mas os acessos não: ' : 'Não salvou: ') + r2.error.message); return; } }
+    await carregarEquipe(); AC_LISTA = []; aviso(`Salvo. Vale na próxima vez que ${nome} abrir o app.`); sair();
+  };
+  desenha();
+}
+function acNovo(P, cab) {
+  P.innerHTML = cab('Cancelar', 'Adicionar <em>pessoa</em>') + `<form class="ac-form" id="fAc">
+    ${campo('nome', 'Nome', '', 'text', 'required')}${campo('email', 'E-mail de login', '', 'email', 'required')}${campo('pct', 'Comissão (%)', 10, 'number')}
+    ${htmlChaves(permPadrao(), false)}
+    <button class="ac-prim" type="submit" id="acSalvar">Adicionar e liberar o acesso</button>
+    <div class="sub" id="acMsg">Depois de adicionar, aparece o botão para mandar pelo WhatsApp o link em que a pessoa cria a senha.</div></form>`;
+  const f = $('fAc');
+  const sair = () => { PREENCHIDO = false; SUJO = false; AC_NOVO = false; telaAcessos(P); window.scrollTo(0, 0); };
+  $('voltar').onclick = async () => { if (pendente() && !(await confirmarFolha('Sair sem salvar?', ['O que você preencheu se perde.'], 'Sair sem salvar'))) return; sair(); };
+  f.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const d = b.parentElement.querySelector('.ac-d'); d.hidden = !d.hidden; b.classList.toggle('on', !d.hidden); });
+  f.querySelector('[data-somkt]').onclick = () => { PERM_LISTA.forEach(([k]) => { f.elements['k_' + k].checked = k === 'marketing'; }); };
+  f.addEventListener('change', () => f.classList.toggle('admin', f.elements.k__admin.checked));
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const adm = f.elements.k__admin.checked, nome = f.elements.nome.value.trim();
+    const ok = await confirmarFolha(`Adicionar ${primeiro(nome)}?`, [adm ? `<span class="menos">Entra na administração:</span> <b>vê e controla tudo</b>` : `<span class="mais">Vai poder usar:</span> <b>${esc(frase(PERM_LISTA.filter(([k]) => f.elements['k_' + k].checked).map(([, t]) => t)) || 'nenhum acesso marcado')}</b>`], 'Adicionar e liberar');
+    if (!ok) return;
+    $('acSalvar').disabled = true; $('acSalvar').textContent = 'Liberando...';
+    const body = { nome, email: f.elements.email.value.trim(), papel: adm ? 'admin' : 'colaborador', comissao_pct: Number(String(f.elements.pct.value || 10).replace(',', '.')), permissoes: adm ? {} : Object.fromEntries(PERM_LISTA.map(([k]) => [k, f.elements['k_' + k].checked])) };
+    const { data: r, error: e2 } = await sb.functions.invoke('equipe-convidar', { body });
+    $('acSalvar').disabled = false; $('acSalvar').textContent = 'Adicionar e liberar o acesso';
+    const msg = e2 ? (e2.context && typeof e2.context.json === 'function' ? ((await e2.context.json().catch(() => ({}))).erro || e2.message) : e2.message) : (r && r.erro);
+    if (msg) { $('acMsg').textContent = /Failed to send|not found|404/i.test(msg) ? 'A função equipe-convidar ainda não foi criada no Supabase. Siga o passo 2 do guia.' : 'Não liberou: ' + msg; $('acMsg').style.color = 'var(--alerta)'; return; }
+    PREENCHIDO = false; SUJO = false; AC_NOVO = false; AC_LISTA = []; await carregarEquipe();
+    const { data: L2 } = await sb.rpc('equipe_acessos_listar'); AC_LISTA = L2 || [];
+    const novo = AC_LISTA.find(x => String(x.email || '').toLowerCase() === body.email.toLowerCase());
+    AC_VER = novo ? novo.user_id : null; await telaAcessos(P); window.scrollTo(0, 0);
+    const bl = P.querySelector('[data-link]'); if (bl && r && r.link) { mostrarLinkAcesso(bl.nextElementSibling, body.nome, r.link); bl.hidden = true; }
+    aviso(r && r.ja_estava ? 'Já estava na equipe: dados atualizados.' : 'Acesso de ' + primeiro(body.nome) + ' liberado. Agora mande o link pelo WhatsApp.');
+  };
 }
 
 /* ---------- histórico de alterações (administradores) ---------- */
