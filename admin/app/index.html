@@ -437,6 +437,405 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
   .numeros{grid-template-columns:repeat(4,1fr)}
   .duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 }
+
+/* ============ computador (1024px ou mais) ============
+   Só visual: nenhuma função muda. O celular e o tablet continuam exatamente como estão.
+   Menu de baixo vira menu lateral fixo; o conteúdo usa a largura da tela até 1280px. */
+@media (min-width:1024px){
+  :root{--lado:232px;--topo-h:58px;--conteudo:1280px}
+  /* menu lateral */
+  .nav{top:var(--topo-h);right:auto;bottom:0;width:var(--lado);flex-direction:column;gap:2px;padding:18px 12px;border-top:0;border-right:1px solid var(--linha);overflow-y:auto}
+  .nav button,.nav.seis button{flex:none;height:46px;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 14px;font-size:14px;letter-spacing:.02em;border-radius:6px}
+  .nav button:hover{background:var(--creme)}
+  .nav button.on{background:var(--creme-2)}
+  .nav button.on::before{top:10px;bottom:10px;left:0;right:auto;width:3px;height:auto;border-radius:0 2px 2px 0}
+  .nav svg{width:20px;height:20px;flex:none}
+  .nav .bola{top:50%;left:auto;right:12px;transform:translateY(-50%)}
+  /* conteúdo ao lado do menu, centralizado no espaço que sobra */
+  .pagina{margin:0 0 0 calc(var(--lado) + max(0px, (100% - var(--lado) - var(--conteudo)) / 2));max-width:var(--conteudo);padding:28px 40px 56px}
+  body.com-fab .pagina{padding-bottom:110px}
+  .faixa-push{max-width:calc(var(--conteudo) - 80px);margin:16px 0 0 calc(var(--lado) + 40px + max(0px, (100% - var(--lado) - var(--conteudo)) / 2))}
+  /* quem não tem menu (acesso só ao Marketing) usa a tela inteira, centralizada */
+  #app:has(> .nav[hidden]) .pagina{margin-left:auto;margin-right:auto}
+  #app:has(> .nav[hidden]) .faixa-push{margin-left:auto;margin-right:auto}
+  #app:has(> .nav[hidden]) .aviso,#app:has(> .nav[hidden]) ~ .aviso{left:50%}
+  .titulo{font-size:36px}
+  .fab{right:32px;bottom:32px}
+  .aviso{bottom:28px;left:calc(50% + var(--lado) / 2)}
+  #faixaVersao{left:calc(var(--lado) + 24px)!important;right:auto!important;bottom:24px!important;max-width:560px}
+  /* folhas que sobem de baixo viram janelas no centro */
+  .folha-caixa{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(640px,92vw);max-height:84vh;border-radius:12px;padding:22px 24px;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+  .folha-caixa.busca-caixa{top:84px;transform:translateX(-50%);width:min(720px,92vw);padding-top:20px}
+  /* números e indicadores com mais colunas */
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .kpis.k3{grid-template-columns:repeat(3,1fr)}
+  .gatalhos{grid-template-columns:repeat(4,1fr)}
+  .numeros .num .v{font-size:32px}
+  /* listas de cartões em duas colunas (as emissões ficam em uma, porque cada card tem a linha de checks logo abaixo) */
+  .lista:not(:has(> .emchk)){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+  .lista > .vazio{grid-column:1/-1}
+  /* kanban: todas as etapas lado a lado, sem precisar deslizar */
+  .kanban{margin:0;padding:2px 0 10px;scroll-snap-type:none}
+  .kcol{flex:1 1 0;min-width:210px;max-width:none}
+  .gj{margin:0;padding:12px 0 6px}
+  .gjc{flex:1 1 220px}
+  .prazo-col{flex:1 1 0}
+  /* formulários em duas colunas: campos simples lado a lado; títulos, textos longos e caixas ocupam a linha toda */
+  .pagina form.form:not(.card){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;align-items:end}
+  .pagina form.form:not(.card) > *{grid-column:1/-1}
+  .pagina form.form:not(.card) > .fl:not(:has(textarea)){grid-column:auto}
+  /* início: duas colunas (o que pede ação à esquerda, números e agenda à direita) */
+  .ini-grade{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 40px;align-items:start}
+  .ini-grade .numeros{grid-template-columns:1fr 1fr}
+  /* mais: grupos em duas colunas */
+  .mais-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;align-items:start}
+  /* cotação rápida: prévia da imagem fixa ao lado do formulário */
+  .pagina:has(> #rpPrevia){display:grid;grid-template-columns:minmax(0,1fr) 400px;column-gap:40px;align-content:start}
+  .pagina:has(> #rpPrevia) > *{grid-column:1}
+  .pagina:has(> #rpPrevia) > #rpPrevia{grid-column:2;grid-row:1 / span 40;align-self:start;position:sticky;top:calc(var(--topo-h) + 20px);margin-top:0!important}
+}
+/* >>> leitura-computador
+   Leitura no computador (1024px ou mais): escala de fontes do CLAUDE.md (13, 16, 18, 22, 28, 36).
+   Nada abaixo de 13px; texto, campos, linhas de lista e menu com 16px; rótulos em caixa alta com 13px e espaçamento menor.
+   As regras de fonte abaixo repetem, na mesma ordem, cada regra de fonte do app (daqui e do CSS dos módulos calendário,
+   indicações, marketing e aeroportos), já no tamanho da escala. O :root na frente só garante que elas valem no computador
+   sem mudar a prioridade entre elas. Celular e tablet não leem nada daqui. */
+@media (min-width:1024px){
+  /* texto secundário um pouco mais escuro sobre o creme, no mesmo tom do texto do corpo */
+  :root{--tinta-2:#4a4a44;--tinta-3:#55554d}
+  /* escala de fontes */
+  :root body{font-size:16px}
+  :root button,:root select,:root textarea,:root input{font-size:16px}
+  :root .topo .n{font-size:13px;letter-spacing:0.1em}
+  :root .topo .s{font-size:13px;letter-spacing:0.08em}
+  :root .nav button{font-size:13px}
+  :root .nav .bola{font-size:13px}
+  :root .titulo{font-size:36px}
+  :root .sub{font-size:13px}
+  :root .secao{font-size:13px;letter-spacing:0.11em}
+  :root .secao a,:root .secao button{font-size:13px}
+  :root .num .l{font-size:13px;letter-spacing:0.08em}
+  :root .num .v{font-size:36px}
+  :root .num .d{font-size:13px}
+  :root .pend button{font-size:16px}
+  :root .pend b{font-size:28px}
+  :root .pend.reun a{font-size:16px}
+  :root .pend.reun b{font-size:13px}
+  :root .bloco h2{font-size:13px;letter-spacing:0.11em}
+  :root .barra .r{font-size:13px}
+  :root .barra .q{font-size:13px}
+  :root .vazio{font-size:13px}
+  :root .fotosG figcaption{font-size:13px}
+  :root .chips button{font-size:13px}
+  :root .lt-i{font-size:13px}
+  :root .lt-i .q{font-size:13px}
+  :root .gsec>summary{font-size:16px}
+  :root .gsec>summary small{font-size:13px}
+  :root .gtr i{font-size:13px}
+  :root .gtr span{font-size:13px}
+  :root .gtr small{font-size:13px}
+  :root .gagora .r{font-size:13px;letter-spacing:0.11em}
+  :root .gagora .t{font-size:28px}
+  :root .gagora .d{font-size:13px}
+  :root .gagora .b>*{font-size:13px}
+  :root .glib i{font-size:13px}
+  :root .glib b{font-size:16px}
+  :root .glib small{font-size:13px}
+  :root .glib .ac button,:root .glib .ac a{font-size:13px}
+  :root .glib input{font-size:16px}
+  :root .pular{font-size:13px}
+  :root .gt .dono{font-size:13px}
+  :root .gt details.rot summary{font-size:13px}
+  :root .gt details.rot div{font-size:13px}
+  :root .gjseg button{font-size:13px}
+  :root .gjres button{font-size:inherit}
+  :root .gjres .l{font-size:13px;letter-spacing:0.08em}
+  :root .gjres .d{font-size:13px}
+  :root .gjchips button{font-size:13px}
+  :root .gjc h3{font-size:13px;letter-spacing:0.09em}
+  :root .gjc h3 small{font-size:13px}
+  :root .gjk{font-size:inherit}
+  :root .gjk .n{font-size:18px}
+  :root .gjk .s{font-size:13px}
+  :root .gjk .p{font-size:13px}
+  :root .gjk .q{font-size:13px}
+  :root .pia h4{font-size:13px;letter-spacing:0.1em}
+  :root .pia li{font-size:16px}
+  :root .pia p{font-size:16px}
+  :root .pia .ob{font-size:16px}
+  :root .lint .l{font-size:13px;letter-spacing:0.08em}
+  :root .seg button{font-size:13px}
+  :root .busca{font-size:16px}
+  :root .card .nome{font-size:22px}
+  :root .card .quando{font-size:13px}
+  :root .tag{font-size:13px;letter-spacing:0.07em}
+  :root .prio{font-size:13px}
+  :root .ciclo{font-size:inherit}
+  :root .ciclo .top{font-size:16px}
+  :root .ciclo .top b{font-size:22px}
+  :root .ciclo small{font-size:13px}
+  :root .kbase .kbt b{font-size:16px}
+  :root .kbase .kbt span{font-size:13px}
+  :root .kbase .kbl{font-size:16px}
+  :root .kbase .kbl small{font-size:13px}
+  :root .kbase .kfal{font-size:13px}
+  :root .kbase .kbl button{font-size:13px}
+  :root .kbase .kbl .q{font-size:13px}
+  :root .kbase summary{font-size:13px}
+  :root .gatalhos button{font-size:16px}
+  :root .gatalhos b{font-size:28px}
+  :root .kpi{font-size:inherit}
+  :root .kpi .l{font-size:13px}
+  :root .kpi .v{font-size:28px}
+  :root .kpi .d{font-size:13px}
+  :root .kalerta{font-size:13px}
+  :root .kalerta b{font-size:16px}
+  :root .kalerta .lin{font-size:13px}
+  :root .khist .m{font-size:13px}
+  :root .fseg button{font-size:13px}
+  :root .botoes4 .zap,:root .botoes4 .sec{font-size:13px}
+  :root .lanc{font-size:16px}
+  :root .lanc small{font-size:13px}
+  :root .conf .cab b{font-size:16px}
+  :root .conf .cab small{font-size:13px}
+  :root .conf input,:root .conf select{font-size:16px}
+  :root .conf .dif{font-size:16px}
+  :root .resumoConf{font-size:16px}
+  :root .printConf .cab b,:root .plido .cab b{font-size:16px}
+  :root .printConf .cab small,:root .plido .cab small{font-size:13px}
+  :root .pchk{font-size:16px}
+  :root .plin select,:root .plin input[type=number]{font-size:16px}
+  :root .pav{font-size:13px}
+  :root .pnota{font-size:13px}
+  :root .pst{font-size:16px}
+  :root .mapa .leaflet-control-attribution{font-size:13px}
+  :root .mapa .leaflet-tooltip{font-size:13px}
+  :root .rank .rt span{font-size:18px}
+  :root .rank .rt b{font-size:16px}
+  :root .rank .rt em{font-size:16px}
+  :root .meses b{font-size:13px}
+  :root .meses span{font-size:13px}
+  :root .perm b{font-size:16px}
+  :root .perm small{font-size:13px}
+  :root .pgrupo{font-size:13px;letter-spacing:0.09em}
+  :root .info{font-size:16px}
+  :root .zap{font-size:13px;letter-spacing:0.06em}
+  :root .sec{font-size:13px}
+  :root .obs summary{font-size:13px}
+  :root .obs textarea{font-size:16px}
+  :root .obs button{font-size:13px}
+  :root .obs .salvo{font-size:13px}
+  :root .cli .nome{font-size:22px}
+  :root .cli .meta{font-size:13px}
+  :root .cli .val b{font-size:18px}
+  :root .cli .val span{font-size:13px}
+  :root .prog .p{font-size:16px}
+  :root .prog .s{font-size:13px}
+  :root .prog .v{font-size:18px}
+  :root .prog .venc{font-size:13px}
+  :root .voltar{font-size:13px}
+  :root .dia{font-size:13px;letter-spacing:0.08em}
+  :root .ev .h{font-size:13px}
+  :root .ev .t{font-size:16px}
+  :root .ev .d{font-size:13px}
+  :root .lin{font-size:16px}
+  :root .faixa-push{font-size:16px}
+  :root .faixa-push .zap,:root .faixa-push .sec{font-size:13px}
+  :root .config{font-size:16px}
+  :root .portao h1{font-size:36px}
+  :root .btn{font-size:13px;letter-spacing:0.07em}
+  :root .aviso{font-size:13px}
+  :root .zap.grande,:root .sec.grande{font-size:13px}
+  :root .mesnav button{font-size:22px}
+  :root .mesnav span{font-size:16px}
+  :root button.card.em{font-size:inherit}
+  :root .form .grupo{font-size:13px;letter-spacing:0.11em}
+  :root .fl span{font-size:13px}
+  :root .fl input,:root .fl select,:root .fl textarea{font-size:16px}
+  :root .fxlin small{font-size:13px}
+  :root .fc{font-size:16px}
+  :root .toque{font-size:13px;letter-spacing:0.06em}
+  :root .fl small{font-size:13px}
+  :root button.lin{font-size:inherit}
+  :root .emchk button{font-size:13px}
+  :root .emchk .cx{font-size:13px}
+  :root .fab{font-size:30px}
+  :root .prazo-tit{font-size:13px;letter-spacing:0.07em}
+  :root .prazo-it{font-size:13px}
+  :root .folha-tit{font-size:13px;letter-spacing:0.1em}
+  :root .folha-item{font-size:16px}
+  :root .folha-item small{font-size:13px}
+  :root .res-grupo{font-size:13px;letter-spacing:0.09em}
+  :root .icone .bola{font-size:13px}
+  :root .nav.seis button{font-size:13px}
+  :root .av{font-size:inherit}
+  :root .av .ic{font-size:13px}
+  :root .av .t{font-size:16px}
+  :root .av .d{font-size:13px}
+  :root .gt label{font-size:16px}
+  :root .gtm{font-size:13px}
+  :root .gte input{font-size:16px}
+  :root details.bloco summary{font-size:16px}
+  :root .av .q{font-size:13px}
+  :root .canal{font-size:16px}
+  :root .canal small{font-size:13px}
+  :root .canal .ok{font-size:13px}
+  :root .canal .sec,:root .canal .zap{font-size:13px}
+  :root .conv{font-size:16px}
+  :root .conv small{font-size:13px}
+  :root .resq button{font-size:13px}
+  :root .kcol h3{font-size:13px;letter-spacing:0.09em}
+  :root .kcol h3 small{font-size:13px}
+  :root .kc .n{font-size:18px}
+  :root .kc .i{font-size:13px}
+  :root .kc .t{font-size:13px}
+  :root .kc .mv button{font-size:13px}
+  :root .kc .mv button.av{font-size:13px}
+  :root .kdica{font-size:13px}
+  :root .meta .top{font-size:13px}
+  :root .meta small{font-size:13px}
+  :root .etapas button{font-size:13px}
+  :root .copiar code{font-size:13px}
+  :root .mini{font-size:13px}
+  :root button[data-pg],:root button[data-desf],:root button[data-cfdesf],:root button[data-avgok]{font-size:13px!important}
+  :root .ev .ck{font-size:13px}
+  :root .ag-cm .h{font-size:13px}
+  :root .ag-cm .n{font-size:13px}
+  :root .ag-chip{font-size:13px}
+  :root .ag-mais{font-size:13px}
+  :root .ag-leg{font-size:13px}
+  :root .ag-chip{font-size:13px}
+  :root .nav button,:root .nav.seis button{font-size:16px}
+  :root .titulo{font-size:36px}
+  :root .numeros .num .v{font-size:36px}
+  :root .sug button{font-size:16px}
+  :root .cal-barra .cal-hoje{font-size:13px}
+  :root .cal-cm .h{font-size:13px}
+  :root .cal-cm .n{font-size:13px}
+  :root .cal-dots b{font-size:13px}
+  :root .cal-chip{font-size:13px}
+  :root .cal-mais{font-size:13px}
+  :root .cal-leg{font-size:13px}
+  :root .cal-dia{font-size:13px;letter-spacing:0.07em}
+  :root .cal-dia small{font-size:13px}
+  :root .cal-it>button{font-size:inherit}
+  :root .cal-it .t{font-size:16px}
+  :root .cal-it .s{font-size:13px}
+  :root .cal-it .q{font-size:13px}
+  :root .cal-it .atr{font-size:13px}
+  :root .cal-it .ac a{font-size:13px}
+  :root .cal-vazio{font-size:13px}
+  :root .cal-tipos button{font-size:13px}
+  :root .cal-semc .cab{font-size:13px}
+  :root .ind-canais button{font-size:13px}
+  :root .ind-detchips button{font-size:13px}
+  :root .ind-canal-res{font-size:13px}
+  :root .ind-cont .v{font-size:36px}
+  :root .ind-card .nome{font-size:16px}
+  :root .ind-card .luc{font-size:22px}
+  :root .ind-card .ant{font-size:13px}
+  :root .ind-sug{font-size:13px}
+  :root .ind-pis{font-size:13px}
+  :root .ind-conf{font-size:16px}
+  :root .ind-or .t{font-size:16px}
+  :root .ind-nota{font-size:13px}
+  :root .ind-tab{font-size:16px}
+  :root .ind-tab th{font-size:13px}
+  :root .ind-tab td.n button{font-size:inherit}
+  :root .ind-c .c1 button{font-size:16px}
+  :root .ind-c .c1 span{font-size:22px}
+  :root .ind-c .c2{font-size:13px}
+  :root .ind-c .c3{font-size:13px}
+  :root .ind-no .s{font-size:13px}
+  :root .ind-tag{font-size:13px}
+  :root .mk-lin{font-size:16px}
+  :root .mk-lin small{font-size:13px}
+  :root .mk-aprov .nome{font-size:22px}
+  :root .mk-aprov .leg{font-size:13px}
+  :root .mk-links{font-size:13px}
+  :root .mk-barra{font-size:13px}
+  :root .mk-cm .h{font-size:13px}
+  :root .mk-cm .n{font-size:13px}
+  :root .mk-chip{font-size:13px}
+  :root .mk-mais{font-size:13px}
+  :root .mk-arr-fantasma{font-size:13px}
+  :root .mk-leg{font-size:13px}
+  :root .mk-chip{font-size:13px}
+  :root .mk-cal .h{font-size:13px;letter-spacing:0.06em}
+  :root .mk-cal button{font-size:13px}
+  :root .mk-fmts span{font-size:13px}
+  :root .mk-ajuste{font-size:13px}
+  :root .mk-pilar b{font-size:22px}
+  :root .mk-pilar small{font-size:13px}
+  :root .mk-doc h3{font-size:13px;letter-spacing:0.1em}
+  :root .mk-doc h3 button{font-size:13px}
+  :root .mk-doc p{font-size:16px}
+  :root .mk-hero .ola{font-size:36px}
+  :root .mk-hero .s{font-size:13px;letter-spacing:0.11em}
+  :root .mk-anel .n{font-size:28px}
+  :root .mk-anel small{font-size:13px}
+  :root .mk-semana .d{font-size:13px}
+  :root .mk-semana .n{font-size:22px}
+  :root .mk-vcard .pill{font-size:13px;letter-spacing:0.07em}
+  :root .mk-vcard .st{font-size:13px;letter-spacing:0.06em}
+  :root .mk-vcard b{font-size:22px}
+  :root .mk-vcard small{font-size:13px}
+  :root .mk-vcard .ac button{font-size:13px;letter-spacing:0.06em}
+  :root .mk-vcard .ac span{font-size:13px}
+  :root .mk-dia{font-size:13px;letter-spacing:0.11em}
+  :root .mk-ideia b{font-size:16px}
+  :root .mk-ideia small{font-size:13px}
+  :root .mk-kt .pill{font-size:13px;letter-spacing:0.06em}
+  :root .mk-kt .st{font-size:13px}
+  :root .mk-kb b{font-size:18px}
+  :root .mk-kb small{font-size:13px}
+  :root .mk-desc{font-size:13px}
+  :root .mk-kac{font-size:13px}
+  :root .mk-conta{font-size:13px;letter-spacing:0.06em}
+  :root .mk-kac button{font-size:13px;letter-spacing:0.06em}
+  :root .mk-erro{font-size:13px}
+  :root .mk-qual{font-size:13px}
+  :root .mk-tf b{font-size:18px}
+  :root .mk-tf small{font-size:13px}
+  :root .mk-tf .lin>span{font-size:13px}
+  :root .mk-tf select,:root .mk-tf input[type=date]{font-size:16px}
+  :root .mk-tf .mk-fmts span{font-size:13px}
+  :root .mk-msg{font-size:13px}
+  :root .mk-rasc{font-size:13px}
+  :root .mk-rasc button{font-size:13px}
+  :root .mk-rapida input{font-size:16px}
+  :root .mk-dono{font-size:13px;letter-spacing:0.06em}
+  :root .mk-kac>span:last-child:not(.mk-kl){font-size:13px}
+  :root .mk-pas .fl>span{font-size:13px;letter-spacing:0.06em}
+  :root .mk-pas select,:root .mk-pas input[type=date],:root .mk-pas input[type=time]{font-size:16px}
+  :root .aero-sug button{font-size:13px}
+  /* tamanhos escritos direto no HTML que o app monta */
+  [style*="font-size:10px"],[style*="font-size: 10px"]{font-size:13px!important}
+  [style*="font-size:11px"],[style*="font-size: 11px"]{font-size:13px!important}
+  [style*="font-size:12px"],[style*="font-size: 12px"]{font-size:13px!important}
+  [style*="font-size:13.5px"],[style*="font-size: 13.5px"]{font-size:13px!important}
+  [style*="font-size:14px"],[style*="font-size: 14px"]{font-size:16px!important}
+  [style*="font-size:15px"],[style*="font-size: 15px"]{font-size:16px!important}
+  [style*="font-size:17px"],[style*="font-size: 17px"]{font-size:18px!important}
+  [style*="font-size:19px"],[style*="font-size: 19px"]{font-size:18px!important}
+  [style*="font-size:20px"],[style*="font-size: 20px"]{font-size:18px!important}
+  [style*="font-size:24px"],[style*="font-size: 24px"]{font-size:28px!important}
+  [style*="font-size:26px"],[style*="font-size: 26px"]{font-size:28px!important}
+  [style*="font-size:30px"],[style*="font-size: 30px"]{font-size:36px!important}
+  /* ajustes de espaço para os tamanhos novos */
+  /* frases de leitura (descrição da tela, dicas, telas vazias, descrição dos avisos) com 16px */
+  :root .sub,:root .kdica,:root .vazio,:root .cal-vazio,:root .ind-nota,:root .av .d{font-size:16px}
+  /* kanban do Comercial e da Gestão: o nome do cliente fica na linha toda; etiqueta e WhatsApp descem quando faltar espaço */
+  .kc > div:first-child{flex-wrap:wrap;row-gap:6px}
+  .kc .n{flex:1 1 150px;min-width:0}
+  :root .kc .mv button{letter-spacing:.04em;padding:8px 4px}
+  /* kanban do Marketing: a ação do card desce para a própria linha quando não couber */
+  .mk-kac{flex-wrap:wrap;gap:4px 10px}
+  .mk-kac button{margin-left:auto;padding-left:0}
+  /* tabela de indicações: rola de lado dentro do bloco se não couber */
+  .ind-tabw{overflow-x:auto}
+}
+/* <<< leitura-computador */
 </style>
 </head>
 <body>
@@ -562,7 +961,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=6';
 import * as MKT from '/admin/app/marketing.js?v=24';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=26';
+import * as CARTOES from '/admin/app/cartoes.js?v=28';
+import * as CALC from '/admin/app/cartoes-calculadora.js?v=3';
 import * as ACV from '/admin/app/acervo.js?v=8';
 import * as CRM from '/admin/app/crm.js?v=20';
 import * as CAL from '/admin/app/calendario.js?v=1';
@@ -977,7 +1377,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'calccartoes', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -992,9 +1392,9 @@ const PERM_PADRAO = Object.fromEntries(PERM_LISTA.map(p => [p[0], !!p[3]]));
 // perfil de marketing (Maju, Jéssica): o que não está salvo fica fechado, então uma permissão nova nunca abre o resto do app sozinha
 const pode = (k) => { if (ADMIN) return true; const P0 = (D.perfil && D.perfil.permissoes) || {}; const v = P0[k]; const mkt = P0.marketing === true || P0.marketing === 'true'; return v === undefined || v === null ? (mkt ? false : !!PERM_PADRAO[k]) : v === true || v === 'true'; };
 /* aba -> permissão que libera */
-const ABA_PERM = { cartoesbase: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], origens: ['comercial', 'emissoes', 'gestao', 'leads'], indicacoes: ['comercial', 'financeiro'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
+const ABA_PERM = { cartoesbase: 'gestao', calccartoes: 'gestao', marketing: 'marketing', emissoes: 'emissoes', reunioes: 'comercial', agenda: 'agenda', comissao: 'comissao', gestao: 'gestao', clientes: 'gestao', financeiro: 'financeiro', receber: 'financeiro', pagar: 'financeiro', compromissos: 'dre', caixa: 'dre', dre: 'dre', leads: ['leads', 'talentos'], site: 'site', metas: 'metas', custos: 'dre', acervo: 'acervo', opmilhas: 'opmilhas', crm: ['comercial', 'emissoes', 'gestao', 'leads'], origens: ['comercial', 'emissoes', 'gestao', 'leads'], indicacoes: ['comercial', 'financeiro'], fornecedores: ['emissoes', 'comercial'], cotador: ['comercial', 'emissoes'] };
 const podeAba = (a) => { if (ADMIN) return ABAS_ADMIN.includes(a); if (soMarketing()) return a === 'marketing'; if (a === 'financeiro') return false; if (a === 'inicio' || a === 'atividades') return true; if (a === 'empresa') return itensEmpresa().length > 0; if (a === 'mais') return itensMais().length > 0; const p = ABA_PERM[a]; return !!p && [].concat(p).some(pode); };
-const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'origens', 'indicacoes', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
+const abasColab = () => ['marketing', 'inicio', 'emissoes', 'reunioes', 'gestao', 'clientes', 'calccartoes', 'agenda', 'financeiro', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'comissao', 'leads', 'site', 'metas', 'custos', 'acervo', 'opmilhas', 'crm', 'origens', 'indicacoes', 'fornecedores', 'cotador', 'mais'].filter(podeAba);
 const VER_TODAS = () => ADMIN || pode('financeiro');
 /* colaborador que só tem o marketing liberado: o app abre direto no Estúdio, sem a barra de baixo */
 const MKT_JUNTO = ['marketing', 'mkt_aprovar', 'mkt_delegar', 'checkin', 'leads', 'talentos'];
@@ -1015,6 +1415,7 @@ function lerHash() {
   if (ABA === 'crm') CRM.rota(h);
   if (ABA === 'fornecedores') FORN.rota(h);
   if (ABA === 'cotador') COT.rota(h);
+  if (ABA === 'calccartoes') CALC.rota(h);
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
   GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
@@ -1089,11 +1490,11 @@ function ir(aba, extra) {
   if (OP_ABAS.includes(aba)) OP_ULT = aba;
   if (!podeAba(aba)) aba = 'inicio';
   // subtelas de Caixa, Operação de milhas, Base de cartões e Despesas fixas voltam ao começo ao entrar pelo menu
-  if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); FX_ED = null; }
+  if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); CALC.inicio(); FX_ED = null; }
   ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
   if (extra) extra();
   // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
-  const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : '';
+  const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : aba === 'calccartoes' ? CALC.hash() : '';
   ANTERIOR = antes; history.pushState(null, '', '#' + aba + sub);
   marcarNav(); tela(); scrollTo(0, 0);
 }
@@ -1161,11 +1562,11 @@ async function marcarInteresse(pid, gestao) {
 }
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
-  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
+  const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' || ABA === 'calccartoes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
   [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1401,6 +1802,7 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false; PREENCHIDO = false;
   document.body.classList.remove('cal-largo');
+  if (ABA !== 'calccartoes') CALC.inicio();
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
   if (soMarketing()) { mostrarFab(); if ($('bLeads')) { $('bLeads').textContent = leadsBadge(); $('bLeads').hidden = !(+$('bLeads').textContent); } return telaLeads($('pagina')); }
@@ -1428,6 +1830,7 @@ function tela() {
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
   if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
+  if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead, nomeTime, cardsDoCliente });
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, admin: ADMIN, aba: () => ABA });
   if (ABA === 'emissoes') return telaEmissoes(P);
@@ -1477,6 +1880,7 @@ function telaInicio(P) {
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    <div class="ini-grade"><div class="ini-a">
     ${blocoGravar()}
     ${blocoReunioes(reun)}
     <div class="secao">Precisa de você</div>
@@ -1487,6 +1891,7 @@ function telaInicio(P) {
     ${ADMIN ? blocoAvgInicio() : ''}
     ${blocoPosViagem()}
     ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
+    </div><div class="ini-b">
     ${blocoMetasAdmin(D.metas, true)}
     <div class="secao">A Maktub hoje</div>
     <div class="numeros">
@@ -1498,7 +1903,8 @@ function telaInicio(P) {
     <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
     <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
-    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>`;
+    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>
+    </div></div>`;
   P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
   ligarAnivHoje(P);
   ligarSemHorario(P);
@@ -2418,6 +2824,7 @@ function htmlTopoGestao(r) {
   else if (atual === 3) { t = 'Marcar a reunião de proposta'; d = 'Defina a data, como vai ser a apresentação, o valor e a condição.'; bt = B('Marcar reunião de proposta ›', 'data-gir="Reunião de proposta"', 1) + B('Proposta com IA', 'data-gia="1"'); }
   else if (atual === 4) { const pa = ((r.marcos || {})['Reunião de proposta'] || {}).pauta; t = ap ? 'Reunião de proposta ' + quandoDiag(ap.data) + ' com ' + esc(String(nomeTime(r.closer_id) || 'o closer').split(' ')[0]) : 'Reunião de proposta sem data'; d = pa ? 'Como vai ser: ' + esc(pa) : 'Depois da reunião, registre se fechou ou não e o porquê.'; bt = ap ? B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Ainda não decidiu: follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"') : B('Marcar data ›', 'data-gir="Reunião de proposta"', 1) + B('Remarcar', 'data-gir="Reunião de proposta"'); bt += B('Proposta com IA', 'data-gia="1" style="grid-column:1/-1"'); }
   else { const F = (r.marcos || {})['Follow-up'] || {}, dt = r.proximo_passo_data, dv = dt ? diasPara(dt) : null; t = dt ? (dv < 0 ? 'Follow-up atrasado: era ' + dataBR(dt) : dv === 0 ? 'Chamar o cliente hoje' : 'Chamar o cliente em ' + dataBR(dt) + ' (' + plural(dv, 'dia', 'dias') + ')') : 'Follow-up sem data'; d = F.nota ? 'Combinado: ' + esc(F.nota) : 'Registre o que ficou combinado para a próxima conversa.'; bt = B('Fechou ›', 'data-gir="Fechou"', 1) + B('Não fechou', 'data-gir="Não fechou"') + B('Novo follow-up', 'data-gir="Follow-up" style="grid-column:1/-1"'); }
+  if (!perdeu && r.resultado !== 'Fechou' && podeAba('calccartoes')) bt += B('Calculadora de cartões', `data-gcalc="${esc(r.id)}" style="grid-column:1/-1"`);
   const ent = entradaDe(r);
   return `<div id="gTopo"><div class="sub" style="margin-top:4px">SDR ${esc(nomeTime(r.sdr_id) || 'a definir')} · Closer ${esc(nomeTime(r.closer_id) || 'a definir')}${ent ? ' · entrou ' + (Date.now() - tsDe(ent) < 2 * 864e5 ? 'há ' + haTempo(Date.now() - tsDe(ent)) : 'em ' + dataBR(String(ent).slice(0, 10))) : ''}</div>
     <div class="gtr" aria-label="Trilha do cliente">${trilha}</div>
@@ -2537,6 +2944,7 @@ Tom: consultivo, próximo, sem pressa artificial. Economia é um benefício poss
 Estrutura da proposta: 1) o que vimos no diagnóstico, nas palavras do cliente; 2) o plano dos 12 meses; 3) o que muda na vida dele; 4) investimento; 5) próximo passo simples.
 (Edite este texto: é ele que a IA segue em toda proposta.)`;
 function ligarTopoGestao(P) {
+  P.querySelectorAll('[data-gcalc]').forEach(b => b.onclick = () => abrirCalc('lead', b.dataset.gcalc));
   P.querySelectorAll('[data-gia]').forEach(b => b.onclick = () => { const d = P.querySelector('.gsec-ia'); if (!d) return; d.open = true; setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); const g = d.querySelector('[data-pia-gerar]'); if (g && !P._piaAuto) { P._piaAuto = 1; g.click(); } });
   P.querySelectorAll('[data-gir]').forEach(b => b.onclick = () => {
     const bt = $('reRes') && [...$('reRes').children].find(x => x.dataset.v === b.dataset.gir); if (!bt) return;
@@ -4093,9 +4501,9 @@ function telaMais(P) {
   const arquivo = [podeAba('opmilhas') && '<button data-ir="opmilhas"><span>Operação de milhas dos sócios</span><span class="seta">›</span></button>',
     podeAba('emissoes') && '<button data-b2b><span>Emissão B2B para agências<small style="display:block;font-size:13px;color:var(--tinta-3)">Fora de uso, mas continua funcionando. O histórico fica em Emissões</small></span><span class="seta">›</span></button>'].filter(Boolean);
   P.innerHTML = `<h1 class="titulo">Mais</h1>
-    ${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div>` : ''; }).join('')}
-    ${ADMIN ? `<div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
+    <div class="mais-grade">${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div><div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div></div>` : ''; }).join('')}
+    ${ADMIN ? `<div><div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
+      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div></div>` : ''}</div>
     ${arquivo.length ? `<details class="gsec" style="margin-top:18px"><summary><span>Arquivo<small>O que saiu do dia a dia, mas continua guardado</small></span></summary><div class="pend" style="margin-top:10px">${arquivo.join('')}</div></details>` : ''}
     <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -4874,6 +5282,7 @@ function telaGestao(P) {
       <button data-g="implantacao"><span>Onboarding</span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b></button>
       <button id="gaPedidos"><span>Pedidos de diagnóstico</span><b class="${sols.length ? 'tem' : ''}">${sols.length}</b></button>
       ${podeAba('cartoesbase') ? '<button data-g="cartoesbase"><span>Base de cartões</span><b>›</b></button>' : ''}
+      ${podeAba('calccartoes') ? '<button data-g="calccartoes"><span>Calculadora de cartões</span><b>›</b></button>' : ''}
     </div>
     ${htmlKpisGestao()}
     ${htmlBaseMes()}
@@ -4962,7 +5371,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   if ($('gaPedidos')) $('gaPedidos').onclick = () => { const d = P.querySelector('details.gsec'), g = $('gePedidos'); if (d) d.open = true; if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   ['geCiclo', 'kpiCiclo', 'gaCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
-  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
+  P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'calccartoes' ? abrirCalc('avulsa') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
   P.querySelectorAll('[data-gt-ok]').forEach(b => b.onclick = async () => { if (await gtMarcar(b.dataset.gtOk, true)) { aviso('Tarefa feita.'); telaGestao(P); } });
   P.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => {
@@ -5945,8 +6354,15 @@ function dadosDiag(c) {
   const q = r.qualificacao || {}, so = solDoCard(r) || {};
   return { gasto: q.gasto || so.gasto_mensal || '', pix: so.movimentacao_pix || '', programas: q.programas || so.programas || '', viagens: q.viagens || so.viagens_ano || '' };
 }
+// calculadora de cartões (aba Gestão): avulsa, da ficha do cliente ou do card do lead
+function abrirCalc(modo, id) { ir('calccartoes', () => CALC.abrir(modo, id)); }
+// gasto mensal do lead em número: o da qualificação do SDR ou o do formulário de diagnóstico
+function gastoDoLead(r) { const q = (r && r.qualificacao) || {}, so = solDoCard(r) || {}; return CARTOES.numeroSolto(q.gasto) || CARTOES.numeroSolto(so.gasto_mensal) || null; }
+// cards de lead da Gestão ligados ao cliente (o mesmo critério do dadosDiag): as simulações feitas no lead aparecem na ficha
+function cardsDoCliente(cid) { const pfs = (D.pessoas || []).filter(p => p.cliente_id === cid).map(p => p.id); return (D.reunioes || []).filter(r => ehGestao(r) && (pfs.includes(r.pessoa_id) || (clienteGestaoDe(r) || {}).id === cid)).map(r => r.id); }
+const simulacoesCtx = () => ({ listar: (cid) => CALC.listarSimulacoes({ sb, cardsDoCliente }, { cliente: cid }), resumo: CALC.resumoSimulacao, rodape: (x) => CALC.rodapeSimulacao(x, { nomeTime }) });
 function fiCartoes(el, c) {
-  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag }, async () => {
+  CARTOES.abaCartoesCliente(el, c, { sb, esc, aviso, campo, brl, num, D, CART, tec, limparTec, dadosDiag, abrirCalc: podeAba('calccartoes') ? (id) => abrirCalc('cliente', id) : null, simulacoes: podeAba('calccartoes') ? simulacoesCtx() : null }, async () => {
     if ((D.gtar || []).some(t => String(t.cliente_id) === String(c.id) && t.chave === 'cartoes' && !t.feito)) await gtMarcarChave(c, 'cartoes');
   });
 }
