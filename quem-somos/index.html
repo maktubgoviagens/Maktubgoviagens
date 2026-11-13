@@ -40,6 +40,8 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
  
+<!-- foto do topo (LCP): pedida antes de tudo -->
+<link rel="preload" as="image" href="/ativos/quem-somos.webp" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -582,7 +584,15 @@ footer a:hover{color:var(--creme)}
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+/* gtag.js e Clarity entram logo depois que o topo da página aparece pronto (ou em até 3 s).
+   Os eventos e a visita ficam na fila do dataLayer até o gtag.js chegar, então nada se perde. */
+(function(){var fila=[],pronto=false;
+window.mkDepoisDoTopo=function(f){if(pronto)f();else fila.push(f);};
+window.mkTopoPronto=function(){if(pronto)return;pronto=true;fila.forEach(function(f){f();});fila=[];};
+setTimeout(window.mkTopoPronto,3000);})();
+mkDepoisDoTopo(function(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX';document.head.appendChild(s);});
+</script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
@@ -593,7 +603,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 <script>
 /* Equipe Maktub fora do Clarity: aparelho marcado pelo app da operação (ou ?equipe=1) não é gravado. ?equipe=0 desfaz. */
 (function(){var equipe=false;try{var q=location.search;if(/[?&]equipe=0/.test(q))localStorage.removeItem('maktub_equipe');else if(/[?&]equipe=1/.test(q)||/maktubgo\.com\.br\/(admin\/|acesso\/app)/.test(document.referrer))localStorage.setItem('maktub_equipe','1');equipe=localStorage.getItem('maktub_equipe')==='1';}catch(e){}if(equipe)return;
-(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m")
+mkDepoisDoTopo(function(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m");});
 })();
 </script>
 <style id="mk-topo-css">
@@ -710,6 +720,17 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       <div class="acoes"><a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="quem_somos_topo">Quero meu diagnóstico</a></div>
     </div>
     <div class="figura figura-retrato" style="background-image:url('/ativos/quem-somos.webp')" role="img" aria-label="Isadora e Matheus em Ouro Preto"></div>
+<script>
+/* o topo já está pronto na tela (primeira pintura, foto do topo e animação de entrada): libera o gtag.js e o Clarity */
+(function(){
+  function foto(){ return new Promise(function(ok){ var el = document.querySelector('.figura-retrato'); if(!el || !el.offsetParent) return ok(); if(el.tagName === 'IMG'){ if(el.complete) return ok(); el.addEventListener('load', ok); el.addEventListener('error', ok); return; } var m = getComputedStyle(el).backgroundImage.match(/url\(\x22?(.*?)\x22?\)/); if(!m) return ok(); var i = new Image(); i.onload = i.onerror = ok; i.src = m[1]; if(i.complete) ok(); }); }
+  function animacao(){ var an = []; try{ Array.prototype.forEach.call(document.querySelectorAll('.entra-topo>*'), function(e){ an = an.concat(e.getAnimations()); }); }catch(e){} return Promise.all(an.map(function(a){ return a.finished.catch(function(){}); })); }
+  function vai(){ Promise.all([foto(), animacao()]).then(function(){ requestAnimationFrame(function(){ setTimeout(mkTopoPronto, 0); }); }); }
+  try{ var po = new PerformanceObserver(function(l){ if(l.getEntriesByName('first-contentful-paint').length){ po.disconnect(); vai(); } }); po.observe({type:'paint', buffered:true}); }
+  catch(e){ addEventListener('load', mkTopoPronto); }
+})();
+</script>
+
   </div>
 </section>
  
@@ -720,28 +741,28 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     <h2 id="t-time">Quem cuida<em>da sua carteira.</em></h2>
     <div class="time">
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-isadora.webp')" role="img" aria-label="Isadora Lombardi"></div>
+        <div class="figura figura-pessoa" data-foto="/ativos/time-isadora.webp" role="img" aria-label="Isadora Lombardi"></div>
         <h3>Isadora Lombardi</h3>
         <span class="pessoa-cargo">Co-fundadora, operações e experiência</span>
         <p class="na-gestao"><strong>Na gestão:</strong> cuida da operação e da experiência de cada cliente, do primeiro contato ao dia a dia da carteira.</p>
         <p>São sete anos de turismo, dentro das maiores operações de milhas do país, antes da Maktub existir. A Isadora é quem escuta primeiro. Ela quer saber como a sua família viaja antes de qualquer cotação sair do papel.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-matheus.webp')" role="img" aria-label="Matheus Braga"></div>
+        <div class="figura figura-pessoa" data-foto="/ativos/time-matheus.webp" role="img" aria-label="Matheus Braga"></div>
         <h3>Matheus Braga</h3>
         <span class="pessoa-cargo">Co-fundador, estratégia e gestão de milhas</span>
         <p class="na-gestao"><strong>Na gestão:</strong> lidera a estratégia de cada carteira: cartões, transferências e janelas de emissão.</p>
         <p>Veio do mercado financeiro e trouxe de lá um jeito de olhar: pontos e milhas pedem cuidado o ano inteiro, com organização e critério. E é ele quem vai antes, conhecer o destino que a gente vende.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-nayara.webp')" role="img" aria-label="Nayara"></div>
+        <div class="figura figura-pessoa" data-foto="/ativos/time-nayara.webp" role="img" aria-label="Nayara"></div>
         <h3>Nayara</h3>
         <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
         <p class="na-gestao"><strong>Na gestão:</strong> quando os pontos viram viagem, traça as rotas internacionais, monta o roteiro e busca a hospedagem.</p>
         <p>A Nayara mora há mais de cinco anos na Europa. Ela é a responsável pela sua experiência: vai traçar rotas, construir seu roteiro, buscar as melhores tarifas de passagem e encontrar onde você vai se hospedar.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-breno.webp')" role="img" aria-label="Breno"></div>
+        <div class="figura figura-pessoa" data-foto="/ativos/time-breno.webp" role="img" aria-label="Breno"></div>
         <h3>Breno</h3>
         <span class="pessoa-cargo">Responsável pelas emissões aéreas e atendimento corporativo</span>
         <p class="na-gestao"><strong>Na gestão:</strong> cuida das emissões aéreas, confere cada detalhe e resolve antes de virar problema.</p>
@@ -754,7 +775,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== NOSSA HISTÓRIA ===================== -->
 <section class="secao" id="alfaiataria" aria-labelledby="t-historia">
   <div class="wrap duas">
-    <div class="figura figura-retrato" style="background-image:url('/ativos/destino-templo-budista.webp')" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas"></div>
+    <div class="figura figura-retrato" data-foto="/ativos/destino-templo-budista.webp" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas"></div>
     <div>
       <span class="olho">Nossa história</span>
       <h2 id="t-historia">Não vendemos destinos.<em>Criamos memórias.</em></h2>
@@ -900,5 +921,25 @@ addEventListener('scroll', function(){
   });
 })();
 </script>
+<script>
+/* fotos de fundo fora da primeira tela: depois que o topo fica pronto, entram cerca de uma tela e meia antes de aparecer, para não disputarem a rede com o topo.
+   Nos carrosséis do celular, todas as fotos do carrossel entram juntas, quando ele chega perto. Sem IntersectionObserver, entram na hora. */
+(window.mkDepoisDoTopo || function(f){ f(); })(function(){
+  var fs = document.querySelectorAll('[data-foto]');
+  function poe(el){ if(!el.hasAttribute('data-foto')) return; el.style.backgroundImage = "url('" + el.getAttribute('data-foto') + "')"; el.removeAttribute('data-foto'); }
+  if(!('IntersectionObserver' in window)){ Array.prototype.forEach.call(fs, poe); return; }
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(!e.isIntersecting) return; io.unobserve(e.target);
+    if(e.target.hasAttribute('data-foto')) poe(e.target); else Array.prototype.forEach.call(e.target.querySelectorAll('[data-foto]'), poe); }); }, { rootMargin:'1200px' });
+  var vistos = [];
+  Array.prototype.forEach.call(fs, function(el){ var alvo = el; if(vistos.indexOf(alvo) < 0){ vistos.push(alvo); io.observe(alvo); } });
+});
+</script>
+<noscript><style>
+[data-foto="/ativos/time-isadora.webp"]{background-image:url('/ativos/time-isadora.webp')}
+[data-foto="/ativos/time-matheus.webp"]{background-image:url('/ativos/time-matheus.webp')}
+[data-foto="/ativos/time-nayara.webp"]{background-image:url('/ativos/time-nayara.webp')}
+[data-foto="/ativos/time-breno.webp"]{background-image:url('/ativos/time-breno.webp')}
+[data-foto="/ativos/destino-templo-budista.webp"]{background-image:url('/ativos/destino-templo-budista.webp')}
+</style></noscript>
 </body>
 </html>

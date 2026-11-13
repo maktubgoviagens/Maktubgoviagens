@@ -40,6 +40,8 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
  
+<!-- foto do topo (LCP): pedida antes de tudo -->
+<link rel="preload" as="image" href="/ativos/caso-maju-adriano-machu-picchu.webp" fetchpriority="high" media="(min-width: 1001px)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -670,7 +672,15 @@ ol.prateleira,ol.jornada,ul.servicos{list-style:none}
 .servico svg{display:none}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+/* gtag.js e Clarity entram logo depois que o topo da página aparece pronto (ou em até 3 s).
+   Os eventos e a visita ficam na fila do dataLayer até o gtag.js chegar, então nada se perde. */
+(function(){var fila=[],pronto=false;
+window.mkDepoisDoTopo=function(f){if(pronto)f();else fila.push(f);};
+window.mkTopoPronto=function(){if(pronto)return;pronto=true;fila.forEach(function(f){f();});fila=[];};
+setTimeout(window.mkTopoPronto,3000);})();
+mkDepoisDoTopo(function(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX';document.head.appendChild(s);});
+</script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
@@ -681,7 +691,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 <script>
 /* Equipe Maktub fora do Clarity: aparelho marcado pelo app da operação (ou ?equipe=1) não é gravado. ?equipe=0 desfaz. */
 (function(){var equipe=false;try{var q=location.search;if(/[?&]equipe=0/.test(q))localStorage.removeItem('maktub_equipe');else if(/[?&]equipe=1/.test(q)||/maktubgo\.com\.br\/(admin\/|acesso\/app)/.test(document.referrer))localStorage.setItem('maktub_equipe','1');equipe=localStorage.getItem('maktub_equipe')==='1';}catch(e){}if(equipe)return;
-(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m")
+mkDepoisDoTopo(function(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m");});
 })();
 </script>
 <style id="mk-topo-css">
@@ -801,9 +811,20 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     <p class="hero-nota">É cliente da Gestão de Milhas Maktub Go? Veja as condições em <a href="#contratacao">Como contratar</a>.</p>
    </div>
    <figure class="inicio-foto">
-    <img src="/ativos/caso-maju-adriano-machu-picchu.webp" alt="Maju e Adriano, clientes da Maktub Go, em Machu Picchu, com uma lhama ao fundo" width="960" height="1200" style="object-position:center 30%" fetchpriority="high">
+    <picture><source media="(max-width: 1000px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><img src="/ativos/caso-maju-adriano-machu-picchu.webp" alt="Maju e Adriano, clientes da Maktub Go, em Machu Picchu, com uma lhama ao fundo" width="960" height="1200" style="object-position:center 30%" fetchpriority="high"></picture>
     <figcaption>Maju e Adriano em Machu Picchu, viagem planejada pela Maktub Go.</figcaption>
    </figure>
+<script>
+/* o topo já está pronto na tela (primeira pintura, foto do topo e animação de entrada): libera o gtag.js e o Clarity */
+(function(){
+  function foto(){ return new Promise(function(ok){ var el = document.querySelector('.inicio-foto img'); if(!el || !el.offsetParent) return ok(); if(el.tagName === 'IMG'){ if(el.complete) return ok(); el.addEventListener('load', ok); el.addEventListener('error', ok); return; } var m = getComputedStyle(el).backgroundImage.match(/url\(\x22?(.*?)\x22?\)/); if(!m) return ok(); var i = new Image(); i.onload = i.onerror = ok; i.src = m[1]; if(i.complete) ok(); }); }
+  function animacao(){ var an = []; try{ Array.prototype.forEach.call(document.querySelectorAll('.entra-topo>*'), function(e){ an = an.concat(e.getAnimations()); }); }catch(e){} return Promise.all(an.map(function(a){ return a.finished.catch(function(){}); })); }
+  function vai(){ Promise.all([foto(), animacao()]).then(function(){ requestAnimationFrame(function(){ setTimeout(mkTopoPronto, 0); }); }); }
+  try{ var po = new PerformanceObserver(function(l){ if(l.getEntriesByName('first-contentful-paint').length){ po.disconnect(); vai(); } }); po.observe({type:'paint', buffered:true}); }
+  catch(e){ addEventListener('load', mkTopoPronto); }
+})();
+</script>
+
   </div>
 </section>
  
@@ -822,8 +843,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
  
     <div class="casos">
       <article class="caso">
-        <div class="figura figura-caso figura-alterna tres" style="background-image:url('/ativos/caso-gramado.webp')" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado e Rhaissa e Wesley passeando pela cidade">
-          <div class="camada" style="background-image:url('/ativos/caso-gramado.webp')"></div>
+        <div class="figura figura-caso figura-alterna tres" data-foto="/ativos/caso-gramado.webp" role="img" aria-label="Surpresa preparada no quarto do hotel em Gramado e Rhaissa e Wesley passeando pela cidade">
+          <div class="camada" data-foto="/ativos/caso-gramado.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-gramado-snowland.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-gramado-rhaissa.webp"></div>
         </div>
@@ -839,7 +860,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
  
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-europa.webp')" role="img" aria-label="Família recebendo a surpresa da viagem para Paris"></div>
+        <div class="figura figura-caso" data-foto="/ativos/caso-europa.webp" role="img" aria-label="Família recebendo a surpresa da viagem para Paris"></div>
         <div class="caso-corpo">
           <span class="caso-rot">Europa<span class="caso-quem"> · Andreza e Luan</span></span>
           <h3>Ela sempre quis ver a Torre Eiffel</h3>
@@ -848,8 +869,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
  
       <article class="caso">
-        <div class="figura figura-caso figura-alterna tres" style="background-image:url('/ativos/caso-jordana-orlando-1.webp');background-position:center 60%" role="img" aria-label="Jordana em frente ao globo da Universal, o filho dela na atração dos raptores e Jordana no Voodoo Doughnut, em Orlando">
-          <div class="camada" style="background-image:url('/ativos/caso-jordana-orlando-1.webp');background-position:center 60%"></div>
+        <div class="figura figura-caso figura-alterna tres" data-foto="/ativos/caso-jordana-orlando-1.webp" style="background-position:center 60%" role="img" aria-label="Jordana em frente ao globo da Universal, o filho dela na atração dos raptores e Jordana no Voodoo Doughnut, em Orlando">
+          <div class="camada" data-foto="/ativos/caso-jordana-orlando-1.webp" style="background-position:center 60%"></div>
           <div class="camada" data-fundo="/ativos/caso-jordana-filho-raptores.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-jordana-voodoo.webp"></div>
         </div>
@@ -861,7 +882,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
  
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-lu-saint-gervais.webp');background-position:center 90%" role="img" aria-label="Lu e Laura com mountain bikes nos Alpes Franceses, em Saint-Gervais"></div>
+        <div class="figura figura-caso" data-foto="/ativos/caso-lu-saint-gervais.webp" style="background-position:center 90%" role="img" aria-label="Lu e Laura com mountain bikes nos Alpes Franceses, em Saint-Gervais"></div>
         <div class="caso-corpo">
           <span class="caso-rot">Alpes Franceses<span class="caso-quem"> · Lu e Laura</span></span>
           <h3>Os Alpes no ritmo do pedal</h3>
@@ -870,8 +891,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
  
       <article class="caso">
-        <div class="figura figura-caso figura-alterna" style="background-image:url('/ativos/caso-maju-adriano-machu-picchu.webp')" role="img" aria-label="Maju e Adriano em Machu Picchu e na região de Cusco">
-          <div class="camada" style="background-image:url('/ativos/caso-maju-adriano-machu-picchu.webp')"></div>
+        <div class="figura figura-caso figura-alterna" data-foto="/ativos/caso-maju-adriano-machu-picchu.webp" role="img" aria-label="Maju e Adriano em Machu Picchu e na região de Cusco">
+          <div class="camada" data-foto="/ativos/caso-maju-adriano-machu-picchu.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-maju-adriano-cusco.webp"></div>
         </div>
         <div class="caso-corpo">
@@ -882,8 +903,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
  
       <article class="caso">
-        <div class="figura figura-caso figura-alterna quatro" style="background-image:url('/ativos/caso-paula-matrioska.webp')" role="img" aria-label="Paula na neve entre o Cazaquistão e a Rússia: em uma moldura dourada com uma matrioska gigante ao fundo, deitada na neve com montanhas ao redor, com os cílios congelados em Omsk e um prédio espelhado em Almaty">
-          <div class="camada" style="background-image:url('/ativos/caso-paula-matrioska.webp')"></div>
+        <div class="figura figura-caso figura-alterna quatro" data-foto="/ativos/caso-paula-matrioska.webp" role="img" aria-label="Paula na neve entre o Cazaquistão e a Rússia: em uma moldura dourada com uma matrioska gigante ao fundo, deitada na neve com montanhas ao redor, com os cílios congelados em Omsk e um prédio espelhado em Almaty">
+          <div class="camada" data-foto="/ativos/caso-paula-matrioska.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-paula-neve.webp" style="background-position:36% center"></div>
           <div class="camada" data-fundo="/ativos/caso-paula-omsk.webp"></div>
           <div class="camada" data-fundo="/ativos/caso-paula-almaty.webp"></div>
@@ -945,7 +966,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="secao secao-creme" id="vividos" aria-labelledby="t-vividos">
 <div class="vividos-trilho">
   <div class="wrap duas">
-    <div class="figura figura-retrato" style="background-image:url('/ativos/destino-santarem.webp')" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
+    <div class="figura figura-retrato" data-foto="/ativos/destino-santarem.webp" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
     <div>
       <span class="olho">A gente vai antes</span>
       <h2 id="t-vividos">Não indicamos<em>por catálogo.</em></h2>
@@ -959,14 +980,14 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       <p class="intro">A Nayara na Sierra Nevada, na Andaluzia, num feriado: neve no alto da montanha e céu aberto no mesmo dia.</p>
       <p style="margin-top:var(--e2)">O feriado dela vira dica para o seu roteiro: o que levar na mala, quando vale subir e como chegar sem perder o dia na estrada.</p>
     </div>
-    <div class="figura figura-retrato figura-alterna" style="background-image:url('/ativos/destino-serra-nevada.webp')" role="img" aria-label="Nayara na Sierra Nevada, Andaluzia">
-      <div class="camada" style="background-image:url('/ativos/destino-serra-nevada.webp')"></div>
+    <div class="figura figura-retrato figura-alterna" data-foto="/ativos/destino-serra-nevada.webp" role="img" aria-label="Nayara na Sierra Nevada, Andaluzia">
+      <div class="camada" data-foto="/ativos/destino-serra-nevada.webp"></div>
       <div class="camada" data-fundo="/ativos/destino-serra-nevada-2.webp"></div>
     </div>
   </div>
   <div class="wrap duas" style="margin-top:var(--e6)">
-    <div class="figura figura-retrato figura-alterna tres" style="background-image:url('/ativos/destino-templo-budista.webp')" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas, na Igreja São Pedro, em Gramado, e na Catedral de Pedra, em Canela">
-      <div class="camada" style="background-image:url('/ativos/destino-templo-budista.webp')"></div>
+    <div class="figura figura-retrato figura-alterna tres" data-foto="/ativos/destino-templo-budista.webp" role="img" aria-label="Isadora e Matheus no templo budista Chagdud Gonpa Khadro Ling, em Três Coroas, na Igreja São Pedro, em Gramado, e na Catedral de Pedra, em Canela">
+      <div class="camada" data-foto="/ativos/destino-templo-budista.webp"></div>
       <div class="camada" data-fundo="/ativos/destino-gramado.webp"></div>
       <div class="camada" data-fundo="/ativos/destino-canela.webp"></div>
     </div>
@@ -1147,7 +1168,7 @@ addEventListener('scroll', function(){
   Array.prototype.forEach.call(figs, function(fig, idx){
     var cams = Array.prototype.filter.call(fig.children, function(c){ return c.classList.contains('camada'); });
     if(cams.length < 2) return;
-    if('IntersectionObserver' in window){ var vigia = new IntersectionObserver(function(es){ if(es.some(function(x){ return x.isIntersecting; })){ cams.forEach(carrega); vigia.disconnect(); } }, {rootMargin:'400px 0px'}); vigia.observe(fig); } else { cams.forEach(carrega); }
+    if('IntersectionObserver' in window){ var vigia = new IntersectionObserver(function(es){ if(es.some(function(x){ return x.isIntersecting; })){ cams.forEach(carrega); vigia.disconnect(); } }, {rootMargin:'400px 0px'}); (window.mkDepoisDoTopo || function(f){ f(); })(function(){ vigia.observe(fig); }); } else { cams.forEach(carrega); }
     var i = 0, timer = null;
     fig.classList.add('galeria');
     fig.setAttribute('role','group');
@@ -1224,5 +1245,29 @@ addEventListener('scroll', function(){
   document.querySelectorAll('.casos .figura-caso').forEach(function(f){ io.observe(f); });
 })();
 </script>
+<script>
+/* fotos de fundo fora da primeira tela: depois que o topo fica pronto, entram cerca de uma tela e meia antes de aparecer, para não disputarem a rede com o topo.
+   Nos carrosséis do celular, todas as fotos do carrossel entram juntas, quando ele chega perto. Sem IntersectionObserver, entram na hora. */
+(window.mkDepoisDoTopo || function(f){ f(); })(function(){
+  var fs = document.querySelectorAll('[data-foto]');
+  function poe(el){ if(!el.hasAttribute('data-foto')) return; el.style.backgroundImage = "url('" + el.getAttribute('data-foto') + "')"; el.removeAttribute('data-foto'); }
+  if(!('IntersectionObserver' in window)){ Array.prototype.forEach.call(fs, poe); return; }
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(!e.isIntersecting) return; io.unobserve(e.target);
+    if(e.target.hasAttribute('data-foto')) poe(e.target); else Array.prototype.forEach.call(e.target.querySelectorAll('[data-foto]'), poe); }); }, { rootMargin:'1200px' });
+  var vistos = [];
+  Array.prototype.forEach.call(fs, function(el){ var alvo = el.closest('.casos, .vividos-trilho') || el; if(vistos.indexOf(alvo) < 0){ vistos.push(alvo); io.observe(alvo); } });
+});
+</script>
+<noscript><style>
+[data-foto="/ativos/caso-gramado.webp"]{background-image:url('/ativos/caso-gramado.webp')}
+[data-foto="/ativos/caso-europa.webp"]{background-image:url('/ativos/caso-europa.webp')}
+[data-foto="/ativos/caso-jordana-orlando-1.webp"]{background-image:url('/ativos/caso-jordana-orlando-1.webp')}
+[data-foto="/ativos/caso-lu-saint-gervais.webp"]{background-image:url('/ativos/caso-lu-saint-gervais.webp')}
+[data-foto="/ativos/caso-maju-adriano-machu-picchu.webp"]{background-image:url('/ativos/caso-maju-adriano-machu-picchu.webp')}
+[data-foto="/ativos/caso-paula-matrioska.webp"]{background-image:url('/ativos/caso-paula-matrioska.webp')}
+[data-foto="/ativos/destino-santarem.webp"]{background-image:url('/ativos/destino-santarem.webp')}
+[data-foto="/ativos/destino-serra-nevada.webp"]{background-image:url('/ativos/destino-serra-nevada.webp')}
+[data-foto="/ativos/destino-templo-budista.webp"]{background-image:url('/ativos/destino-templo-budista.webp')}
+</style></noscript>
 </body>
 </html>
