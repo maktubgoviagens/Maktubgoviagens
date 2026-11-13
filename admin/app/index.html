@@ -1050,6 +1050,9 @@ body.cb-leitura #montarCot{margin-top:8px}
 .fp-l small{display:block;font-size:14px;color:var(--tinta-3);margin-top:3px}
 .arq-l{align-items:center;gap:12px;cursor:default}
 .arq-l .arq-r{width:auto;flex:none;margin:0;padding:8px 14px}
+.arq-b{display:flex;flex-direction:column;align-items:stretch;gap:2px;flex:none}
+.arq-x{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ac-prim.perigo{background:var(--alerta);border-color:var(--alerta);color:#fff}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -4553,11 +4556,11 @@ async function gerarLinkAcesso(b) {
   mostrarLinkAcesso(b.nextElementSibling, b.dataset.nome, r.link); b.hidden = true;
 }
 // confirmação em folha que sobe de baixo: só grava no botão principal
-function confirmarFolha(titulo, linhas, rotulo) {
+function confirmarFolha(titulo, linhas, rotulo, perigo) {
   return new Promise((ok) => {
     const el = document.createElement('div'); el.className = 'folha';
     el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${esc(titulo)}</div>${linhas.map(l => `<p class="ac-fl">${l}</p>`).join('')}
-      <button type="button" class="ac-prim" data-r="1">${esc(rotulo)}</button><button type="button" class="ac-sec" data-r="0">Voltar e revisar</button></div>`;
+      <button type="button" class="ac-prim${perigo ? ' perigo' : ''}" data-r="1">${esc(rotulo)}</button><button type="button" class="ac-sec" data-r="0">Voltar e revisar</button></div>`;
     const fim = (r) => { el.remove(); ok(r); };
     el.querySelector('.folha-fundo').onclick = () => fim(false);
     el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
@@ -5040,21 +5043,38 @@ function maisAreas() {
 const maisLinha = (x) => { const [t, d] = x.k || x.href || x.b2b ? (x.d !== undefined ? [x.t, x.d] : maisPartes(x.t)) : [x.t, '']; return `<button class="ac-pes" type="button" ${x.k ? `data-ir="${x.k}"` : x.href ? `data-href="${x.href}"` : 'data-b2b'}><span><b>${esc(t)}</b>${d ? `<small>${esc(d)}</small>` : ''}</span>${x.n ? `<em class="mais-n">${x.n}</em>` : '<i>›</i>'}</button>`; };
 /* ---------- Arquivados: o que saiu das telas sem ser apagado. Só a administração vê e restaura. ---------- */
 let ARQ_TIPO = 'cards';
+// quantos registros de uma tabela apontam para o item (para a confirmação do excluir de vez dizer o que vai junto ou perde a ligação)
+const arqConta = async (tab, f) => { const q = await f(sb.from(tab).select('*', { count: 'exact', head: true })); return q.error ? 0 : q.count || 0; };
+const arqQtd = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
 const ARQ = {
   cards: { t: 'Cards', tab: 'atendimentos', sel: 'id,cliente,produto,etapa,resultado,data,arquivado_em,arquivado_por', nome: (x) => x.cliente || 'Cliente',
     det: (x) => [x.produto, x.resultado === 'Em andamento' ? x.etapa : x.resultado].filter(Boolean).join(' · '),
-    volta: (x) => ['Ele volta para o funil em "' + esc(x.resultado === 'Em andamento' ? x.etapa || 'Novo lead' : x.resultado || '') + '", do jeito que estava.', 'Os avisos de retorno voltam a valer para ele.'] },
+    volta: (x) => ['Ele volta para o funil em "' + esc(x.resultado === 'Em andamento' ? x.etapa || 'Novo lead' : x.resultado || '') + '", do jeito que estava.', 'Os avisos de retorno voltam a valer para ele.'],
+    vai: async (x) => { const [r, c, l] = await Promise.all([arqConta('agenda_reunioes', q => q.eq('atendimento_id', x.id)), arqConta('propostas', q => q.eq('dados->>reuniao_id', String(x.id))), arqConta('extrato_milhas', q => q.eq('atendimento_id', x.id))]);
+      const L = [r && arqQtd(r, 'reunião', 'reuniões'), c && arqQtd(c, 'cotação', 'cotações'), l && arqQtd(l, 'lançamento de milhas', 'lançamentos de milhas')].filter(Boolean);
+      return [L.length ? (r + c + l > 1 ? 'Continuam no app, só perdem a ligação com o card: ' : 'Continua no app, só perde a ligação com o card: ') + maisJuntar(L).replace(/^./, m => m.toLowerCase()) + '.' : 'Nada mais está ligado a ele.'] } },
   cotacoes: { t: 'Cotações', tab: 'propostas', sel: 'id,titulo,modelo,atualizado_em,arquivado_em,arquivado_por', nome: (x) => x.titulo || 'Cotação sem título',
-    det: (x) => x.modelo ? 'Cotação ' + ({ go: 'Go', corp: 'Corporativo', rapida: 'Rápida' }[x.modelo] || x.modelo) : '', volta: () => ['Ela volta para a lista de cotações, do jeito que estava.'] },
-  fichas: { t: 'Fichas', tab: 'pessoas', sel: 'id,nome,celular,arquivado_em,arquivado_por', nome: (x) => x.nome || 'Ficha',
-    det: (x) => x.celular || '', volta: () => ['Ela volta para as fichas de clientes, com tudo o que estava ligado a ela.'] },
+    det: (x) => x.modelo ? 'Cotação ' + ({ go: 'Go', corp: 'Corporativo', rapida: 'Rápida' }[x.modelo] || x.modelo) : '', volta: () => ['Ela volta para a lista de cotações, do jeito que estava.'],
+    vai: async () => ['O link que o cliente recebeu continua funcionando.'] },
+  fichas: { t: 'Fichas', tab: 'pessoas', sel: 'id,nome,celular,cliente_id,parceiro_ref,arquivado_em,arquivado_por', nome: (x) => x.nome || 'Ficha',
+    det: (x) => x.celular || '', volta: () => ['Ela volta para as fichas de clientes, com tudo o que estava ligado a ela.'],
+    trava: (x) => x.cliente_id || x.parceiro_ref ? 'Esta ficha tem conta da Gestão ou cadastro de parceiro. Use "juntar fichas" em vez de excluir.' : '',
+    vai: async (x) => { const [d, v, e, k] = await Promise.all([arqConta('pessoas_documentos', q => q.eq('pessoa_id', x.id)), arqConta('pessoas_vinculos', q => q.or(`pessoa_a.eq.${x.id},pessoa_b.eq.${x.id}`)), arqConta('emissao_passageiros', q => q.eq('pessoa_id', x.id)), arqConta('contrato_dados_pessoa', q => q.eq('pessoa_id', x.id))]);
+      const L = [d && 'os documentos pessoais (CPF e passaporte)', v && arqQtd(v, 'vínculo de família ou viagem', 'vínculos de família ou viagem'), e && 'o registro como passageiro em ' + arqQtd(e, 'emissão', 'emissões'), k && 'os dados de contrato'].filter(Boolean);
+      return [L.length ? 'Apaga junto: ' + maisJuntar(L).replace(/^./, c => c.toLowerCase()) + '.' : 'Nada mais é apagado junto.', 'As vendas e os atendimentos dela continuam no app, só perdem a ligação com a ficha.'] } },
   documentos: { t: 'Documentos', tab: 'documentos', sel: 'id,titulo,tipo,cliente_id,arquivo_path,arquivado_em,arquivado_por', nome: (x) => x.titulo || 'Documento',
-    det: (x) => nomeCli(x.cliente_id), volta: (x) => ['Ele volta para o painel de ' + esc(nomeCli(x.cliente_id)) + ', do jeito que estava.'] },
+    det: (x) => nomeCli(x.cliente_id), volta: (x) => ['Ele volta para o painel de ' + esc(nomeCli(x.cliente_id)) + ', do jeito que estava.'],
+    vai: async () => ['O arquivo também é apagado.'],
+    // primeiro o registro, depois o arquivo: se o registro falhar, nada some
+    apagar: async (x) => { const r = await sb.from('documentos').delete().eq('id', x.id); if (r.error) return r.error; if (x.arquivo_path) await sb.storage.from('documentos').remove([x.arquivo_path]); return null; } },
   lancamentos: { t: 'Lançamentos', tab: 'extrato_milhas', sel: 'id,grupo_id,cliente_id,programa,tipo,quantidade,data,arquivado_em,arquivado_por', nome: (x) => (x.programa || 'Milhas') + ' · ' + (x.grupo_id && /^transf/.test(x.tipo) ? 'Transferência' : TIPO_CART[x.tipo] || x.tipo || ''),
     det: (x) => [nomeCli(x.cliente_id), num(x.grupo_id && /^transf/.test(x.tipo) ? Math.abs(x.quantidade) : x.quantidade), dataBR(x.data)].join(' · '),
     // as linhas de uma transferência aparecem juntas, numa linha só
     juntar: (L) => L.filter((x, i) => !x.grupo_id || L.findIndex(y => y.grupo_id === x.grupo_id) === i),
     volta: (x) => ['Ele volta para o saldo, o painel e o relatório de ' + esc(nomeCli(x.cliente_id)) + ', e o painel é recalculado.'],
+    vai: async (x, L) => [(x.grupo_id && L.filter(y => y.grupo_id === x.grupo_id).length > 1 ? 'As ' + L.filter(y => y.grupo_id === x.grupo_id).length + ' linhas deste lançamento são apagadas juntas, com a economia ligada a elas.' : 'A economia ligada a ele também é apagada.'), 'O saldo do cliente não muda: o lançamento arquivado já não contava.'],
+    apagar: async (x, L) => { const ids = x.grupo_id ? L.filter(y => y.grupo_id === x.grupo_id).map(y => y.id) : [x.id];
+      const r = await sb.from('extrato_milhas').delete().in('id', ids); if (r.error) return r.error; await recalcularPainel(x.cliente_id); return null; },
     // tira o arquivado e o cancelado que o arquivar pôs (no lançamento e na economia ligada a ele) e recalcula o painel
     restaurar: async (x, L) => {
       const ids = x.grupo_id ? L.filter(y => y.grupo_id === x.grupo_id).map(y => y.id) : [x.id];
@@ -5079,10 +5099,10 @@ async function telaArquivados(P) {
   P.innerHTML = `
     <button class="voltar" type="button" id="arqVoltar">‹ Mais</button>
     <h1 class="titulo"><em>Arquivados</em></h1>
-    <div class="sub">Saíram das telas, dos números e dos avisos. Nada foi apagado.</div>
+    <div class="sub">Saíram das telas, dos números e dos avisos. Restaure ou, se foi um erro, exclua de vez.</div>
     <div class="chips" id="arqTipo" style="margin-top:12px">${Object.entries(ARQ).map(([k, x]) => `<button type="button" data-t="${k}" class="${k === ARQ_TIPO ? 'on' : ''}">${x.t}${R[k] && R[k].length ? ' ' + R[k].length : ''}</button>`).join('')}</div>
     ${L === null ? '<div class="vazio" style="margin-top:12px">Não deu para carregar agora. Tente de novo em instantes.</div>'
-      : L.length ? `<div class="ac-lista" style="margin-top:12px">${L.map(x => `<div class="ac-pes arq-l"><span><b>${esc(a.nome(x))}</b><small>${esc([a.det(x), 'arquivado em ' + quando(x.arquivado_em) + (nomeTime(x.arquivado_por) ? ' por ' + nomeTime(x.arquivado_por) : '')].filter(Boolean).join(' · '))}</small></span><button type="button" class="ac-sec arq-r" data-r="${esc(x.id)}">Restaurar</button></div>`).join('')}</div>`
+      : L.length ? `<div class="ac-lista" style="margin-top:12px">${L.map(x => `<div class="ac-pes arq-l"><span><b>${esc(a.nome(x))}</b><small>${esc([a.det(x), 'arquivado em ' + quando(x.arquivado_em) + (nomeTime(x.arquivado_por) ? ' por ' + nomeTime(x.arquivado_por) : '')].filter(Boolean).join(' · '))}</small></span><span class="arq-b"><button type="button" class="ac-sec arq-r" data-r="${esc(x.id)}">Restaurar</button><button type="button" class="arq-x" data-x="${esc(x.id)}">Excluir de vez</button></span></div>`).join('')}</div>`
       : `<div class="vazio" style="margin-top:12px">Nenhum item arquivado em ${a.t.toLowerCase()}.</div>`}`;
   $('arqVoltar').onclick = () => ir('mais');
   P.querySelectorAll('#arqTipo [data-t]').forEach(b => b.onclick = () => { ARQ_TIPO = b.dataset.t; telaArquivados(P); });
@@ -5093,6 +5113,17 @@ async function telaArquivados(P) {
     const error = a.restaurar ? await a.restaurar(x, L._todos || L) : (await sb.from(a.tab).update({ arquivado_em: null, arquivado_por: null }).eq('id', x.id)).error;
     if (error) { b.disabled = false; aviso('Não restaurou: ' + limparTec(error.message)); return; }
     aviso('Restaurado.'); await carregar(true);
+  });
+  // excluir de vez: só a administração, só o que já está arquivado, e a confirmação diz o que vai junto
+  P.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
+    const x = (L || []).find(y => String(y.id) === b.dataset.x); if (!x) return;
+    const tr = a.trava && a.trava(x); if (tr) { aviso(tr); return; }
+    b.disabled = true; const vai = a.vai ? await a.vai(x, L._todos || L) : []; b.disabled = false;
+    if (!await confirmarFolha('Excluir de vez ' + a.nome(x) + '?', [...vai, '<b>Não dá para desfazer.</b>'], 'Excluir de vez', true)) return;
+    b.disabled = true;
+    const error = a.apagar ? await a.apagar(x, L._todos || L) : (await sb.from(a.tab).delete().eq('id', x.id)).error;
+    if (error) { b.disabled = false; aviso('Não excluiu: ' + limparTec(error.message)); return; }
+    aviso('Excluído de vez.'); telaArquivados(P);
   });
 }
 function telaMais(P) {
@@ -6245,7 +6276,7 @@ async function fiCarteira(el, c) {
     <div class="secao">Por programa</div>
     <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
     <div class="secao">Últimos lançamentos</div>
-    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref ? '' : `<button class="mini" data-del="${x.id}">arquivar</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref || !ADMIN ? '' : `<button class="mini" data-del="${x.id}">arquivar</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
       <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
   el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
   // arquivar no lugar de excluir: o lançamento também fica cancelado, e o saldo, o painel e o relatório do cliente já ignoram o cancelado.
@@ -6769,7 +6800,7 @@ async function fiDocs(el, c) {
       <label class="fl"><span>Arquivo (PDF, imagem ou HTML, até 20 MB)</span><input type="file" name="arquivo" required accept=".pdf,.html,.htm,.png,.jpg,.jpeg,.webp"></label>
       <button class="zap" type="submit" id="upBtn" style="margin-top:10px;width:100%">Enviar documento</button></form>
     <div class="secao">Enviados</div>
-    <div class="bloco" style="margin-top:0">${(data || []).length ? data.map(d => `<div class="lanc"><div><b>${esc(d.titulo)}</b><small>${esc((TIPO_DOC.find(x => x[0] === d.tipo) || [0, d.tipo])[1])} · ${new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><div class="q"><button class="mini" data-ver="${esc(d.arquivo_path)}">ver</button><button class="mini" data-rm="${d.id}">arquivar</button></div></div>`).join('') : '<div class="vazio">Nenhum documento enviado.</div>'}</div>`;
+    <div class="bloco" style="margin-top:0">${(data || []).length ? data.map(d => `<div class="lanc"><div><b>${esc(d.titulo)}</b><small>${esc((TIPO_DOC.find(x => x[0] === d.tipo) || [0, d.tipo])[1])} · ${new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><div class="q"><button class="mini" data-ver="${esc(d.arquivo_path)}">ver</button>${ADMIN ? `<button class="mini" data-rm="${d.id}">arquivar</button>` : ''}</div></div>`).join('') : '<div class="vazio">Nenhum documento enviado.</div>'}</div>`;
   $('fDoc').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target, file = f.elements.arquivo.files[0];
     if (!tv(f, 'titulo') || !file) { aviso('Informe o título e escolha o arquivo.'); return; }
