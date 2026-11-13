@@ -1327,7 +1327,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-fecha]')
 function acoesNovo() {
   const L = [];
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
-  if (pode('comercial')) L.push(['Novo atendimento', 'Cotação para cliente ou emissão B2B', () => escolherAtendimento()]);
+  if (pode('comercial') || pode('emissoes')) L.push(['Novo atendimento', pode('comercial') ? 'Cotação para cliente ou emissão B2B' : 'Emissão B2B para agência', () => escolherAtendimento()]);
   if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar emissão', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
@@ -1339,10 +1339,10 @@ function abrirB2B() {
   else ir('emissoes', () => { EM_ED = 'b2b'; });
 }
 function escolherAtendimento() {
-  const L = [
-    ['Cotação para cliente', 'Viagem ou passagem: entra no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]
-  ];
-  // Emissão B2B: continua funcionando, mas fora de uso; fica em Mais > Arquivo
+  const L = [];
+  if (pode('comercial')) L.push(['Cotação para cliente', 'Viagem ou passagem: entra no funil', () => ir('reunioes', () => { RE_ED = 'nova'; RE_VISTA = 'viagens'; })]);
+  if (pode('comercial') || pode('emissoes')) L.push(['Emissão B2B para agência', 'Emissão direta para agência parceira, sem passar pelo funil', abrirB2B]);
+  if (!L.length) return;
   if (L.length === 1) { L[0][2](); scrollTo(0, 0); return; }
   document.querySelector('#folhaMais .folha-tit').textContent = 'Novo atendimento';
   $('folhaItens').innerHTML = L.map(([t, d], i) => `<button class="folha-item" data-acao="${i}"><span>${t}<small>${d}</small></span><span class="seta">›</span></button>`).join('');
@@ -2310,7 +2310,6 @@ function telaEmissoes(P) {
   P.innerHTML = `${segOp('emissoes')}
     <h1 class="titulo">${LST ? 'Emissões da <em>Maktub</em>' : 'Minhas <em>emissões</em>'}</h1>
     ${botaoLancar('nova')}
-    ${pode('comercial') ? '' : '<button class="sec grande" id="novaB2B" style="margin-top:8px;width:100%">+ Emissão B2B</button>'}
     ${infoSinc()}
     ${seletorMes('emMes')}
     ${(() => { const at = [];
@@ -5057,7 +5056,6 @@ function maisConta() {
   if (ADMIN) L.push({ href: '/admin/', t: 'Administração completa', d: 'Carteiras e documentos', c: 'administração completa' }, { href: '/painel/', t: 'Meu painel de cliente', d: '', c: 'meu painel' });
   if (ADMIN) L.push({ k: 'arquivados', t: 'Arquivados', d: 'Cards, cotações, fichas, documentos e lançamentos arquivados. Dá para restaurar', c: 'arquivados' });
   if (podeAba('opmilhas')) L.push({ k: 'opmilhas', t: 'Operação de milhas dos sócios', d: 'Arquivo', c: 'operação dos sócios' });
-  if (podeAba('emissoes')) L.push({ b2b: 1, t: 'Emissão B2B para agências', d: 'Fora de uso, mas continua funcionando. O histórico fica em Emissões', c: 'B2B' });
   return L;
 }
 function maisAreas() {
@@ -5916,7 +5914,11 @@ function htmlKpisGestao() {
 }
 const vencendo = () => vencimentos(30).filter(({ p }) => !(p.vencimento_avisado_em && dia(p.vencimento_avisado_em) >= new Date(dia(p.vencimento_data) - 60 * 864e5)));
 const normNome = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// o caminho que casava emissões com clientes da Gestão pelo nome saiu (risco de contar duas vezes):
+// a emissão com milhas do cliente é lançada no card do Comercial, no bloco Passagens, e aparece sozinha em "Uso de milhas"
 function emissoesGestao() {
+  return [];
+  // eslint-disable-next-line no-unreachable
   if (!D.clientes || !D.clientes.length) return [];
   const mapa = {}; D.clientes.forEach(c => { mapa[normNome(c.nome_completo)] = c; });
   const desde = mesMais(mesKey(new Date()), -1) + '-01';
@@ -5938,7 +5940,6 @@ function pendGestao() {
     ['Pedidos de diagnóstico pelo site', pedidosSite().length],
     ['Indicações de clientes', indicacoesNovas().length],
     ['Leads para retornar hoje', retornosHoje().filter(ehGestao).length],
-    ['Emissões para lançar na carteira', emissoesGestao().length],
     ['Milhas de clientes vencendo', vencendo().length],
     ['Renovações em 90 dias', renovacoes(90).length],
     ['Clientes sem data de entrada', semContrato().length],
@@ -5981,7 +5982,7 @@ function telaGestao(P) {
   const total = totalGestao();
   const kB = mesKey(new Date()), baseFalta = (D.clientes || []).filter(c => precisaBase(c, kB) && vejoBase(c) && !confDoMes(c, kB)).length;
   const NG = { 'Implantações em andamento': impl.length, 'Pedidos de reunião dos clientes': ags.length, 'Pedidos de diagnóstico pelo site': sols.length, 'Indicações de clientes': ind.length, 'Leads para retornar hoje': ret.length,
-    'Emissões de clientes da Gestão': emissoesGestao().length, 'Milhas de clientes vencendo em 30 dias': venc.length, 'Renovações em 90 dias': renov.length, 'Clientes sem data de entrada': semc.length };
+    'Milhas de clientes vencendo em 30 dias': venc.length, 'Renovações em 90 dias': renov.length, 'Clientes sem data de entrada': semc.length };
   const grupo = (titulo, html) => html ? `<details class="gres"><summary><span>${titulo}</span>${NG[titulo] ? `<span class="kpill">${NG[titulo]}</span>` : '<i>›</i>'}</summary><div class="gres-c">${html}</div></details>` : '';
   const primG = [['Base do mês para alimentar', baseFalta], ...Object.entries(NG)].find(x => x[1]);
   P.innerHTML = `
