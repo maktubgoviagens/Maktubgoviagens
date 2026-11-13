@@ -923,7 +923,7 @@ button,select,textarea,input{font-size:16px}
   .novo-topo:not([hidden]){display:inline-flex;align-items:center;background:var(--dourado-claro);color:var(--verde);border:0;border-radius:10px;padding:0 14px;height:38px;font-size:16px;font-weight:500;cursor:pointer;margin-right:4px}
   .nav button[data-t="mais"]{display:none}
   .nav .nbusca{display:flex;align-items:center;gap:8px;height:42px;margin:0 0 10px;padding:0 12px;border:1px solid var(--linha);border-radius:10px;background:var(--creme);color:var(--tinta-3);font-size:16px;flex:none;cursor:pointer}
-  .nav .ng{display:flex;justify-content:space-between;align-items:center;flex:none;height:auto;background:none;border:0;margin:14px 0 2px;padding:4px 14px;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dourado);cursor:pointer}
+  .nav .ng{display:flex;justify-content:space-between;align-items:center;flex:none;height:auto;text-align:left;white-space:nowrap;background:none;border:0;margin:14px 0 2px;padding:4px 14px;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dourado);cursor:pointer}
   .nav .ng::after{content:'⌄';font-size:14px;color:var(--tinta-3)}
   .nav .ng.fechado::after{content:'›'}
   .nav .nx:not([hidden]){display:flex;align-items:center;justify-content:space-between;flex:none;height:auto;min-height:40px;padding:8px 14px;line-height:1.3;border:0;border-radius:8px;background:none;font-size:16px;color:var(--tinta-2);cursor:pointer;text-align:left;letter-spacing:0}
@@ -957,6 +957,18 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 #salvarRe.cb-oculto{display:none}
 body.cb-leitura #assumirAt.zap{display:none}
 body.cb-leitura #montarCot{margin-top:8px}
+
+/* ===== Funil do Comercial (13/11/2026) ===== */
+.flista .chips{margin:6px 0 10px}
+.fl-row b small.fl-n{display:inline;margin:0;font-family:'Cormorant Garamond',serif;color:var(--dourado);font-size:16px;font-weight:600}
+.kpill{display:inline-block;font-size:14px;padding:2px 10px;border-radius:999px;background:var(--alerta-f,#f6e7dc);color:var(--alerta);white-space:nowrap;flex:none}
+.kpill.ok{background:#e6efe8;color:var(--verde)}
+.kc2 .kpill{margin-top:8px}
+.kc2 .n small{color:var(--dourado);font-weight:600}
+.kc2{border-radius:12px}
+.so-pc{display:none}
+@media (max-width:1023px){.kanban.kanban-c{display:none}}
+@media (min-width:1024px){.flista{display:none}.so-pc{display:block}.kdica.so-pc{margin-bottom:8px}}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1195,6 +1207,8 @@ let GE_FUNIL = false;
 let AC_VER = null, AC_EDIT = false, AC_LISTA = [], AC_NOVO = false;
 // Mais: área aberta e texto da busca
 let MAIS_AREA = null, MAIS_Q = '';
+// funil do Comercial no celular: etapa escolhida
+let RE_ETC = null;
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
 /* ================= acesso ================= */
@@ -3359,6 +3373,38 @@ function ligarCardsReuniao(P) {
     tela();
   });
 }
+/* ---------- funil do Comercial (etapa 4 do layout): card da lista sem botões; as ações ficam dentro do card ---------- */
+function estadoKC(r) {
+  const et = etapaDe(r), atr = r.resultado === 'Em andamento' && r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
+  if (r.resultado === 'Em andamento' && !r.assumido_por) return ['Sem dono', 'alerta'];
+  if (atr) return ['Retorno atrasado', 'alerta'];
+  if (D.cots && ['Cotação enviada', 'Follow-up'].includes(et) && !cotsDe(r.id).length) return ['Sem cotação', 'alerta'];
+  return null;
+}
+function linhaKC(r) {
+  const p = passoDe(r);
+  return [r.trecho || r.produto, r.valor_estimado ? brl2(r.valor_estimado) : '', (ADMIN || GER()) && r.responsavel_id ? String(nomeTime(r.responsavel_id) || '').split(' ')[0] : '', p.data ? 'retorno ' + dataCurta(dia(p.data)) : ''].filter(Boolean).join(' · ');
+}
+function htmlKCardC(r) {
+  const e = estadoKC(r), atr = e && e[0] === 'Retorno atrasado';
+  return `<div class="kc kc2 ${atr ? 'atr' : ''}" data-kid="${r.id}"><button class="n" data-r="${r.id}">${VENDA.numCard(r) ? `<small>${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>
+    <div class="i">${esc(linhaKC(r))}</div>${r.resultado === 'Em andamento' ? `<div class="t">${esc(passoDe(r).txt)}</div>` : ''}${e ? `<span class="kpill">${e[0]}</span>` : ''}</div>`;
+}
+function htmlKPosC(r) {
+  const pend = VENDA.pendenciasFechamento(r);
+  return `<div class="kc kc2"><button class="n" data-r="${r.id}">${VENDA.numCard(r) ? `<small>${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</button>
+    <div class="i">${esc([r.trecho || r.produto, r.valor_fechado ? brl2(r.valor_fechado) : ''].filter(Boolean).join(' · '))}</div>
+    ${pend.length ? `<div class="t alerta">Falta: ${esc(pend.slice(0, 2).join('; '))}${pend.length > 2 ? '…' : ''}</div>` : '<span class="kpill ok">Pronto para concluir</span>'}</div>`;
+}
+// no celular: uma etapa por vez, escolhida nos chips
+function htmlFunilCel(abertos) {
+  const cols = etapasDe(false).map(et => [et, abertos.filter(r => etapaDe(r) === et || (et === etapasDe(false)[0] && !etapasDe(false).includes(etapaDe(r))))]).concat([['Fechou · em emissão', posVenda(), true]]);
+  if (!RE_ETC || !cols.some(c => c[0] === RE_ETC)) RE_ETC = (cols.find(c => c[1].length) || cols[0])[0];
+  const lin = (r, pos) => { const e = pos ? (VENDA.pendenciasFechamento(r).length ? ['Falta ' + VENDA.pendenciasFechamento(r).length, 'alerta'] : ['Pronto', 'ok']) : estadoKC(r);
+    return `<button type="button" class="ac-pes fl-row" data-r="${r.id}"><span><b>${VENDA.numCard(r) ? `<small class="fl-n">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}</b><small>${esc(pos ? [r.trecho || r.produto, r.valor_fechado ? brl2(r.valor_fechado) : ''].filter(Boolean).join(' · ') : linhaKC(r))}</small></span>${e ? `<span class="kpill ${e[1]}">${e[0]}</span>` : '<i>›</i>'}</button>`; };
+  return `<div class="flista"><div class="chips" id="flChips">${cols.map(([et, L]) => `<button type="button" data-fl="${esc(et)}" class="${et === RE_ETC ? 'on' : ''}">${esc(et)} ${L.length}</button>`).join('')}</div>
+    ${cols.map(([et, L, pos]) => `<div class="fl-col" data-flc="${esc(et)}" ${et === RE_ETC ? '' : 'hidden'}>${L.length ? `<div class="ac-lista">${L.map(r => lin(r, pos)).join('')}</div>` : '<div class="vazio">Nenhum card nesta etapa.</div>'}</div>`).join('')}</div>`;
+}
 function htmlKCard(r, etapas) {
   const et = etapaDe(r), i = etapas.indexOf(et);
   const atr = r.proximo_passo_data && r.proximo_passo_data <= hojeISO();
@@ -3413,7 +3459,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (!RE_ED || !pode('gestao')) RE_VISTA = 'viagens'; // sem a chave da Gestão, o Comercial mostra só viagens
   if (RE_ED) return telaFormReuniao(P);
-  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>' + atalhosComercial();
+  const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
   if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
   const abertos = D.reunioes.filter(r => (daVista(r) || (!G && ABA !== 'gestao' && pode('gestao') && ehGestao(r) && !r.assumido_por && etapaDe(r) === 'Novo lead')) && r.resultado === 'Em andamento')
@@ -3424,12 +3470,12 @@ function telaReunioes(P) {
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
-    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">Kanban · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
-    <div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>
+    ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica so-pc">Arraste o card para outra coluna para mudar de etapa.</div>' + htmlFunilCel(abertos)}
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
-    <div class="kanban">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => htmlKCard(r, etapasDe(ehGestao(r)))).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPos).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
+    <div class="kanban${G ? '' : ' kanban-c'}">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => G ? htmlKCard(r, etapasDe(ehGestao(r))) : htmlKCardC(r)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : (pv => `<div class="kcol"><h3>Fechou · em emissão <small>${pv.length}</small></h3>${pv.map(htmlKPosC).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`)(posVenda())}</div>
 `}
     ${RE_PARTE !== 'res' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
@@ -3473,6 +3519,7 @@ function telaReunioes(P) {
     }
     aviso('Responsável definido.'); telaReunioes(P);
   };
+  if ($('flChips')) $('flChips').onclick = (e) => { const b = e.target.closest('[data-fl]'); if (!b) return; RE_ETC = b.dataset.fl; [...$('flChips').children].forEach(x => x.classList.toggle('on', x === b)); P.querySelectorAll('[data-flc]').forEach(c => { c.hidden = c.dataset.flc !== RE_ETC; }); };
   P.querySelectorAll('[data-agav]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.agav));
   P.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => moverEtapa(b.dataset.mv, b.dataset.et));
   P.querySelectorAll('[data-assumir-at]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); assumirAtendimento(b.dataset.assumirAt); });
@@ -4493,7 +4540,7 @@ function htmlCardLeitura(r, base) {
       ${venda || +r.valor_estimado ? `<button type="button" class="cb-olho" id="cbOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button>` : ''}
     </div>
     ${acao ? `<button type="button" class="ac-prim" id="cbPrim" data-acao="${acao[0]}">${acao[1]}</button>` : ''}
-    <div class="cb-txts">${ativo && et !== 'Não fechou' ? '<button type="button" data-cbt="perdeu">Não fechou</button>' : ''}<button type="button" data-cbt="etapa">Mudar etapa</button>${zap ? `<a href="${esc(zap)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</div>`;
+    <div class="cb-txts">${ativo && et !== 'Não fechou' ? '<button type="button" data-cbt="perdeu">Não fechou</button>' : ''}<button type="button" data-cbt="etapa">Mudar etapa</button>${zap ? `<a href="${esc(zap)}" target="_blank" rel="noopener" id="cbZap">WhatsApp</a>` : ''}</div>`;
 }
 function ligarCardLeitura(P, f, r, base) {
   document.body.classList.toggle('sem-valores', cbOlho());
@@ -4510,6 +4557,7 @@ function ligarCardLeitura(P, f, r, base) {
     if (a === 'emitiu') { abrir('etapa'); const c = abrir('atend'); if ($('reEmitiu') && !$('reEmitiu').hidden) $('reEmitiu').click(); ver($('reServicos') || c); return; }
     etapa(null);
   };
+  if ($('cbZap')) $('cbZap').addEventListener('click', () => marcarContato(r));
   P.querySelectorAll('[data-cbt]').forEach(b => b.onclick = () => b.dataset.cbt === 'perdeu' ? etapa('Não fechou') : etapa(null));
   // o que mudou desde que o card abriu: nome do campo, de e para
   const rotulo = (el) => { if (!el) return ''; if (el.name === 'etapa') return 'Etapa'; const l = el.closest('label.fl'); const t = l && l.querySelector('span'); return t ? t.textContent.replace(/\s*\(.*?\)\s*$/, '').trim() : ''; };
