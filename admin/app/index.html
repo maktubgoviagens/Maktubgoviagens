@@ -969,6 +969,21 @@ body.cb-leitura #montarCot{margin-top:8px}
 .so-pc{display:none}
 @media (max-width:1023px){.kanban.kanban-c{display:none}}
 @media (min-width:1024px){.flista{display:none}.so-pc{display:block}.kdica.so-pc{margin-bottom:8px}}
+
+/* ===== Início (13/11/2026) ===== */
+.ini-card{display:block;position:relative;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:16px 44px 16px 16px;margin-top:12px;cursor:pointer;font:inherit;color:var(--tinta)}
+.ini-card.ouro{background:var(--creme-2)}
+.ini-card>i{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--dourado-claro);font-size:22px}
+.ini-rot{display:block;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);margin-bottom:6px}
+.ini-num{display:block;font-family:'Cormorant Garamond',serif;font-weight:500;font-size:36px;color:var(--verde);line-height:1.1}
+.ini-card small{display:block;font-size:16px;color:var(--tinta-2);margin-top:4px}
+.ini-card small b{color:var(--verde)}
+.ini-txt{display:block;font-size:18px;line-height:1.4;color:var(--tinta)}
+.ini-txt b{color:var(--verde)}
+.ini-card .cb-olho{margin:6px 0 0;padding:4px 0}
+.ini-lista{display:none;margin-top:8px}
+.ini-lista.aberta{display:block}
+@media (min-width:1024px){.ini-lista:not([hidden]){display:block}#iniHoje i{display:none}}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -2005,7 +2020,7 @@ function tela() {
   if (ABA === 'mais') return telaMais(P);
   if (ABA === 'empresa') return telaEmpresa(P);
   if (ABA === 'equipe') return telaEquipe(P);
-  if (!ADMIN && ABA === 'inicio') return telaInicioColab(P);
+  if (!ADMIN && !GER() && ABA === 'inicio') return telaInicioColab(P);
   if (ABA === 'leads') return telaLeads(P);
   if (ABA === 'clientes') return CLI ? telaFicha(P, CLI) : telaClientes(P);
   if (ABA === 'agenda') return telaAgenda(P);
@@ -2013,6 +2028,32 @@ function tela() {
   return telaInicio(P);
 }
 
+/* ---------- Início (etapa 5 do layout): Hoje, onde está travando e o mês ---------- */
+// a etapa do Comercial com mais cards parados há mais de 2 dias (só cards em andamento, fora da Gestão)
+function gargaloComercial() {
+  const lim = Date.now() - 2 * 864e5, cont = {};
+  D.reunioes.filter(r => r.resultado === 'Em andamento' && !ehGestao(r)).forEach(r => { const et = etapaDe(r); if (new Date(r.etapa_desde || r.created_at || r.data) < lim) cont[et] = (cont[et] || 0) + 1; });
+  const [etapa, n] = Object.entries(cont).sort((a, b) => b[1] - a[1])[0] || [];
+  return etapa ? { etapa, n } : null;
+}
+// mês: lucro bruto e a meta (administração); a gerente vê só a porcentagem
+function blocoMesInicio(m, mesTxt) {
+  const rot = `<span class="ini-rot">${mesTxt.charAt(0).toUpperCase() + mesTxt.slice(1)}</span>`;
+  if (!m) return `<button type="button" class="ini-card" id="iniMes">${rot}<span class="ini-txt">Ver as metas do mês.</span><i>›</i></button>`;
+  const e = m.empresa || {};
+  if (ADMIN && m.admin !== false && e.lucro !== undefined) {
+    const metas = [e.lucro_meta1, e.lucro_meta2, e.lucro_meta3, e.lucro_meta4].map(Number).filter(x => x > 0), alvo = metas.find(x => +e.lucro < x) || metas[metas.length - 1], nAlvo = alvo ? metas.indexOf(alvo) + 1 : 0;
+    return `<div class="ini-card" id="iniMes" role="button" tabindex="0">${rot}<b class="ini-num"><span class="cb-valor">${brl(+e.lucro || 0)}</span></b>
+      <small>de lucro bruto${alvo ? ` · <b>${pct(Math.round((+e.lucro || 0) / alvo * 1000) / 10)}</b> da meta ${nAlvo} de <span class="cb-valor">${brl(alvo)}</span>` : ' · sem meta definida'}</small>
+      <button type="button" class="cb-olho" id="iniOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button><i>›</i></div>`;
+  }
+  // quem tem a chave das metas em reais recebe os valores; na tela da gerente vira só a porcentagem
+  const pr = (meta) => +meta > 0 ? Math.round((+e.lucro || 0) / +meta * 1000) / 10 : null;
+  const p = (m.admin ? [pr(e.lucro_meta1), pr(e.lucro_meta2), pr(e.lucro_meta3), pr(e.lucro_meta4)] : [e.meta1, e.meta2, e.meta3, e.meta4]).map(x => x === null || x === undefined ? null : +x).filter(x => x !== null);
+  const alvo = p.findIndex(x => x < 100), v = alvo >= 0 ? p[alvo] : p[p.length - 1];
+  if (p.length && p.every(x => x === 0)) return `<button type="button" class="ini-card" id="iniMes">${rot}<span class="ini-txt">Sem avanço registrado nas metas deste mês.</span><small>Ver as metas</small><i>›</i></button>`;
+  return `<button type="button" class="ini-card" id="iniMes">${rot}${p.length ? `<b class="ini-num">${pct(v)}</b><small>da meta ${alvo >= 0 ? alvo + 1 : p.length} da Maktub${alvo < 0 ? ', batida' : ''}</small>` : '<span class="ini-txt">Nenhuma meta definida para este mês.</span>'}<i>›</i></button>`;
+}
 function telaInicio(P) {
   const hora = new Date().getHours();
   const leads30 = D.leads.filter(r => Date.now() - new Date(r.created_at) <= 30 * 864e5).length;
@@ -2021,64 +2062,62 @@ function telaInicio(P) {
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; }), 'novo'],
     ['Check-ins para fazer', checkinsTotal(), () => ir('agenda', () => { AG_VISTA = 'checkins'; })],
     ...(ADMIN || podeAba('emissoes') ? [['Voos sem horário de saída', voosSemHorario().length, () => { const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
-    ['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')],
-    ['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')],
-    ['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')],
-    ['Fornecedores a pagar', aPagar().length, () => ir('pagar')],
+    ...(ADMIN ? [['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')]] : []),
+    ...(ADMIN ? [['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')]] : []),
+    ...(ADMIN ? [['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')]] : []),
+    ...(ADMIN ? [['Fornecedores a pagar', aPagar().length, () => ir('pagar')]] : []),
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Leads no funil esperando alguém assumir', D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.assumido_por && etapaDe(r) === 'Novo lead').length, () => ir('reunioes')],
     ['Vendas fechadas aguardando emissão ou planilha', posVenda().length, () => ir('reunioes')],
     ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Retornos comerciais para hoje', retornosHoje().filter(r => !ehGestao(r)).length, () => ir('reunioes')],
-    ['Gestão de Milhas', totalGestao(), () => ir('gestao')],
+    ...(ADMIN || pode('gestao') ? [['Gestão de Milhas', totalGestao(), () => ir('gestao')]] : []),
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Aniversários de clientes hoje', aniversariosHoje().length, () => { const el = $('anivHoje'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }],
-    ['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))],
-    ['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))],
-    ['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))],
+    ...(ADMIN ? [['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]] : []),
+    ...(ADMIN ? [['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
+    ...(ADMIN ? [['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
     ...(ADMIN ? [['Avaliações no Google para responder', D.avGoogle ? avgPend().length : undefined, () => { const el = $('avgInicio'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
   const comPend = itens.filter(x => x[1]), emDia = itens.filter(x => !x[1]);
   const reun = reunioesProximas();
   const prox = eventos().filter(e => difDias(e.d) >= 0 && !reun.L.some(r => mesmaReuniao(r, e))).slice(0, 4);
+  const totalHoje = comPend.length, prim = comPend[0];
+  const garg = gargaloComercial(), mesTxt = new Date().toLocaleDateString('pt-BR', { month: 'long' });
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
-    <div class="sub">Atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    <div class="sub">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, c => c.toUpperCase())} · atualizado às ${D.atual ? D.atual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
     <div class="ini-grade"><div class="ini-a">
-    ${blocoGravar()}
-    ${blocoReunioes(reun)}
-    <div class="secao">Precisa de você</div>
-    ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
+    <button type="button" class="ini-card" id="iniHoje"><span class="ini-rot">Hoje</span><b class="ini-num">${totalHoje ? totalHoje + (totalHoje === 1 ? ' coisa' : ' coisas') : 'Tudo em dia'}</b><small>${prim ? 'A primeira: ' + esc(prim[0].charAt(0).toLowerCase() + prim[0].slice(1)) + ' (' + prim[1] + ')' : 'Nada esperando por você agora.'}</small><i>${totalHoje ? '⌄' : ''}</i></button>
+    <div id="iniLista" class="ini-lista" ${totalHoje ? '' : 'hidden'}>
+    ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : ''}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
-    ${blocoAnivHoje()}
-    ${blocoSemHorario()}
-    ${ADMIN ? blocoAvgInicio() : ''}
-    ${blocoPosViagem()}
-    ${D.avisos.length ? `<div class="secao">Últimos avisos <button data-ir="avisos">Ver todos ›</button></div>${D.avisos.slice(0, 3).map(htmlAviso).join('')}` : ''}
-    </div><div class="ini-b">
-    ${blocoMetasAdmin(D.metas, true)}
-    <div class="secao">A Maktub hoje</div>
-    <div class="numeros">
-      ${(c => `<div class="num destaque"><div class="l">Conversão do mês</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} reuniões decididas</div></div>`)(conversao(reunioesDoPeriodo(mesKey(new Date()), 'mes')))}
-      <div class="num destaque"><div class="l">Lucro das vendas do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'lucro_liquido'))}</div><div class="d">${doMes(mesKey(new Date())).length} emissões · ${brlC(soma(doMes(mesKey(new Date())), 'valor_receber'))} em vendas</div></div>
-      <div class="num"><div class="l">Comissões do mês</div><div class="v">${brlC(soma(doMes(mesKey(new Date())), 'comissao'))}</div><div class="d">geradas no mês, pagas 50/50</div></div>
-      <div class="num"><div class="l">Leads em 30 dias</div><div class="v">${leads30}</div><div class="d">${(n => n + (n === 1 ? ' fechado' : ' fechados'))(D.leads.filter(r => r.status === 'fechado' && Date.now() - new Date(r.created_at) <= 30 * 864e5).length)}</div></div>
     </div>
+    ${blocoGravar()}
+    ${(h => h.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:14px"><summary><span>Resolver por aqui<small>Voos sem horário, aniversários e avaliações</small></span></summary>${h}</details>` : '')(blocoAnivHoje() + blocoSemHorario() + (ADMIN ? blocoAvgInicio() : '') + blocoPosViagem())}
+    </div><div class="ini-b">
+    <button type="button" class="ini-card ${garg ? 'ouro' : ''}" id="iniGarg"><span class="ini-rot">Onde está travando</span>${garg ? `<span class="ini-txt"><b>${garg.n} ${garg.n === 1 ? 'card parado' : 'cards parados'}</b> em ${esc(garg.etapa)} há mais de 2 dias.</span>` : '<span class="ini-txt">Nenhum card do Comercial parado há mais de 2 dias.</span>'}<i>›</i></button>
+    ${blocoMesInicio(D.metas, mesTxt)}
+    ${blocoReunioes(reun)}
     <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
-    ${prox.length ? agrupar(prox) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
-    <div class="secao">Site <button data-ir="site">Ver números ›</button></div>
-    <div id="siteResumo" class="bloco"><div class="vazio">Carregando...</div></div>
+    ${prox.length ? agrupar(prox.slice(0, 3)) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
     </div></div>`;
-  P.querySelectorAll('.pend button').forEach(b => b.onclick = itens[b.dataset.i][2]);
+  $('iniHoje').onclick = () => { if (totalHoje) $('iniLista').classList.toggle('aberta'); };
+  $('iniGarg').onclick = () => ir('reunioes', () => { if (garg) RE_ETC = garg.etapa; });
+  if ($('iniMes')) $('iniMes').onclick = (e) => { if (e.target.closest('#iniOlho')) return; ir(ADMIN ? 'empresa' : 'metas'); };
+  if ($('iniOlho')) $('iniOlho').onclick = () => { const on = !cbOlho(); try { localStorage.setItem('olhoValores', on ? '1' : '0'); } catch (_) {} document.body.classList.toggle('sem-valores', on); $('iniOlho').textContent = on ? 'Mostrar valores' : 'Esconder valores'; };
+  document.body.classList.toggle('sem-valores', cbOlho());
+  P.querySelectorAll('.pend button[data-i]').forEach(b => b.onclick = () => { if ($('iniDetD')) $('iniDetD').open = true; itens[b.dataset.i][2](); });
+  if ($('iniDetD') && matchMedia('(min-width:1024px)').matches) $('iniDetD').open = true;
   ligarAnivHoje(P);
   ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicio(P));
   ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   ligarAvisos(P);
-  carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div>${podeAba('leads') ? `<button class="lin" id="irLeadsSite" style="font-size:14px"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}<span class="seta">›</span></span></button>` : `<div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div>`}<div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div><div class="sub">Cliques no WhatsApp são anônimos: a pessoa aparece direto na conversa do WhatsApp da Maktub.</div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; if ($('irLeadsSite')) $('irLeadsSite').onclick = () => ir('leads'); });
+  if ($('siteResumo')) carregarSite().then(() => { const el = $('siteResumo'); if (!el) return; el.innerHTML = SITE && SITE.ok ? `<div class="lin"><span>Visitas em ${SITE_DIAS} dias</span><span>${num(SITE.ga.sessoes)}</span></div><div class="lin"><span>Cliques no WhatsApp</span><span>${num(SITE.ga.whatsapp)}</span></div>${podeAba('leads') ? `<button class="lin" id="irLeadsSite" style="font-size:14px"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}<span class="seta">›</span></span></button>` : `<div class="lin"><span>Formulários enviados</span><span>${num(SITE.ga.formularios)}</span></div>`}<div class="lin"><span>Cliques no Google</span><span>${num(SITE.sc.cliques)}</span></div><div class="sub">Cliques no WhatsApp são anônimos: a pessoa aparece direto na conversa do WhatsApp da Maktub.</div>` : '<div class="vazio">Números do site ainda não conectados. Toque em Ver números para ver como ativar.</div>'; if ($('irLeadsSite')) $('irLeadsSite').onclick = () => ir('leads'); });
 }
 
 function telaInicioColab(P) {
