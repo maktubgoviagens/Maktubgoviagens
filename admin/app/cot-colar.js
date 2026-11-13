@@ -295,7 +295,7 @@ export function codigoDe(txt) {
 let CSS_AERO = false;
 export function ligarBuscaAero(raiz) {
   if (!CSS_AERO) { CSS_AERO = true; const st = document.createElement('style'); st.textContent = `.aero-sug{position:absolute;left:0;right:0;top:100%;z-index:60;background:var(--branco,#fff);border:1px solid var(--linha,#ddd);box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
-.aero-sug button{display:flex;gap:8px;align-items:baseline;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-bottom:1px solid var(--linha,#eee);cursor:pointer;font:inherit;font-size:13px;color:var(--tinta,#222)}
+.aero-sug button{display:flex;gap:8px;align-items:baseline;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-bottom:1px solid var(--linha,#eee);cursor:pointer;font:inherit;font-size:14px;color:var(--tinta,#222)}
 .aero-sug button b{font-weight:700;color:var(--verde,#1B4332);min-width:34px}.aero-sug button small{color:var(--tinta-3,#888);margin-left:auto;white-space:nowrap}.aero-pos{position:relative}`; document.head.appendChild(st); }
   const fecha = () => document.querySelectorAll('.aero-sug').forEach(x => x.remove());
   const aplica = (el, x) => {
