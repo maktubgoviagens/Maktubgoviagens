@@ -39,7 +39,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
- 
+
+<!-- foto do topo (LCP): pedida antes de tudo, para aparecer junto com o texto -->
+<link rel="preload" as="image" href="/ativos/janela-aviao.webp" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -773,7 +775,9 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 .hero-vs .vs-item{box-shadow:none}
 </style>
-<link rel="stylesheet" href="/diagnostico/formulario.css">
+<!-- o formulário de diagnóstico fica bem abaixo da dobra: o CSS dele chega sem segurar a primeira pintura -->
+<link rel="preload" as="style" href="/diagnostico/formulario.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/diagnostico/formulario.css"></noscript>
 <style id="mk-gestao-css">
 /* ===================== HOME DA GESTÃO DE MILHAS ===================== */
 .hero p.hero-gratis{margin-top:var(--e2);font-family:var(--sans);font-size:16px;font-weight:400;line-height:1.5;color:var(--verde)}
@@ -990,25 +994,25 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     <h3 class="sub-titulo" id="equipe">Sua equipe de gestão</h3>
     <div class="time">
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-isadora.webp')" role="img" aria-label="Isadora Lombardi"></div>
+        <div class="figura figura-pessoa" data-fundo="/ativos/time-isadora.webp" role="img" aria-label="Isadora Lombardi"></div>
         <h3>Isadora Lombardi</h3>
         <span class="pessoa-cargo">Co-fundadora, Operações e Experiência</span>
         <p>Sete anos de turismo, dentro das maiores operações de milhas do país, antes da Maktub existir.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-matheus.webp')" role="img" aria-label="Matheus Braga"></div>
+        <div class="figura figura-pessoa" data-fundo="/ativos/time-matheus.webp" role="img" aria-label="Matheus Braga"></div>
         <h3>Matheus Braga</h3>
         <span class="pessoa-cargo">Co-fundador, Estratégia e Gestão de Milhas</span>
         <p>Veio do mercado financeiro e trouxe de lá o hábito de acompanhar tudo de perto, com critério.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-nayara.webp')" role="img" aria-label="Nayara"></div>
+        <div class="figura figura-pessoa" data-fundo="/ativos/time-nayara.webp" role="img" aria-label="Nayara"></div>
         <h3>Nayara</h3>
         <span class="pessoa-cargo">Especialista em rotas internacionais e experiência do cliente</span>
         <p>Mora há mais de cinco anos na Europa e conhece de perto as rotas e as tarifas internacionais.</p>
       </article>
       <article class="pessoa">
-        <div class="figura figura-pessoa" style="background-image:url('/ativos/time-breno.webp')" role="img" aria-label="Breno"></div>
+        <div class="figura figura-pessoa" data-fundo="/ativos/time-breno.webp" role="img" aria-label="Breno"></div>
         <h3>Breno</h3>
         <span class="pessoa-cargo">Responsável pelas emissões aéreas e atendimento corporativo</span>
         <p>Confere cada detalhe da emissão e resolve antes de virar problema.</p>
@@ -1128,7 +1132,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
     <div class="casos">
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-gramado.webp')" role="img" aria-label="Rhaissa no quarto do hotel em Gramado, com as flores, o chocolate e a carta da surpresa"></div>
+        <div class="figura figura-caso" data-fundo="/ativos/caso-gramado.webp" role="img" aria-label="Rhaissa no quarto do hotel em Gramado, com as flores, o chocolate e a carta da surpresa"></div>
         <div class="caso-corpo">
           <span class="caso-rot">Gramado</span>
           <h3>O Wesley chamou a gente para conspirar</h3>
@@ -1137,7 +1141,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
 
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-jordana-filho-raptores.webp')" role="img" aria-label="O filho da Jordana em Orlando, na viagem surpresa"></div>
+        <div class="figura figura-caso" data-fundo="/ativos/caso-jordana-filho-raptores.webp" role="img" aria-label="O filho da Jordana em Orlando, na viagem surpresa"></div>
         <div class="caso-corpo">
           <span class="caso-rot">Orlando</span>
           <h3>Uma viagem inteira guardada em segredo</h3>
@@ -1146,7 +1150,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </article>
 
       <article class="caso">
-        <div class="figura figura-caso" style="background-image:url('/ativos/caso-paula-neve.webp');background-position:36% center" role="img" aria-label="Paula deitada na neve, com montanhas ao redor, no inverno entre o Cazaquistão e a Rússia"></div>
+        <div class="figura figura-caso" data-fundo="/ativos/caso-paula-neve.webp" style="background-position:36% center" role="img" aria-label="Paula deitada na neve, com montanhas ao redor, no inverno entre o Cazaquistão e a Rússia"></div>
         <div class="caso-corpo">
           <span class="caso-rot">Cazaquistão e Rússia</span>
           <h3>Do Cazaquistão à Sibéria, em pleno inverno</h3>
@@ -1393,6 +1397,26 @@ addEventListener('scroll', function(){
   }catch(e){}
 })();
 </script>
+<script>
+/* fotos de fundo abaixo da dobra (equipe e casos): entram cerca de uma tela e meia antes de aparecer,
+   para não disputarem a rede com o topo da página. Sem IntersectionObserver, entram na hora. */
+(function(){
+  var fs = document.querySelectorAll('[data-fundo]');
+  function poe(el){ el.style.backgroundImage = "url('" + el.getAttribute('data-fundo') + "')"; el.removeAttribute('data-fundo'); }
+  if(!('IntersectionObserver' in window)){ Array.prototype.forEach.call(fs, poe); return; }
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ poe(e.target); io.unobserve(e.target); } }); }, { rootMargin:'1200px 0px' });
+  Array.prototype.forEach.call(fs, function(el){ io.observe(el); });
+})();
+</script>
+<noscript><style>
+[data-fundo="/ativos/time-isadora.webp"]{background-image:url('/ativos/time-isadora.webp')}
+[data-fundo="/ativos/time-matheus.webp"]{background-image:url('/ativos/time-matheus.webp')}
+[data-fundo="/ativos/time-nayara.webp"]{background-image:url('/ativos/time-nayara.webp')}
+[data-fundo="/ativos/time-breno.webp"]{background-image:url('/ativos/time-breno.webp')}
+[data-fundo="/ativos/caso-gramado.webp"]{background-image:url('/ativos/caso-gramado.webp')}
+[data-fundo="/ativos/caso-jordana-filho-raptores.webp"]{background-image:url('/ativos/caso-jordana-filho-raptores.webp')}
+[data-fundo="/ativos/caso-paula-neve.webp"]{background-image:url('/ativos/caso-paula-neve.webp')}
+</style></noscript>
 <script src="/diagnostico/formulario.js" defer></script>
 <script>
 /* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
