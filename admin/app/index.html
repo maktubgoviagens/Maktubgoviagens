@@ -931,6 +931,32 @@ button,select,textarea,input{font-size:16px}
   .nav .nx.on{background:var(--creme-2);color:var(--verde);font-weight:600}
   .nav .nx .mais-n{font-size:18px}
 }
+
+/* ===== Card do Comercial em leitura (13/11/2026) ===== */
+.cb-etapa{display:inline-block;background:var(--creme-2);color:var(--verde);border-radius:999px;padding:4px 14px;font-size:14px;font-weight:500;margin:10px 0 10px}
+.cbr{background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:8px 14px;margin-bottom:12px}
+.cbr-l{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--linha);font-size:16px}
+.cbr-l:first-child{border-top:0}
+.cbr-l>span:first-child{color:var(--tinta-3);font-size:14px;flex:none;padding-top:2px}
+.cbr-l>span:last-child{text-align:right}
+.cbr-l .alerta,.cbr-l>span.alerta{color:var(--alerta)}
+.cb-olho{display:block;margin:4px 0 4px auto;background:none;border:0;color:var(--dourado);font-size:14px;text-decoration:underline;cursor:pointer;padding:4px 0}
+body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(43,43,38,.45);user-select:none}
+.cb-txts{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 20px;margin:12px 0 4px}
+.cb-txts button,.cb-txts a{background:none;border:0;color:var(--dourado);font-size:16px;text-decoration:underline;cursor:pointer;padding:6px 0}
+.cb{background:var(--branco);border:1px solid var(--linha);border-radius:12px;margin-top:8px}
+.cb-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px}
+.cb-h b{display:block;font-weight:500;font-size:16px;color:var(--verde)}
+.cb-h small{display:block;font-size:14px;color:var(--tinta-3);margin-top:2px}
+.cb-ed{flex:none;background:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--dourado);cursor:pointer}
+.cb-corpo{display:none;padding:0 14px 14px}
+.cb.aberto .cb-corpo{display:block}
+.cb.aberto{background:#fffdf7}
+.cb-corpo>.grupo:first-child{display:none}
+.cb-corpo>.bloco:first-child{margin-top:0}
+#salvarRe.cb-oculto{display:none}
+body.cb-leitura #assumirAt.zap{display:none}
+body.cb-leitura #montarCot{margin-top:8px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1925,7 +1951,7 @@ function htmlEvento(e) {
 function tela() {
   SUJO = false; PREENCHIDO = false;
   document.body.classList.remove('cal-largo');
-  document.body.classList.remove('ac-com-barra');
+  document.body.classList.remove('ac-com-barra', 'cb-leitura', 'sem-valores');
   if (ABA !== 'acessos') { AC_VER = null; AC_EDIT = false; AC_NOVO = false; }
   if (ABA !== 'mais') { MAIS_AREA = null; MAIS_Q = ''; }
   if (ABA !== 'calccartoes') CALC.inicio();
@@ -3378,6 +3404,7 @@ async function moverEtapa(id, etapa) {
 const semResp = () => D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento' && (!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id)));
 let RE_PARTE = (() => { try { return localStorage.getItem('maktub_re_parte') || 'funil'; } catch (_) { return 'funil'; } })();
 function telaReunioes(P) {
+  document.body.classList.remove('ac-com-barra', 'cb-leitura', 'sem-valores');
   if (ABA === 'reunioes' && RE_ED === 'b2b') return B2B.tela(P, { D, sb, $, esc, aviso, limparTec, brl2, nomeTime, ADMIN, rotuloVoltar: 'Comercial', voltar: () => { if (location.hash === '#reunioes/b2b' && ANTERIOR !== null) { ANTERIOR = null; history.back(); } else { RE_ED = null; ir('reunioes'); } } });
   if (pode('gestao') && ABA === 'reunioes' && RE_ED) {
     const x = RE_ED === 'nova' ? null : D.reunioes.find(r => r.id === RE_ED);
@@ -3594,6 +3621,19 @@ function telaFormReuniao(P) {
   const RE_PRE_FECHOU = !!(RE_PRE && RE_PRE.etapa === 'Fechou');
   const r = { ...base, ...(RE_PRE || {}) }; RE_PRE = null;
   const G = r.produto === 'Gestão de Milhas';
+  // card do Comercial já existente: abre em leitura, com um botão principal e blocos que abrem no "Editar"
+  const CB = !nova && !G;
+  const cbAbre = (k, tit, res, rot) => `<div class="cb" data-cb="${k}"><div class="cb-h"><span><b>${tit}</b><small>${esc(res || '')}</small></span><button type="button" class="cb-ed" data-cbed="${k}">${rot || 'Editar'}</button></div><div class="cb-corpo">`;
+  const cbFecha = '</div></div>';
+  const cbRes = CB ? (() => {
+    const prods = [...new Set(String(r.produto || '').split(' + ').filter(Boolean))].join(', ');
+    const rt = reunioesDe(base.id).length, nota = String(r.observacoes || '').trim();
+    return { atend: [r.tipo, prods].filter(Boolean).join(' · '), cliente: [r.cliente, r.contato].filter(Boolean).join(' · '),
+      viagem: [r.trecho || 'Sem trecho', r.data_viagem ? dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : '') : ''].filter(Boolean).join(' · '),
+      etapa: [etapaDe(r), r.proximo_passo_data && r.resultado === 'Em andamento' ? 'retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''].filter(Boolean).join(' · '),
+      reun: rt ? rt + (rt === 1 ? ' reunião' : ' reuniões') : 'Nenhuma reunião', notas: nota ? nota.slice(0, 70) + (nota.length > 70 ? '…' : '') : 'Sem anotações',
+      cots: (n => n ? n + (n === 1 ? ' cotação' : ' cotações') : 'Nenhuma ligada ao card')(cotsDe(base.id).length) };
+  })() : {};
   const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
   // campos de cada etapa da Gestão: quando aconteceu e o que precisa para avançar
   const ETG = (et) => {
@@ -3614,16 +3654,24 @@ function telaFormReuniao(P) {
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
     <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
+    ${CB ? htmlCardLeitura(r, base) : ''}
+    ${CB ? '<div class="secao">O card</div>' : ''}
+    ${CB && podeAba('cotador') ? cbAbre('cots', 'Cotações', cbRes.cots, 'Abrir') : ''}
     ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
+    ${CB && podeAba('cotador') ? cbFecha : ''}
     ${!nova && G ? htmlTopoGestao(base) + htmlPropostaIA(base) : ''}
+    ${CB ? cbAbre('linha', 'Linha do tempo', 'Cada passo com data, hora e quem fez', 'Abrir') : ''}
     ${!nova ? (G ? (lt => lt ? `<details class="gsec"><summary><span>Linha do tempo<small>Cada passo com data, hora e quem fez</small></span></summary>${lt}</details>` : '')(htmlLinhaTempo(base)) : htmlLinhaTempo(base)) : ''}
+    ${CB ? cbFecha : ''}
     <form id="fRe" class="form" autocomplete="off" ${G ? 'novalidate' : ''} style="${G ? 'display:flex;flex-direction:column' : ''}">
       ${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}
+      ${CB ? cbAbre('atend', 'Atendimento e serviços', cbRes.atend) : ''}
       <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
       ${campo('data', 'Data e hora ' + fusoRotulo(), dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}
       ${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
+      ${CB ? cbFecha + cbAbre('cliente', 'Cliente', cbRes.cliente) : ''}
       <div class="grupo">Cliente</div>
       ${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}
       <datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
@@ -3632,9 +3680,11 @@ function telaFormReuniao(P) {
       ${campo('contato', 'WhatsApp ou e-mail', r.contato)}
       <div id="cliResumo"></div>
       <div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>
+      ${CB ? cbFecha + cbAbre('viagem', 'Viagem e origem', cbRes.viagem) : ''}
       ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`}
       ${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}
       ${G ? '</details><div style="order:-4">' + htmlGestaoSdr(r) + '</div><div style="order:-5">' : ''}
+      ${CB ? cbFecha + cbAbre('etapa', 'Etapa e próximo passo', cbRes.etapa) : ''}
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
@@ -3655,6 +3705,7 @@ function telaFormReuniao(P) {
         </div>`)((() => { const pd = padraoPasso(r, etapaDe(r)) || {}; return { tipo: r.proximo_passo_tipo || pd.tipo || '', data: r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : pd.data || '', nota: r.proximo_passo_tipo ? notaPasso(r) : r.proximo_passo || '' }; })())}
       </div>
       ${G ? '</div>' : ''}
+      ${CB ? cbFecha + cbAbre('reun', 'Reuniões', cbRes.reun) : ''}
       ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
       ${G ? '<details class="gsec" style="order:-2"><summary><span>Reuniões<small>Diagnóstico e outras reuniões, na agenda e no TickTick</small></span></summary>' : ''}
       <div id="blReun"><div class="grupo">Reuniões</div>
@@ -3668,12 +3719,16 @@ function telaFormReuniao(P) {
       <label class="fl" id="nrResumo" hidden><span>Resumo da reunião</span><textarea name="nr_abordado" rows="5" placeholder="Cole aqui o resumo do Granola."></textarea></label>
       <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}</div>
       ${G ? '</details>' : ''}
+      ${CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas) : ''}
       <label class="fl" style="${G ? 'order:-1' : ''}"><span>Anotações gerais</span><textarea name="observacoes" rows="3">${esc(r.observacoes || '')}</textarea></label>
-      <button class="zap grande" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
+      ${CB ? cbFecha : ''}
+      <button class="zap grande${CB ? ' cb-oculto' : ''}" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
       ${nova ? '' : '<div class="sub" id="rascInfo" style="margin-top:4px;text-align:center"></div>'}
       ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
       <div class="sub" id="msgRe"></div>
-    </form>`;
+    </form>
+    ${CB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
+  if (CB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
@@ -3712,6 +3767,7 @@ function telaFormReuniao(P) {
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && (ADMIN || GER())) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
+  if (CB) ligarCardLeitura(P, f, r, base);
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
   if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '', ida: base.data_viagem || '', volta: base.data_volta || '' }));
@@ -4401,6 +4457,81 @@ function acNovo(P, cab) {
     AC_VER = novo ? novo.user_id : null; await telaAcessos(P); window.scrollTo(0, 0);
     const bl = P.querySelector('[data-link]'); if (bl && r && r.link) { mostrarLinkAcesso(bl.nextElementSibling, body.nome, r.link); bl.hidden = true; }
     aviso(r && r.ja_estava ? 'Já estava na equipe: dados atualizados.' : 'Acesso de ' + primeiro(body.nome) + ' liberado. Agora mande o link pelo WhatsApp.');
+  };
+}
+
+/* ---------- card do Comercial em leitura (etapa 3 do layout) ----------
+   O formulário continua inteiro por baixo; aqui só se mostra o resumo, uma ação principal e os blocos fechados. */
+const cbOlho = () => { try { return localStorage.getItem('olhoValores') === '1'; } catch (_) { return false; } };
+function cbAcao(r, base) {
+  const et = etapaDe(r), IT = (r.itens || []).filter(x => !x.cancelado_em);
+  if (r.resultado === 'Em andamento' && !r.assumido_por) return ['assumir', 'Assumir'];
+  if (et === 'Novo lead' || et === 'Em cotação') return podeAba('cotador') ? ['cotar', cotsDe(base.id).length ? 'Nova cotação' : 'Montar a cotação'] : ['etapa', 'Mudar etapa'];
+  if (et === 'Cotação enviada' || et === 'Follow-up') return ['fechou', 'Fechou'];
+  if (et === 'Fechou' && !(IT.length && IT.every(VENDA.enviado))) return ['emitiu', 'Emitiu'];
+  return null;
+}
+function htmlCardLeitura(r, base) {
+  const et = etapaDe(r), hoje = hojeISO(), ativo = r.resultado === 'Em andamento';
+  const dias = Math.max(0, Math.floor((Date.now() - new Date(r.etapa_desde || r.created_at || r.data)) / 864e5));
+  const atras = ativo && r.proximo_passo_data && String(r.proximo_passo_data).slice(0, 10) < hoje;
+  const IT = (r.itens || []).filter(x => !x.cancelado_em);
+  const venda = IT.reduce((a, x) => a + (+x.venda || 0), 0) || +r.valor_fechado || 0, custo = IT.reduce((a, x) => a + (+x.custo || 0), 0);
+  const verMg = ADMIN || VER_MARGEM() || base.responsavel_id === D.meuId;
+  const nc = cotsDe(base.id).length, ult = nc ? cotsDe(base.id)[0] : null;
+  const lin = (rot, val, cls) => `<div class="cbr-l"><span>${rot}</span><span class="${cls || ''}">${val}</span></div>`;
+  const acao = cbAcao(r, base);
+  const zap = typeof zapLink === 'function' && r.contato && String(r.contato).replace(/\D/g, '').length >= 10 ? zapLink(r.contato, r.cliente, `Olá, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`) : '';
+  return `<span class="cb-etapa">${esc(et)}${ativo ? ` · ${dias} ${dias === 1 ? 'dia' : 'dias'} nesta etapa` : ''}</span>
+    <div class="cbr">
+      ${ativo ? lin('Próximo passo', esc([r.proximo_passo, r.proximo_passo_data ? 'retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''].filter(Boolean).join(' · ') || 'Sem próximo passo'), atras || (!r.proximo_passo && !r.proximo_passo_data) ? 'alerta' : '') : ''}
+      ${lin('Viagem', esc(r.trecho || 'Sem trecho') + (r.data_viagem ? ' · ' + dataCurta(dia(r.data_viagem)) : ''))}
+      ${lin('Responsável', r.responsavel_id ? esc(nomeTime(r.responsavel_id) || 'Outra pessoa') : 'Sem responsável', r.responsavel_id ? '' : 'alerta')}
+      ${podeAba('cotador') ? lin('Cotação', nc ? esc(nc + (nc === 1 ? ' ligada ao card' : ' ligadas ao card')) + (ult ? ' · ' + esc(resumoEnvios(ult)) : '') : 'Nenhuma ligada ao card', nc ? '' : (et === 'Cotação enviada' || et === 'Follow-up' ? 'alerta' : '')) : ''}
+      ${venda ? lin('Venda', `<span class="cb-valor">${brl2(venda)}</span>`) : (+r.valor_estimado ? lin('Valor cotado', `<span class="cb-valor">${brl2(+r.valor_estimado)}</span>`) : '')}
+      ${venda && custo && verMg ? lin('Lucro bruto', `<span class="cb-valor">${brl2(venda - custo)}</span>`) : ''}
+      ${venda || +r.valor_estimado ? `<button type="button" class="cb-olho" id="cbOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button>` : ''}
+    </div>
+    ${acao ? `<button type="button" class="ac-prim" id="cbPrim" data-acao="${acao[0]}">${acao[1]}</button>` : ''}
+    <div class="cb-txts">${ativo && et !== 'Não fechou' ? '<button type="button" data-cbt="perdeu">Não fechou</button>' : ''}<button type="button" data-cbt="etapa">Mudar etapa</button>${zap ? `<a href="${esc(zap)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</div>`;
+}
+function ligarCardLeitura(P, f, r, base) {
+  document.body.classList.toggle('sem-valores', cbOlho());
+  const abrir = (k, on = true) => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (!c) return null; c.classList.toggle('aberto', on); const b = c.querySelector('.cb-ed'); if (b) b.textContent = on ? 'Fechar' : b.dataset.rot; return c; };
+  P.querySelectorAll('[data-cbed]').forEach(b => { b.dataset.rot = b.textContent; b.onclick = () => abrir(b.dataset.cbed, !b.closest('.cb').classList.contains('aberto')); });
+  const ver = (el) => el && setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+  const etapa = (v) => { const c = abrir('etapa'); const b = v && $('reRes') && $('reRes').querySelector(`[data-v="${v}"]`); if (b) b.click(); ver(v === 'Fechou' && $('blFechou') ? $('blFechou') : c); };
+  if ($('cbOlho')) $('cbOlho').onclick = () => { const on = !cbOlho(); try { localStorage.setItem('olhoValores', on ? '1' : '0'); } catch (_) {} document.body.classList.toggle('sem-valores', on); $('cbOlho').textContent = on ? 'Mostrar valores' : 'Esconder valores'; };
+  if ($('cbPrim')) $('cbPrim').onclick = () => {
+    const a = $('cbPrim').dataset.acao;
+    if (a === 'assumir' && $('assumirAt')) return $('assumirAt').click();
+    if (a === 'cotar' && $('montarCot')) return $('montarCot').click();
+    if (a === 'fechou') return etapa('Fechou');
+    if (a === 'emitiu') { abrir('etapa'); const c = abrir('atend'); if ($('reEmitiu') && !$('reEmitiu').hidden) $('reEmitiu').click(); ver($('reServicos') || c); return; }
+    etapa(null);
+  };
+  P.querySelectorAll('[data-cbt]').forEach(b => b.onclick = () => b.dataset.cbt === 'perdeu' ? etapa('Não fechou') : etapa(null));
+  // o que mudou desde que o card abriu: nome do campo, de e para
+  const rotulo = (el) => { if (!el) return ''; if (el.name === 'etapa') return 'Etapa'; const l = el.closest('label.fl'); const t = l && l.querySelector('span'); return t ? t.textContent.replace(/\s*\(.*?\)\s*$/, '').trim() : ''; };
+  const mostra = (el) => { if (!el) return ''; if (el.tagName === 'SELECT') return (el.selectedOptions[0] || {}).textContent || ''; if (el.type === 'checkbox') return el.checked ? 'sim' : 'não'; if (el.type === 'date' && el.value) return el.value.split('-').reverse().join('/'); return el.value; };
+  const foto = () => { const m = {}; [...f.elements].forEach(el => { if (!el.name || el.type === 'submit' || el.type === 'button' || /^(nr_|cn_)/.test(el.name) && !el.value) return; if ((el.type === 'radio') && !el.checked) return; m[el.name] = { v: el.type === 'checkbox' ? String(el.checked) : el.value, d: mostra(el), r: rotulo(el), h: el.type === 'hidden' }; }); m._itens = { v: f._itens ? JSON.stringify(f._itens()) : '', d: '', r: 'Serviços, custos e valores', h: true }; try { const fe = f._fech ? f._fech() : null; m._fech = { v: fe ? JSON.stringify(fe) : '', d: '', r: 'Pagamento do cliente', h: true }; } catch (_) {} return m; };
+  let ini = null;
+  const difs = () => { if (!ini) return []; const a = foto(), L = []; Object.keys({ ...ini, ...a }).forEach(k => { const x = ini[k] || { v: '' }, y = a[k] || { v: '' }; if (x.v === y.v) return; L.push({ r: y.r || x.r || 'Outro campo', de: x.d, para: y.d, h: y.h || x.h }); }); return L; };
+  const desenha = () => {
+    const L = difs(), n = L.length; if (!$('cbBarra')) return;
+    $('cbBarra').hidden = !n; $('cbConta').textContent = n === 1 ? '1 mudança ainda não salva' : n + ' mudanças ainda não salvas';
+    document.body.classList.toggle('ac-com-barra', !!n);
+    if (n) { SUJO = true; PREENCHIDO = true; FORM_PREENCHIDO = f; URL_PREENCHIDO = location.href; }
+  };
+  ['input', 'change', 'click'].forEach(ev => f.addEventListener(ev, () => setTimeout(desenha, 60)));
+  setTimeout(() => { ini = foto(); desenha(); }, 900);
+  if ($('cbRevisar')) $('cbRevisar').onclick = async () => {
+    const L = difs(); if (!L.length) return;
+    const curto = (t) => t && String(t).length <= 40 && !/^[0-9a-f]{8}-/.test(t);
+    const linhas = L.slice(0, 8).map(x => `<b>${esc(x.r)}</b>${!x.h && curto(x.de || 'vazio') && curto(x.para || 'vazio') ? `: ${esc(x.de || 'vazio')} → <b>${esc(x.para || 'vazio')}</b>` : x.r === 'Etapa' ? `: ${esc(ini.etapa.v)} → <b>${esc(f.elements.etapa.value)}</b>` : ''}`);
+    if (L.length > 8) linhas.push(`e mais ${L.length - 8}`);
+    if (!(await confirmarFolha(`Salvar as mudanças${VENDA.numCard(r) ? ' do ' + VENDA.numCard(r) : ''}?`, linhas, 'Confirmar e salvar'))) return;
+    f.requestSubmit($('salvarRe'));
   };
 }
 
