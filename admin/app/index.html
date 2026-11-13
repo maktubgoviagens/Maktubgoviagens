@@ -1191,7 +1191,7 @@ import * as CRM from '/admin/app/crm.js?v=22';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=13';
-import * as COT from '/admin/app/cotador.js?v=55';
+import * as COT from '/admin/app/cotador.js?v=56';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=28';
 import * as ATV from '/admin/app/atividades.js?v=3';
@@ -2073,7 +2073,7 @@ function tela() {
   if (ABA === 'acessos') return telaAcessos(P);
   if (ABA === 'arquivados') return telaArquivados(P);
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, GER: GER(), meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
-  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
+  if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, zapLink, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
@@ -3047,7 +3047,7 @@ function htmlLiberacao(r, L) {
   const I = (ok, n) => `<i class="${ok ? 'ok' : ''}">${ok ? '✓' : n}</i>`;
   const cad = L.ok[0] ? `<small>${esc(L.cli.nome_completo || '')} já está na Gestão.</small><div class="ac"><button type="button" data-gficha="${L.cli.id}">Abrir a base ›</button></div>`
     : !pf ? '<small>Ligue este card a uma ficha do CRM (campo Cliente, mais abaixo) para cadastrar.</small>'
-    : `<small>Cria o login do painel com o e-mail do cliente e liga a ficha do CRM. Ele entra pelo site com o e-mail e um código, sem senha.</small><input type="email" id="libMail" placeholder="${pf.email ? 'E-mail do cliente' : 'E-mail do cliente (a ficha não tem e-mail)'}" value="${esc(pf.email || '')}"><input type="text" id="libNome" placeholder="Nome completo" value="${esc(pf.nome || r.cliente || '')}"><div class="ac"><button type="button" class="p" data-lib-cad="${r.id}">Cadastrar na Gestão</button></div>`;
+    : `<small>Cria o login do painel com o e-mail do cliente e liga a ficha do CRM. No primeiro acesso, ele cria a senha pelo "Esqueci a senha" e depois entra com o e-mail, a senha e um código.</small><input type="email" id="libMail" placeholder="${pf.email ? 'E-mail do cliente' : 'E-mail do cliente (a ficha não tem e-mail)'}" value="${esc(pf.email || '')}"><input type="text" id="libNome" placeholder="Nome completo" value="${esc(pf.nome || r.cliente || '')}"><div class="ac"><button type="button" class="p" data-lib-cad="${r.id}">Cadastrar na Gestão</button></div>`;
   const ctr = L.ok[1] ? `<small>Assinado${L.ctr.assinado_em ? ' em ' + dataBR(String(L.ctr.assinado_em).slice(0, 10)) : ''}.</small>`
     : !L.ok[0] ? '<small>Depois do cadastro: o contrato sai da base do cliente.</small>'
     : L.aberto && L.aberto.status === 'enviado' ? `<small>Enviado${L.aberto.enviado_em ? ' em ' + dataBR(String(L.aberto.enviado_em).slice(0, 10)) : ''}, aguardando a assinatura.</small><div class="ac"><button type="button" class="p" data-lib-ctrst="${L.aberto.id}" data-lib-r="${r.id}">Atualizar status</button><button type="button" data-gficha="${L.cli.id}">Ver contrato ›</button></div>`
@@ -6916,7 +6916,7 @@ Fechamento (3 min): "Amanhã te mando um resumo do que entendi. Se algo estiver 
 Regras: perguntar sobre hábitos e desejos, nunca pedir valores detalhados ou extratos; anotar as palavras do cliente como ele disse (elas vão para o resumo); não recomendar cartão nem estratégia nesta reunião.`;
 function textoAcessoPainel(c) {
   const pf = (D.pessoas || []).find(x => x.cliente_id === c.id), nome = String(c.nome_completo || '').split(' ')[0];
-  return `Oi, ${nome}! Seu painel da Gestão de Milhas Maktub Go já está liberado.\n\nPara entrar: https://www.maktubgo.com.br/acesso/\nUse o seu e-mail${pf && pf.email ? ' (' + pf.email + ')' : ''} e a sua senha. Depois, digite o código de 6 dígitos que chega no seu e-mail.\nSe ainda não criou a sua senha, use o link do e-mail de cadastro que enviamos para você.\n\nLá você faz o seu cadastro: cartões, programas, saldos e quem viaja com você.`;
+  return `Oi, ${nome}! Seu painel da Gestão de Milhas Maktub Go já está liberado.\n\nPara entrar: https://www.maktubgo.com.br/acesso/\nNo primeiro acesso, toque em "Esqueci a senha" e crie a sua com o seu e-mail${pf && pf.email ? ' (' + pf.email + ')' : ''}. Depois é só entrar com o e-mail, a senha e o código de 6 dígitos que chega no seu e-mail.\n\nLá você faz o seu cadastro: cartões, programas, saldos e quem viaja com você.`;
 }
 
 async function fiTarefas(el, c) {

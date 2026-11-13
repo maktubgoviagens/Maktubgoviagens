@@ -2012,7 +2012,7 @@
   let GESTOR = null, CLIENTE = null, USER = null;
   let WA_GESTOR = WA_NUM;
  
-  // ----- Gestor dedicado -----
+  // ----- Contato da equipe -----
   function renderGestor(g) {
     GESTOR = g;
     if (!g) return;
@@ -2025,7 +2025,7 @@
     const meta = [g.horario_atendimento, g.prazo_resposta].filter(Boolean).map(escapeHtml).map(x => `<span>${x}</span>`).join('');
     $('gestorCard').innerHTML = `${gestorFoto(g)}
       <div><div class="k">Seu contato na equipe</div><div class="n">${escapeHtml(g.nome)}</div>
-        <div class="c">${escapeHtml(g.cargo || 'Gestão de Milhas Maktub Go')}</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div>
+        <div class="c">Equipe da Gestão de Milhas Maktub Go</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div>
       <div class="acts"><a class="btn-sm solid" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
         ${g.email ? `<a class="btn-sm" href="mailto:${escapeHtml(g.email)}">E-mail</a>` : ''}
         <a class="btn-sm" href="#reuniao">Agendar reunião</a></div>`;
