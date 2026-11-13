@@ -1067,6 +1067,8 @@ body.cb-leitura #montarCot{margin-top:8px}
 .td-mais{margin-top:8px}
 .td-nova{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.td-nova input{min-height:44px}
 .td-dias{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.rc-bt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.rc-bt button{width:100%;min-height:44px}
+.rc-lin{margin-top:8px;border-top:1px solid var(--linha);padding-top:6px}.rc-lin .lin{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -2403,11 +2405,10 @@ function telaEmissoes(P) {
   P.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const em = D.emissoes.find(x => x.id === b.dataset.e); if (!VER && em && !minha(em) && !pode('checkin') && !LST) return; EM_ED = b.dataset.e; history.pushState(null, '', '#emissoes/' + EM_ED); telaEmissoes(P); scrollTo(0, 0); });
   // checks financeiros direto no card: um toque marca, desmarcar pede confirmação
   P.querySelectorAll('[data-ck-cli]').forEach(b => b.onclick = async () => {
-    if (!b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo: cliente pagou'; return; }
-    b.disabled = true; const id = b.dataset.ckCli;
-    const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', id);
-    if (error) { b.disabled = false; aviso('Não salvou: ' + error.message); return; }
-    const e = D.emissoes.find(x => x.id === id); if (e) e.pago = true; aviso('Recebido do cliente. Vai para a planilha em até 5 minutos.'); telaEmissoes(P);
+    const e = D.emissoes.find(x => x.id === b.dataset.ckCli); if (!e) return;
+    if (!RECEB[e.id]) await carregarReceb([e.id]);
+    const v = await folhaReceb(e, false); if (!v) return;
+    b.disabled = true; if (await registrarReceb(e, v)) telaEmissoes(P); else b.disabled = false;
   });
   P.querySelectorAll('[data-ck-forn]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ckForn, e = D.emissoes.find(x => x.id === id), novo = !e.pago_fornecedor;
@@ -5096,30 +5097,86 @@ function telaConferir(P) {
   });
   P.querySelectorAll('[data-cfdesf]').forEach(b => b.onclick = async () => { b.disabled = true; if (await salvar(b.dataset.cfdesf, false)) { aviso('Voltou para a lista de conferir.'); telaConferir(P); } else b.disabled = false; });
 }
+/* recebimentos do cliente (96-recebimentos-do-cliente.sql): pagamento parcial com valor, data e forma.
+   Quando a soma chega ao valor da venda, a venda fica paga (e a planilha recebe o "Pago" como sempre). Os parciais ficam só no app. */
+let RECEB = {}; // emissao_id -> recebimentos ativos
+const r2 = (x) => Math.round(x * 100) / 100;
+const FORMAS_REC = ['Pix', 'Cartão de crédito', 'Transferência', 'Boleto', 'Dinheiro'];
+const recebidoDe = (e) => r2((RECEB[e.id] || []).reduce((t, x) => t + (+x.valor || 0), 0));
+const faltaDe = (e) => r2(Math.max((+e.valor_receber || 0) - recebidoDe(e), 0));
+async function carregarReceb(ids) {
+  if (!ids.length) return;
+  const q = await sb.from('recebimentos_cliente').select('*').is('arquivado_em', null).in('emissao_id', ids).order('recebido_em');
+  if (q.error) return;
+  ids.forEach(id => { RECEB[id] = []; }); (q.data || []).forEach(x => (RECEB[x.emissao_id] = RECEB[x.emissao_id] || []).push(x));
+}
+// folha com valor (no parcial), data e forma
+function folhaReceb(e, parcial) {
+  return new Promise((ok) => {
+    const falta = faltaDe(e), el = document.createElement('div'); el.className = 'folha';
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${parcial ? 'Recebimento parcial' : 'Recebido o restante'}</div>
+      <p class="ac-fl">${esc(e.comprador || e.produto || 'Cliente')} · falta ${brl2(falta)} de ${brl2(+e.valor_receber || 0)}</p>
+      <form id="frc" autocomplete="off">
+        ${parcial ? `<label class="fl"><span>Valor recebido (R$)</span><input name="valor" type="number" step="0.01" min="0.01" inputmode="decimal" required></label>` : `<p class="ac-fl"><b>${brl2(falta)}</b> entram como recebidos e a venda fica paga.</p>`}
+        <label class="fl"><span>Data em que o dinheiro entrou</span><input name="data" type="date" required value="${hojeISO()}"></label>
+        <label class="fl"><span>Forma</span><select name="forma">${FORMAS_REC.map(f => `<option ${f === (e.forma_pagamento || '') ? 'selected' : ''}>${f}</option>`).join('')}</select></label>
+        <p class="ac-fl" id="frcRes"></p>
+        <button type="submit" class="ac-prim">Confirmar</button><button type="button" class="ac-sec" data-r="0">Voltar e revisar</button></form></div>`;
+    const fim = (v) => { el.remove(); ok(v); };
+    el.querySelector('.folha-fundo').onclick = () => fim(null);
+    el.querySelector('[data-r="0"]').onclick = () => fim(null);
+    const f = el.querySelector('#frc'), res = el.querySelector('#frcRes');
+    if (parcial) f.elements.valor.oninput = () => { const v = +String(f.elements.valor.value).replace(',', '.') || 0; res.textContent = v >= falta - 0.009 ? 'Com esse valor a venda fica quitada.' : v > 0 ? `Depois dele, faltam ${brl2(r2(falta - v))}.` : ''; };
+    f.onsubmit = (ev) => { ev.preventDefault(); const v = parcial ? r2(+String(f.elements.valor.value).replace(',', '.') || 0) : falta; if (!(v > 0)) return; if (v > falta + 0.009) { res.textContent = `O valor passa do que falta (${brl2(falta)}).`; return; } fim({ valor: v, data: f.elements.data.value || hojeISO(), forma: f.elements.forma.value }); };
+    document.body.appendChild(el);
+  });
+}
+// grava o recebimento e, se quitou, marca a venda como paga
+async function registrarReceb(e, v) {
+  const ins = await sb.from('recebimentos_cliente').insert({ emissao_id: e.id, valor: v.valor, recebido_em: v.data, forma: v.forma }).select().single();
+  if (ins.error) { aviso('Não salvou: ' + limparTec(ins.error.message)); return false; }
+  (RECEB[e.id] = RECEB[e.id] || []).push(ins.data);
+  if (faltaDe(e) <= 0.009) {
+    const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', e.id);
+    if (error) { aviso('O recebimento foi salvo, mas a venda não ficou paga: ' + limparTec(error.message)); return true; }
+    e.pago = true; aviso('Venda quitada. O "Pago" vai para a planilha em até 5 minutos.');
+  } else aviso(`Recebimento salvo. Falta ${brl2(faltaDe(e))}.`);
+  return true;
+}
 function telaReceber(P) {
   const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
   P.innerHTML = `<button class="voltar" id="voltar">‹ Voltar</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(soma(L, 'valor_receber'))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>
+      <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(L.reduce((t, e) => t + faltaDe(e), 0))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>
     </div>
-    <div class="sub">Toque em "Recebido" quando o cliente pagar. Vai marcado para a planilha em até 5 minutos.</div>
+    <div class="sub">Registre cada valor com a data em que entrou. Quando a venda fica quitada, o "Pago" vai para a planilha em até 5 minutos.</div>
     <div class="lista">${L.length ? L.map(e => `<div class="card" data-rc="${e.id}">
       <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span></div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
       <div class="info"><div><span>Valor:</span> ${brl2(e.valor_receber)}${e.forma_pagamento ? ' · ' + esc(e.forma_pagamento) : ''}</div>
         ${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}</div>` : ''}
         ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
-      <button class="zap grande" data-ok="${e.id}" style="margin-top:10px;width:100%">Recebido</button>
+        ${recebidoDe(e) ? `<div><span>Recebido:</span> ${brl2(recebidoDe(e))} de ${brl2(e.valor_receber)} · <b>faltam ${brl2(faltaDe(e))}</b></div>` : ''}</div>
+      ${(RECEB[e.id] || []).length ? `<div class="rc-lin">${RECEB[e.id].map(x => `<div class="lin"><span>${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}</span><button class="mini" data-rcarq="${x.id}" data-em="${e.id}">arquivar</button></div>`).join('')}</div>` : ''}
+      <div class="rc-bt"><button class="zap" data-ok="${e.id}">Recebido o restante</button><button class="sec" data-parc="${e.id}">+ Recebimento parcial</button></div>
     </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div><div id="rbBloco"></div>`;
+  // os recebimentos parciais chegam por trás e a tela atualiza uma vez
+  const semRec = L.filter(e => !RECEB[e.id]).map(e => e.id);
+  if (semRec.length) carregarReceb(semRec).then(() => { if (ABA === 'receber' && $('rbBloco')) telaReceber(P); });
   blocoReembolsos();
   $('voltar').onclick = () => voltarA(ANTERIOR || 'financeiro'); // volta para onde a pessoa estava (Início, Financeiro ou Empresa)
-  P.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
-    const id = b.dataset.ok;
-    if (RC_CONF !== id) { RC_CONF = id; b.textContent = 'Toque de novo para confirmar'; return; }
-    RC_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
-    const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', id);
-    if (error) { b.disabled = false; b.textContent = 'Recebido'; aviso('Não salvou: ' + error.message); return; }
-    const e = D.emissoes.find(x => x.id === id); if (e) e.pago = true;
-    aviso('Pagamento marcado como recebido. Vai para a planilha em até 5 minutos.'); telaReceber(P);
+  P.querySelectorAll('[data-ok], [data-parc]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.ok || b.dataset.parc, e = D.emissoes.find(x => x.id === id); if (!e) return;
+    if (!RECEB[e.id]) await carregarReceb([e.id]);
+    const v = await folhaReceb(e, !!b.dataset.parc); if (!v) return;
+    b.disabled = true; if (await registrarReceb(e, v)) telaReceber(P); else b.disabled = false;
+  });
+  // recebimento lançado errado: arquiva (nada se apaga) e a venda volta a ter saldo a receber
+  P.querySelectorAll('[data-rcarq]').forEach(b => b.onclick = async () => {
+    const e = D.emissoes.find(x => x.id === b.dataset.em), x = e && (RECEB[e.id] || []).find(y => String(y.id) === b.dataset.rcarq); if (!x) return;
+    if (!await confirmarFolha('Arquivar este recebimento?', [`${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}.`, `A venda volta a ter ${brl2(r2(faltaDe(e) + (+x.valor || 0)))} a receber.`], 'Arquivar')) return;
+    const { error } = await sb.from('recebimentos_cliente').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', x.id);
+    if (error) { aviso('Não arquivou: ' + limparTec(error.message)); return; }
+    RECEB[e.id] = RECEB[e.id].filter(y => y !== x); aviso('Recebimento arquivado.'); telaReceber(P);
   });
 }
 
