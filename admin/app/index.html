@@ -1350,6 +1350,7 @@ function acoesNovo() {
   if (podeAba('cotador')) L.push(['Cotação rápida', 'Print do site + valor da Maktub', () => ir('cotador', () => COT.novaRapida())]);
   if (pode('comercial') || pode('emissoes')) L.push(['Novo atendimento', pode('comercial') ? 'Cotação para cliente ou emissão B2B' : 'Emissão B2B para agência', () => escolherAtendimento()]);
   if (podeAba('emissoes') && !modoPlanilha()) L.push(['Registrar emissão', 'Nova emissão', () => ir('emissoes', () => { EM_ED = 'nova'; })]);
+  if (modoPlanilha() && linkPlanilha()) L.push(['Lançar na planilha', 'Abre a planilha de vendas no Google Sheets', () => window.open(linkPlanilha(), '_blank', 'noopener')]);
   if (podeAba('crm')) L.push(['Novo cadastro', 'Cliente, passageiro ou parceiro', () => ir('crm', () => CRM.novo())]);
   return L;
 }
@@ -2277,8 +2278,12 @@ const soma = (arr, c) => arr.reduce((s, e) => s + (Number(e[c]) || 0), 0);
 const modoPlanilha = () => !!(D.cfg && D.cfg.origem_emissoes === 'planilha');
 function botaoLancar(id) {
   if (!modoPlanilha()) return `<button class="zap grande" id="${id}" style="margin-top:14px">+ Registrar emissão</button>`;
-  return ''; // vendas entram pelo Fechou do atendimento e pela emissão B2B; a planilha recebe sozinha
+  // vendas entram pelo Fechou do atendimento e pela emissão B2B, e a planilha recebe sozinha;
+  // para lançar direto nela, o link salvo em Comissões e regras
+  const u = linkPlanilha();
+  return u ? `<a class="sec grande" href="${esc(u)}" target="_blank" rel="noopener" style="margin-top:14px;display:block;text-align:center">Abrir a planilha para lançar</a>` : '';
 }
+const linkPlanilha = () => { const u = D.cfg && String(D.cfg.planilha_url || '').trim(); return u && /^https:\/\//.test(u) && (ADMIN || pode('emissoes')) ? u : ''; };
 function infoSinc() {
   if (!modoPlanilha()) return '';
   const u = D.cfg.ultima_sincronizacao ? quando(D.cfg.ultima_sincronizacao) : 'ainda não sincronizado';
