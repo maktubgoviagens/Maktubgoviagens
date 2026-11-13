@@ -1069,6 +1069,11 @@ body.cb-leitura #montarCot{margin-top:8px}
 .td-dias{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .rc-bt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.rc-bt button{width:100%;min-height:44px}
 .rc-lin{margin-top:8px;border-top:1px solid var(--linha);padding-top:6px}.rc-lin .lin{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.cx-banco{border-bottom:1px solid var(--linha);padding:10px 0}.cx-banco:last-of-type{border-bottom:0}
+.cx-banco summary{list-style:none;cursor:pointer;display:grid;gap:6px}.cx-banco summary::-webkit-details-marker{display:none}
+.cx-bt{display:flex;justify-content:space-between;gap:10px;font-size:16px}.cx-bt span{font-weight:500;white-space:nowrap}
+.cx-banco .t{display:block;height:8px;border-radius:999px;background:var(--linha);overflow:hidden}.cx-banco .t i{display:block;height:100%;background:var(--dourado-claro,#B49755)}
+.cx-banco small{font-size:14px;color:var(--tinta-3,#6b6b63)}.cx-banco .lin{font-size:14px;padding-left:4px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1212,7 +1217,7 @@ import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=29';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=18';
-import * as CX from '/admin/app/caixa.js?v=4';
+import * as CX from '/admin/app/caixa.js?v=5';
 import * as DRE from '/admin/app/dre.js?v=8';
 import * as B2B from '/admin/app/b2b.js?v=10';
 import * as IND from '/admin/app/indicacoes.js?v=8';
