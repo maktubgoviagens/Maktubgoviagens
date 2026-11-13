@@ -1181,7 +1181,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=6';
 import * as MKT from '/admin/app/marketing.js?v=26';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=29';
+import * as CARTOES from '/admin/app/cartoes.js?v=30';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=8';
 import * as CRM from '/admin/app/crm.js?v=22';
@@ -1878,7 +1878,7 @@ async function carregar(silencioso, manterTela) {
       sb.from('gestao_tarefas').select('*').limit(5000),
       sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em').order('criado_em', { ascending: false }).limit(3000),
       sb.from('gestao_ciclos').select('cliente_id,inicio,vencimento').limit(5000),
-      sb.from('extrato_milhas').select('cliente_id,data,quantidade,programa').eq('tipo', 'expiracao').limit(5000),
+      sb.from('extrato_milhas').select('cliente_id,data,quantidade,programa').eq('tipo', 'expiracao').is('arquivado_em', null).limit(5000),
       sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
     ]) : null,
     CRMok ? Promise.all([
@@ -5027,7 +5027,7 @@ const maisPartes = (t) => { const [a, ...b] = String(t).split(': '); const r = b
 function maisConta() {
   const L = [];
   if (ADMIN) L.push({ href: '/admin/', t: 'Administração completa', d: 'Carteiras e documentos', c: 'administração completa' }, { href: '/painel/', t: 'Meu painel de cliente', d: '', c: 'meu painel' });
-  if (ADMIN) L.push({ k: 'arquivados', t: 'Arquivados', d: 'Cards, cotações e fichas arquivados. Dá para restaurar', c: 'arquivados' });
+  if (ADMIN) L.push({ k: 'arquivados', t: 'Arquivados', d: 'Cards, cotações, fichas, documentos e lançamentos arquivados. Dá para restaurar', c: 'arquivados' });
   if (podeAba('opmilhas')) L.push({ k: 'opmilhas', t: 'Operação de milhas dos sócios', d: 'Arquivo', c: 'operação dos sócios' });
   if (podeAba('emissoes')) L.push({ b2b: 1, t: 'Emissão B2B para agências', d: 'Fora de uso, mas continua funcionando. O histórico fica em Emissões', c: 'B2B' });
   return L;
@@ -5047,14 +5047,31 @@ const ARQ = {
   cotacoes: { t: 'Cotações', tab: 'propostas', sel: 'id,titulo,modelo,atualizado_em,arquivado_em,arquivado_por', nome: (x) => x.titulo || 'Cotação sem título',
     det: (x) => x.modelo ? 'Cotação ' + ({ go: 'Go', corp: 'Corporativo', rapida: 'Rápida' }[x.modelo] || x.modelo) : '', volta: () => ['Ela volta para a lista de cotações, do jeito que estava.'] },
   fichas: { t: 'Fichas', tab: 'pessoas', sel: 'id,nome,celular,arquivado_em,arquivado_por', nome: (x) => x.nome || 'Ficha',
-    det: (x) => x.celular || '', volta: () => ['Ela volta para as fichas de clientes, com tudo o que estava ligado a ela.'] }
+    det: (x) => x.celular || '', volta: () => ['Ela volta para as fichas de clientes, com tudo o que estava ligado a ela.'] },
+  documentos: { t: 'Documentos', tab: 'documentos', sel: 'id,titulo,tipo,cliente_id,arquivo_path,arquivado_em,arquivado_por', nome: (x) => x.titulo || 'Documento',
+    det: (x) => nomeCli(x.cliente_id), volta: (x) => ['Ele volta para o painel de ' + esc(nomeCli(x.cliente_id)) + ', do jeito que estava.'] },
+  lancamentos: { t: 'Lançamentos', tab: 'extrato_milhas', sel: 'id,grupo_id,cliente_id,programa,tipo,quantidade,data,arquivado_em,arquivado_por', nome: (x) => (x.programa || 'Milhas') + ' · ' + (x.grupo_id && /^transf/.test(x.tipo) ? 'Transferência' : TIPO_CART[x.tipo] || x.tipo || ''),
+    det: (x) => [nomeCli(x.cliente_id), num(x.grupo_id && /^transf/.test(x.tipo) ? Math.abs(x.quantidade) : x.quantidade), dataBR(x.data)].join(' · '),
+    // as linhas de uma transferência aparecem juntas, numa linha só
+    juntar: (L) => L.filter((x, i) => !x.grupo_id || L.findIndex(y => y.grupo_id === x.grupo_id) === i),
+    volta: (x) => ['Ele volta para o saldo, o painel e o relatório de ' + esc(nomeCli(x.cliente_id)) + ', e o painel é recalculado.'],
+    // tira o arquivado e o cancelado que o arquivar pôs (no lançamento e na economia ligada a ele) e recalcula o painel
+    restaurar: async (x, L) => {
+      const ids = x.grupo_id ? L.filter(y => y.grupo_id === x.grupo_id).map(y => y.id) : [x.id];
+      const r = await sb.from('extrato_milhas').update({ arquivado_em: null, arquivado_por: null, cancelado_em: null, cancelado_por: null }).in('id', ids);
+      if (r.error) return r.error;
+      await sb.from('historico_economia').update({ cancelado_em: null }).in('extrato_id', ids);
+      if (!await recalcularPainel(x.cliente_id)) aviso('Restaurado, mas o painel do cliente não recalculou agora. Abra a carteira dele para recalcular.');
+      return null;
+    } }
 };
 async function telaArquivados(P) {
   P.innerHTML = '<h1 class="titulo">Arquivados</h1><div class="sub">Carregando…</div>';
   const R = {};
   await Promise.all(Object.entries(ARQ).map(async ([k, a]) => {
     const q = await sb.from(a.tab).select(a.sel).not('arquivado_em', 'is', null).order('arquivado_em', { ascending: false }).limit(300);
-    R[k] = q.error ? null : q.data || [];
+    R[k] = q.error ? null : a.juntar ? a.juntar(q.data || []) : q.data || [];
+    if (a.juntar && !q.error) R[k]._todos = q.data || [];
   }));
   if (ABA !== 'arquivados') return;
   const a = ARQ[ARQ_TIPO], L = R[ARQ_TIPO];
@@ -5063,7 +5080,7 @@ async function telaArquivados(P) {
     <button class="voltar" type="button" id="arqVoltar">‹ Mais</button>
     <h1 class="titulo"><em>Arquivados</em></h1>
     <div class="sub">Saíram das telas, dos números e dos avisos. Nada foi apagado.</div>
-    <div class="seg" id="arqTipo" style="margin-top:12px">${Object.entries(ARQ).map(([k, x]) => `<button type="button" data-t="${k}" class="${k === ARQ_TIPO ? 'on' : ''}">${x.t}${R[k] && R[k].length ? ' ' + R[k].length : ''}</button>`).join('')}</div>
+    <div class="chips" id="arqTipo" style="margin-top:12px">${Object.entries(ARQ).map(([k, x]) => `<button type="button" data-t="${k}" class="${k === ARQ_TIPO ? 'on' : ''}">${x.t}${R[k] && R[k].length ? ' ' + R[k].length : ''}</button>`).join('')}</div>
     ${L === null ? '<div class="vazio" style="margin-top:12px">Não deu para carregar agora. Tente de novo em instantes.</div>'
       : L.length ? `<div class="ac-lista" style="margin-top:12px">${L.map(x => `<div class="ac-pes arq-l"><span><b>${esc(a.nome(x))}</b><small>${esc([a.det(x), 'arquivado em ' + quando(x.arquivado_em) + (nomeTime(x.arquivado_por) ? ' por ' + nomeTime(x.arquivado_por) : '')].filter(Boolean).join(' · '))}</small></span><button type="button" class="ac-sec arq-r" data-r="${esc(x.id)}">Restaurar</button></div>`).join('')}</div>`
       : `<div class="vazio" style="margin-top:12px">Nenhum item arquivado em ${a.t.toLowerCase()}.</div>`}`;
@@ -5073,7 +5090,7 @@ async function telaArquivados(P) {
     const x = (L || []).find(y => String(y.id) === b.dataset.r); if (!x) return;
     if (!await confirmarFolha('Restaurar ' + a.nome(x) + '?', a.volta(x), 'Restaurar')) return;
     b.disabled = true;
-    const { error } = await sb.from(a.tab).update({ arquivado_em: null, arquivado_por: null }).eq('id', x.id);
+    const error = a.restaurar ? await a.restaurar(x, L._todos || L) : (await sb.from(a.tab).update({ arquivado_em: null, arquivado_por: null }).eq('id', x.id)).error;
     if (error) { b.disabled = false; aviso('Não restaurou: ' + limparTec(error.message)); return; }
     aviso('Restaurado.'); await carregar(true);
   });
@@ -6207,7 +6224,7 @@ async function fiCarteira(el, c) {
   if (CLI !== c.id || FI_ABA !== 'carteira' || !$('fiCorpo')) return;
   if (ex.error) { el.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou a carteira: ' + ex.error.message))}</div>`; return; }
   c._ex = ex.data || []; c._refs = refs; c._W = CART.calcCarteira(c._ex);
-  const W = c._W, L = c._ex.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || ''))).slice(0, 20);
+  const W = c._W, L = c._ex.filter(x => !x.arquivado_em).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at || '').localeCompare(String(a.created_at || ''))).slice(0, 20);
   const patr = W.programas.reduce((t, p) => t + (refs[p.key] !== undefined ? p.saldo * refs[p.key] / 1000 : 0), 0);
   el.innerHTML = `
     <div class="numeros" style="margin-top:12px">
@@ -6228,17 +6245,21 @@ async function fiCarteira(el, c) {
     <div class="secao">Por programa</div>
     <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
     <div class="secao">Últimos lançamentos</div>
-    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref ? '' : `<button class="mini" data-del="${x.id}">excluir</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref ? '' : `<button class="mini" data-del="${x.id}">arquivar</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
       <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
   el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
+  // arquivar no lugar de excluir: o lançamento também fica cancelado, e o saldo, o painel e o relatório do cliente já ignoram o cancelado.
+  // A economia ligada a ele fica marcada como cancelada (sai do painel). Nada é apagado.
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const x = c._ex.find(y => String(y.id) === b.dataset.del); if (!x) return;
-    if (CONFIRMA !== 'ex' + x.id) { CONFIRMA = 'ex' + x.id; b.textContent = 'confirmar'; return; }
-    CONFIRMA = null;
     const ids = x.grupo_id ? c._ex.filter(y => y.grupo_id === x.grupo_id).map(y => y.id) : [x.id];
-    const { error } = await sb.from('extrato_milhas').delete().in('id', ids);
-    if (error) { aviso('Não excluiu: ' + error.message); return; }
-    await depoisDaCarteira(c, 'Lançamento excluído e painel recalculado.');
+    if (!await confirmarFolha('Arquivar este lançamento?', [esc(x.programa) + ' · ' + esc(TIPO_CART[x.tipo] || x.tipo) + ' · ' + num(x.quantidade) + ' em ' + dataBR(x.data) + '.',
+      ids.length > 1 ? `As ${ids.length} linhas deste lançamento saem juntas do saldo, do painel e do relatório do cliente.` : 'Ele sai do saldo, do painel e do relatório do cliente.', 'Nada é apagado. Dá para restaurar em Mais, Arquivados.'], 'Arquivar')) return;
+    const agora = new Date().toISOString();
+    const { error } = await sb.from('extrato_milhas').update({ arquivado_em: agora, arquivado_por: D.meuId, cancelado_em: agora, cancelado_por: D.meuId }).in('id', ids);
+    if (error) { aviso('Não arquivou: ' + limparTec(error.message)); return; }
+    await sb.from('historico_economia').update({ cancelado_em: agora }).in('extrato_id', ids).is('cancelado_em', null);
+    await depoisDaCarteira(c, 'Lançamento arquivado e painel recalculado.');
   });
   if (FI_FORM) formCarteira(c);
 }
@@ -6738,7 +6759,7 @@ async function fiRelatorio(el, c) {
 /* documentos */
 async function fiDocs(el, c) {
   el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando...</div>';
-  const { data, error } = await sb.from('documentos').select('*').eq('cliente_id', c.id).order('created_at', { ascending: false });
+  const { data, error } = await sb.from('documentos').select('*').eq('cliente_id', c.id).is('arquivado_em', null).order('created_at', { ascending: false });
   if (CLI !== c.id || FI_ABA !== 'docs' || !$('fiCorpo')) return;
   if (error) { el.innerHTML = `<div class="vazio">${esc(limparTec('Não carregou: ' + error.message))}</div>`; return; }
   el.innerHTML = `
@@ -6748,7 +6769,7 @@ async function fiDocs(el, c) {
       <label class="fl"><span>Arquivo (PDF, imagem ou HTML, até 20 MB)</span><input type="file" name="arquivo" required accept=".pdf,.html,.htm,.png,.jpg,.jpeg,.webp"></label>
       <button class="zap" type="submit" id="upBtn" style="margin-top:10px;width:100%">Enviar documento</button></form>
     <div class="secao">Enviados</div>
-    <div class="bloco" style="margin-top:0">${(data || []).length ? data.map(d => `<div class="lanc"><div><b>${esc(d.titulo)}</b><small>${esc((TIPO_DOC.find(x => x[0] === d.tipo) || [0, d.tipo])[1])} · ${new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><div class="q"><button class="mini" data-ver="${esc(d.arquivo_path)}">ver</button><button class="mini" data-rm="${d.id}">excluir</button></div></div>`).join('') : '<div class="vazio">Nenhum documento enviado.</div>'}</div>`;
+    <div class="bloco" style="margin-top:0">${(data || []).length ? data.map(d => `<div class="lanc"><div><b>${esc(d.titulo)}</b><small>${esc((TIPO_DOC.find(x => x[0] === d.tipo) || [0, d.tipo])[1])} · ${new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><div class="q"><button class="mini" data-ver="${esc(d.arquivo_path)}">ver</button><button class="mini" data-rm="${d.id}">arquivar</button></div></div>`).join('') : '<div class="vazio">Nenhum documento enviado.</div>'}</div>`;
   $('fDoc').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target, file = f.elements.arquivo.files[0];
     if (!tv(f, 'titulo') || !file) { aviso('Informe o título e escolha o arquivo.'); return; }
@@ -6768,15 +6789,13 @@ async function fiDocs(el, c) {
     const { data: s, error: er } = await sb.storage.from('documentos').createSignedUrl(b.dataset.ver, 300);
     if (er) { w && w.close(); aviso('Não abriu: ' + er.message); } else if (w) w.location = s.signedUrl;
   });
+  // arquivar no lugar de excluir (93-arquivar-documentos-e-lancamentos.sql): some do painel do cliente e o arquivo fica guardado
   el.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
     const d = data.find(x => String(x.id) === b.dataset.rm); if (!d) return;
-    if (CONFIRMA !== 'doc' + d.id) { CONFIRMA = 'doc' + d.id; b.textContent = 'confirmar'; return; }
-    CONFIRMA = null;
-    // primeiro o registro (é ele que aparece no painel do cliente), depois o arquivo: se o registro falhar, nada some
-    const { error: er } = await sb.from('documentos').delete().eq('id', d.id);
-    if (er) { aviso('Não excluiu: ' + er.message); return; }
-    const rm = await sb.storage.from('documentos').remove([d.arquivo_path]);
-    aviso(rm.error ? 'Documento tirado do painel. O arquivo ficou guardado no Supabase.' : 'Documento excluído.'); fiDocs(el, c);
+    if (!await confirmarFolha('Arquivar "' + d.titulo + '"?', ['O documento sai do painel do cliente.', 'Nada é apagado, o arquivo continua guardado. Dá para restaurar em Mais, Arquivados.'], 'Arquivar')) return;
+    const { error: er } = await sb.from('documentos').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', d.id);
+    if (er) { aviso('Não arquivou: ' + limparTec(er.message)); return; }
+    aviso('Documento arquivado. Saiu do painel do cliente.'); fiDocs(el, c);
   });
 }
 

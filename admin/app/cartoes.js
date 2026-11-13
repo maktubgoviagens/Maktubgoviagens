@@ -888,7 +888,7 @@ async function desenharSimulacao(ctx) {
     const [sv, sa, rg, refs, bu, us, ex] = await Promise.all([sb.from('cartoes_salas_vip').select('catalogo_id,rede_ou_sala,tipo,acessos_titular_ano,gasto_minimo_rs,gasto_minimo_faturas'),
       aeros.length ? sb.from('salas_aeroportos').select('*').in('aeroporto_iata', aeros) : Promise.resolve({ data: [] }), sb.from('regras_estrategia').select('*').eq('ativa', true), X.CART.valoresRef(),
       sb.from('cliente_beneficios_uso').select('*').eq('cliente_id', ctx.c.id), sb.from('cliente_salas_uso').select('cartao_id,pessoas,data').eq('cliente_id', ctx.c.id).gte('data', ano),
-      sb.from('extrato_milhas').select('data,programa,tipo,quantidade').eq('cliente_id', ctx.c.id).gte('data', desde)]);
+      sb.from('extrato_milhas').select('data,programa,tipo,quantidade').eq('cliente_id', ctx.c.id).is('arquivado_em', null).gte('data', desde)]);
     ctx.simDados = { salas: sv.data || [], salasAero: sa.data || [], regras: rg.data || [], refs, aero: chaveA, beneficiosUso: bu.error ? [] : (bu.data || []), usoSalas: us.data || [], extrato: ex.data || [] };
   }
   if (!box.isConnected) return;
