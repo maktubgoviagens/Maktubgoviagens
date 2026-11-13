@@ -16,7 +16,10 @@ const ehLead = (D, p) => !ehCliente(D, p) && !(((p.papeis || []).includes('forne
 export const leadOuCliente = (D, p) => ehCliente(D, p) || ehLead(D, p);
 const rotulos = (D, p) => [ehCliente(D, p) ? 'Cliente' : !ehLead(D, p) ? '' : 'Lead' + ((p.interesse || []).length ? ' · ' + p.interesse.map(k => INTERESSES[k] || k).join(' e ') : ''), ...(p.papeis || []).filter(k => k === 'gestao' || k === 'passageiro' || k === 'parceiro' || k === 'fornecedor').map(k => PAPEIS[k])].filter(Boolean);
 const ORIGENS = ['Site', 'Indicação', 'Instagram', 'WhatsApp', 'Cliente antigo', 'Outro'];
-let VISTA = 'lista', PID = null, BUSCA = '', FILTRO = 'todos', MSG = '';
+let VISTA = 'lista', PID = null, BUSCA = '', FILTRO = 'todos', MSG = '', TODAS = false;
+const VISTOS_K = 'crmVistos';
+const vistos = () => { try { return JSON.parse(localStorage.getItem(VISTOS_K) || '[]'); } catch (_) { return []; } };
+const marcarVisto = (id) => { try { localStorage.setItem(VISTOS_K, JSON.stringify([id, ...vistos().filter(x => x !== id)].slice(0, 20))); } catch (_) {} };
 
 const so = (t) => String(t || '').replace(/\D/g, '');
 const tel = (t) => { const d = so(t); if (d.length < 10) return ''; return (d.length === 12 || d.length === 13) && d.startsWith('55') ? d.slice(2) : d; };
@@ -104,7 +107,7 @@ export function telaCRM(P, X) {
   return telaLista(P, X);
 }
 
-function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
+function ir(X, v, id) { if (X.sairOk && !X.sairOk()) return; if (v === 'ficha' && id) marcarVisto(id); VISTA = v; PID = id || null; MSG = ''; const h = v === 'lista' ? '#crm' : v === 'nova' ? '#crm/nova' : v === 'dups' ? '#crm/duplicadas' : `#crm/${id}${v === 'editar' ? '/editar' : ''}`; history.pushState(null, '', h); telaCRM(X.$('pagina'), X); scrollTo(0, 0); }
 
 function telaLista(P, X) {
   const { D, $, esc, brlC, ADMIN } = X;
@@ -117,23 +120,28 @@ function telaLista(P, X) {
     .map(p => ({ p, r: resumo(D, p.id) }))
     .sort((a, b) => FILTRO === 'aniv' ? new Date(a.p.nascimento).getDate() - new Date(b.p.nascimento).getDate() : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   const dups = (D.dups || []).length;
+  const semFiltro = !BUSCA && FILTRO === 'todos', V = vistos(), porId = new Map(lista.map(x => [x.p.id, x]));
+  const recentes = semFiltro && !TODAS ? V.map(id => porId.get(id)).filter(Boolean) : [];
+  const mostra = semFiltro && !TODAS ? (recentes.length ? recentes : lista.slice(0, 20)) : lista.slice(0, 300);
+  const linha = ({ p, r }) => `<button type="button" class="ac-pes" data-p="${p.id}"><span><b>${esc(p.nome)}</b><small>${esc([rotulos(D, p).join(' · '), p.celular || '', FILTRO === 'aniv' && p.nascimento ? 'faz ' + (idade(p.nascimento) + 1) + ' em ' + new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''].filter(Boolean).join(' · '))}</small></span>${r.n ? `<span class="crm-v">${verValor(X) ? `<b>${brlC(r.total)}</b>` : ''}<small>${r.n} ${r.n === 1 ? 'compra' : 'compras'}</small></span>` : '<i>›</i>'}</button>`;
+  const nCli = todas.filter(p => ehCliente(D, p)).length, nLead = todas.filter(p => ehLead(D, p)).length;
   P.innerHTML = `
     <h1 class="titulo">Clientes</h1>
-    <div class="sub">${todas.length} fichas · ${todas.filter(p => ehCliente(D, p)).length} ${todas.filter(p => ehCliente(D, p)).length === 1 ? 'cliente' : 'clientes'} · ${todas.filter(p => ehLead(D, p)).length} ${todas.filter(p => ehLead(D, p)).length === 1 ? 'lead' : 'leads'} · ${todas.filter(p => (p.papeis || []).includes('gestao')).length} na Gestão</div>
-    ${ADMIN ? `<button class="sec grande" id="irDups" style="margin-top:12px;width:100%">${dups ? (dups === 1 ? '1 possível ficha duplicada' : dups + ' possíveis fichas duplicadas') + ' para confirmar ›' : 'Revisar fichas duplicadas ›'}</button>` : ''}
-    ${X.irOrigens && X.IND.pendentes(X) ? `<button class="sec grande" id="irOrigens" style="margin-top:10px;width:100%">${X.IND.pendentes(X)} ${X.IND.pendentes(X) === 1 ? 'cliente' : 'clientes'} com origem para marcar ›</button>` : ''}
-    <button class="zap grande" id="novaP" style="margin-top:10px;width:100%">+ Novo cadastro</button>
-    <div id="cadOp"></div>
-    <input class="busca" id="buscaP" type="search" placeholder="Buscar por nome, apelido, telefone ou e-mail" value="${esc(BUSCA)}">
+    <div class="sub">${todas.length} fichas · ${nCli} ${nCli === 1 ? 'cliente' : 'clientes'} · ${nLead} ${nLead === 1 ? 'lead' : 'leads'}</div>
+    <label class="mais-busca"><span aria-hidden="true">⌕</span><input type="search" id="buscaP" placeholder="Buscar por nome, apelido, telefone ou e-mail" value="${esc(BUSCA)}" autocomplete="off"></label>
     <div class="chips" id="filP" style="margin-top:10px">${filtros.map(([k, l]) => `<button data-f="${k}" class="${k === FILTRO ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <div class="lista">${lista.length ? lista.slice(0, 300).map(({ p, r }) => `
-      <button class="cli" data-p="${p.id}"><div><div class="nome">${esc(p.nome)}</div>
-        <div class="meta">${rotulos(D, p).join(' · ')}${p.celular ? ' · ' + esc(p.celular) : ''}${FILTRO === 'aniv' && p.nascimento ? ' · faz ' + (idade(p.nascimento) + 1) + ' em ' + new Date(p.nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}</div></div>
-        <div class="val">${r.n ? `${verValor(X) ? `<b>${brlC(r.total)}</b>` : ''}<span>${r.n} ${r.n === 1 ? 'compra' : 'compras'}</span>` : ''}</div></button>`).join('') : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo cadastro para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}</div>
-    ${lista.length > 300 ? '<div class="sub">Mostrando as 300 primeiras. Use a busca para achar as demais.</div>' : ''}
-    ${verValor(X) ? '<div class="sub">Valores pelas emissões registradas no app.</div>' : ''}`;
+    ${ADMIN && dups ? `<div class="ac-lista" style="margin-top:10px"><button type="button" class="ac-pes" id="irDups"><span><b>Fichas duplicadas para confirmar</b><small>Revisar e juntar</small></span><span class="kpill">${dups}</span></button></div>` : ''}
+    ${X.irOrigens && X.IND.pendentes(X) ? `<div class="ac-lista" style="margin-top:10px"><button type="button" class="ac-pes" id="irOrigens"><span><b>Origens para marcar</b><small>Clientes sem origem definida</small></span><span class="kpill">${X.IND.pendentes(X)}</span></button></div>` : ''}
+    ${semFiltro && !TODAS ? `<div class="secao">${recentes.length ? 'Vistos por último' : 'Clientes'}</div>` : `<div class="secao">${lista.length} ${lista.length === 1 ? 'ficha' : 'fichas'}</div>`}
+    ${mostra.length ? `<div class="ac-lista">${mostra.map(linha).join('')}</div>` : `<div class="vazio">${BUSCA ? 'Ninguém encontrado. Toque em Novo cadastro para cadastrar.' : 'Nenhuma ficha neste filtro.'}</div>`}
+    ${semFiltro && !TODAS ? `<button type="button" class="ac-sec" id="verTodas">Ver todas as ${todas.length} fichas</button>` : ''}
+    ${lista.length > 300 && !(semFiltro && !TODAS) ? '<div class="sub">Mostrando as 300 primeiras. Use a busca para achar as demais.</div>' : ''}
+    <button type="button" class="ac-sec" id="novaP">+ Novo cadastro</button>
+    <div id="cadOp"></div>
+    ${verValor(X) ? '<div class="sub" style="margin-top:8px">Valores pelas emissões registradas no app.</div>' : ''}`;
+  if ($('verTodas')) $('verTodas').onclick = () => { TODAS = true; telaLista(P, X); };
   $('buscaP').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaLista(P, X); $('buscaP').focus(); $('buscaP').setSelectionRange(pos, pos); };
-  $('filP').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; telaLista(P, X); } };
+  $('filP').onclick = (e) => { const b = e.target.closest('button'); if (b) { FILTRO = b.dataset.f; if (FILTRO !== 'todos') TODAS = false; telaLista(P, X); } };
   if ($('irOrigens')) $('irOrigens').onclick = () => X.irOrigens();
   $('novaP').onclick = () => {
     const el = $('cadOp');
