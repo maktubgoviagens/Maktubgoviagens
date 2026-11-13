@@ -413,6 +413,8 @@ export function calcular(D, C, ini, fim) {
 
 // ---------- tela: Indicações ----------
 // opt.embutido: aba Indicações do painel da Empresa (sem título nem período próprios; usa o período do painel)
+// quem indica: os 5 primeiros; o resto num toque
+let IND_TODOS = false;
 export async function telaIndicacoes(P, X, opt = {}) {
   estilos();
   const { $, esc, brlC, brl2 } = X, emb = !!opt.embutido;
@@ -474,14 +476,15 @@ export async function telaIndicacoes(P, X, opt = {}) {
     </div>
     <section class="bloco"><h2>Quem indica · ordenado pelo ${V ? 'lucro Direto' : 'número de vendas'}</h2>
       ${R.ranking.length ? `<div class="ind-tabw"><table class="ind-tab"><thead><tr><th>Quem indica</th><th>Indicou</th><th>Fecharam</th><th>Conversão</th><th>Vendas</th>${V ? '<th>Faturamento</th><th>Lucro da Maktub</th><th>Comissão direta</th><th>Comissão indireta</th>' : ''}<th>Gestão</th>${V ? '<th class="rede">Rede gerada (informativo)</th>' : ''}</tr></thead><tbody>
-        ${R.ranking.map(x => `<tr><td class="n"><button data-arv="${x.id}">${esc(x.q.nome)} ›</button></td><td>${x.indicou}</td><td>${x.fecharam}</td><td>${conv(x)}</td><td>${x.vendas}</td>${V ? `<td>${brlC(x.fat)}</td><td><b>${brl2(x.luc)}</b></td><td>${brl2(x.com)}</td><td>R$ 0,00</td>` : ''}<td>${x.gestao}${x.cortesia ? ` (${x.cortesia} cortesia)` : ''}</td>${V ? `<td class="rede">${brl2(x.rede)}</td>` : ''}</tr>`).join('')}
+        ${R.ranking.slice(0, IND_TODOS ? R.ranking.length : 5).map(x => `<tr><td class="n"><button data-arv="${x.id}">${esc(x.q.nome)} ›</button></td><td>${x.indicou}</td><td>${x.fecharam}</td><td>${conv(x)}</td><td>${x.vendas}</td>${V ? `<td>${brlC(x.fat)}</td><td><b>${brl2(x.luc)}</b></td><td>${brl2(x.com)}</td><td>R$ 0,00</td>` : ''}<td>${x.gestao}${x.cortesia ? ` (${x.cortesia} cortesia)` : ''}</td>${V ? `<td class="rede">${brl2(x.rede)}</td>` : ''}</tr>`).join('')}
         <tr class="tot"><td>Total da empresa</td><td>${tot.indicou}</td><td>${tot.fecharam}</td><td>${conv(tot)}</td><td>${tot.vendas}</td>${V ? `<td>${brlC(tot.fat)}</td><td>${brl2(tot.luc)}</td><td>${brl2(tot.com)}</td><td>R$ 0,00</td>` : ''}<td>${tot.gestao}</td>${V ? '<td class="rede">não soma</td>' : ''}</tr>
       </tbody></table></div>
-      <div class="ind-cards">${R.ranking.map(x => `<div class="ind-c"><div class="c1"><button data-arv="${x.id}">${esc(x.q.nome)} ›</button>${V ? `<span>${brlC(x.luc)}</span>` : ''}</div>
+      <div class="ind-cards">${R.ranking.slice(0, IND_TODOS ? R.ranking.length : 5).map(x => `<div class="ind-c"><div class="c1"><button data-arv="${x.id}">${esc(x.q.nome)} ›</button>${V ? `<span>${brlC(x.luc)}</span>` : ''}</div>
         <div class="c2">indicou ${x.indicou} · fecharam ${x.fecharam} (${conv(x)}) · ${x.vendas} ${x.vendas === 1 ? 'venda' : 'vendas'}${V ? ` · faturamento ${brlC(x.fat)} · comissão direta ${brl2(x.com)} · indireta R$ 0,00` : ''} · Gestão ${x.gestao}</div>
         ${V ? `<div class="c3">Rede gerada: ${brl2(x.rede)} (informativo, já contado em outra pessoa)</div>` : ''}</div>`).join('')}
         <div class="ind-c"><div class="c1"><b style="color:var(--tinta)">Total da empresa</b>${V ? `<span>${brlC(tot.luc)}</span>` : ''}</div><div class="c2">${tot.vendas} vendas${V ? ` · comissão direta ${brl2(tot.com)} · comissão indireta R$ 0,00` : ''} · a Rede não soma</div></div></div>`
       : '<div class="vazio">Ninguém com indicação marcada ainda. As indicações aparecem aqui conforme a equipe marca as origens.</div>'}
+      ${!IND_TODOS && R.ranking.length > 5 ? `<button type="button" class="ac-sec" id="indTodos">Ver todos os ${R.ranking.length}</button>` : ''}
       <div class="ind-nota">Indicou, fecharam e conversão contam desde o início. Vendas, ${V ? 'faturamento, lucro, comissão e ' : ''}Gestão seguem o período (Gestão pela data de assinatura do contrato). Toque no nome para ver a árvore.${R.orfaos ? ` ${R.orfaos} ${R.orfaos === 1 ? 'pessoa aponta' : 'pessoas apontam'} para uma ficha de quem indicou que não existe mais: um administrador precisa corrigir.` : ''}</div>
     </section>`;
   if (!emb) {
@@ -490,6 +493,7 @@ export async function telaIndicacoes(P, X, opt = {}) {
     if ($('indNav')) $('indNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { mover(+b.dataset.n); telaIndicacoes(P, X); } };
   }
   P.querySelectorAll('[data-irorigens]').forEach(b => b.onclick = () => X.ir('origens'));
+  if (em('indTodos')) em('indTodos').onclick = () => { IND_TODOS = true; telaIndicacoes(P, X, opt); };
   if (em('fecharArv')) em('fecharArv').onclick = () => { ARV = null; telaIndicacoes(P, X, opt); };
   P.querySelectorAll('[data-arv]').forEach(b => b.onclick = () => { ARV = b.dataset.arv; telaIndicacoes(P, X, opt).then(() => { const a = em('fecharArv'); if (a) a.scrollIntoView({ block: 'center' }); }); });
 }
