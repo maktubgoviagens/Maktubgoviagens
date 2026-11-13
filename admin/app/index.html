@@ -1014,6 +1014,15 @@ body.cb-leitura #montarCot{margin-top:8px}
   .gh-res{grid-area:res}.gh-novo{grid-area:novo}.gh-jor{grid-area:jor;min-width:0}.gh-cart{grid-area:cart}.gh-lista{grid-area:lista}
   .gh-jor .gjseg{margin-top:0}
 }
+
+/* ===== Card da Gestão em leitura (13/11/2026) ===== */
+.gtr-linha{display:block;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-top:10px;cursor:pointer;font:inherit}
+.gtr-linha span:first-child{display:block;font-size:16px;color:var(--verde);font-weight:500}
+.gtr-barra{display:block;height:6px;border-radius:3px;background:var(--creme-2);margin:8px 0 6px;overflow:hidden}
+.gtr-barra i{display:block;height:100%;background:var(--dourado-claro)}
+.gtr-linha small{font-size:14px;color:var(--dourado);text-decoration:underline}
+.gtr.gtr-fechada{display:none!important}
+.gagora{border-radius:12px}.gagora .b button,.gagora .b a{border-radius:12px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -3739,8 +3748,13 @@ function telaFormReuniao(P) {
   const G = r.produto === 'Gestão de Milhas';
   // card do Comercial já existente: abre em leitura, com um botão principal e blocos que abrem no "Editar"
   const CB = !nova && !G;
+  // card da Gestão já existente: o "Agora" é o resumo e a ação; o formulário vira blocos com Editar
+  const GB = !nova && G;
   const cbAbre = (k, tit, res, rot) => `<div class="cb" data-cb="${k}"><div class="cb-h"><span><b>${tit}</b><small>${esc(res || '')}</small></span><button type="button" class="cb-ed" data-cbed="${k}">${rot || 'Editar'}</button></div><div class="cb-corpo">`;
   const cbFecha = '</div></div>';
+  const gbRes = GB ? { etapa: [etapaDe(r), r.proximo_passo_data && r.resultado === 'Em andamento' ? 'retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''].filter(Boolean).join(' · '),
+    quem: 'SDR ' + (String(nomeTime(r.sdr_id) || 'a definir').split(' ')[0]) + ' · Closer ' + (String(nomeTime(r.closer_id) || 'a definir').split(' ')[0]),
+    notas: (n => n ? n.slice(0, 70) + (n.length > 70 ? '…' : '') : 'Sem anotações')(String(r.observacoes || '').trim()) } : {};
   const cbRes = CB ? (() => {
     const prods = [...new Set(String(r.produto || '').split(' + ').filter(Boolean))].join(', ');
     const rt = reunioesDe(base.id).length, nota = String(r.observacoes || '').trim();
@@ -3799,7 +3813,7 @@ function telaFormReuniao(P) {
       ${CB ? cbFecha + cbAbre('viagem', 'Viagem e origem', cbRes.viagem) : ''}
       ${G ? '' : `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`}
       ${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}
-      ${G ? '</details><div style="order:-4">' + htmlGestaoSdr(r) + '</div><div style="order:-5">' : ''}
+      ${G ? '</details><div style="order:-4">' + (GB ? cbAbre('quem', 'Quem conduz', gbRes.quem) : '') + htmlGestaoSdr(r) + (GB ? cbFecha : '') + '</div><div style="order:-5">' + (GB ? cbAbre('etapa', 'Etapa e próximo passo', gbRes.etapa) : '') : ''}
       ${CB ? cbFecha + cbAbre('etapa', 'Etapa e próximo passo', cbRes.etapa) : ''}
       <div class="grupo">Etapa</div>
       <div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>
@@ -3820,7 +3834,7 @@ function telaFormReuniao(P) {
           <div class="sub">No dia do retorno, você recebe um aviso, e o card aparece no calendário.</div>
         </div>`)((() => { const pd = padraoPasso(r, etapaDe(r)) || {}; return { tipo: r.proximo_passo_tipo || pd.tipo || '', data: r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : pd.data || '', nota: r.proximo_passo_tipo ? notaPasso(r) : r.proximo_passo || '' }; })())}
       </div>
-      ${G ? '</div>' : ''}
+      ${G ? (GB ? cbFecha : '') + '</div>' : ''}
       ${CB ? cbFecha + cbAbre('reun', 'Reuniões', cbRes.reun) : ''}
       ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
       ${G ? '<details class="gsec" style="order:-2"><summary><span>Reuniões<small>Diagnóstico e outras reuniões, na agenda e no TickTick</small></span></summary>' : ''}
@@ -3835,16 +3849,16 @@ function telaFormReuniao(P) {
       <label class="fl" id="nrResumo" hidden><span>Resumo da reunião</span><textarea name="nr_abordado" rows="5" placeholder="Cole aqui o resumo do Granola."></textarea></label>
       <div class="sub" id="nrDica">Sem marcar "já aconteceu", a reunião fica agendada e vai para o TickTick.</div>`}</div>
       ${G ? '</details>' : ''}
-      ${CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas) : ''}
+      ${CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas) : ''}${GB ? '<div style="order:-1">' + cbAbre('notas', 'Anotações', gbRes.notas) : ''}
       <label class="fl" style="${G ? 'order:-1' : ''}"><span>Anotações gerais</span><textarea name="observacoes" rows="3">${esc(r.observacoes || '')}</textarea></label>
-      ${CB ? cbFecha : ''}
-      <button class="zap grande${CB ? ' cb-oculto' : ''}" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
+      ${CB ? cbFecha : ''}${GB ? cbFecha + '</div>' : ''}
+      <button class="zap grande${CB || GB ? ' cb-oculto' : ''}" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
       ${nova ? '' : '<div class="sub" id="rascInfo" style="margin-top:4px;text-align:center"></div>'}
       ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
       <div class="sub" id="msgRe"></div>
     </form>
-    ${CB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
-  if (CB) document.body.classList.add('cb-leitura');
+    ${CB || GB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
+  if (CB || GB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
@@ -3883,7 +3897,8 @@ function telaFormReuniao(P) {
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   if (!nova && (ADMIN || GER())) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
-  if (CB) ligarCardLeitura(P, f, r, base);
+  if (CB || GB) ligarCardLeitura(P, f, r, base);
+  if (GB) ligarGestaoLeitura(P);
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
   if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '', ida: base.data_viagem || '', volta: base.data_volta || '' }));
@@ -4630,7 +4645,7 @@ function ligarCardLeitura(P, f, r, base) {
   P.querySelectorAll('[data-cbt]').forEach(b => b.onclick = () => b.dataset.cbt === 'perdeu' ? etapa('Não fechou') : etapa(null));
   // o que mudou desde que o card abriu: nome do campo, de e para
   const rotulo = (el) => { if (!el) return ''; if (el.name === 'etapa') return 'Etapa'; const l = el.closest('label.fl'); const t = l && l.querySelector('span'); return t ? t.textContent.replace(/\s*\(.*?\)\s*$/, '').trim() : ''; };
-  const mostra = (el) => { if (!el) return ''; if (el.tagName === 'SELECT') return (el.selectedOptions[0] || {}).textContent || ''; if (el.type === 'checkbox') return el.checked ? 'sim' : 'não'; if (el.type === 'date' && el.value) return el.value.split('-').reverse().join('/'); return el.value; };
+  const mostra = (el) => { if (!el) return ''; if (el.tagName === 'SELECT') return (el.selectedOptions[0] || {}).textContent || ''; if (el.type === 'checkbox') return el.checked ? 'sim' : 'não'; if (el.type === 'date' && el.value) return el.value.split('-').reverse().join('/'); if (el.type === 'datetime-local' && el.value) return el.value.slice(0, 10).split('-').reverse().join('/') + ' ' + el.value.slice(11, 16); return el.value; };
   const foto = () => { const m = {}; [...f.elements].forEach(el => { if (!el.name || el.type === 'submit' || el.type === 'button' || /^(nr_|cn_)/.test(el.name) && !el.value) return; if ((el.type === 'radio') && !el.checked) return; m[el.name] = { v: el.type === 'checkbox' ? String(el.checked) : el.value, d: mostra(el), r: rotulo(el), h: el.type === 'hidden' }; }); m._itens = { v: f._itens ? JSON.stringify(f._itens()) : '', d: '', r: 'Serviços, custos e valores', h: true }; try { const fe = f._fech ? f._fech() : null; m._fech = { v: fe ? JSON.stringify(fe) : '', d: '', r: 'Pagamento do cliente', h: true }; } catch (_) {} return m; };
   let ini = null;
   const difs = () => { if (!ini) return []; const a = foto(), L = []; Object.keys({ ...ini, ...a }).forEach(k => { const x = ini[k] || { v: '' }, y = a[k] || { v: '' }; if (x.v === y.v) return; L.push({ r: y.r || x.r || 'Outro campo', de: x.d, para: y.d, h: y.h || x.h }); }); return L; };
@@ -4650,6 +4665,21 @@ function ligarCardLeitura(P, f, r, base) {
     if (!(await confirmarFolha(`Salvar as mudanças${VENDA.numCard(r) ? ' do ' + VENDA.numCard(r) : ''}?`, linhas, 'Confirmar e salvar'))) return;
     f.requestSubmit($('salvarRe'));
   };
+}
+
+// card da Gestão em leitura: a trilha vira uma linha que abre, e os botões do "Agora" abrem o bloco certo antes de agir
+function ligarGestaoLeitura(P) {
+  const tr = P.querySelector('#gTopo .gtr');
+  if (tr) {
+    const L = [...tr.children].filter(x => x.querySelector('i')), i = L.findIndex(x => /\b(a|x)\b/.test(x.querySelector('i').className)), atual = L[i >= 0 ? i : L.length - 1];
+    const nome = atual ? (atual.querySelector('span') || {}).textContent : '';
+    tr.insertAdjacentHTML('beforebegin', `<button type="button" class="gtr-linha" id="gtrLinha"><span>Etapa ${(i >= 0 ? i : L.length - 1) + 1} de ${L.length}${nome ? ' · ' + esc(nome) : ''}</span><span class="gtr-barra"><i style="width:${Math.round(((i >= 0 ? i : L.length - 1) + 1) / L.length * 100)}%"></i></span><small>Ver a trilha</small></button>`);
+    tr.classList.add('gtr-fechada');
+    $('gtrLinha').onclick = () => { const f = tr.classList.toggle('gtr-fechada'); $('gtrLinha').querySelector('small').textContent = f ? 'Ver a trilha' : 'Esconder a trilha'; };
+  }
+  const abrir = (k) => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c && !c.classList.contains('aberto')) { const b = c.querySelector('.cb-ed'); if (b) b.click(); } };
+  P.querySelectorAll('#gTopo [data-gir]').forEach(b => b.addEventListener('click', () => abrir('etapa')));
+  P.querySelectorAll('#gTopo [data-gqual]').forEach(b => b.addEventListener('click', () => abrir('quem')));
 }
 
 /* ---------- histórico de alterações (administradores) ---------- */
