@@ -1026,6 +1026,17 @@ body.cb-leitura #montarCot{margin-top:8px}
 
 /* ===== Clientes (13/11/2026) ===== */
 .crm-v{flex:none;text-align:right}.crm-v b{display:block;font-weight:500;color:var(--verde);font-size:16px}.crm-v small{display:block;font-size:14px;color:var(--tinta-3)}
+
+/* ===== Operação (13/11/2026) ===== */
+.em-fbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.em-filtrar{background:var(--branco);border:1px solid var(--linha);border-radius:999px;padding:8px 16px;font-size:14px;color:var(--verde);cursor:pointer;min-height:40px}
+.em-fchip{background:var(--creme-2);border:0;border-radius:999px;padding:8px 14px;font-size:14px;color:var(--verde);cursor:pointer;min-height:40px}
+#emFiltros{background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:4px 12px 12px;margin-top:8px}
+.ag-linha{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ag-linha>*{background:var(--branco);border:1px solid var(--linha);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--tinta-2);font-family:inherit}
+.ag-linha button{cursor:pointer}
+.ag-linha b{font-weight:600;color:var(--verde)}
+.ag-linha .al{border-color:var(--alerta);color:var(--alerta)}.ag-linha .al b{color:var(--alerta)}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -2222,7 +2233,7 @@ function infoSinc() {
   const alertas = ADMIN ? [...(r.vendedores_nao_encontrados || []).map(v => `Vendedor "${esc(v)}" da planilha não está na equipe do app`), ...(r.ignorados || []).slice(0, 5).map(i => `${i.linha ? 'Linha ' + i.linha + ': ' : ''}${esc(i.motivo)}`)] : [];
   return `<div class="sub" style="margin-top:8px">Lançamentos vêm da planilha. Última sincronização: ${u}.</div>${alertas.length ? `<div class="config" style="margin-top:8px">${alertas.join('<br>')}</div>` : ''}`;
 }
-let EM_MES = mesKey(new Date()), EM_ED = null, EM_VEND = 'todos', EM_SERV = 'todos', FIN_MODO = 'mes', CONFIRMA = null;
+let EM_MES = mesKey(new Date()), EM_ED = null, EM_VEND = 'todos', EM_SERV = 'todos', FIN_MODO = 'mes', CONFIRMA = null, EM_FILT = false;
 
 function seletorMes(id) {
   return `<div class="mesnav" id="${id}"><button data-n="-1" aria-label="Mês anterior">‹</button><span>${mesNome(EM_MES)}${mesFechado(EM_MES) ? ' <i class="tag">fechado</i>' : ''}</span><button data-n="1" aria-label="Próximo mês">›</button></div>`;
@@ -2274,13 +2285,20 @@ function telaEmissoes(P) {
     ${pode('comercial') ? '' : '<button class="sec grande" id="novaB2B" style="margin-top:8px;width:100%">+ Emissão B2B</button>'}
     ${infoSinc()}
     ${seletorMes('emMes')}
+    ${(() => { const at = [];
+      if (LST && EM_VEND !== 'todos') at.push(['vend', 'Vendedor: ' + (EM_VEND === 'sem' ? 'sem vendedor' : String(nomeTime(EM_VEND) || '').split(' ')[0])]);
+      if (EM_SERV !== 'todos') at.push(['serv', EM_SERV]);
+      if (EM_PEND !== 'todas' && EM_PEND) at.push(['pend', EM_PEND === 'cli' ? 'Cliente não pagou' : 'Fornecedor a pagar']);
+      return `<div class="em-fbar"><button type="button" class="em-filtrar" id="emFiltrar">Filtrar${at.length ? ' · ' + at.length : ''}</button>${at.map(([k, t]) => `<button type="button" class="em-fchip" data-fx="${k}">${esc(t)} ×</button>`).join('')}</div>`; })()}
+    <div id="emFiltros" ${EM_FILT ? '' : 'hidden'}>
     ${LST ? `<select class="busca" id="emVend" style="margin-top:8px"><option value="todos">Todos os vendedores</option>${D.time.map(t => `<option value="${t.user_id}" ${EM_VEND === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}<option value="sem" ${EM_VEND === 'sem' ? 'selected' : ''}>Sem vendedor (histórico)</option></select>` : ''}
+    ${pode('financeiro') ? `<div class="chips" id="emPend" style="margin-top:8px">${[['todas', 'Todas'], ['cli', 'Cliente não pagou'], ['forn', 'Fornecedor a pagar']].map(([k, l]) => `<button data-p="${k}" class="${EM_PEND === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
+    <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+    </div>
     ${ADMIN && semVend().length ? `<details class="bloco" style="margin-top:10px"><summary style="cursor:pointer;color:var(--alerta)">${semVend().length} ${semVend().length === 1 ? 'venda sem vendedor' : 'vendas sem vendedor'} (todos os meses)</summary>
       <div class="sub" style="margin-top:6px">${semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7))).length} em meses abertos podem ser definidas aqui; meses fechados não mudam. A comissão sai pelo percentual de quem você escolher.</div>
       <div class="duas-col" style="margin-top:6px"><label class="fl"><span>Passar para</span><select id="loteVend">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteVendB" style="align-self:end">Definir</button></div>
       <button type="button" class="sec" id="verSemVend" style="width:100%;margin-top:6px">Ver as vendas sem vendedor deste mês</button></details>` : ''}
-    ${pode('financeiro') ? `<div class="chips" id="emPend" style="margin-top:8px">${[['todas', 'Todas'], ['cli', 'Cliente não pagou'], ['forn', 'Fornecedor a pagar']].map(([k, l]) => `<button data-p="${k}" class="${EM_PEND === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
-    <select class="busca" id="emServ" style="margin-top:8px"><option value="todos">Todos os serviços</option>${[...new Set([...SERVICOS, ...D.emissoes.map(e => e.servico).filter(Boolean)])].map(x => `<option ${EM_SERV === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : LST ? L.filter(minha).length + ' suas no mês' : 'no mês'}</div></div>
       ${VER ? `<div class="num"><div class="l">Lucro das vendas</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
@@ -2298,6 +2316,8 @@ function telaEmissoes(P) {
         ${devePagar(e) ? `<button type="button" data-ck-forn="${e.id}" class="${e.pago_fornecedor ? 'ok' : ''}"><span class="cx">${e.pago_fornecedor ? '✓' : ''}</span><span>Pago ao fornecedor</span></button>` : ''}
         <button type="button" data-ck-nota="${e.id}" class="${e.nota_gerada ? 'ok' : ''}"><span class="cx">${e.nota_gerada ? '✓' : ''}</span><span>Nota emitida</span></button>
         <button type="button" data-nota-pdf="${e.id}" class="${e.nota_arquivo ? 'ok' : ''}"><span class="cx">${e.nota_arquivo ? '↓' : '+'}</span><span>${e.nota_arquivo ? 'Baixar nota' : 'Anexar PDF da nota'}</span></button></div>` : ''}`).join('') : '<div class="vazio">Nenhuma emissão neste mês.</div>'}</div>`;
+  if ($('emFiltrar')) $('emFiltrar').onclick = () => { EM_FILT = !EM_FILT; $('emFiltros').hidden = !EM_FILT; };
+  P.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => { const k = b.dataset.fx; if (k === 'vend') EM_VEND = 'todos'; if (k === 'serv') EM_SERV = 'todos'; if (k === 'pend') EM_PEND = 'todas'; telaEmissoes(P); });
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); telaEmissoes(P); scrollTo(0, 0); };
   if ($('novaB2B')) $('novaB2B').onclick = () => { EM_ED = 'b2b'; history.pushState(null, '', '#emissoes/b2b'); telaEmissoes(P); scrollTo(0, 0); };
   ligarMes('emMes', () => telaEmissoes(P));
@@ -7017,21 +7037,20 @@ function telaAgenda(P) {
     return;
   }
   const CAL = AG_MODO === 'cal';
-  const E = CAL ? [] : eventos();
+  const E0 = CAL ? [] : eventos(), E = AG_TUDO ? E0 : E0.filter(e => difDias(e.d) <= 7);
   let ultimo = '';
   P.innerHTML = `${segOp('agenda')}
     <h1 class="titulo">Agenda da <em>operação</em></h1>
     <div class="seg" id="agVista"><button data-v="tudo" class="on">Compromissos</button><button data-v="reunioes">Reuniões${proximasReunioes().length ? ' · ' + proximasReunioes().length : ''}</button></div>
-    <div class="sub">${pode('gestao') ? 'Voos, viagens, reuniões e vencimentos dos próximos 120 dias' : 'Todos os voos da Maktub nos próximos 120 dias'}</div>
-    <div class="numeros" style="margin-top:14px">
-      <div class="num ${checkinsTotal() ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsTotal()}</div></div>
-      ${pode('gestao') ? `<div class="num ${reunioesAConfirmar().length ? 'alerta' : ''}"><div class="l">Reuniões a confirmar</div><div class="v">${reunioesAConfirmar().length}</div></div>` : ''}
-      <div class="num"><div class="l">Voos em 30 dias</div><div class="v">${D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length + trechosEm().filter(t => difDias(t.d) >= 0 && difDias(t.d) <= 30).length}</div></div>
-      ${pode('gestao') ? `<div class="num ${vencimentos(30).length ? 'alerta' : ''}"><div class="l">Vencimentos em 30 dias</div><div class="v">${vencimentos(30).length}</div></div>` : ''}
-    </div>
-    <div class="seg" id="agModo" style="margin-top:12px"><button data-m="cal" class="${CAL ? 'on' : ''}">Calendário</button><button data-m="lista" class="${CAL ? '' : 'on'}">Lista</button></div>
-    ${CAL ? agCalendario() : `<div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`}`;
+    <div class="sub">${pode('gestao') ? 'Voos, viagens, reuniões e vencimentos' : 'Todos os voos da Maktub'}${AG_MODO === 'cal' ? '' : AG_TUDO ? ' nos próximos 120 dias' : ' nos próximos 7 dias'}</div>
+    ${(() => { const voos30 = D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length + trechosEm().filter(t => difDias(t.d) >= 0 && difDias(t.d) <= 30).length;
+      const it = [[checkinsTotal(), 'check-in em 48 h', 'check-ins em 48 h', 'ck', true], ...(pode('gestao') ? [[reunioesAConfirmar().length, 'reunião a confirmar', 'reuniões a confirmar', 'reun', true]] : []), [voos30, 'voo em 30 dias', 'voos em 30 dias', '', false], ...(pode('gestao') ? [[vencimentos(30).length, 'vencimento em 30 dias', 'vencimentos em 30 dias', '', true]] : [])];
+      return `<div class="ag-linha">${it.map(([n, u, pl, k, al]) => `<${k ? 'button type="button"' : 'span'} class="${al && n ? 'al' : ''}" ${k ? `data-agl="${k}"` : ''}><b>${n}</b> ${n === 1 ? u : pl}</${k ? 'button' : 'span'}>`).join('')}</div>`; })()}
+    <div class="seg" id="agModo" style="margin-top:12px"><button data-m="lista" class="${CAL ? '' : 'on'}">Próximos 7 dias</button><button data-m="cal" class="${CAL ? 'on' : ''}">Calendário</button></div>
+    ${CAL ? agCalendario() : `<div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`}${!CAL && !AG_TUDO && E0.length > E.length ? `<button type="button" class="ac-sec" id="agTudo">Ver os próximos 120 dias (${E0.length})</button>` : ''}`;
   $('agVista').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.v === 'reunioes') { AG_VISTA = 'reunioes'; telaAgenda(P); } };
+  if ($('agTudo')) $('agTudo').onclick = () => { AG_TUDO = true; telaAgenda(P); };
+  P.querySelectorAll('[data-agl]').forEach(b => b.onclick = () => { if (b.dataset.agl === 'ck') { AG_VISTA = 'checkins'; telaAgenda(P); } else { AG_VISTA = 'reunioes'; telaAgenda(P); } });
   $('agModo').onclick = (e) => { const b = e.target.closest('button'); if (b && b.dataset.m !== AG_MODO) { AG_MODO = b.dataset.m; telaAgenda(P); } };
   if (CAL) {
     $('agCMes').onclick = (e) => { const b = e.target.closest('button'); if (b) { AG_CMES = mesMais(AG_CMES, +b.dataset.n); AG_DIA = null; telaAgenda(P); } };
@@ -7040,7 +7059,7 @@ function telaAgenda(P) {
 }
 
 /* calendário do mês: voos, viagens, reuniões, vencimentos e aniversários; toque no dia abre tudo detalhado */
-let AG_MODO = 'cal', AG_CMES = mesKey(new Date()), AG_DIA = null;
+let AG_MODO = 'lista', AG_CMES = mesKey(new Date()), AG_DIA = null, AG_TUDO = false;
 function agCalendario() {
   const k = AG_CMES, [y, mm] = k.split('-').map(Number);
   const prim = (new Date(y, mm - 1, 1).getDay() + 6) % 7, dias = new Date(y, mm, 0).getDate(), hj = isoLocal(new Date());
