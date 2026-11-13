@@ -1054,6 +1054,19 @@ body.cb-leitura #montarCot{margin-top:8px}
 .arq-x{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .ac-prim.perigo{background:var(--alerta);border-color:var(--alerta);color:#fff}
 .gf-v{font-style:normal;font-weight:500;color:var(--verde);white-space:nowrap}
+.td-n{font-family:Jost,sans-serif;font-size:14px;letter-spacing:0;text-transform:none;color:var(--tinta-3,#6b6b63);margin-left:6px}
+.td-lista{margin-top:8px}
+.td-l{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--linha)}
+.td-l:last-child{border-bottom:0}
+.td-ck{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--verde);background:#fff;color:#fff;font-size:16px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
+.td-l.feito .td-ck{background:var(--verde)}
+.td-t{flex:1;min-width:0;font-size:16px;line-height:1.35}.td-t small{display:block;font-size:14px;color:var(--tinta-3,#6b6b63)}
+.td-l.feito .td-t{text-decoration:line-through;opacity:.6}
+.td-q{flex:none;font-size:14px;color:var(--tinta-3,#6b6b63);white-space:nowrap}.td-q.alerta{color:var(--alerta)}
+.td-x,.td-ab{flex:none;background:none;border:0;font-size:22px;color:var(--tinta-3,#6b6b63);padding:4px 6px;cursor:pointer;line-height:1}
+.td-mais{margin-top:8px}
+.td-nova{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.td-nova input{min-height:44px}
+.td-dias{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -2178,6 +2191,7 @@ function telaInicio(P) {
     ${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-i="${itens.findIndex(x => x[0] === t)}"><span>${t}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : ''}
     ${emDia.length ? `<details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Tudo em dia em ${emDia.length} ${emDia.length === 1 ? 'item' : 'itens'}</summary><div class="sub">${emDia.map(x => x[0]).join(' · ')}</div></details>` : ''}
     </div>
+    <div id="tdBloco" class="td-bloco"></div>
     ${blocoGravar()}
     ${(h => h.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:14px"><summary><span>Resolver por aqui<small>Voos sem horário, aniversários e avaliações</small></span></summary>${h}</details>` : '')(blocoAnivHoje() + blocoSemHorario() + (ADMIN ? blocoAvgInicio() : '') + blocoPosViagem())}
     </div><div class="ini-b">
@@ -2196,6 +2210,7 @@ function telaInicio(P) {
   if ($('iniDetD') && matchMedia('(min-width:1024px)').matches) $('iniDetD').open = true;
   ligarAnivHoje(P);
   ligarSemHorario(P);
+  tarefasDia();
   ligarPosViagem(P, () => telaInicio(P));
   ligarAvg(P, () => telaInicio(P));
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -2225,7 +2240,7 @@ function telaInicioColab(P) {
     ${avaliacoesParaPedir(true).length ? `<div class="pend" style="margin-top:12px"><button data-ir="agenda"><span>Avaliações de atendimento para pedir</span><span><b class="tem">${avaliacoesParaPedir(true).length}</b><span class="seta">›</span></span></button></div>` : ''}
     ${blocoAnivHoje()}
     ${blocoPosViagem()}
-    ${retornosHoje().length ? `<div class="secao">Retornos para hoje <button data-ir="reunioes">Ver reuniões ›</button></div>${retornosHoje().map(htmlReuniao).join('')}` : ''}
+    <div id="tdBloco" class="td-bloco"></div>
     <div class="secao">Próximos voos <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox) : '<div class="vazio">Nenhum voo nos próximos dias.</div>'}`;
   if ($('novaReuniao')) $('novaReuniao').onclick = () => escolherAtendimento();
@@ -2233,6 +2248,7 @@ function telaInicioColab(P) {
   ligarSemHorario(P);
   ligarPosViagem(P, () => telaInicioColab(P));
   ligarAnivHoje(P);
+  tarefasDia();
   if ($('nova') && !modoPlanilha()) $('nova').onclick = () => { ABA = 'emissoes'; EM_ED = 'nova'; history.pushState(null, '', '#emissoes/nova'); marcarNav(); tela(); scrollTo(0, 0); };
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   // provisionado do próximo pagamento: salário fixo + metades de comissão do fechamento deste mês
@@ -3409,6 +3425,97 @@ function registrarAdiamento(r, row, etapa) {
   row.marcos = M;
 }
 const retornosHoje = () => D.reunioes.filter(r => r.resultado === 'Em andamento' && r.proximo_passo_data && passoDe(r).data <= hojeISO());
+/* ---------- Minhas tarefas de hoje (etapa 9): retornos dos meus cards, tarefas da Gestão e tarefas avulsas (95-tarefas-do-dia.sql) ----------
+   O que não foi marcado aparece sozinho no dia seguinte, como atrasado. */
+let TD_AVULSAS = null, TD_NOVA = false;
+async function tarefasDia() {
+  const el = $('tdBloco'); if (!el) return;
+  // desenha na hora com o que já tem e atualiza as tarefas avulsas por trás (sem redesenhar se a pessoa estiver digitando uma nova)
+  if (TD_AVULSAS === null) el.innerHTML = '<div class="secao">Minhas tarefas de hoje</div><div class="vazio">Carregando...</div>'; else desenharTarefasDia();
+  const ini = new Date(); ini.setHours(0, 0, 0, 0);
+  const q = await sb.from('tarefas_dia').select('*').is('arquivado_em', null).or(`feito_em.is.null,feito_em.gte.${ini.toISOString()}`).order('data');
+  TD_AVULSAS = q.error ? (TD_AVULSAS || []) : q.data || [];
+  if (!TD_NOVA) desenharTarefasDia();
+}
+function itensTarefasDia() {
+  const hoje = hojeISO(), eu = D.meuId, L = [];
+  D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.arquivado_em && [r.responsavel_id, r.closer_id, r.sdr_id].includes(eu)).forEach(r => {
+    const p = passoDe(r); if (!p.data || p.data > hoje) return;
+    L.push({ k: 'r' + r.id, tipo: 'card', r, t: `${r.cliente || 'Cliente'} · ${String(p.txt || p.rot || 'retorno').replace(/^./, c => c.toLowerCase())}`, data: p.data });
+  });
+  (D.gtar || []).filter(t => !t.feito && t.prazo && String(t.prazo).slice(0, 10) <= hoje && t.responsavel === eu).forEach(t => {
+    L.push({ k: 'g' + t.id, tipo: 'gestao', g: t, t: `${nomeCli(t.cliente_id)} · ${String(t.titulo || 'tarefa').replace(/^./, c => c.toLowerCase())}`, data: String(t.prazo).slice(0, 10) });
+  });
+  (TD_AVULSAS || []).filter(a => a.feito_em || String(a.data) <= hoje).forEach(a => L.push({ k: 'a' + a.id, tipo: 'avulsa', a, t: a.titulo, data: String(a.data), feito: !!a.feito_em }));
+  return L.sort((x, y) => (!!x.feito - !!y.feito) || x.data.localeCompare(y.data));
+}
+function desenharTarefasDia() {
+  const el = $('tdBloco'); if (!el) return;
+  const L = itensTarefasDia(), hoje = hojeISO(), falta = L.filter(x => !x.feito).length;
+  const quando = (x) => { if (x.feito) return 'feita'; const d = Math.round((dia(hoje) - dia(x.data)) / 864e5); return d <= 0 ? 'hoje' : d === 1 ? 'desde ontem' : `atrasada ${d} dias`; };
+  el.innerHTML = `<div class="secao">Minhas tarefas de hoje${L.length ? ` <span class="td-n">${falta ? falta + (falta === 1 ? ' para fazer' : ' para fazer') : 'tudo feito'}</span>` : ''}</div>
+    <div class="ac-lista td-lista">${L.map(x => `<div class="td-l ${x.feito ? 'feito' : ''}" data-td="${esc(x.k)}">
+      <button type="button" class="td-ck" aria-label="${x.feito ? 'Desmarcar' : 'Marcar como feita'}">${x.feito ? '✓' : ''}</button>
+      <span class="td-t">${esc(x.t)}<small>${x.tipo === 'card' ? 'card' : x.tipo === 'gestao' ? 'tarefa da Gestão' : 'tarefa sua'}</small></span>
+      <span class="td-q ${!x.feito && x.data < hoje ? 'alerta' : ''}">${quando(x)}</span>
+      ${x.tipo === 'avulsa' ? `<button type="button" class="td-x" data-tdx="${x.a.id}" aria-label="Tirar da lista">×</button>` : x.tipo === 'card' ? '<button type="button" class="td-ab" aria-label="Abrir o card">›</button>' : ''}</div>`).join('') || '<div class="vazio">Nada para hoje. Bom trabalho.</div>'}</div>
+    ${TD_NOVA ? `<form class="td-nova" id="tdForm" autocomplete="off"><input name="titulo" placeholder="O que precisa fazer?" required maxlength="200"><input name="data" type="date" value="${hoje}"><button type="submit" class="ac-prim">Adicionar</button><button type="button" class="ac-sec" id="tdCanc">Cancelar</button></form>`
+      : '<button type="button" class="ac-sec td-mais" id="tdMais">+ Tarefa</button>'}`;
+  const achar = (k) => L.find(x => x.k === k);
+  el.querySelectorAll('.td-l').forEach(row => {
+    const x = achar(row.dataset.td); if (!x) return;
+    row.querySelector('.td-ck').onclick = () => marcarTarefaDia(x);
+    const ab = row.querySelector('.td-ab'); if (ab) ab.onclick = () => abrirAtendimento(x.r.id);
+  });
+  el.querySelectorAll('[data-tdx]').forEach(b => b.onclick = async () => {
+    const a = (TD_AVULSAS || []).find(y => String(y.id) === b.dataset.tdx); if (!a) return;
+    const { error } = await sb.from('tarefas_dia').update({ arquivado_em: new Date().toISOString() }).eq('id', a.id);
+    if (error) { aviso('Não tirou: ' + limparTec(error.message)); return; }
+    TD_AVULSAS = TD_AVULSAS.filter(y => y !== a); desenharTarefasDia();
+  });
+  if ($('tdMais')) $('tdMais').onclick = () => { TD_NOVA = true; desenharTarefasDia(); const i = $('tdForm') && $('tdForm').elements.titulo; if (i) i.focus(); };
+  if ($('tdCanc')) $('tdCanc').onclick = () => { TD_NOVA = false; SUJO = false; PREENCHIDO = false; desenharTarefasDia(); };
+  if ($('tdForm')) $('tdForm').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target, titulo = f.elements.titulo.value.trim(), data = f.elements.data.value || hoje; if (!titulo) return;
+    const { data: nova, error } = await sb.from('tarefas_dia').insert({ titulo, data }).select().single();
+    if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
+    TD_AVULSAS.push(nova); TD_NOVA = false; SUJO = false; PREENCHIDO = false;
+    aviso(data > hoje ? `Tarefa guardada para ${dataBR(data)}.` : 'Tarefa adicionada.'); desenharTarefasDia();
+  };
+}
+// folha do "feito" num retorno de card: o card nunca fica sem próximo passo
+function folhaProximoPasso(r) {
+  return new Promise((ok) => {
+    const el = document.createElement('div'); el.className = 'folha';
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">Feito. Qual o próximo passo?</div>
+      <p class="ac-fl">${esc(r.cliente || 'Cliente')} · ${esc(passoDe(r).rot || 'retorno')}</p>
+      <label class="fl"><span>Anotação do próximo passo (opcional)</span><input id="tdNota" maxlength="200" placeholder="Ex.: vai decidir com a família"></label>
+      <div class="td-dias">${[[1, 'Amanhã'], [3, 'Em 3 dias'], [7, 'Em 1 semana']].map(([n, t]) => `<button type="button" class="ac-sec" data-n="${n}">${t}</button>`).join('')}</div>
+      <button type="button" class="ac-sec" data-r="abrir">Abrir o card</button><button type="button" class="ac-sec" data-r="0">Voltar</button></div>`;
+    const fim = (v) => { el.remove(); ok(v); };
+    el.querySelector('.folha-fundo').onclick = () => fim(null);
+    el.querySelector('[data-r="0"]').onclick = () => fim(null);
+    el.querySelector('[data-r="abrir"]').onclick = () => fim('abrir');
+    el.querySelectorAll('[data-n]').forEach(b => b.onclick = () => fim({ data: maisDias(+b.dataset.n), nota: el.querySelector('#tdNota').value.trim() }));
+    document.body.appendChild(el);
+  });
+}
+async function marcarTarefaDia(x) {
+  if (x.tipo === 'avulsa') {
+    const feito_em = x.feito ? null : new Date().toISOString();
+    const { error } = await sb.from('tarefas_dia').update({ feito_em }).eq('id', x.a.id);
+    if (error) { aviso('Não marcou: ' + limparTec(error.message)); return; }
+    x.a.feito_em = feito_em; desenharTarefasDia(); return;
+  }
+  if (x.tipo === 'gestao') { if (await gtMarcar(x.g.id, true)) { aviso('Tarefa da Gestão feita.'); desenharTarefasDia(); } return; }
+  const v = await folhaProximoPasso(x.r); if (!v) return;
+  if (v === 'abrir') { abrirAtendimento(x.r.id); return; }
+  const tipo = x.r.proximo_passo_tipo || passoDe(x.r).tipo || null;
+  const row = { proximo_passo_data: v.data, ...(tipo ? { proximo_passo_tipo: tipo } : {}), ...(v.nota ? { proximo_passo: tipo ? textoPasso(tipo, v.nota) : v.nota } : {}) };
+  const { data, error } = await sb.from('atendimentos').update(row).eq('id', x.r.id).select().single();
+  if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
+  Object.assign(x.r, data); aviso(`Feito. Próximo passo de ${x.r.cliente || 'cliente'} em ${dataBR(v.data)}.`); desenharTarefasDia();
+}
 const mesLocal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 function reunioesDoPeriodo(k, modo) { return D.reunioes.filter(r => modo === 'ano' ? mesLocal(r.data).slice(0, 4) === k.slice(0, 4) : mesLocal(r.data) === k); }
 function conversao(L) {
