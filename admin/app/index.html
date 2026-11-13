@@ -1037,6 +1037,17 @@ body.cb-leitura #montarCot{margin-top:8px}
 .ag-linha button{cursor:pointer}
 .ag-linha b{font-weight:600;color:var(--verde)}
 .ag-linha .al{border-color:var(--alerta);color:var(--alerta)}.ag-linha .al b{color:var(--alerta)}
+
+/* ===== Números (13/11/2026) ===== */
+.emp-hero{margin-top:12px;padding-right:16px}
+.emp-hero .kb{margin:10px 0 4px}
+.funil-p{background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:16px;margin-top:12px}
+.fp-sub{font-size:16px;color:var(--tinta-2);margin-top:2px}.fp-sub b{color:var(--alerta);font-weight:500}
+.fp-vs{font-size:14px;font-weight:600;color:var(--verde);margin:6px 0 4px}.fp-vs.al{color:var(--alerta)}
+.fp-l{margin-top:12px}
+.fp-t{display:flex;justify-content:space-between;font-size:16px}.fp-t b{color:var(--verde);font-variant-numeric:tabular-nums}
+.fp-b{height:8px;border-radius:4px;background:var(--creme-2);margin-top:4px;overflow:hidden}.fp-b i{display:block;height:100%;background:var(--verde)}.fp-b i.ouro{background:var(--dourado-claro)}
+.fp-l small{display:block;font-size:14px;color:var(--tinta-3);margin-top:3px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -5155,11 +5166,15 @@ async function painelEmp() {
     <div class="seg" id="pnlPer" style="margin-top:12px">${[['semana', 'Semana'], ['mes', 'Mês'], ['ano', 'Ano'], ['tudo', 'Desde o início']].map(([k, t]) => `<button data-p="${k}" class="${PNL_PER === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     ${PNL_PER === 'tudo' ? '' : `<div class="mesnav" id="pnlNav"><button data-n="-1">‹</button><span>${esc(per.nome)}</span><button data-n="1">›</button></div>`}
     ${PNL_PER === 'semana' ? '<div class="sub">Semana de quarta a terça. Na virada do mês, a semana é cortada no último dia do mês.</div>' : ''}
-    <div class="kpis kpis4">
-      ${card('Lucro bruto', brlC(lb), meta && meta.lucro ? barra(lb / meta.lucro * 100) : '', `${vMeta(lb, meta && meta.lucro, brlC)}${vs(lb, LA && soma(LA, 'lucro_bruto'), true)}<br>líquido <b style="font-weight:600;color:var(--verde)">${brlC(ll)}</b>`)}
-      ${card('Vendas', num(L.length), meta && meta.qtd ? barra(L.length / meta.qtd * 100) : '', `${vMeta(L.length, meta && meta.qtd, num)}${vs(L.length, LA && LA.length, false)}`)}
-      ${card('Clientes ativos da Gestão', at === null ? '-' : num(at), at === null ? '' : barra(at / META_CLIENTES * 100), at === null ? 'só para quem vê a Gestão' : `de ${META_CLIENTES}, meta de ${META_ANO}<br>+${assinados} ${assinados === 1 ? 'contrato assinado' : 'contratos assinados'} no período`)}
-      ${card('Lucro vindo de indicação', R ? brlC(indic(R)) : '-', '', R ? `sem meta definida${ll ? '<br>' + pct(indic(R) / ll * 100) + ' do lucro líquido' : ''}${RA ? vs(indic(R), indic(RA), true) : ''}` : 'Rode o 75-origem-e-indicacoes.sql')}
+    <div class="ini-card emp-hero" style="cursor:default"><span class="ini-rot">Lucro bruto · ${esc(per.nome)}</span><b class="ini-num"><span class="cb-valor">${brlC(lb)}</span></b>
+      ${meta && meta.lucro ? barra(lb / meta.lucro * 100) : ''}
+      <small>${meta && meta.lucro ? `${pct(lb / meta.lucro * 100)} da meta de <span class="cb-valor">${brlC(meta.lucro)}</span>` : 'sem meta definida'}${vs(lb, LA && soma(LA, 'lucro_bruto'), true).replace('<br>', ' · ')}</small>
+      <small>líquido <span class="cb-valor">${brlC(ll)}</span></small>
+      <button type="button" class="cb-olho" id="empOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button></div>
+    <div class="ac-lista" style="margin-top:10px">
+      <div class="ac-pes"><span><b>Vendas</b><small>${vMeta(L.length, meta && meta.qtd, num)}${vs(L.length, LA && LA.length, false).replace('<br>', ' · ')}</small></span><span class="crm-v"><b>${num(L.length)}</b></span></div>
+      <div class="ac-pes"><span><b>Clientes ativos da Gestão</b><small>${at === null ? 'só para quem vê a Gestão' : `de ${META_CLIENTES}, meta de ${META_ANO} · +${assinados} ${assinados === 1 ? 'contrato assinado' : 'contratos assinados'} no período`}</small></span><span class="crm-v"><b>${at === null ? '-' : num(at)}</b></span></div>
+      <div class="ac-pes"><span><b>Lucro vindo de indicação</b><small>${R ? (ll ? pct(indic(R) / ll * 100) + ' do lucro líquido' : 'no período') + (RA ? vs(indic(R), indic(RA), true).replace('<br>', ' · ') : '') : 'Rode o 75-origem-e-indicacao.sql para ativar'}</small></span><span class="crm-v"><b class="cb-valor">${R ? brlC(indic(R)) : '-'}</b></span></div>
     </div>
     <div class="seg" id="pnlAba" style="margin-top:16px">${tabs.map(([k, t]) => `<button data-a="${k}" class="${PNL_ABA === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div id="pnlCorpo"></div>`;
@@ -5168,6 +5183,8 @@ async function painelEmp() {
   else if (PNL_ABA === 'comercial') corpo.innerHTML = abaComercial(per);
   else if (PNL_ABA === 'financeiro') corpo.innerHTML = abaFinanceiro(L, E);
   else IND.telaIndicacoes(corpo, ctxIND(), { embutido: true, per: PNL_PER, ref: PNL_REF });
+  document.body.classList.toggle('sem-valores', cbOlho());
+  if ($('empOlho')) $('empOlho').onclick = () => { const on = !cbOlho(); try { localStorage.setItem('olhoValores', on ? '1' : '0'); } catch (_) {} document.body.classList.toggle('sem-valores', on); $('empOlho').textContent = on ? 'Mostrar valores' : 'Esconder valores'; };
   $('pnlPer').onclick = (e) => { const b = e.target.closest('button'); if (b) { PNL_PER = b.dataset.p; painelEmp(); } };
   if ($('pnlNav')) $('pnlNav').onclick = (e) => { const b = e.target.closest('button'); if (b) { moverPainel(+b.dataset.n); painelEmp(); } };
   $('pnlAba').onclick = (e) => { const b = e.target.closest('button'); if (b) { PNL_ABA = b.dataset.a; painelEmp(); } };
@@ -5211,6 +5228,32 @@ function abaVendas(L, per) {
 }
 
 // Comercial: funil e conversão no período (os mesmos cálculos de Comercial › Resultados)
+/* ---------- funil do período (etapa 9 do layout): quantos chegaram a cada etapa e quantos passam ---------- */
+function etapasAlcancadas(r, G) {
+  const fechou = r.resultado === 'Fechou', M = r.marcos || {}, et = etapaDe(r);
+  if (G) {
+    const idx = Math.max(ETAPAS_G.indexOf(et), ...Object.keys(M).map(k => ETAPAS_G.indexOf(k)));
+    return { 'Lead': true, 'Qualificado': fechou || idx >= 1 || !!r.sdr_id && !!(r.qualificacao || {}).gasto, 'Diagnóstico feito': fechou || idx >= 3, 'Reunião de proposta': fechou || idx >= 4, 'Fechou': fechou };
+  }
+  const enviada = fechou || ['Cotação enviada', 'Follow-up'].includes(et) || cotsDe(r.id).some(c => (c.hist || []).length) || !!(M['Cotação enviada']);
+  // cards antigos não têm quem assumiu registrado: quem já andou no funil conta como assumido
+  return { 'Lead': true, 'Assumido': fechou || enviada || !!r.assumido_por || (et !== 'Novo lead' && ETAPAS_V.includes(et)), 'Cotação enviada': enviada, 'Fechou': fechou };
+}
+function htmlFunilPeriodo(base, baseAnt, G, nomeAnt) {
+  const L = base.filter(r => r.resultado !== 'Não se aplica' && !VENDA.soMilhasCliente(r));
+  if (!L.length) return '<div class="vazio" style="margin-top:12px">Nenhum atendimento aberto neste período.</div>';
+  const passos = Object.keys(etapasAlcancadas(L[0], G));
+  const cont = passos.map(k => L.filter(r => etapasAlcancadas(r, G)[k]).length);
+  const taxa = cont[cont.length - 1] / cont[0] * 100;
+  const LA = (baseAnt || []).filter(r => r.resultado !== 'Não se aplica' && !VENDA.soMilhasCliente(r));
+  const taxaA = LA.length ? LA.filter(r => r.resultado === 'Fechou').length / LA.length * 100 : null;
+  const dif = taxaA === null ? null : Math.round(taxa - taxaA);
+  return `<section class="funil-p"><div class="ini-rot">${G ? 'Funil da Gestão de Milhas' : 'Funil de viagens'}</div>
+    <div class="ini-num">${pct(Math.round(taxa * 10) / 10)}</div><div class="fp-sub">dos leads viraram venda${L.length < 20 ? ` · <b>com base em ${L.length} ${L.length === 1 ? 'card' : 'cards'}</b>` : ''}</div>
+    ${dif !== null && nomeAnt ? `<div class="fp-vs ${dif < 0 ? 'al' : ''}">${dif === 0 ? 'Igual a ' + esc(nomeAnt) : `${Math.abs(dif)} ${Math.abs(dif) === 1 ? 'ponto' : 'pontos'} ${dif < 0 ? 'abaixo' : 'acima'} de ${esc(nomeAnt)}`}</div>` : ''}
+    ${passos.map((k, i) => `<div class="fp-l"><div class="fp-t"><span>${esc(k)}</span><b>${cont[i]}</b></div><div class="fp-b"><i class="${k === 'Fechou' ? 'ouro' : ''}" style="width:${Math.max(2, cont[i] / cont[0] * 100)}%"></i></div>${i ? `<small>${cont[i - 1] ? pct(Math.round(cont[i] / cont[i - 1] * 100)) : '-'} passam</small>` : ''}</div>`).join('')}
+    </section>`;
+}
 function abaComercial(per) {
   const G = PNL_COM === 'gestao' && (ADMIN || pode('gestao'));
   const desde = `${new Date().getFullYear() - 1}-01-01`;
@@ -5219,11 +5262,13 @@ function abaComercial(per) {
   const motivos = Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]);
   return `${ADMIN || pode('gestao') ? `<div class="seg" id="pnlCom" style="margin-top:12px"><button data-c="viagens" class="${G ? '' : 'on'}">Viagens</button><button data-c="gestao" class="${G ? 'on' : ''}">Gestão de Milhas</button></div>` : ''}
     ${per.ini < desde ? `<div class="sub">O app guarda no aparelho os atendimentos desde ${dataBR(desde)}. Antes disso, o funil fica incompleto.</div>` : ''}
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
-      <div class="num"><div class="l">${G ? 'Leads e reuniões' : 'Cotações e reuniões'}</div><div class="v">${base.length}</div><div class="d">${c.andamento} ainda em aberto</div></div>
-      <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">no período</div></div>
-      <div class="num"><div class="l">Não fecharam</div><div class="v">${c.perdeu}</div><div class="d">motivos abaixo</div></div>
+    ${(() => { const ant = PNL_PER === 'tudo' ? null : IND.periodo(PNL_PER, refAnterior()), bA = ant ? D.reunioes.filter(noPeriodoDe(ant, 'data')).filter(r => G ? ehGestao(r) : !ehGestao(r)) : null;
+      const nA = !ant ? '' : PNL_PER === 'semana' ? 'a semana anterior' : PNL_PER === 'mes' ? ant.nome.split(' ')[0].toLowerCase() : ant.nome;
+      return htmlFunilPeriodo(base, bA, G, nA); })()}
+    <div class="ac-lista" style="margin-top:12px">
+      <div class="ac-pes"><span><b>Conversão das decididas</b><small>${c.fechou} de ${c.decididas} · ${c.andamento} ainda em aberto</small></span><span class="crm-v"><b>${c.taxa === null ? '-' : pct(c.taxa)}</b></span></div>
+      <div class="ac-pes"><span><b>Valor fechado</b><small>no período</small></span><span class="crm-v"><b class="cb-valor">${brlC(c.valor)}</b></span></div>
+      <div class="ac-pes"><span><b>Não fecharam</b><small>motivos abaixo</small></span><span class="crm-v"><b>${c.perdeu}</b></span></div>
     </div>
     ${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}
     ${ADMIN ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
