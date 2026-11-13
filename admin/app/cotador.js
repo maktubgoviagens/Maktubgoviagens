@@ -3,6 +3,7 @@
 // e "Maktub Corporativo" (cotação objetiva de voos). Gera o HTML pronto, no visual aprovado, sem mostrar custo.
 
 import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=6';
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 import { acharPessoa } from '/admin/app/venda.js?v=20';
 export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
@@ -183,7 +184,7 @@ function escolherCard(P, X, escolhido, voltar) {
     const ct = g('contato'), ehMail = /@/.test(ct), agora = new Date().toISOString();
     const chave = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
     let p = (D.pessoas || []).find(x => chave(x.nome) === chave(nome));
-    if (!p) { const ja = acharPessoa(D, { nome, contato: ct }); if (ja && confirm(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?\n\nOK: usar esta ficha. Cancelar: criar uma ficha nova.`)) p = ja; }
+    if (!p) { const ja = acharPessoa(D, { nome, contato: ct }); if (ja && await pergunta(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?`, { sim: 'Usar esta ficha', nao: 'Criar uma ficha nova', escolha: true })) p = ja; }
     // Como chegou: obrigatório para cliente novo; cliente com ficha e sem origem recebe a origem escolhida
     let ori = null;
     if (SO && (!p || !p.origem_canal)) {
@@ -332,7 +333,7 @@ function editor(P, X) {
     const vk = S.modelo === 'corp' && k.match(/^(.*voos\.\d+)\.(ocod|dcod|saida|chegada|data|tipo)$/);
     if (vk) { const v = get(vk[1]); completarVoo(v); ['onome', 'dnome', 'duracao'].forEach(c => { const el = f.querySelector(`[data-k="${vk[1]}.${c}"]`); if (el && el !== e.target && el.value !== (v[c] || '')) el.value = v[c] || ''; }); } });
   f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && e.target.dataset.k) set(e.target.dataset.k, e.target.value); if (e.target.dataset.hotel) escolherHotel(X, e.target); if (e.target.dataset.foto) fotoUpload(e.target, P, X); if (e.target.dataset.print) printUpload(e.target, P, X); });
-  f.addEventListener('click', (e) => {
+  f.addEventListener('click', async (e) => {
     const cb = e.target.closest('[data-colar]'); if (cb) { (S.modelo === 'go' ? colarGo : colar)(P, X, cb.dataset.colar); return; }
     const m = e.target.closest('[data-mais]'), t = e.target.closest('[data-tira]'), xv = e.target.closest('[data-xvoo]');
     if (m) { mais(m.dataset.mais); editor(P, X); }
@@ -342,7 +343,7 @@ function editor(P, X) {
       const [lista, i] = t.dataset.tira.split('#');
       // remover sem querer apagava um dia, um hotel ou a opção inteira: agora pergunta antes
       const oQue = lista === '_print' ? 'o print' : /opcoes$/.test(lista) ? 'esta opção inteira da cotação' : 'este item';
-      if (!confirm(`Remover ${oQue}?`)) return;
+      if (!await pergunta(`Remover ${oQue}?`, { sim: 'Remover', perigo: true })) return;
       if (lista === '_print') S.print = ''; else get(lista).splice(+i, 1); editor(P, X);
     }
   });
@@ -357,10 +358,10 @@ function editor(P, X) {
 }
 
 // X de um trecho na Maktub Go (opcoes.N.voos#j) ou na corporativa (voos#j, extras.N.voos#j)
-function tirarVooEd(P, X, alvo) {
+async function tirarVooEd(P, X, alvo) {
   const [lista, i] = alvo.split('#'), base = lista.replace(/\.?voos$/, ''), T = base ? get(base) : S, go = S.modelo === 'go';
   const siteK = go ? 'sites' : 'de', porK = go ? 'cartao' : 'por', F = go ? FMT_GO : FMT_C;
-  if (!T || !tirarVoo(T, +i, siteK, porK, F)) return;
+  if (!T || !await tirarVoo(T, +i, siteK, porK, F)) return;
   if (go) { const ds = T.voos.filter(F.ok).map(v => v.data).filter(Boolean).sort(); T.embarque = ds[0] || ''; T.retorno = ds.length > 1 ? ds[ds.length - 1] : ''; }
   if (T.voos.some(F.ok)) rotular(T.voos, F.o, F.d);
   editor(P, X);
@@ -947,7 +948,7 @@ function somarVoos(T, novosBrutos, de, por, siteK, porK, F) {
   return { n: novos.length, somou: true };
 }
 // tira o trecho i da opção T com confirmação: desconta o site da tela dele (quando sai o último trecho daquela tela) e apaga o valor da Maktub
-function tirarVoo(T, i, siteK, porK, F) {
+async function tirarVoo(T, i, siteK, porK, F) {
   const v = T.voos[i]; if (!v) return false;
   if (!F.ok(v)) { T.voos.splice(i, 1); return true; }
   const g = v._g, irmaos = g ? T.voos.filter(x => x !== v && x._g === g && F.ok(x)).length : 0, val = g && T.site_g ? T.site_g[g] : 0;
@@ -956,7 +957,7 @@ function tirarVoo(T, i, siteK, porK, F) {
   else if (val && irmaos) lin.push('O valor do site continua: ele é de uma tela com mais trechos e só sai quando o último deles for tirado.');
   else if (num(T[siteK]) && T.voos.filter(F.ok).length > 1) lin.push('O valor do site não muda sozinho. Confira depois.');
   if (num(T[porK])) lin.push('O valor da Maktub será apagado para você digitar o novo total.');
-  if (!confirm(lin.join('\n\n'))) return false;
+  if (!await pergunta(lin.join('\n\n'), { sim: 'Tirar o trecho', perigo: true })) return false;
   T.voos.splice(i, 1);
   if (val && !irmaos) { T[siteK] = String(Math.max(0, Math.round(((num(T[siteK]) || 0) - val) * 100) / 100)); delete T.site_g[g]; }
   if (!T.voos.some(F.ok)) { T[siteK] = ''; T.site_g = {}; }
@@ -1084,12 +1085,12 @@ function editorRapida(P, X) {
     if (!num(S.por) && $('fRap').querySelector('[data-k="por"]')) $('fRap').querySelector('[data-k="por"]').focus();
   };
   // tirar um trecho: confirma, desconta o valor do site da tela dele (quando sai o último trecho daquela tela) e apaga o valor da Maktub para digitar o novo total
-  const tirarTrecho = (i) => { if (!tirarVoo(S, i, 'de', 'por', FMT_C)) return;
+  const tirarTrecho = async (i) => { if (!await tirarVoo(S, i, 'de', 'por', FMT_C)) return;
     S.eco = undefined; rotular(S.voos); editorRapida(P, X);
     const cp = $('fRap') && $('fRap').querySelector('[data-k="por"]'); if (cp) cp.focus();
     X.aviso('Trecho removido. Digite o novo valor da Maktub.'); };
   if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) tirarTrecho(+b.dataset.xv); };
-  if ($('rpLimpa')) $('rpLimpa').onclick = () => { if (!confirm('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.')) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
+  if ($('rpLimpa')) $('rpLimpa').onclick = async () => { if (!await pergunta('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.', { sim: 'Tirar todos', perigo: true })) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
   if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
   // bagagem: mala de mão liga e desliga, despachada no + e −; monta o texto da cotação (continua editável)

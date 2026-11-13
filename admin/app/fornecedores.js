@@ -3,6 +3,7 @@
 // para indicar os melhores aos próximos clientes de cada destino.
 
 export const TIPOS = { hotel: 'Hotel', transfer: 'Transfer', passeio: 'Passeio', ingresso: 'Ingresso', seguro: 'Seguro viagem', locadora: 'Aluguel de carro', trem: 'Trem', restaurante: 'Restaurante', outro: 'Outro' };
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 let LISTA = null, AVS = null, JUNTAR = null, VISTA = 'lista', FID = null, TIPO = 'todos', BUSCA = '', PRE = null, PULADOS = new Set();
 
 const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -281,7 +282,7 @@ function telaDuplicados(P, X) {
   $('voltar').onclick = () => { VISTA = 'lista'; tela(P, X); };
   P.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
     const g = G[+b.dataset.g], manter = g.find(f => f.id === b.dataset.m);
-    if (!confirm(`Manter "${manter.nome}" e juntar ${g.length - 1} ${g.length === 2 ? 'cadastro' : 'cadastros'} nele? Não dá para desfazer.`)) return;
+    if (!await pergunta(`Manter "${manter.nome}" e juntar ${g.length - 1} ${g.length === 2 ? 'cadastro' : 'cadastros'} nele?\n\nNão dá para desfazer.`, { sim: 'Juntar', perigo: true })) return;
     P.querySelectorAll('[data-m]').forEach(x => x.disabled = true);
     for (const f of g) if (f.id !== manter.id) { const e = await juntar(X, manter, f); if (e) { $('msgD').textContent = e; P.querySelectorAll('[data-m]').forEach(x => x.disabled = false); return; } }
     X.aviso('Juntado em ' + manter.nome + '.'); telaDuplicados(P, X);
@@ -303,7 +304,7 @@ function telaJuntar(P, X) {
   $('buscaJ').oninput = (e) => { JUNTAR = e.target.value; const pos = e.target.selectionStart; telaJuntar(P, X); $('buscaJ').focus(); $('buscaJ').setSelectionRange(pos, pos); };
   P.querySelectorAll('[data-j]').forEach(b => b.onclick = async () => {
     const outro = LISTA.find(x => x.id === b.dataset.j);
-    if (!confirm(`Juntar "${outro.nome}" em "${f.nome}"? O cadastro "${outro.nome}" deixa de existir. Não dá para desfazer.`)) return;
+    if (!await pergunta(`Juntar "${outro.nome}" em "${f.nome}"?\n\nO cadastro "${outro.nome}" deixa de existir. Não dá para desfazer.`, { sim: 'Juntar', perigo: true })) return;
     b.disabled = true;
     const e = await juntar(X, f, outro);
     if (e) { $('msgJ').textContent = e; b.disabled = false; return; }

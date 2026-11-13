@@ -1208,19 +1208,19 @@ import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=30';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=8';
-import * as CRM from '/admin/app/crm.js?v=22';
+import * as CRM from '/admin/app/crm.js?v=23';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=4';
-import * as FORN from '/admin/app/fornecedores.js?v=13';
-import * as COT from '/admin/app/cotador.js?v=57';
+import * as FORN from '/admin/app/fornecedores.js?v=14';
+import * as COT from '/admin/app/cotador.js?v=58';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=29';
+import * as VENDA from '/admin/app/venda.js?v=30';
 import * as ATV from '/admin/app/atividades.js?v=3';
-import * as CMP from '/admin/app/compromissos.js?v=18';
+import * as CMP from '/admin/app/compromissos.js?v=19';
 import * as CX from '/admin/app/caixa.js?v=5';
 import * as DRE from '/admin/app/dre.js?v=8';
-import * as B2B from '/admin/app/b2b.js?v=10';
-import * as IND from '/admin/app/indicacoes.js?v=8';
+import * as B2B from '/admin/app/b2b.js?v=11';
+import * as IND from '/admin/app/indicacoes.js?v=9';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -2402,7 +2402,7 @@ function telaEmissoes(P) {
     const quem = $('loteVend').value, pessoa = (D.equipe || []).find(x => x.user_id === quem);
     const alvo = semVend().filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)));
     if (!alvo.length) { aviso('As vendas sem vendedor estão todas em meses fechados.'); return; }
-    if (!confirm(`Definir ${nomeTime(quem)} como vendedor de ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'}?${pessoa ? ` A comissão sai a ${pct(pessoa.comissao_pct)}.` : ''}`)) return;
+    if (!await pergunta(`Definir ${nomeTime(quem)} como vendedor de ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'}?${pessoa ? `\n\nA comissão sai a ${pct(pessoa.comissao_pct)}.` : ''}`, { sim: 'Definir' })) return;
     $('loteVendB').disabled = true; $('loteVendB').textContent = 'Salvando...';
     const ids = alvo.map(e => e.id);
     for (let k = 0; k < ids.length; k += 100) {
@@ -3608,7 +3608,7 @@ const posVenda = () => D.reunioes.filter(r => r.resultado === 'Fechou' && !ehGes
 const compParaConferir = () => D.reunioes.filter(r => r.fech && r.fech.comprovante && !r.fech.conferido);
 async function assumirAtendimento(id) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
-  if (r.assumido_por && r.assumido_por !== D.meuId && !confirm(`${nomeTime(r.assumido_por) || 'Outra pessoa'} já assumiu. Assumir no lugar?`)) return;
+  if (r.assumido_por && r.assumido_por !== D.meuId && !await pergunta(`${nomeTime(r.assumido_por) || 'Outra pessoa'} já assumiu. Assumir no lugar?`, { sim: 'Assumir no lugar' })) return;
   const ld = leadDoCard(r); if (ld && !intDe(ld).length) { aviso('Marque o que o lead quer antes de assumir.'); return; }
   const upd = { assumido_por: D.meuId, assumido_em: new Date().toISOString(), responsavel_id: D.meuId };
   if (!r.cotacao_inicio && !ehGestao(r)) upd.cotacao_inicio = hojeISO();
@@ -3789,7 +3789,7 @@ function telaReunioes(P) {
   ligarCardsReuniao(P);
   if ($('loteRespB')) $('loteRespB').onclick = async () => {
     const quem = $('loteResp').value, L = semResp(), ids = L.map(r => r.id);
-    if (!confirm(`Definir ${nomeTime(quem)} como responsável de ${ids.length} ${ids.length === 1 ? 'atendimento' : 'atendimentos'}?`)) return;
+    if (!await pergunta(`Definir ${nomeTime(quem)} como responsável de ${ids.length} ${ids.length === 1 ? 'atendimento' : 'atendimentos'}?`, { sim: 'Definir' })) return;
     $('loteRespB').disabled = true; $('loteRespB').textContent = 'Salvando...';
     for (let k = 0; k < ids.length; k += 100) {
       const { error } = await sb.from('atendimentos').update({ responsavel_id: quem }).in('id', ids.slice(k, k + 100));
@@ -4210,13 +4210,13 @@ function telaFormReuniao(P) {
       b.textContent = A.cliente.length && !A.vendas.length ? 'Emitiu: lançar na Gestão do cliente' : A.cliente.length ? 'Emitiu: enviar para a planilha e lançar na Gestão' : 'Emitiu: enviar para a planilha'; }
     f._rotFech = rotFech; setTimeout(rotFech, 0);
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
-    $('reProd').querySelectorAll('button').forEach(b => b.onclick = () => {
+    $('reProd').querySelectorAll('button').forEach(b => b.onclick = async () => {
       const k = IT.findIndex(x => x.produto === b.dataset.p);
       if (k >= 0) {
         if (VENDA.enviado(IT[k])) { aviso('Esse serviço já foi para a planilha.'); return; }
         // serviço com algo preenchido: pergunta antes de apagar (um toque sem querer apagava custo, localizador e passageiros)
         const temDado = Object.entries(IT[k]).some(([c, v]) => c !== 'produto' && v !== null && v !== undefined && v !== '' && v !== false && !(Array.isArray(v) && !v.length));
-        if (temDado && !confirm(`Tirar ${b.dataset.p} deste card?\n\nO que foi preenchido nesse serviço (valores, localizador, passageiros, print) será apagado.`)) return;
+        if (temDado && !await pergunta(`Tirar ${b.dataset.p} deste card?\n\nO que foi preenchido nesse serviço (valores, localizador, passageiros, print) será apagado.`, { sim: 'Tirar', perigo: true })) return;
         IT.splice(k, 1);
       } else IT.push({ produto: b.dataset.p, custo: null, venda: null });
       marcar(); EDIT.desenha(); if (f._reunVis) f._reunVis(); if (f._ratear) f._ratear();
@@ -4343,7 +4343,7 @@ function telaFormReuniao(P) {
     $('reFechPend').innerHTML = '';
     const nV = A.vendas.length, nC = A.cliente.length;
     const partes = [nV ? `enviar ${nV} ${nV === 1 ? 'serviço' : 'serviços'} para a planilha como ${nV === 1 ? 'emitido e pago' : 'emitidos e pagos'}` : '', nC ? `lançar ${nC === 1 ? 'a emissão' : nC + ' emissões'} com milhas do cliente na ficha da Gestão` : ''].filter(Boolean).join(' e ');
-    if (!confirm(partes.charAt(0).toUpperCase() + partes.slice(1) + '?')) return;
+    if (!await pergunta(partes.charAt(0).toUpperCase() + partes.slice(1) + '?', { sim: 'Confirmar' })) return;
     const antes = IT.map(x => x.planilha_id), bt = $('enviarPlan');
     bt.disabled = true; bt.textContent = 'Enviando...';
     const fim = () => { bt.disabled = false; if (f._rotFech) f._rotFech(); };
@@ -4468,7 +4468,7 @@ function telaFormReuniao(P) {
     if (!row.pessoa_id) {
       // antes de criar: a pessoa já tem ficha (CPF, celular, e-mail ou nome parecido)? liga com um toque
       const ja = VENDA.acharPessoa(D, { nome: g('cliente'), contato: g('contato') });
-      if (ja && confirm(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?\n\nOK: usar esta ficha. Cancelar: criar uma ficha nova.`)) { row.pessoa_id = ja.id; f.elements.pessoa_id.value = ja.id; }
+      if (ja && await pergunta(`Já existe a ficha de ${ja.nome}${ja.celular ? ' (' + ja.celular + ')' : ''}. É esta pessoa?`, { sim: 'Usar esta ficha', nao: 'Criar uma ficha nova', escolha: true })) { row.pessoa_id = ja.id; f.elements.pessoa_id.value = ja.id; }
     }
     if (!row.pessoa_id) {
       // cliente novo: cria a ficha no CRM antes de salvar o atendimento
@@ -4483,7 +4483,7 @@ function telaFormReuniao(P) {
     }
     if (nova && G && row.pessoa_id) {
       const ja = D.reunioes.find(x => ehGestao(x) && x.pessoa_id === row.pessoa_id && ['Em andamento', 'Fechou'].includes(x.resultado));
-      if (ja && confirm(`${ja.cliente} já tem um card da Gestão (${ja.resultado === 'Fechou' ? 'fechado' : etapaDe(ja)}).\n\nOK: abrir o card que já existe. Cancelar: criar outro mesmo assim.`)) { $('salvarRe').disabled = false; $('msgRe').textContent = ''; SUJO = false; abrirAtendimento(ja.id); return; }
+      if (ja && await pergunta(`${ja.cliente} já tem um card da Gestão (${ja.resultado === 'Fechou' ? 'fechado' : etapaDe(ja)}).`, { sim: 'Abrir o card que já existe', nao: 'Criar outro mesmo assim', escolha: true })) { $('salvarRe').disabled = false; $('msgRe').textContent = ''; SUJO = false; abrirAtendimento(ja.id); return; }
     }
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
@@ -4717,17 +4717,25 @@ async function gerarLinkAcesso(b) {
   mostrarLinkAcesso(b.nextElementSibling, b.dataset.nome, r.link); b.hidden = true;
 }
 // confirmação em folha que sobe de baixo: só grava no botão principal
-function confirmarFolha(titulo, linhas, rotulo, perigo) {
+function confirmarFolha(titulo, linhas, rotulo, perigo, rotuloNao, escolha) {
   return new Promise((ok) => {
     const el = document.createElement('div'); el.className = 'folha';
     el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${esc(titulo)}</div>${linhas.map(l => `<p class="ac-fl">${l}</p>`).join('')}
-      <button type="button" class="ac-prim${perigo ? ' perigo' : ''}" data-r="1">${esc(rotulo)}</button><button type="button" class="ac-sec" data-r="0">Voltar e revisar</button></div>`;
+      <button type="button" class="ac-prim${perigo ? ' perigo' : ''}" data-r="1">${esc(rotulo)}</button><button type="button" class="ac-sec" data-r="0">${esc(rotuloNao || 'Voltar e revisar')}</button></div>`;
     const fim = (r) => { el.remove(); ok(r); };
-    el.querySelector('.folha-fundo').onclick = () => fim(false);
+    // escolha entre dois caminhos: tocar fora não decide por ninguém
+    el.querySelector('.folha-fundo').onclick = () => { if (!escolha) fim(false); };
     el.querySelectorAll('[data-r]').forEach(x => x.onclick = () => fim(x.dataset.r === '1'));
     document.body.appendChild(el);
   });
 }
+// a mesma folha no lugar do confirm() do navegador: o primeiro parágrafo vira o título, os outros as linhas.
+// o: { sim, nao, perigo, escolha } (escolha: dois caminhos, cada botão com o seu nome e tocar fora não decide)
+function pergunta(texto, o = {}) {
+  const ps = String(texto || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+  return confirmarFolha(ps.shift() || 'Confirmar?', ps.map(x => esc(x).replace(/\n/g, '<br>')), o.sim || 'Confirmar', o.perigo, o.nao || (o.escolha ? 'Não' : 'Voltar'), o.escolha);
+}
+window.pergunta = pergunta; window.confirmarFolha = confirmarFolha;
 // botões de ligar e desligar, só com o nome; a explicação abre no "?"
 const htmlChaves = (perm, adm) => `${PERMS.map(([g, L]) => `<div class="ac-gr">${g}</div><div class="ac-grupo">${L.map(([k, t, d]) => `<div class="ac-sw" data-k="${k}"><label><input type="checkbox" name="k_${k}" ${marcado(perm, k) ? 'checked' : ''}><span class="ac-t">${esc(t)}</span><span class="ac-tg"></span></label><button type="button" class="ac-i" data-i="${k}" aria-label="O que é">?</button><div class="ac-d" hidden>${esc(d)}</div></div>`).join('')}</div>`).join('')}
   <div class="ac-gr">Perfil</div><div class="ac-grupo"><div class="ac-sw" data-k="_admin"><label><input type="checkbox" name="k__admin" ${adm ? 'checked' : ''}><span class="ac-t">Administração</span><span class="ac-tg"></span></label><button type="button" class="ac-i" data-i="_admin" aria-label="O que é">?</button><div class="ac-d" hidden>Vê e controla tudo: salários, DRE, financeiro e os acessos da equipe. Com isso ligado, as chaves acima deixam de valer.</div></div></div>
@@ -5058,7 +5066,7 @@ function telaPagar(P) {
     aviso(msg); telaPagar(P);
   };
   P.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { if (PG_CONF !== b.dataset.pg) { PG_CONF = b.dataset.pg; b.textContent = 'Confirmar'; return; } PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
-  P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pgall]; if (!confirm(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`)) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
+  P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = async () => { const g = grupos[b.dataset.pgall]; if (!await pergunta(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`, { sim: 'Marcar como pagas' })) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
   P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
     b.disabled = true;
@@ -5662,7 +5670,7 @@ function telaEquipe(P) {
     const alvo = minhas.filter(e => !mesFechado(String(e.data_negociacao).slice(0, 7)) && !temManual(e.comissao_manual) && +e.comissao_pct !== novo);
     if (!alvo.length && daPl) { aviso(`Nada a mudar: as vendas desse período usam a comissão escrita na planilha (coluna Comissão), que sempre vale.`); return; }
     if (!alvo.length) { aviso(fechadas ? `Nada a mudar: as ${fechadas} vendas desse período estão em meses fechados.` : `Todas as vendas desde ${desde.split('-').reverse().join('/')} já estão com ${pct(novo)}.`); return; }
-    if (!confirm(`Aplicar ${pct(novo)} de comissão a ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'} de ${pessoa.nome} desde ${desde.split('-').reverse().join('/')}?${fechadas ? ` (${fechadas} em meses fechados ficam como estão.)` : ''}`)) return;
+    if (!await pergunta(`Aplicar ${pct(novo)} de comissão a ${alvo.length} ${alvo.length === 1 ? 'venda' : 'vendas'} de ${pessoa.nome} desde ${desde.split('-').reverse().join('/')}?${fechadas ? `\n\n${fechadas} em meses fechados ficam como estão.` : ''}`, { sim: 'Aplicar' })) return;
     b.disabled = true; b.textContent = 'Aplicando...';
     const ids = alvo.map(e => e.id); let feitas = 0, erro = '';
     for (let k = 0; k < ids.length; k += 100) {
@@ -6758,7 +6766,7 @@ async function depoisDaCarteira(c, msg) {
   if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []);
   await gtMarcarChave(c, 'carteira');
   FI_FORM = null;
-  if (falhou && confirm(`O lançamento foi salvo, mas o painel do cliente não terminou de atualizar (${limparTec(falhou)}). O cliente pode ver números desatualizados.\n\nTentar atualizar o painel de novo agora?`)) return depoisDaCarteira(c, msg);
+  if (falhou && await pergunta(`O lançamento foi salvo, mas o painel do cliente não terminou de atualizar.\n\n${limparTec(falhou)}. O cliente pode ver números desatualizados.\n\nTentar atualizar o painel de novo agora?`, { sim: 'Tentar de novo', nao: 'Agora não' })) return depoisDaCarteira(c, msg);
   if (!falhou) aviso(msg); telaFicha($('pagina'), c.id);
 }
 function formCarteira(c) {
@@ -7866,10 +7874,10 @@ function ligarAvg(P, render) {
     aviso('Resposta copiada. Cole no Google e publique; depois toque em "Já respondi".');
   });
   P.querySelectorAll('[data-avgtxt]').forEach(t => { avgAltura(t); t.oninput = () => { AVG_RASC[t.dataset.avgtxt] = t.value; avgAltura(t); }; });
-  P.querySelectorAll('[data-avgoutra]').forEach(b => b.onclick = () => {
+  P.querySelectorAll('[data-avgoutra]').forEach(b => b.onclick = async () => {
     const a = achar(b.dataset.avgoutra); if (!a) return;
     const t = P.querySelector(`[data-avgtxt="${CSS.escape(a.codigo)}"]`);
-    if (t && t.value.trim() && t.value !== (a.sugestao || '') && !confirm('Trocar o texto que você editou por uma nova sugestão?')) return;
+    if (t && t.value.trim() && t.value !== (a.sugestao || '') && !await pergunta('Trocar o texto que você editou por uma nova sugestão?', { sim: 'Trocar o texto' })) return;
     avgGerar(a, !!a.sugestao);
   });
   // avaliação nova, ainda sem sugestão: pede uma vez, uma de cada vez

@@ -5,6 +5,7 @@
 // Direto: vendas de quem a pessoa indicou. Rede: vendas dos níveis seguintes, só informativa, nunca soma.
 // Comissão só no Direto. A comissão indireta não existe no sistema e aparece sempre como zero.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 export const ROTULO = {
   internet: 'Internet', indicacao_cliente: 'Indicação de cliente', indicacao_parceiro: 'Indicação de parceiro',
   rede_socios: 'Rede dos sócios', prospeccao_ativa: 'Prospecção ativa', registro_teste: 'Registro de teste'
@@ -153,7 +154,7 @@ export function ligarSeletor(el, X, ctx = {}) {
       if (L.length > 1) return { erro: 'Há mais de uma ficha com o nome de quem indicou. Junte as fichas antes ou escreva o nome completo.' };
       let ind = L[0];
       if (!ind) {
-        if (!confirm(`Não existe ficha de "${nome}". Criar a ficha de quem indicou agora?`)) return { erro: 'Escolha a ficha de quem indicou.' };
+        if (!await pergunta(`Não existe ficha de "${nome}". Criar a ficha de quem indicou agora?`, { sim: 'Criar a ficha' })) return { erro: 'Escolha a ficha de quem indicou.' };
         const ins = await X.sb.from('pessoas').insert({ nome, papeis: [] }).select().single();
         if (ins.error) return { erro: X.limparTec('Não criou a ficha de quem indicou: ' + ins.error.message) };
         ind = ins.data; (X.D.pessoas = X.D.pessoas || []).push(ind);
@@ -307,7 +308,7 @@ export async function telaOrigens(P, X) {
     let pf = L[0];
     if (!pf) {
       const nome = card.querySelector('.sf-in').value.replace(/\s+/g, ' ').trim();
-      if (!confirm(`Não existe ficha de "${nome}". Criar a ficha agora e ligar a venda a ela?`)) return;
+      if (!await pergunta(`Não existe ficha de "${nome}". Criar a ficha agora e ligar a venda a ela?`, { sim: 'Criar e ligar' })) return;
       const ins = await X.sb.from('pessoas').insert({ nome, papeis: ['cliente'] }).select().single();
       if (ins.error) { msg.innerHTML = `<span class="ind-alerta">${esc(X.limparTec('Não criou a ficha: ' + ins.error.message))}</span>`; return; }
       pf = ins.data; D.pessoas.push(pf);
