@@ -6,7 +6,7 @@ import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
-let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos';
+let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos', LIM_B = 30;
 // abas da Base de cartões (Cartões, Salas VIP, Bancos, Correções) e o que cada uma guarda
 let ABA_B = 'cartoes', IMP = false, LIN_ED = null, CORR_ED = null;
 let SALAS = null, SEGS = null, CORR = null, NPEND = null, AERO = null;
@@ -134,24 +134,26 @@ function abaCartoes(corpo, P, X) {
   const L = BASE.filter(b => passa(b) && (!BUSCA || (nomeBase(b) + ' ' + (b.programa || '')).toLowerCase().includes(BUSCA.toLowerCase())));
   corpo.innerHTML = `<div class="sub">Anuidade, isenção e pontuação de cada cartão do mercado. Os cartões dos clientes usam estes dados nas contas.</div>
     ${X.admin && TEM_NOVAS() ? '<button class="sec" id="bImp" style="width:100%;margin-top:10px">Importar planilha da base</button>' : ''}
-    <section class="bloco">
-      <div class="duas-col" style="align-items:end">${campo('cot', 'Cotação de referência do dólar (R$)', cot ?? '', 'number', 'placeholder="Ex.: 5,40"')}<button class="sec" id="cotOk" style="height:44px">Salvar cotação</button></div>
-      <div class="sub">Usada para converter os gastos dos cartões que pontuam por dólar.</div>
-    </section>
     <div class="duas-col" style="margin-top:14px;align-items:end"><label class="fl"><span>Buscar</span><input id="bBusca" value="${esc(BUSCA)}" placeholder="Banco, cartão ou programa"></label><button class="zap" id="bNovo" style="height:44px">+ Novo cartão</button></div>
     ${TEM_NOVAS() ? `<div class="chips" style="margin-top:8px">${filtros.map(([k, l]) => `<button data-fc="${k}" class="${FILTRO_C === k ? 'on' : ''}">${l}</button>`).join('')}</div>`
       : `<label class="fc" style="margin-top:8px"><input type="checkbox" id="bIlim" ${FILTRO_C === 'ilim' ? 'checked' : ''}><span>Só cartões com sala VIP ilimitada</span></label>`}
-    <section class="bloco" style="margin-top:10px">${L.length ? L.map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
+    <section class="bloco" style="margin-top:10px">${L.length ? L.slice(0, LIM_B).map(b => `<button type="button" class="lin" data-b="${b.id}" style="width:100%;background:none;border:0;border-top:1px solid var(--linha);text-align:left;cursor:pointer">
         <span><b style="font-weight:600">${esc(nomeBase(b))}</b>${b.ativo === false ? ' <small>(fora da lista)</small>' : b.vendido_hoje === false ? ' <small>(fora de linha)</small>' : ''}${b.a_confirmar ? ' <span class="tag alerta">a confirmar</span>' : ''}
           <small style="display:block;color:var(--tinta-3);font-size:13px">${esc(resumoCartao(b, brl))}</small></span>
         ${conferido(b.conferido_em)}</button>`).join('')
       : `<div class="vazio">${BASE.length ? 'Nenhum cartão com essa busca.' : 'Nenhum cartão cadastrado ainda.'}</div>`}</section>
+    ${L.length > LIM_B ? `<button type="button" class="ac-sec" id="bMais">Mostrar mais ${Math.min(30, L.length - LIM_B)} de ${num(L.length - LIM_B)}</button>` : ''}
     <div class="sub" style="margin-top:8px">${num(L.length)} de ${num(BASE.length)} cartões. Em laranja, os conferidos há mais de 90 dias: vale revisar no site do banco.</div>
+    <details class="gsec" style="margin-top:14px"><summary><span>Cotação de referência do dólar<small>Usada para converter os gastos dos cartões que pontuam por dólar</small></span></summary>
+      <div class="duas-col" style="align-items:end">${campo('cot', 'Cotação de referência do dólar (R$)', cot ?? '', 'number', 'placeholder="Ex.: 5,40"')}<button class="sec" id="cotOk" style="height:44px">Salvar cotação</button></div>
+      <div class="sub">Usada para converter os gastos dos cartões que pontuam por dólar.</div>
+    </details>
     ${X.admin && !TEM_NOVAS() ? X.tec('<div class="config" style="margin-top:14px">Para salas VIP, bancos, correções e a importação da planilha, rode no Supabase o 62-ia-cartoes-bases.sql.</div>') : ''}`;
-  $('bBusca').oninput = (e) => { BUSCA = e.target.value; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
+  $('bBusca').oninput = (e) => { BUSCA = e.target.value; LIM_B = 30; const pos = e.target.selectionStart; telaBase(P, X); const b = $('bBusca'); b.focus(); b.setSelectionRange(pos, pos); };
   $('bNovo').onclick = () => { ED = 'novo'; telaBase(P, X); };
+  if ($('bMais')) $('bMais').onclick = () => { LIM_B += 30; telaBase(P, X); };
   if ($('bIlim')) $('bIlim').onchange = (e) => { FILTRO_C = e.target.checked ? 'ilim' : 'todos'; telaBase(P, X); };
-  corpo.querySelectorAll('[data-fc]').forEach(b => b.onclick = () => { FILTRO_C = b.dataset.fc; telaBase(P, X); });
+  corpo.querySelectorAll('[data-fc]').forEach(b => b.onclick = () => { FILTRO_C = b.dataset.fc; LIM_B = 30; telaBase(P, X); });
   if ($('bImp')) $('bImp').onclick = () => { IMP = true; telaBase(P, X); scrollTo(0, 0); };
   corpo.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { ED = el.dataset.b; telaBase(P, X); scrollTo(0, 0); });
   $('cotOk').onclick = async () => {
