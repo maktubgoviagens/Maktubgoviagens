@@ -12,6 +12,8 @@
 /* Link de cotação com nome (maktubgo.com.br/nome-escolhido): busca a cotação; se não existir, mostra esta página normal. */
 (function () {
   var m = location.pathname.match(/^\/([a-z0-9-]{3,40})\/?$/i); if (!m) return;
+  // pode ser uma cotação: a medição (GA4 e Clarity) espera a resposta. Cotação de cliente não é medida (regra do CLAUDE.md).
+  window.MK_COT = 'esperando';
   // a cotação roda isolada (quadro com sandbox, sem a origem do site): um script dentro dela não alcança
   // a sessão de quem está logado no site, no painel ou no app. Links abrem em nova aba (WhatsApp, Instagram).
   var abrirCotacao = function (html) {
@@ -26,14 +28,15 @@
     f.title = 'Cotação'; f.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads');
     f.srcdoc = doc; document.body.appendChild(f);
   };
+  var naoECotacao = function () { if (window.MK_COT !== 'esperando') return; window.MK_COT = 'nao'; if (window.MK_MEDIR) window.MK_MEDIR(); };
   var raiz = document.documentElement; raiz.style.visibility = 'hidden';
-  var mostrar = function () { raiz.style.visibility = ''; };
+  var mostrar = function () { if (window.MK_COT === 'sim') return; raiz.style.visibility = ''; naoECotacao(); };
   fetch('https://qzrpvavhgtklacsbhlfi.supabase.co/rest/v1/rpc/ver_cotacao', {
     method: 'POST', headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE' },
     body: JSON.stringify({ p_token: m[1].toLowerCase() })
   }).then(function (r) { return r.ok ? r.json() : null; }).then(function (html) {
     if (!html || typeof html !== 'string') return mostrar();
-    abrirCotacao(html);
+    window.MK_COT = 'sim'; abrirCotacao(html);
   }).catch(mostrar);
   setTimeout(mostrar, 6000);
 })();
@@ -67,19 +70,20 @@ a.cheio:hover{background:transparent;color:#B49755;border-color:#A88B4A}
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
-<!-- Google Analytics 4: visitas, cliques no WhatsApp e envios de formulário -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<!-- Medição da página de erro: Google Analytics 4 (visitas e cliques no WhatsApp) e Microsoft Clarity (mapa de calor, rolagem e gravações anônimas).
+     Só carrega quando o endereço não é uma cotação de cliente. -->
 <script>
-window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+window.MK_MEDIR=function(){if(window.MK_MEDIU)return;window.MK_MEDIU=true;
+var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX';document.head.appendChild(g);
+window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="wa.me"]');if(a)gtag('event','clique_whatsapp',{local:(a.getAttribute('aria-label')||a.textContent||'botão').trim().slice(0,60)});},true);
-</script>
-<!-- Microsoft Clarity: mapa de calor, rolagem e gravações anônimas -->
-<script>
 /* Equipe Maktub fora do Clarity: aparelho marcado pelo app da operação (ou ?equipe=1) não é gravado. ?equipe=0 desfaz. */
 (function(){var equipe=false;try{var q=location.search;if(/[?&]equipe=0/.test(q))localStorage.removeItem('maktub_equipe');else if(/[?&]equipe=1/.test(q)||/maktubgo\.com\.br\/(admin\/|acesso\/app)/.test(document.referrer))localStorage.setItem('maktub_equipe','1');equipe=localStorage.getItem('maktub_equipe')==='1';}catch(e){}if(equipe)return;
 (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m")
 })();
+};
+if(window.MK_COT!=='esperando')window.MK_MEDIR();
 </script>
 </head>
 <body>

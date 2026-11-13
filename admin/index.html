@@ -437,7 +437,7 @@
       `<a class="btn" href="/painel/relatorio.html?cliente=${c.id}" target="_blank">Relatório do mês</a>`) + `
       <div class="card" style="max-width:640px"><form id="fCad"><div class="grid">
         <div class="f full"><label>Nome completo</label><input name="nome_completo" value="${esc(c.nome_completo || '')}" /></div>
-        <div class="f"><label>Gestor dedicado</label><select name="gestor_id">${gestorOpts(c.gestor_id)}</select></div>
+        <div class="f"><label>Responsável da equipe</label><select name="gestor_id">${gestorOpts(c.gestor_id)}</select></div>
         <div class="f"><label>Convites disponíveis</label><input type="number" min="0" max="50" name="convites_disponiveis" value="${esc(c.convites_disponiveis ?? 2)}" /></div>
         <div class="f full"><label>Tela de boas-vindas</label><div class="muted">${c.onboarding_concluido_em ? 'Vista em ' + brDT(c.onboarding_concluido_em) + '. <button type="button" class="btn sm" id="resetWel">Mostrar de novo</button>' : 'Ainda não vista. Aparece no próximo acesso.'}</div></div>
         <div class="f full"><label>ID do cliente</label><div class="muted">${c.id}</div></div>
@@ -1530,7 +1530,7 @@
       </tbody></table></div>`;
     const open = (g) => {
       $('panel').innerHTML = `<h3>${g ? 'Editar' : 'Novo'} gestor</h3><div class="ph">Dados exibidos para os clientes.</div>
-        <form id="fg"><div class="grid">${fields.map(f => inputFor(f, g ? g[f[0]] : (f[0] === 'ativo' ? true : f[0] === 'cargo' ? 'Gestor de Milhas' : null))).join('')}</div>
+        <form id="fg"><div class="grid">${fields.map(f => inputFor(f, g ? g[f[0]] : (f[0] === 'ativo' ? true : f[0] === 'cargo' ? 'Equipe da Gestão de Milhas Maktub Go' : null))).join('')}</div>
         <div class="pbar"><button type="button" class="btn" id="cx">Cancelar</button><button class="btn pri">Salvar</button></div><div id="mx"></div></form>`;
       $('drawer').hidden = false; $('cx').onclick = closeDrawer;
       $('fg').onsubmit = async (e) => {

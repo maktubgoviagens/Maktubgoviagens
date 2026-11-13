@@ -646,7 +646,9 @@ async function gerarLink(X) {
   const dados = atualizar ? { slug } : r.data;
   if (dados.slug) S.link_slug = dados.slug;
   const url = dados.slug ? `https://www.maktubgo.com.br/${dados.slug}` : `https://www.maktubgo.com.br/c/?k=${dados.token}`;
-  const zap = `https://wa.me/?text=${encodeURIComponent(url)}`;
+  const card = cardDe(X, S.reuniao_id), primeiro = String((card && card.cliente) || '').trim().split(' ')[0];
+  // com celular no card, abre a conversa com o cliente; sem celular, a escolha de contato como antes
+  const zap = (card && X.zapLink && X.zapLink(card.contato, card.cliente, `Oi${primeiro ? ', ' + primeiro : ''}! Aqui está a sua proposta da Maktub Go: ${url}`)) || `https://wa.me/?text=${encodeURIComponent(url)}`;
   X.$('linkBox').innerHTML = `<div class="config" style="margin-top:8px;word-break:break-all"><b>${atualizar ? 'Link atualizado' : 'Link pronto'}:</b><br><a href="${url}" target="_blank" rel="noopener">${url}</a></div><div class="botoes4" style="margin-top:6px"><button class="sec" id="copiarL">Copiar link</button><a class="sec" style="text-align:center;text-decoration:none" href="${zap}" target="_blank" rel="noopener">Enviar no WhatsApp</a></div>`;
   X.$('copiarL').onclick = async () => { try { await navigator.clipboard.writeText(url); X.aviso('Link copiado.'); } catch (e) { X.aviso(url); } };
   try { await navigator.clipboard.writeText(url); } catch (e) {}
@@ -794,7 +796,7 @@ function gerarGo(X) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title>${h(titulo)} · Maktub Go</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet"><style>${CSS_GO}</style></head><body>
-<div class="marca-dagua" aria-hidden="true"><span>Maktub Go · Documento exclusivo</span></div>
+<div class="marca-dagua" aria-hidden="true"><span>Maktub Go · Proposta personalizada</span></div>
 <div class="barra"><div class="wrap"><span>Alfaiataria de Viagens</span><span><a href="mailto:${EMAIL}">${EMAIL}</a> &nbsp;·&nbsp; <a href="https://wa.me/${ZAP}">${ZAP_TXT}</a></span></div></div>
 <header class="capa"><div class="wrap"><div class="moldura"><img class="selo" src="${M.selo}" alt="Maktub Go, Alfaiataria de Viagens e Experiências">
 <div class="kicker">${h(S.kicker)}</div><h1>${h(S.titulo)}</h1>${S.sub ? `<p class="sub">${h(S.sub)}</p>` : ''}${S.linha ? `<p class="datas">${h(S.linha)}</p>` : ''}
@@ -807,13 +809,13 @@ ${S.opcoes.map(painel).join('')}
 <div class="avisos"><div class="wrap">${avisos.map(a => `<p>${h(a)}</p>`).join('')}</div></div>
 <div class="fecho"><img class="assin" src="${M.assin}" alt="Seu destino começa aqui."></div>
 <footer><img class="assin-footer" src="${M.rodape}" alt="Maktub Go"><div>${ctLinks()}</div>
-<p class="prop">Documento exclusivo Maktub Go, de uso restrito ${pax === 1 ? 'ao viajante indicado' : 'aos viajantes indicados'}. Proibida a reprodução ou distribuição a terceiros.</p></footer>
+<p class="prop">Proposta preparada pela Maktub Go para ${pax === 1 ? 'o viajante indicado' : 'os viajantes indicados'}. Proibida a reprodução ou distribuição a terceiros.</p></footer>
 <script>
-var NOMES=${JSON.stringify(nomes)},QUEM=${JSON.stringify(S.nomeZap || '')};
+var NOMES=${JSON.stringify(nomes)},QUEM=${JSON.stringify(S.nomeZap || '')},VIAGEM=${JSON.stringify(String(S.destino || '').trim())},LINK=${JSON.stringify(S.slug ? 'maktubgo.com.br/' + S.slug : '')};
 function brl(v){return 'R$ '+v.toFixed(2).replace('.',',').replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.');}
 function atualizar(sec){var n=sec.dataset.op,base=parseFloat(sec.dataset.base)||0,s=document.querySelector('input[name="carro'+n+'"]:checked'),extra='';
  if(s){var p=parseFloat(s.dataset.preco),tem=p>0;sec.querySelector('[data-cnome]').textContent=s.dataset.nome;sec.querySelector('[data-cval]').textContent=brl(p);sec.querySelector('[data-total]').textContent=brl(base+p);sec.querySelector('[data-obs]').hidden=!tem;var li=sec.querySelector('[data-licarro]');if(li)li.hidden=!tem;extra=tem?' com o carro '+s.dataset.nome+'. Total: '+brl(base+p)+'.':', sem aluguel de carro.';}
- var msg='Olá, Maktub!'+(QUEM?' Aqui é '+QUEM+'.':'')+' Vi a proposta da viagem e quero seguir'+(NOMES[n]?' com a '+NOMES[n]:'')+(extra||'.');
+ var msg='Olá, Maktub!'+(QUEM?' Aqui é '+QUEM+'.':'')+' Vi a proposta da viagem'+(VIAGEM?' '+VIAGEM:'')+(LINK?' ('+LINK+')':'')+' e quero seguir'+(NOMES[n]?' com a '+NOMES[n]:'')+(extra||'.');
  sec.querySelector('[data-cta]').href='https://wa.me/${ZAP}?text='+encodeURIComponent(msg);}
 document.querySelectorAll('.invest[data-op]').forEach(function(sec){atualizar(sec);});
 document.querySelectorAll('input[type=radio][name^="carro"]').forEach(function(i){i.addEventListener('change',function(){atualizar(i.closest('.painel').querySelector('.invest'));});});
