@@ -6311,7 +6311,7 @@ function telaFicha(P, id) {
   const c = D.clientes.find(x => x.id === id);
   if (!c) { CLI = null; return telaClientes(P); }
   const g = D.gestores.find(x => x.id === c.gestor_id);
-  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['cartoes', 'Cartões'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
+  const abas = [['resumo', 'Resumo'], ['trajetoria', 'Trajetória'], ['tarefas', 'Tarefas'], ['carteira', 'Carteira'], ['cartoes', 'Cartões'], ['viagens', 'Viagens'], ['reunioes', 'Reuniões'], ['relatorio', 'Carta'], ['docs', 'Docs']];
   if (!abas.some(a => a[0] === FI_ABA)) FI_ABA = 'resumo';
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Voltar</button>
@@ -6324,7 +6324,7 @@ function telaFicha(P, id) {
   $('voltar').onclick = () => voltarSeguro('clientes');
   $('fiAbas').onclick = (e) => { const b = e.target.closest('button'); if (b) { FI_ABA = b.dataset.a; FI_FORM = null; telaFicha(P, id); } };
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); const pf = (D.pessoas || []).find(x => x.cliente_id === c.id); if (b && b.dataset.fa === 'dados' && pf) ir('crm', () => CRM.abrir(pf.id)); };
-  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
+  ({ resumo: fiResumo, trajetoria: fiTrajetoria, tarefas: fiTarefas, carteira: fiCarteira, cartoes: fiCartoes, viagens: fiViagens, reunioes: fiReunioes, relatorio: fiRelatorio, docs: fiDocs }[FI_ABA])($('fiCorpo'), c);
 }
 
 function fiResumo(el, c) {
@@ -6396,6 +6396,85 @@ function ligarCadastroCli(c) {
   };
 }
 
+/* ---------- editor da Gestão para o que vinha do /admin/: viagens, movimentos estratégicos, economias e lançamentos ---------- */
+const GX_STATUS_VIAGEM = [['estrategia', 'Estratégia'], ['planejamento', 'Planejamento'], ['emitida', 'Emitida']];
+const GX_CAT_ECO = { emissao: 'Passagem', acumulo: 'Cartões e super acúmulo', cashback: 'Cashback', outro: 'Outro ganho' };
+const GX_VIAGEM = { tab: 'viagens', titulo: 'Viagens', novo: '+ Viagem', vazio: 'Nenhuma viagem no painel.', ordem: ['data_viagem', true],
+  ajuda: 'Cada viagem aparece no painel do cliente, com hotel e datas.',
+  campos: [['destino', 'Destino', 'text', 1], ['destino_complemento', 'Complemento (ex.: Santiago e Atacama)', 'text'], ['data_viagem', 'Data de ida', 'date', 1], ['data_retorno', 'Data de volta', 'date'],
+    ['status', 'Situação', 'select', 1, GX_STATUS_VIAGEM], ['detalhes', 'Detalhes (ex.: viagem internacional)', 'text'], ['programa_usado', 'Programa', 'text'], ['milhas_estimadas', 'Milhas estimadas', 'text'],
+    ['hotel', 'Hotel', 'text'], ['hotel_checkin', 'Check-in do hotel', 'date'], ['hotel_checkout', 'Check-out do hotel', 'date'], ['observacoes', 'Observações', 'textarea']],
+  linha: (x) => [esc(x.destino || 'Viagem') + (x.destino_complemento ? ' · ' + esc(x.destino_complemento) : ''), [x.data_viagem ? dataBR(x.data_viagem) + (x.data_retorno ? ' a ' + dataBR(x.data_retorno) : '') : '', (GX_STATUS_VIAGEM.find(s => s[0] === x.status) || [0, x.status || ''])[1], x.hotel].filter(Boolean).join(' · ')] };
+const GX_MOV = { tab: 'movimentos_estrategicos', titulo: 'Movimentos estratégicos', novo: '+ Movimento', vazio: 'Nenhum movimento no painel.', ordem: ['ordem', true],
+  ajuda: 'Aparecem no painel e no relatório do cliente. No título, *palavra* fica em itálico.',
+  campos: [['titulo', 'Título', 'text', 1], ['tag', 'Etiqueta (ex.: Prioridade · Upgrade)', 'text'], ['prioridade', 'Prioridade', 'bool'], ['descricao', 'Descrição', 'textarea'],
+    ['meta_1_label', 'Informação 1: rótulo', 'text'], ['meta_1_valor', 'Informação 1: valor', 'text'], ['meta_2_label', 'Informação 2: rótulo', 'text'], ['meta_2_valor', 'Informação 2: valor', 'text'],
+    ['meta_3_label', 'Informação 3: rótulo', 'text'], ['meta_3_valor', 'Informação 3: valor', 'text'], ['ordem', 'Ordem', 'number']],
+  linha: (x) => [esc(String(x.titulo || 'Movimento').replace(/\*/g, '')), [x.tag, x.prioridade && !/prioridade/i.test(x.tag || '') ? 'prioridade' : ''].filter(Boolean).map(esc).join(' · ')] };
+// economias lançadas à mão (as da carteira são recalculadas sozinhas e não se editam aqui); novas entram pelo "+ Cashback ou outro ganho"
+const GX_ECO = { tab: 'historico_economia', titulo: 'Economias lançadas à mão', vazio: 'Nenhuma economia lançada à mão.', ordem: ['data', false], semNovo: true,
+  filtro: (q) => q.is('extrato_id', null).is('cancelado_em', null),
+  ajuda: 'Só as lançadas à mão. As que vêm da carteira são calculadas sozinhas. Para uma nova, use "+ Cashback ou outro ganho" acima.',
+  campos: (x) => [['data', 'Data', 'date', 1], ['descricao', 'Descrição', 'text', 1]].concat(x && x.categoria === 'emissao' ? [['valor_mercado_brl', 'Valor de mercado (R$)', 'number'], ['valor_pago_brl', 'Valor investido (R$)', 'number']] : [['valor_economia_brl', 'Valor da economia (R$)', 'number', 1]]).concat([['observacao', 'Observação', 'text']]),
+  linha: (x) => [esc(x.descricao || GX_CAT_ECO[x.categoria] || 'Economia'), [dataBR(x.data), GX_CAT_ECO[x.categoria] || '', brl2(ecoValor(x))].filter(Boolean).join(' · ')],
+  depois: async (c) => { const ec = await sb.from('historico_economia').select('*').eq('cliente_id', c.id).is('cancelado_em', null); if (!ec.error) D.eco = D.eco.filter(r => r.cliente_id !== c.id).concat(ec.data || []); } };
+const GX_LANC = { tab: 'extrato_milhas', titulo: 'Lançamento',
+  campos: [['data', 'Data', 'date', 1], ['programa', 'Programa', 'text', 1], ['tipo', 'Tipo', 'select', 1, Object.entries(TIPO_CART).filter(([k]) => k !== 'transf_entrada' && k !== 'transf_saida')], ['quantidade', 'Quantidade (negativa para saída)', 'number', 1], ['descricao', 'Descrição', 'text']] };
+const gxCampos = (cfg, x) => typeof cfg.campos === 'function' ? cfg.campos(x) : cfg.campos;
+function gxForm(cfg, x) {
+  const v = (k) => x && x[k] !== null && x[k] !== undefined ? x[k] : '';
+  return `<form class="bloco form gx-form" autocomplete="off" style="margin:8px 0">${x ? '' : `<b>${esc(cfg.novo ? cfg.novo.replace('+ ', 'Novo: ') : 'Novo')}</b>`}
+    ${gxCampos(cfg, x).map(([k, r, t, req, ops]) => t === 'bool' ? `<label class="fc" style="margin:8px 0"><input type="checkbox" name="${k}" ${v(k) ? 'checked' : ''}><span>${esc(r)}</span></label>`
+      : t === 'select' ? `<label class="fl"><span>${esc(r)}</span><select name="${k}">${ops.map(([o, l]) => `<option value="${esc(o)}" ${String(v(k) || (x ? '' : ops[0][0])) === o ? 'selected' : ''}>${esc(l)}</option>`).join('')}${v(k) && !ops.some(o => o[0] === v(k)) ? `<option selected>${esc(v(k))}</option>` : ''}</select></label>`
+      : t === 'textarea' ? `<label class="fl"><span>${esc(r)}</span><textarea name="${k}" rows="3">${esc(v(k))}</textarea></label>`
+      : `<label class="fl"><span>${esc(r)}</span><input name="${k}" type="${t === 'number' ? 'number' : t}" ${t === 'number' ? 'step="any" inputmode="decimal"' : ''} ${req ? 'required' : ''} value="${esc(t === 'date' ? String(v(k)).slice(0, 10) : v(k))}"></label>`).join('')}
+    <button type="submit" class="ac-prim" style="margin-top:10px">Revisar e salvar</button><button type="button" class="ac-sec" data-gxc>Cancelar</button></form>`;
+}
+function gxLigar(f, cfg, x, c, depois) {
+  f.querySelector('[data-gxc]').onclick = () => { f.remove(); SUJO = false; PREENCHIDO = false; };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const C = gxCampos(cfg, x), row = {};
+    C.forEach(([k, , t]) => { const el = f.elements[k]; if (!el) return; if (t === 'bool') { row[k] = el.checked; return; } const s = String(el.value).trim(); row[k] = s === '' ? null : t === 'number' ? Number(s.replace(',', '.')) : s; });
+    const falta = C.filter(([k, , , req]) => req && (row[k] === null || row[k] === undefined)).map(([, r]) => r);
+    if (falta.length) { aviso('Preencha: ' + falta.join(', ') + '.'); return; }
+    if (cfg === GX_ECO && x && x.categoria === 'emissao' && (row.valor_mercado_brl === null || row.valor_pago_brl === null)) { aviso('Para passagem, informe o valor de mercado e o valor investido.'); return; }
+    const fmt = (k, val) => { const t = (C.find(y => y[0] === k) || [])[2]; return val === null || val === undefined || val === '' ? 'vazio' : t === 'bool' ? (val ? 'sim' : 'não') : t === 'date' ? dataBR(val) : String(val); };
+    const mud = x ? C.filter(([k]) => String(row[k] ?? '') !== String((x[k] ?? '') === '' ? '' : (C.find(y => y[0] === k)[2] === 'date' ? String(x[k]).slice(0, 10) : x[k]))).map(([k, r]) => `${r}: ${esc(fmt(k, x[k]))} → ${esc(fmt(k, row[k]))}`) : [];
+    if (x && !mud.length) { aviso('Nada mudou.'); return; }
+    const linhas = x ? mud.slice(0, 6).concat(mud.length > 6 ? ['e mais ' + (mud.length - 6) + ' campos'] : []) : [esc(cfg.linha ? cfg.linha({ ...row })[0] : 'Novo item') + '.'];
+    linhas.push(cfg === GX_LANC ? 'O saldo e o painel do cliente são recalculados.' : 'O painel do cliente mostra a mudança na hora.');
+    if (!await confirmarFolha(x ? 'Salvar as mudanças?' : 'Salvar?', linhas.map(l => /\.$/.test(l) ? l : l + '.'), 'Salvar')) return;
+    const r = x ? await sb.from(cfg.tab).update(row).eq('id', x.id) : await sb.from(cfg.tab).insert({ ...row, cliente_id: c.id });
+    if (r.error) { aviso('Não salvou: ' + limparTec(r.error.message)); return; }
+    SUJO = false; PREENCHIDO = false;
+    if (cfg.depois) await cfg.depois(c);
+    if (depois) await depois(); else aviso('Salvo. O painel do cliente já mostra.');
+  };
+}
+// bloco com a lista; tocar num item abre a edição logo abaixo dele
+async function gxBloco(el, c, cfg) {
+  if (!el) return;
+  let q = sb.from(cfg.tab).select('*').eq('cliente_id', c.id); if (cfg.filtro) q = cfg.filtro(q);
+  const { data, error } = await q.order(cfg.ordem[0], { ascending: cfg.ordem[1] });
+  if (!el.isConnected) return;
+  if (error) { el.innerHTML = `<div class="secao">${esc(cfg.titulo)}</div><div class="vazio">${esc(limparTec('Não carregou: ' + error.message))}</div>`; return; }
+  const L = data || [];
+  el.innerHTML = `<div class="secao">${esc(cfg.titulo)}</div>${cfg.ajuda ? `<div class="sub" style="margin-top:-4px">${esc(cfg.ajuda)}</div>` : ''}
+    <div class="ac-lista" style="margin-top:8px">${L.map(x => { const [t, d] = cfg.linha(x); return `<button type="button" class="ac-pes" data-gx="${esc(x.id)}"><span><b>${t}</b>${d ? `<small>${d}</small>` : ''}</span><i>›</i></button>`; }).join('') || `<div class="vazio">${esc(cfg.vazio)}</div>`}</div>
+    ${cfg.semNovo ? '' : `<button type="button" class="ac-sec" data-gxn style="margin-top:8px">${esc(cfg.novo)}</button>`}`;
+  const recarregar = async () => { aviso('Salvo. O painel do cliente já mostra.'); gxBloco(el, c, cfg); };
+  el.querySelectorAll('[data-gx]').forEach(b => b.onclick = () => {
+    if (el.querySelector('.gx-form')) { if (!sairOk()) return; el.querySelector('.gx-form').remove(); }
+    const x = L.find(y => String(y.id) === b.dataset.gx); b.insertAdjacentHTML('afterend', gxForm(cfg, x)); gxLigar(b.nextElementSibling, cfg, x, c, recarregar);
+  });
+  const n = el.querySelector('[data-gxn]'); if (n) n.onclick = () => {
+    if (el.querySelector('.gx-form')) { if (!sairOk()) return; el.querySelector('.gx-form').remove(); }
+    n.insertAdjacentHTML('beforebegin', gxForm(cfg, null)); gxLigar(n.previousElementSibling, cfg, null, c, recarregar);
+  };
+}
+async function fiViagens(el, c) { el.innerHTML = '<div id="blViag"></div>'; await gxBloco($('blViag'), c, GX_VIAGEM); }
+
 /* carteira no celular */
 async function fiCarteira(el, c) {
   if (!c._W) el.innerHTML = '<div class="vazio" style="margin-top:14px">Carregando a carteira...</div>';
@@ -6424,8 +6503,18 @@ async function fiCarteira(el, c) {
     <div class="secao">Por programa</div>
     <div class="bloco" style="margin-top:0">${W.programas.filter(p => p.saldo).length ? W.programas.filter(p => p.saldo).map(p => `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} · ${[p.herdado ? 'herdado ' + milC(p.herdado) : '', p.organico ? 'orgânico ' + milC(p.organico) : '', p.pago ? 'pago ' + milC(p.pago) : ''].filter(Boolean).join(' · ')}</div></div><div class="v">${p.custo_medio !== null ? brl2(p.custo_medio) + '<small style="display:block;font-size:11px;color:var(--tinta-3)">milheiro médio</small>' : ''}</div>${p.venc_data ? `<div class="s" style="grid-column:1/-1">${num(p.venc_qtd)} vencem em ${dataBR(p.venc_data)}</div>` : ''}</div>`).join('') : '<div class="vazio">Nenhum lançamento ainda. Comece pelo saldo herdado de cada programa.</div>'}</div>
     <div class="secao">Últimos lançamentos</div>
-    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref || !ADMIN ? '' : `<button class="mini" data-del="${x.id}">arquivar</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}
-      <div class="sub">Editar um lançamento antigo continua na <a href="${adminLink(c.id, 'carteira')}">Administração completa</a>.</div></div>`;
+    <div class="bloco" style="margin-top:0">${L.length ? L.map(x => `<div class="lanc"><div><b>${esc(x.programa)}</b> · ${esc(x.tipo === 'emissao' && Number(x.quantidade) > 0 ? 'Estorno de resgate' : TIPO_CART[x.tipo] || x.tipo)}<small>${dataBR(x.data)}${x.descricao ? ' · ' + esc(x.descricao) : ''}${x.emissao_ref ? ` · <a href="#reunioes/${esc(x.atendimento_id || '')}">pelo card</a>` : ''}${x.cancelado_em ? ' · <span style="color:var(--alerta)">cancelada, não conta no saldo</span>' : ''}</small></div><div class="q ${Number(x.quantidade) < 0 ? 'neg' : ''}" style="${x.cancelado_em ? 'text-decoration:line-through;opacity:.6' : ''}">${Number(x.quantidade) > 0 ? '+' : ''}${num(x.quantidade)}${x.emissao_ref || !ADMIN || x.cancelado_em ? '' : `<button class="mini" data-edl="${x.id}">editar</button><button class="mini" data-del="${x.id}">arquivar</button>`}</div></div>`).join('') : '<div class="vazio">Sem lançamentos.</div>'}</div>
+    ${ADMIN ? '<div id="blMov"></div><div id="blEco"></div><button type="button" class="ac-sec" id="recalcCli" style="margin-top:14px">Recalcular o painel do cliente</button>' : ''}`;
+  if (ADMIN) { gxBloco($('blMov'), c, GX_MOV); gxBloco($('blEco'), c, GX_ECO); }
+  if ($('recalcCli')) $('recalcCli').onclick = async () => { const b = $('recalcCli'); b.disabled = true; b.textContent = 'Recalculando...'; await depoisDaCarteira(c, 'Painel do cliente recalculado.'); };
+  // editar um lançamento antigo (veio do /admin/): só a administração, um lançamento por vez; transferência se arquiva e lança de novo
+  el.querySelectorAll('[data-edl]').forEach(b => b.onclick = () => {
+    const x = c._ex.find(y => String(y.id) === b.dataset.edl); if (!x) return;
+    if (x.grupo_id && c._ex.filter(y => y.grupo_id === x.grupo_id).length > 1) { aviso('Este lançamento faz parte de uma transferência. Arquive e lance de novo, para as duas pontas ficarem certas.'); return; }
+    const row = b.closest('.lanc'); if (!row || row.nextElementSibling && row.nextElementSibling.classList.contains('gx-form')) return;
+    row.insertAdjacentHTML('afterend', gxForm(GX_LANC, x)); const f = row.nextElementSibling;
+    gxLigar(f, GX_LANC, x, c, async () => { await depoisDaCarteira(c, 'Lançamento editado e painel recalculado.'); });
+  });
   el.querySelectorAll('[data-form]').forEach(b => b.onclick = () => { FI_FORM = b.dataset.form; formCarteira(c); });
   // arquivar no lugar de excluir: o lançamento também fica cancelado, e o saldo, o painel e o relatório do cliente já ignoram o cancelado.
   // A economia ligada a ele fica marcada como cancelada (sai do painel). Nada é apagado.
