@@ -5155,7 +5155,7 @@ function telaReceber(P) {
       <div class="info"><div><span>Valor:</span> ${brl2(e.valor_receber)}${e.forma_pagamento ? ' · ' + esc(e.forma_pagamento) : ''}</div>
         ${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}</div>` : ''}
         ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
-        ${recebidoDe(e) ? `<div><span>Recebido:</span> ${brl2(recebidoDe(e))} de ${brl2(e.valor_receber)} · <b>faltam ${brl2(faltaDe(e))}</b></div>` : ''}</div>
+      ${recebidoDe(e) ? `<div class="info"><div><span>Recebido:</span> ${brl2(recebidoDe(e))} de ${brl2(e.valor_receber)} · <b>faltam ${brl2(faltaDe(e))}</b></div></div>` : ''}
       ${(RECEB[e.id] || []).length ? `<div class="rc-lin">${RECEB[e.id].map(x => `<div class="lin"><span>${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}</span><button class="mini" data-rcarq="${x.id}" data-em="${e.id}">arquivar</button></div>`).join('')}</div>` : ''}
       <div class="rc-bt"><button class="zap" data-ok="${e.id}">Recebido o restante</button><button class="sec" data-parc="${e.id}">+ Recebimento parcial</button></div>
     </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div><div id="rbBloco"></div>`;
