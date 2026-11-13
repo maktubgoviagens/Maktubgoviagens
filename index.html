@@ -687,7 +687,15 @@ footer a:hover{color:var(--creme)}
 @media (min-width:1001px){.hero h1{font-size:80px}}
 </style>
 <!-- Google Analytics 4: visitas, cliques no WhatsApp, cliques nos botões de diagnóstico e diagnósticos enviados -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX"></script>
+<script>
+/* gtag.js e Clarity entram logo depois que a foto do topo aparece na tela (ou em até 3 s).
+   Os eventos e a visita ficam na fila do dataLayer até o gtag.js chegar, então nada se perde. */
+(function(){var fila=[],pronto=false;
+window.mkDepoisDoTopo=function(f){if(pronto)f();else fila.push(f);};
+window.mkTopoPronto=function(){if(pronto)return;pronto=true;fila.forEach(function(f){f();});fila=[];};
+setTimeout(window.mkTopoPronto,3000);})();
+mkDepoisDoTopo(function(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-HW7VYZHTVX';document.head.appendChild(s);});
+</script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-HW7VYZHTVX');
@@ -698,7 +706,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 <script>
 /* Equipe Maktub fora do Clarity: aparelho marcado pelo app da operação (ou ?equipe=1) não é gravado. ?equipe=0 desfaz. */
 (function(){var equipe=false;try{var q=location.search;if(/[?&]equipe=0/.test(q))localStorage.removeItem('maktub_equipe');else if(/[?&]equipe=1/.test(q)||/maktubgo\.com\.br\/(admin\/|acesso\/app)/.test(document.referrer))localStorage.setItem('maktub_equipe','1');equipe=localStorage.getItem('maktub_equipe')==='1';}catch(e){}if(equipe)return;
-(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m")
+mkDepoisDoTopo(function(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","ypnuw0ek2m");});
 })();
 </script>
 <style id="mk-topo-css">
@@ -891,6 +899,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     <figure class="hero-foto">
       <img src="/ativos/janela-aviao.webp" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" fetchpriority="high">
     </figure>
+    <script>/* a foto do topo já está na tela: libera o gtag.js e o Clarity */ (function(){var i=document.querySelector('.hero-foto img');function foto(){if(i.complete)setTimeout(mkTopoPronto,0);else{i.addEventListener('load',function(){requestAnimationFrame(function(){setTimeout(mkTopoPronto,0);});});i.addEventListener('error',mkTopoPronto);}}try{var po=new PerformanceObserver(function(l){if(l.getEntriesByName('first-contentful-paint').length){po.disconnect();foto();}});po.observe({type:'paint',buffered:true});}catch(e){addEventListener('load',mkTopoPronto);}})();</script>
   </div>
 </section>
 
