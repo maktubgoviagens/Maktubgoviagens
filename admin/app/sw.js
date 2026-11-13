@@ -21,13 +21,25 @@ self.addEventListener('push', (e) => {
   }));
 });
 
+const pedirAoApp = (c, url) => new Promise((ok) => {
+  const canal = new MessageChannel(), t = setTimeout(() => ok(false), 1500);
+  canal.port1.onmessage = () => { clearTimeout(t); ok(true); };
+  try { c.postMessage({ tipo: 'abrir', url }, [canal.port2]); } catch (_) { clearTimeout(t); ok(false); }
+});
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = new URL((e.notification.data && e.notification.data.url) || '/admin/app/', self.location.origin).href;
   e.waitUntil((async () => {
     const abertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of abertas) {
-      if (c.url.includes('/admin/app/') && 'focus' in c) { await c.focus(); if ('navigate' in c) return c.navigate(url); return; }
+      if (c.url.includes('/admin/app/') && 'focus' in c) {
+        await c.focus();
+        // app aberto: ele mesmo troca de tela, pelo caminho que pergunta antes de sair de um formulário preenchido.
+        // Versão antiga do app, que não responde: abre a tela como antes.
+        if (await pedirAoApp(c, url)) return;
+        if ('navigate' in c) return c.navigate(url);
+        return;
+      }
     }
     return self.clients.openWindow(url);
   })());

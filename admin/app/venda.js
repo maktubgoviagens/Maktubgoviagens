@@ -801,14 +801,16 @@ function casarPrograma(nome, G) {
   return p ? p.programa : String(nome || '').trim();
 }
 function aplicarLeitura(X, x, d, ctx) {
-  if (d.programa) x.programa = casarPrograma(d.programa, ctx.gestao);
-  if (+d.milhas > 0) x.milhas = Math.round(+d.milhas);
-  if (d.taxas !== null && d.taxas !== undefined && +d.taxas >= 0) x.taxas = r2(+d.taxas);
-  if (d.localizador) x.localizador = String(d.localizador).toUpperCase();
-  if (d.companhia_emissora) x.cia_emissora = d.companhia_emissora;
-  if (d.cabine) x.cabine = d.cabine;
+  // o print só preenche o que ainda está vazio: o que a pessoa já digitou fica
+  const vazio = (v) => v === undefined || v === null || String(v).trim() === '';
+  if (d.programa && vazio(x.programa)) x.programa = casarPrograma(d.programa, ctx.gestao);
+  if (+d.milhas > 0 && vazio(x.milhas)) x.milhas = Math.round(+d.milhas);
+  if (d.taxas !== null && d.taxas !== undefined && +d.taxas >= 0 && vazio(x.taxas)) x.taxas = r2(+d.taxas);
+  if (d.localizador && vazio(x.localizador)) x.localizador = String(d.localizador).toUpperCase();
+  if (d.companhia_emissora && vazio(x.cia_emissora)) x.cia_emissora = d.companhia_emissora;
+  if (d.cabine && vazio(x.cabine)) x.cabine = d.cabine;
   const tr = (d.trechos || []).filter(v => v.origem || v.destino);
-  if (tr.length) {
+  if (tr.length && !(x.voos || []).some(v => v.o || v.d || v.data)) {
     x.voos = tr.map(v => ({ o: up3(v.origem), d: up3(v.destino), data: v.data || '', hora: v.saida || '' }));
     const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && !x.cia_voo) x.cia_voo = op;
     cabecalhoCliente(x);
@@ -827,6 +829,25 @@ function aplicarLeitura(X, x, d, ctx) {
   }
   x.lido_em = new Date().toISOString(); x.lido_obs = d.observacao || '';
 }
+// redesenhar tira o foco de quem estava digitando: guarda o campo e a posição do cursor e devolve depois (igual ao do cotador)
+function comFoco(fn) {
+  const a = document.activeElement, q = a && a !== document.body ? (a.dataset && a.dataset.k ? `[data-k="${a.dataset.k}"]${a.dataset.it !== undefined ? `[data-it="${a.dataset.it}"]` : ''}` : a.id ? '#' + a.id : a.name ? `[name="${a.name}"]` : null) : null;
+  let pos = null; try { pos = a && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null; } catch (_) { pos = null; }
+  const r = fn();
+  if (!q) return r;
+  // a tela pode redesenhar na hora ou só quando a leitura termina: espera o campo antigo sair e põe o foco no novo
+  const devolve = () => {
+    if (a.isConnected) return document.activeElement !== a; // não redesenhou ainda; se a pessoa já foi para outro campo, para
+    const at = document.activeElement; if (at && at !== document.body) return true;
+    const b = document.querySelector(q); if (!b) return false;
+    b.focus(); try { if (pos) b.setSelectionRange(pos[0], pos[1]); } catch (_) { /* campo sem cursor */ }
+    return true;
+  };
+  if (devolve()) return r;
+  const ob = new MutationObserver(() => { if (devolve()) ob.disconnect(); });
+  ob.observe(document.body, { childList: true, subtree: true }); setTimeout(() => ob.disconnect(), 8000);
+  return r;
+}
 export async function lerEmissao(X, x, files, ctx, depois) {
   files = [...(files || [])].filter(f => f && /^image\//.test(f.type)).slice(0, 4);
   if (!files.length) { X.aviso('Escolha uma imagem da emissão.'); return; }
@@ -838,7 +859,7 @@ export async function lerEmissao(X, x, files, ctx, depois) {
   if (!msg && error && error.context && error.context.status === 404) msg = 'A leitura do print da emissão ainda não está publicada. Preencha à mão.';
   if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou preencha à mão.'); return; }
   aplicarLeitura(X, x, data, ctx);
-  depois();
+  comFoco(depois);
   if (!x.print) await subir(X, 'print', x, depois, files[0]);
   if (X.rascunho) X.rascunho(true);
   X.aviso('Print lido. Confira os campos e digite o valor pagante.');
