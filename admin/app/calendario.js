@@ -30,44 +30,44 @@ export function estilos() {
   s.textContent = `
 .cal-barra{display:flex;gap:8px;align-items:center;margin-top:12px}
 .cal-barra .seg{flex:1;margin:0}
-.cal-barra .cal-hoje{background:var(--branco);border:1px solid var(--linha);padding:0 16px;min-height:44px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--verde);cursor:pointer}
+.cal-barra .cal-hoje{background:var(--branco);border:1px solid var(--linha);padding:0 16px;min-height:44px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--verde);cursor:pointer}
 .cal-cm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--linha);border-top:1px solid var(--linha);margin:10px -10px 0;background:var(--branco)}
-.cal-cm .h{font-size:13px;text-transform:lowercase;color:var(--tinta-2);text-align:center;padding:6px 0;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);background:var(--creme-2)}
+.cal-cm .h{font-size:14px;text-transform:lowercase;color:var(--tinta-2);text-align:center;padding:6px 0;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);background:var(--creme-2)}
 .cal-cm .d{min-height:62px;border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);padding:3px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0}
 .cal-cm .d.fora{background:var(--creme-2);cursor:default}
 .cal-cm .d.fora .n{color:var(--tinta-3)}
 .cal-cm .d.hj .n{background:var(--dourado);color:#fff;border-radius:11px;padding:0 6px}
 .cal-cm .d.sel{outline:2px solid var(--verde);outline-offset:-2px}
-.cal-cm .n{font-size:13px;color:var(--tinta-2);line-height:20px}
+.cal-cm .n{font-size:14px;color:var(--tinta-2);line-height:20px}
 .cal-dots{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;max-width:44px}
 .cal-dots i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 .cal-dots i.cont{background:var(--branco);box-shadow:inset 0 0 0 2px var(--c)}
 .cal-dots i.atr{box-shadow:0 0 0 2px var(--branco),0 0 0 3.5px var(--alerta)}
-.cal-dots b{font-size:13px;font-weight:500;color:var(--tinta-2);line-height:8px}
+.cal-dots b{font-size:14px;font-weight:500;color:var(--tinta-2);line-height:8px}
 .cal-chips{display:none;width:100%;flex-direction:column;gap:3px}
-.cal-chip{display:block;width:100%;border:0;border-radius:3px;padding:3px 6px;font-size:13px;line-height:1.3;text-align:left;color:#fff;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-family:inherit}
+.cal-chip{display:block;width:100%;border:0;border-radius:3px;padding:3px 6px;font-size:14px;line-height:1.3;text-align:left;color:#fff;background:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-family:inherit}
 .cal-chip.cont{background:var(--branco);color:var(--c);box-shadow:inset 0 0 0 1.5px var(--c)}
 .cal-chip.atr{box-shadow:inset 4px 0 0 var(--alerta);padding-left:9px}
 .cal-chip.passado{opacity:.6}
-.cal-mais{font-size:13px;color:var(--tinta-3);padding-left:3px}
-.cal-leg{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--tinta-2);margin-top:10px}
+.cal-mais{font-size:14px;color:var(--tinta-3);padding-left:3px}
+.cal-leg{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:14px;color:var(--tinta-2);margin-top:10px}
 .cal-leg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;background:var(--c)}
 .cal-leg i.cont{background:var(--branco);box-shadow:inset 0 0 0 2px var(--c)}
 .cal-leg i.atr{background:var(--branco);box-shadow:inset 0 0 0 2px var(--alerta)}
-.cal-dia{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:20px 0 8px}
-.cal-dia small{letter-spacing:.04em;text-transform:none;color:var(--tinta-3);font-weight:400;font-size:13px}
+.cal-dia{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:20px 0 8px}
+.cal-dia small{letter-spacing:.04em;text-transform:none;color:var(--tinta-3);font-weight:400;font-size:14px}
 .cal-it{display:flex;flex-wrap:wrap;align-items:stretch;background:var(--branco);border:1px solid var(--linha);border-left:5px solid var(--c);margin-bottom:6px}
 .cal-it.cont{border-left-style:dashed}
 .cal-it>button{flex:1 1 200px;min-width:0;background:none;border:0;padding:11px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .cal-it .t{display:block;font-size:16px;color:var(--verde);line-height:1.3}
-.cal-it .s{display:block;font-size:13px;color:var(--tinta-2);margin-top:3px;line-height:1.4}
-.cal-it .q{display:inline-block;font-size:13px;color:var(--tinta-3);margin-right:6px}
-.cal-it .atr{display:inline-block;font-size:13px;color:var(--alerta);font-weight:600;margin-right:6px}
+.cal-it .s{display:block;font-size:14px;color:var(--tinta-2);margin-top:3px;line-height:1.4}
+.cal-it .q{display:inline-block;font-size:14px;color:var(--tinta-3);margin-right:6px}
+.cal-it .atr{display:inline-block;font-size:14px;color:var(--alerta);font-weight:600;margin-right:6px}
 .cal-it .ac{display:flex;align-items:center;padding:0 12px 12px}
 @media (min-width:420px){.cal-it .ac{padding:8px 10px 8px 0}}
-.cal-it .ac a{white-space:nowrap;font-size:13px;padding:10px 12px;min-width:auto;flex:none;letter-spacing:.08em}
-.cal-vazio{color:var(--tinta-3);font-size:13px;padding:10px 0}
-.cal-tipos button{font-size:13px;display:inline-flex;align-items:center;min-height:40px}
+.cal-it .ac a{white-space:nowrap;font-size:14px;padding:10px 12px;min-width:auto;flex:none;letter-spacing:.08em}
+.cal-vazio{color:var(--tinta-3);font-size:14px;padding:10px 0}
+.cal-tipos button{font-size:14px;display:inline-flex;align-items:center;min-height:40px}
 .cal-tipos button i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:7px;box-shadow:0 0 0 1.5px var(--branco)}
 .cal-tipos button:not(.on){color:var(--tinta-3);text-decoration:line-through}
 .cal-tipos button:not(.on) i{background:var(--branco);box-shadow:inset 0 0 0 2px var(--c)}
@@ -85,7 +85,7 @@ export function estilos() {
   .cal-sem .cal-semc{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--linha);border-top:1px solid var(--linha);background:var(--branco);margin-top:10px}
   .cal-semc .col{border-right:1px solid var(--linha);border-bottom:1px solid var(--linha);min-height:300px;padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0}
   .cal-semc .col.hj{background:rgba(168,139,74,.08)}
-  .cal-semc .cab{font-size:13px;color:var(--tinta-2);text-align:center;padding:4px 0 6px;border-bottom:1px solid var(--linha);margin:-4px -4px 4px;background:var(--creme-2)}
+  .cal-semc .cab{font-size:14px;color:var(--tinta-2);text-align:center;padding:4px 0 6px;border-bottom:1px solid var(--linha);margin:-4px -4px 4px;background:var(--creme-2)}
   .cal-semc .col.hj .cab{color:var(--verde);font-weight:600}
   .cal-semc .cal-chip{white-space:normal}
   .cal-cm .cal-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
