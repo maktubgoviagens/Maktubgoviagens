@@ -984,6 +984,36 @@ body.cb-leitura #montarCot{margin-top:8px}
 .ini-lista{display:none;margin-top:8px}
 .ini-lista.aberta{display:block}
 @media (min-width:1024px){.ini-lista:not([hidden]){display:block}#iniHoje i{display:none}}
+
+/* ===== Gestão: tela inicial (13/11/2026) ===== */
+.gh{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.gh>details.gsec,.gh .gh-lista>details.gsec{margin-top:0}
+.gsec>summary.ghcard{display:block;position:relative;padding:16px 36px 16px 2px}
+.gsec>summary.ghcard::after{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
+.gsec[open]>summary.ghcard::after{transform:translateY(-50%) rotate(90deg)}
+.ghcard .ini-de{font-family:'Jost',sans-serif;font-size:18px;color:var(--tinta-2)}
+.ghcard small{display:block;font-size:16px;color:var(--tinta-2);margin-top:4px}
+.gres{border-top:1px solid var(--linha)}
+.gres>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0;cursor:pointer;list-style:none;font-size:16px;color:var(--verde);font-weight:500}
+.gres>summary::-webkit-details-marker{display:none}
+.gres>summary i{font-style:normal;color:var(--dourado-claro);font-size:20px}
+.gres-c{padding:0 0 12px}
+.gh-lista{display:flex;flex-direction:column;gap:12px}
+.gh-lista .ac-lista{margin-top:0}
+/* jornada no celular: uma etapa por vez, escolhida nos chips */
+@media (max-width:1023px){
+  .gh-jor .gj{display:block!important;overflow:visible!important;margin:0!important;padding:8px 0 0!important}
+  .gh-jor .gjc{display:none!important}
+  .gh-jor .gjc.sel{display:flex!important;flex-direction:column;gap:8px}
+  .gh-jor .gjc.sel h3,.gh-jor .gjc.sel .ln{display:none!important}
+  .gh-jor .gjk{width:100%}
+  .gh-jor .gjchips button.on{background:var(--verde);color:var(--creme);border-color:var(--verde)}
+}
+@media (min-width:1024px){
+  .gh{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"res cart" "res lista" "novo novo" "jor jor";gap:14px 28px;align-items:start}
+  .gh-res{grid-area:res}.gh-novo{grid-area:novo}.gh-jor{grid-area:jor;min-width:0}.gh-cart{grid-area:cart}.gh-lista{grid-area:lista}
+  .gh-jor .gjseg{margin-top:0}
+}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -5731,24 +5761,17 @@ function telaGestao(P) {
   const c = conversao(reunioesDoPeriodo(mesKey(new Date()), 'ano').filter(ehGestao));
   const impl = implantacoesAbertas();
   const total = totalGestao();
-  const grupo = (titulo, html) => html ? `<div class="secao">${titulo}</div>${html}` : '';
+  const kB = mesKey(new Date()), baseFalta = (D.clientes || []).filter(c => precisaBase(c, kB) && vejoBase(c) && !confDoMes(c, kB)).length;
+  const NG = { 'Implantações em andamento': impl.length, 'Pedidos de reunião dos clientes': ags.length, 'Pedidos de diagnóstico pelo site': sols.length, 'Indicações de clientes': ind.length, 'Leads para retornar hoje': ret.length,
+    'Emissões de clientes da Gestão': emissoesGestao().length, 'Milhas de clientes vencendo em 30 dias': venc.length, 'Renovações em 90 dias': renov.length, 'Clientes sem data de entrada': semc.length };
+  const grupo = (titulo, html) => html ? `<details class="gres"><summary><span>${titulo}</span>${NG[titulo] ? `<span class="kpill">${NG[titulo]}</span>` : '<i>›</i>'}</summary><div class="gres-c">${html}</div></details>` : '';
+  const primG = [['Base do mês para alimentar', baseFalta], ...Object.entries(NG)].find(x => x[1]);
   P.innerHTML = `
     <h1 class="titulo">Gestão de <em>Milhas</em></h1>
     <div class="sub">${total ? plural(total, 'coisa', 'coisas') + ' para resolver' : 'Nada pendente agora'} · ${D.clientes.length} cliente${D.clientes.length === 1 ? '' : 's'}</div>
-    <div class="gatalhos">
-      <button data-g="clientes"><span>Carteira da Gestão</span><b>${D.clientes.length}</b></button>
-      <button data-g="funil"><span>Funil da Gestão</span><b class="${leads.length ? 'tem' : ''}">${leads.length}</b></button>
-      <button id="gaCiclo"><span>Ciclo do mês</span><b class="${D.clientes.length && emDia < D.clientes.length ? 'tem' : ''}">${emDia}/${D.clientes.length}</b></button>
-      <button data-g="implantacao"><span>Onboarding</span><b class="${impl.length ? 'tem' : ''}">${impl.length}</b></button>
-      <button id="gaPedidos"><span>Pedidos de diagnóstico</span><b class="${sols.length ? 'tem' : ''}">${sols.length}</b></button>
-      ${podeAba('cartoesbase') ? '<button data-g="cartoesbase"><span>Base de cartões</span><b>›</b></button>' : ''}
-      ${podeAba('calccartoes') ? '<button data-g="calccartoes"><span>Calculadora de cartões</span><b>›</b></button>' : ''}
-    </div>
-    ${htmlKpisGestao()}
+    <div class="gh">
+    <details class="gsec gh-res" id="geRes"${GE_SOL_ABERTO ? ' open' : ''}><summary class="ghcard"><span class="ini-rot">Para resolver hoje</span><b class="ini-num">${total ? plural(total, 'coisa', 'coisas') : 'Tudo em dia'}</b><small>${primG ? 'A primeira: ' + esc(primG[0].charAt(0).toLowerCase() + primG[0].slice(1)) + ' (' + primG[1] + ')' : 'Nada pendente agora.'}</small></summary>
     ${htmlBaseMes()}
-
-    ${htmlJornadaGestao()}
-    <details class="gsec" style="margin-top:14px"${GE_SOL_ABERTO ? ' open' : ''}><summary><span>Para resolver hoje<small>Ciclo do mês, tarefas, pedidos e renovações</small></span><b style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:${total ? 'var(--alerta)' : 'var(--tinta-3)'};margin-left:auto">${total}</b></summary>
     <button class="ciclo" id="geCiclo">
       <div class="top"><span>Ciclo de ${mesNomeCurto(mesKey(new Date()))}</span><b>${emDia} de ${D.clientes.length} em dia</b></div>
       <div class="barra2"><i class="${emDia === D.clientes.length && emDia ? 'ok' : ''}" style="width:${D.clientes.length ? emDia / D.clientes.length * 100 : 0}%"></i></div>
@@ -5792,15 +5815,34 @@ function telaGestao(P) {
     ${htmlPedidosDiagnostico()}
 
     </details>
-    <div class="secao">Números da carteira</div>
-    <div class="numeros" style="margin-top:0">
+    <button class="zap grande gh-novo" id="geNovo" style="width:100%">+ Novo lead da Gestão</button>
+    <div class="gh-jor">${htmlJornadaGestao()}</div>
+    <details class="gsec gh-cart"><summary class="ghcard"><span class="ini-rot">Carteira</span><b class="ini-num">${clientesAtivos().length} <span class="ini-de">de ${META_CLIENTES} clientes</span></b><small>meta de ${META_ANO} · ver os indicadores</small></summary>
+      ${htmlKpisGestao()}
+      <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Carteira sob gestão</div><div class="v">${brlC(pat)}</div><div class="d">${milC(mi)} milhas e pontos</div></div>
       <div class="num"><div class="l">Economia gerada no ano</div><div class="v">${brlC(economiaAno())}</div><div class="d">para os clientes em ${new Date().getFullYear()}</div></div>
       <div class="num"><div class="l">Conversão no ano</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} leads decididos</div></div>
       <div class="num"><div class="l">Leads em aberto</div><div class="v">${leads.length}</div><div class="d">no funil da Gestão</div></div>
+      </div>
+    </details>
+    <div class="gh-lista">
+      <div class="ac-lista">
+        <button type="button" class="ac-pes" data-g="clientes"><span><b>Carteira da Gestão</b><small>${plural(D.clientes.length, 'cliente', 'clientes')}</small></span><i>›</i></button>
+        <button type="button" class="ac-pes" data-g="funil"><span><b>Funil da Gestão</b><small>${plural(leads.length, 'lead em aberto', 'leads em aberto')}</small></span><i>›</i></button>
+        <button type="button" class="ac-pes" data-g="calendario"><span><b>Calendário da Gestão</b><small>Retornos, reuniões, renovações e aniversários</small></span><i>›</i></button>
+      </div>
+      <details class="gsec"><summary><span>Ferramentas<small>Ciclo do mês, onboarding, pedidos de diagnóstico, base de cartões e calculadora</small></span></summary>
+        <div class="ac-lista">
+          <button type="button" class="ac-pes" id="gaCiclo"><span><b>Ciclo do mês</b><small>${emDia} de ${D.clientes.length} em dia</small></span><i>›</i></button>
+          <button type="button" class="ac-pes" data-g="implantacao"><span><b>Onboarding</b><small>${plural(impl.length, 'implantação aberta', 'implantações abertas')}</small></span><i>›</i></button>
+          <button type="button" class="ac-pes" id="gaPedidos"><span><b>Pedidos de diagnóstico</b><small>${plural(sols.length, 'pedido novo', 'pedidos novos')}</small></span><i>›</i></button>
+          ${podeAba('cartoesbase') ? '<button type="button" class="ac-pes" data-g="cartoesbase"><span><b>Base de cartões</b></span><i>›</i></button>' : ''}
+          ${podeAba('calccartoes') ? '<button type="button" class="ac-pes" data-g="calccartoes"><span><b>Calculadora de cartões</b></span><i>›</i></button>' : ''}
+        </div>
+      </details>
     </div>
-    <div class="pend" style="margin-top:12px"><button data-g="calendario"><span>Calendário da Gestão<small style="display:block;font-size:13px;color:var(--tinta-3)">Retornos, reuniões, renovações e aniversários do mês</small></span><span><span class="seta">›</span></span></button></div>
-    <button class="zap grande" id="geNovo" style="margin-top:12px;width:100%">+ Novo lead da Gestão</button>
+    </div>
     ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
   ligarGestao(P);
   autoLiberar().then(n => { if (n && ABA === 'gestao' && !RE_ED && !GE_FUNIL) tela(); });
@@ -5827,6 +5869,10 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-c]').forEach(b => b.onclick = () => abrirFicha(b.dataset.gjC));
   P.querySelectorAll('[data-gj-cli]').forEach(b => b.onclick = () => ir('clientes'));
   { const k = $('gjKanban'), c = k && [...k.querySelectorAll('.gjc')].find(x => x.querySelector('.gjk')); if (k && c && !k._rolou) { k._rolou = 1; k.scrollLeft = c.offsetLeft - k.offsetLeft - 16; } }
+  const gjSel = (i) => { P.querySelectorAll('.gh-jor .gjc').forEach(c => c.classList.toggle('sel', c.dataset.gjCol === String(i))); P.querySelectorAll('.gh-jor .gjchips [data-gj-ir]').forEach(b => b.classList.toggle('on', b.dataset.gjIr === String(i))); };
+  { const ch = P.querySelector('.gh-jor .gjchips [data-gj-ir]'); if (ch) gjSel(ch.dataset.gjIr); }
+  const celG = () => matchMedia('(max-width:1023px)').matches;
+  P.querySelectorAll('.gjchips [data-gj-ir]').forEach(b => b.addEventListener('click', (ev) => { if (!celG()) return; ev.stopImmediatePropagation(); gjSel(b.dataset.gjIr); }, true));
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   if ($('gaPedidos')) $('gaPedidos').onclick = () => { const d = P.querySelector('details.gsec'), g = $('gePedidos'); if (d) d.open = true; if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
