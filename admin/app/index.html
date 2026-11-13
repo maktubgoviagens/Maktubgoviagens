@@ -1407,7 +1407,7 @@ function minhasTarefas() {
   if (!soMarketing()) {
     if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (passoDe(r).data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + ': ' + passoDe(r).txt, () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
     const av = avaliacoesParaPedir(true).length; if (av) add('Comercial', n2(av, 'avaliação de atendimento para pedir', 'avaliações de atendimento para pedir'), 'Reuniões realizadas nos últimos 14 dias', () => ir('agenda'));
-    if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 48 horas', () => ir('agenda'), true); }
+    if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 24 horas', () => ir('agenda'), true); }
     if (pode('gestao')) { const n = tarefasParaHoje().length; if (n) add('Gestão de Milhas', n2(n, 'tarefa da Gestão para hoje', 'tarefas da Gestão para hoje'), 'Implantação e acompanhamento dos clientes', () => ir('gestao')); }
   }
   return L;
@@ -1994,7 +1994,7 @@ const patrimonio = (id) => progsDe(id).reduce((s, p) => s + (Number(p.patrimonio
 const milhas = (id) => progsDe(id).reduce((s, p) => s + (Number(p.saldo) || 0), 0);
 const economiaAno = (id) => D.eco.filter(r => !id || r.cliente_id === id).reduce((s, r) => s + ecoValor(r), 0);
 const vencimentos = (dias) => D.progs.filter(p => p.vencimento_data && Number(p.vencimento_quantidade) > 0).map(p => ({ p, d: dia(p.vencimento_data) })).filter(x => difDias(x.d) >= 0 && difDias(x.d) <= dias).sort((a, b) => a.d - b.d);
-const checkins = () => D.voos.filter(v => ['confirmado', 'checkin_aberto'].includes(v.status)).filter(v => { const d = dia(v.data_voo); if (v.hora_partida) { const [h, m] = v.hora_partida.split(':'); d.setHours(+h, +m); } const hrs = (d - Date.now()) / 36e5; return hrs >= 0 && hrs <= 48; });
+const checkins = () => D.voos.filter(v => ['confirmado', 'checkin_aberto'].includes(v.status)).filter(v => { const d = dia(v.data_voo); if (v.hora_partida) { const [h, m] = v.hora_partida.split(':'); d.setHours(+h, +m); } const hrs = (d - Date.now()) / 36e5; return hrs >= 0 && hrs <= 24; });
 const checkinsTotal = () => checkins().length + checkinsEm().length;
 const reunioesAConfirmar = () => D.ags.filter(a => a.status === 'solicitada');
 const leadsSemResposta = () => D.leads.filter(r => r.status === 'novo');
@@ -2214,7 +2214,7 @@ function telaInicioColab(P) {
     <div class="numeros" style="margin-top:12px">
       ${(() => { const itens = CMP.parcelas(D.emissoes, D.meuId).filter(x => x.comp === k), com = itens.reduce((a, x) => a + (+x.valor || 0), 0), [yy, mm] = k.split('-').map(Number), pg = new Date(yy, mm, 5).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         return `<button class="num destaque" data-ir="comissao" style="text-align:left;cursor:pointer"><div class="l">Você recebe em ${pg}</div><div class="v" id="recebeIni" data-com="${com}">${brlC(com)}</div><div class="d">Gerado em ${new Date().toLocaleDateString('pt-BR', { month: 'long' })}: ${brlC(soma(L, 'comissao'))}</div></button>`; })()}
-      <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 48 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
+      <div class="num ${checkinsEm().length ? 'alerta' : ''}"><div class="l">Check-ins em 24 h</div><div class="v">${checkinsEm().length}</div><div class="d">de toda a Maktub</div></div>
     </div>
     ${D.metas && D.metas.admin ? blocoMetasAdmin(D.metas, false) : blocoMetasColab(D.metas)}
     ${pode('comercial') ? '<button class="sec grande" id="novaReuniao" style="margin-top:8px;width:100%">+ Novo atendimento</button>' : ''}
@@ -5585,7 +5585,7 @@ function trechosEm() {
         const d = dia(r.data), k = difDias(d); if (k < -1) return;
         const hr = r.hora ? String(r.hora).slice(0, 5) : '', feito = !!r.checkin;
         let pend = !feito && pendSemHora(k);
-        if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
+        if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
         T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, de: r.origem, para: r.destino, v });
       });
       return;
@@ -5596,7 +5596,7 @@ function trechosEm() {
       if (k < -1) return;
       const H = (D.horas || {})[String(v.id)] || {}, hr = H['hora_' + tr];
       let pend = !feito && pendSemHora(k);
-      if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 48 * 36e5; }
+      if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
       T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, de, para, v });
     });
   });
@@ -7422,7 +7422,7 @@ function telaAgenda(P) {
   if (AG_VISTA === 'checkins') {
     const E = eventos().filter(e => e.ic === 'voo' && e.alerta);
     P.innerHTML = `${segOp('checkins')}<button class="voltar" id="voltarCk">‹ Agenda</button><h1 class="titulo" style="margin-top:6px">Check-ins <em>para fazer</em></h1>
-      <div class="sub">Voos nas próximas 48 horas sem check-in marcado. Faça o check-in, envie o bilhete ao cliente e marque aqui.</div>
+      <div class="sub">Voos nas próximas 24 horas (sem horário: a partir das 7h do dia anterior) sem check-in marcado. Faça o check-in, envie o bilhete ao cliente e marque aqui.</div>
       <div style="margin-top:6px">${E.length ? agrupar(E) : '<div class="vazio" style="margin-top:14px">Nenhum check-in pendente.</div>'}</div>`;
     $('voltarCk').onclick = () => { AG_VISTA = 'tudo'; telaAgenda(P); };
     return;
@@ -7435,7 +7435,7 @@ function telaAgenda(P) {
     <div class="seg" id="agVista"><button data-v="tudo" class="on">Compromissos</button><button data-v="reunioes">Reuniões${proximasReunioes().length ? ' · ' + proximasReunioes().length : ''}</button></div>
     <div class="sub">${pode('gestao') ? 'Voos, viagens, reuniões e vencimentos' : 'Todos os voos da Maktub'}${AG_MODO === 'cal' ? '' : AG_TUDO ? ' nos próximos 120 dias' : ' nos próximos 7 dias'}</div>
     ${(() => { const voos30 = D.voos.filter(v => difDias(dia(v.data_voo)) >= 0 && difDias(dia(v.data_voo)) <= 30).length + trechosEm().filter(t => difDias(t.d) >= 0 && difDias(t.d) <= 30).length;
-      const it = [[checkinsTotal(), 'check-in em 48 h', 'check-ins em 48 h', 'ck', true], ...(pode('gestao') ? [[reunioesAConfirmar().length, 'reunião a confirmar', 'reuniões a confirmar', 'reun', true]] : []), [voos30, 'voo em 30 dias', 'voos em 30 dias', '', false], ...(pode('gestao') ? [[vencimentos(30).length, 'vencimento em 30 dias', 'vencimentos em 30 dias', '', true]] : [])];
+      const it = [[checkinsTotal(), 'check-in em 24 h', 'check-ins em 24 h', 'ck', true], ...(pode('gestao') ? [[reunioesAConfirmar().length, 'reunião a confirmar', 'reuniões a confirmar', 'reun', true]] : []), [voos30, 'voo em 30 dias', 'voos em 30 dias', '', false], ...(pode('gestao') ? [[vencimentos(30).length, 'vencimento em 30 dias', 'vencimentos em 30 dias', '', true]] : [])];
       return `<div class="ag-linha">${it.map(([n, u, pl, k, al]) => `<${k ? 'button type="button"' : 'span'} class="${al && n ? 'al' : ''}" ${k ? `data-agl="${k}"` : ''}><b>${n}</b> ${n === 1 ? u : pl}</${k ? 'button' : 'span'}>`).join('')}</div>`; })()}
     <div class="seg" id="agModo" style="margin-top:12px"><button data-m="lista" class="${CAL ? '' : 'on'}">Próximos 7 dias</button><button data-m="cal" class="${CAL ? 'on' : ''}">Calendário</button></div>
     ${CAL ? agCalendario() : `<div style="margin-top:6px">${E.length ? E.map(e => { const k = nomeDia(e.d); const h = k !== ultimo ? `<div class="dia">${k}</div>` : ''; ultimo = k; return h + htmlEvento(e); }).join('') : '<div class="vazio" style="margin-top:14px">Nada na agenda.</div>'}</div>`}${!CAL && !AG_TUDO && E0.length > E.length ? `<button type="button" class="ac-sec" id="agTudo">Ver os próximos 120 dias (${E0.length})</button>` : ''}`;

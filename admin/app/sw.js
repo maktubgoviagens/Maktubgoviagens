@@ -12,12 +12,16 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Maktub Go', body: e.data ? e.data.text() : '' }; }
+  // check-in pendente toca como alarme: vibra mais, fica na tela até alguém tocar e não chega em silêncio.
+  // (no Android e no computador; no iPhone o sistema não deixa a notificação de um app da web tocar diferente)
+  const alarme = /^checkin/.test(d.tag || '');
   e.waitUntil(self.registration.showNotification(d.title || 'Maktub Go', {
     body: d.body || '',
     icon: '/ativos/app-icon-192.png',
     badge: '/ativos/app-icon-192.png',
     tag: d.tag || undefined,
-    data: { url: d.url || '/admin/app/' }
+    data: { url: d.url || '/admin/app/' },
+    ...(alarme ? { requireInteraction: true, renotify: !!d.tag, silent: false, vibrate: [600, 200, 600, 200, 600, 200, 1200] } : {})
   }));
 });
 
