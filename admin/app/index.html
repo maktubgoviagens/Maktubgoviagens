@@ -1053,6 +1053,7 @@ body.cb-leitura #montarCot{margin-top:8px}
 .arq-b{display:flex;flex-direction:column;align-items:stretch;gap:2px;flex:none}
 .arq-x{background:none;border:0;color:var(--alerta);font:inherit;font-size:14px;padding:6px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .ac-prim.perigo{background:var(--alerta);border-color:var(--alerta);color:#fff}
+.gf-v{font-style:normal;font-weight:500;color:var(--verde);white-space:nowrap}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1671,6 +1672,7 @@ function lerHash() {
   EM_ED = ABA === 'emissoes' && h[1] ? h[1] : null;
   GE_FUNIL = ABA === 'gestao' && h[1] === 'funil';
   GE_CICLO = ABA === 'gestao' && h[1] === 'ciclo';
+  GE_FERR = ABA === 'gestao' && ['milheiro', 'equipe'].includes(h[1]) ? h[1] : null; GF_ED = null;
   RE_ED = ABA === 'reunioes' && h[1] ? h[1] : GE_FUNIL && h[2] ? h[2] : null;
   AG_ED = ABA === 'agenda' && h[1] && !h[1].startsWith('?') ? h[1].split('?')[0] : null;
   if (ABA === 'agenda' && (h[1] || location.hash.includes('ticktick='))) AG_VISTA = 'reunioes';
@@ -1747,7 +1749,7 @@ function ir(aba, extra) {
   if (!podeAba(aba)) aba = 'inicio';
   // subtelas de Caixa, Operação de milhas, Base de cartões e Despesas fixas voltam ao começo ao entrar pelo menu
   if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); CALC.inicio(); FX_ED = null; }
-  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; GE_FERR = null; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
   if (extra) extra();
   // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
   const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : aba === 'calccartoes' ? CALC.hash() : '';
@@ -5775,7 +5777,7 @@ function listaLeads() {
 
 
 /* ================= gestão de milhas ================= */
-let GE_CICLO = false;
+let GE_CICLO = false, GE_FERR = null, GF_ED = null; // GF_ED: item em edição nas ferramentas ('novo' para um novo)
 const mesAnterior = () => mesMais(mesKey(new Date()), -1);
 const mesNomeCurto = (k) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 function cicloCliente(c) {
@@ -5970,6 +5972,7 @@ function htmlPedidosDiagnostico() {
 
 function telaGestao(P) {
   if (GE_CICLO) return telaCiclo(P);
+  if (GE_FERR) return telaGeFerr(P);
   const ags = reunioesAConfirmar(), sols = pedidosSite(), ind = indicacoesNovas();
   const ret = retornosHoje().filter(ehGestao), venc = vencendo(), renov = renovacoes(90), semc = semContrato();
   const ciclos = D.clientes.map(c => ({ c, x: cicloCliente(c) }));
@@ -6051,13 +6054,14 @@ function telaGestao(P) {
         <button type="button" class="ac-pes" data-g="funil"><span><b>Funil da Gestão</b><small>${plural(leads.length, 'lead em aberto', 'leads em aberto')}</small></span><i>›</i></button>
         <button type="button" class="ac-pes" data-g="calendario"><span><b>Calendário da Gestão</b><small>Retornos, reuniões, renovações e aniversários</small></span><i>›</i></button>
       </div>
-      <details class="gsec"><summary><span>Ferramentas<small>Ciclo do mês, onboarding, pedidos de diagnóstico, base de cartões e calculadora</small></span></summary>
+      <details class="gsec"><summary><span>Ferramentas<small>Ciclo do mês, onboarding, pedidos de diagnóstico, cartões${ADMIN ? ', valor do milheiro e contato da equipe' : ''}</small></span></summary>
         <div class="ac-lista">
           <button type="button" class="ac-pes" id="gaCiclo"><span><b>Ciclo do mês</b><small>${emDia} de ${D.clientes.length} em dia</small></span><i>›</i></button>
           <button type="button" class="ac-pes" data-g="implantacao"><span><b>Onboarding</b><small>${plural(impl.length, 'implantação aberta', 'implantações abertas')}</small></span><i>›</i></button>
           <button type="button" class="ac-pes" id="gaPedidos"><span><b>Pedidos de diagnóstico</b><small>${plural(sols.length, 'pedido novo', 'pedidos novos')}</small></span><i>›</i></button>
           ${podeAba('cartoesbase') ? '<button type="button" class="ac-pes" data-g="cartoesbase"><span><b>Base de cartões</b></span><i>›</i></button>' : ''}
           ${podeAba('calccartoes') ? '<button type="button" class="ac-pes" data-g="calccartoes"><span><b>Calculadora de cartões</b></span><i>›</i></button>' : ''}
+          ${ADMIN ? '<button type="button" class="ac-pes" data-gf="milheiro"><span><b>Valor do milheiro</b><small>Referência por programa para a carteira em reais</small></span><i>›</i></button><button type="button" class="ac-pes" data-gf="equipe"><span><b>Contato da equipe no painel</b><small>Quem aparece para o cliente, com WhatsApp e horário</small></span><i>›</i></button>' : ''}
         </div>
       </details>
     </div>
@@ -6095,6 +6099,7 @@ function ligarGestao(P) {
   P.querySelectorAll('[data-gj-ir]').forEach(b => b.onclick = () => { const c = P.querySelector(`[data-gj-col="${b.dataset.gjIr}"]`), k = $('gjKanban'); if (c && k) k.scrollTo({ left: c.offsetLeft - k.offsetLeft - 16, behavior: 'smooth' }); });
   P.querySelectorAll('[data-base]').forEach(b => b.onclick = () => alimentarBase(b.dataset.base));
   if ($('gaPedidos')) $('gaPedidos').onclick = () => { const d = P.querySelector('details.gsec'), g = $('gePedidos'); if (d) d.open = true; if (g) { g.open = true; g.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+  P.querySelectorAll('[data-gf]').forEach(b => b.onclick = () => { GE_FERR = b.dataset.gf; GF_ED = null; history.pushState(null, '', '#gestao/' + GE_FERR); telaGestao(P); scrollTo(0, 0); });
   ['geCiclo', 'kpiCiclo', 'gaCiclo'].forEach(id => $(id) && ($(id).onclick = () => { GE_CICLO = true; history.pushState(null, '', '#gestao/ciclo'); telaGestao(P); scrollTo(0, 0); }));
   P.querySelectorAll('[data-g]').forEach(b => b.onclick = () => b.dataset.g === 'cartoesbase' ? ir('cartoesbase') : b.dataset.g === 'calccartoes' ? abrirCalc('avulsa') : b.dataset.g === 'funil' ? ir('gestao', () => { GE_FUNIL = true; if (RE_PARTE === 'cal') RE_PARTE = 'funil'; }) : b.dataset.g === 'calendario' ? ir('gestao', () => { GE_FUNIL = true; RE_PARTE = 'cal'; }) : b.dataset.g === 'implantacao' ? ir('clientes', () => { FILTRO = 'implantacao'; }) : ir('clientes'));
   P.querySelectorAll('[data-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.ficha, b.dataset.fa));
@@ -6159,6 +6164,83 @@ function ligarGestao(P) {
     aviso('Certo, sai da lista.'); telaGestao(P);
   });
   ligarCardsReuniao(P);
+}
+/* ---------- Ferramentas da Gestão que vieram do /admin/: valor do milheiro e contato da equipe no painel (só a administração) ---------- */
+const gfVoltar = (P) => { GE_FERR = null; GF_ED = null; history.pushState(null, '', '#gestao'); telaGestao(P); scrollTo(0, 0); };
+// todo painel de cliente usa o valor do milheiro: depois de mudar, recalcula todos
+async function recalcularTodos() {
+  const refs = await CART.valoresRef(); let ok = 0;
+  for (const c of D.clientes || []) { try { await CART.syncCarteira(c.id, refs); ok++; } catch (_) { /* segue com os outros */ } }
+  const pr = await sb.from('programas_milhas').select('*'); if (!pr.error) D.progs = pr.data || [];
+  return ok;
+}
+async function telaGeFerr(P) {
+  if (!ADMIN) { GE_FERR = null; return telaGestao(P); }
+  const mil = GE_FERR === 'milheiro', tab = mil ? 'valores_milheiro' : 'gestores';
+  P.innerHTML = '<div class="vazio">Carregando...</div>';
+  const q = await sb.from(tab).select('*').order(mil ? 'programa' : 'nome');
+  if (!GE_FERR) return;
+  if (q.error) { P.innerHTML = `<button class="voltar" id="gfV">‹ Gestão</button><div class="vazio">${esc(limparTec('Não carregou: ' + q.error.message))}</div>`; $('gfV').onclick = () => gfVoltar(P); return; }
+  const L = q.data || [];
+  const quando = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+  const nCli = (g) => (D.clientes || []).filter(c => c.gestor_id === g.id).length;
+  const CAMPOS_G = [['nome', 'Nome', 'text', 'required'], ['whatsapp', 'WhatsApp (com DDD)', 'tel', 'inputmode="tel"'], ['email', 'E-mail', 'email', ''], ['horario_atendimento', 'Horário de atendimento', 'text', 'placeholder="Ex.: Seg a sex, 9h às 18h"'],
+    ['prazo_resposta', 'Prazo de resposta', 'text', 'placeholder="Ex.: Resposta em até 2 horas úteis"'], ['cal_link', 'Link de agendamento (Cal.com)', 'text', 'placeholder="Ex.: maktubgo/reuniao-mensal"'], ['foto_url', 'Foto (link https da imagem)', 'url', '']];
+  const form = (x) => mil
+    ? `<form class="bloco form" id="gfForm" style="margin-top:0" autocomplete="off">
+        ${x ? `<b>${esc(x.programa)}</b>` : `<label class="fl"><span>Programa</span><input name="programa" list="gfProgs" required placeholder="Ex.: Smiles"></label><datalist id="gfProgs">${PROG_PADRAO.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`}
+        <label class="fl"><span>Valor por milheiro (R$)</span><input name="valor_brl" type="number" step="0.01" min="0" inputmode="decimal" required value="${x ? esc(x.valor_brl) : ''}"></label>
+        <label class="fl"><span>Observação (opcional)</span><input name="observacao" value="${x ? esc(x.observacao || '') : ''}" placeholder="Ex.: média das emissões de outubro"></label>
+        <button type="submit" class="ac-prim" style="margin-top:10px">Revisar e salvar</button><button type="button" class="ac-sec" id="gfCanc">Cancelar</button></form>`
+    : `<form class="bloco form" id="gfForm" style="margin-top:0" autocomplete="off">
+        ${CAMPOS_G.map(([k, r, t, ex]) => `<label class="fl"><span>${r}</span><input name="${k}" type="${t}" ${ex} value="${x ? esc(x[k] || '') : ''}"></label>`).join('')}
+        <label class="fc" style="margin:8px 0"><input type="checkbox" name="ativo" ${!x || x.ativo !== false ? 'checked' : ''}><span>Aparece no painel dos clientes ligados a ele</span></label>
+        <button type="submit" class="ac-prim" style="margin-top:10px">Revisar e salvar</button><button type="button" class="ac-sec" id="gfCanc">Cancelar</button></form>`;
+  const linha = (x) => GF_ED === String(x.id) ? form(x) : mil
+    ? `<button type="button" class="ac-pes" data-gfe="${esc(x.id)}"><span><b>${esc(x.programa)}</b><small>${esc(['atualizado em ' + quando(x.atualizado_em), x.observacao].filter(Boolean).join(' · '))}</small></span><em class="gf-v">${brl2(+x.valor_brl || 0)}</em></button>`
+    : `<button type="button" class="ac-pes" data-gfe="${esc(x.id)}"><span><b>${esc(x.nome)}</b><small>${esc([x.whatsapp ? 'WhatsApp ' + x.whatsapp : 'sem WhatsApp', plural(nCli(x), 'cliente', 'clientes'), x.ativo === false ? 'fora do painel' : ''].filter(Boolean).join(' · '))}</small></span><i>›</i></button>`;
+  P.innerHTML = `<button class="voltar" type="button" id="gfV">‹ Gestão</button>
+    <h1 class="titulo">${mil ? 'Valor do <em>milheiro</em>' : 'Contato da <em>equipe</em> no painel'}</h1>
+    <div class="sub">${mil ? 'Referência por programa: é com ele que a carteira de cada cliente vira reais. Atualize uma vez por mês, com o valor que a milha rende em emissão, não o de venda.' : 'É quem aparece para o cliente no painel e no relatório, com foto, WhatsApp, horário e prazo de resposta. O cliente vê sempre "Equipe da Gestão de Milhas Maktub Go".'}</div>
+    <div class="ac-lista" style="margin-top:12px">${L.map(linha).join('') || `<div class="vazio">${mil ? 'Nenhum programa com valor.' : 'Nenhum contato cadastrado.'}</div>`}</div>
+    ${GF_ED === 'novo' ? form(null) : `<button type="button" class="ac-sec" id="gfNovo" style="margin-top:10px">${mil ? '+ Programa' : '+ Contato'}</button>`}
+    ${mil ? '<button type="button" class="ac-sec" id="gfRecalc" style="margin-top:8px">Recalcular todos os painéis</button>' : ''}`;
+  $('gfV').onclick = () => gfVoltar(P);
+  P.querySelectorAll('[data-gfe]').forEach(b => b.onclick = () => { if (GF_ED && !sairOk()) return; GF_ED = b.dataset.gfe; telaGeFerr(P); });
+  if ($('gfNovo')) $('gfNovo').onclick = () => { if (GF_ED && !sairOk()) return; GF_ED = 'novo'; telaGeFerr(P); };
+  if ($('gfCanc')) $('gfCanc').onclick = () => { GF_ED = null; SUJO = false; PREENCHIDO = false; telaGeFerr(P); };
+  if ($('gfRecalc')) $('gfRecalc').onclick = async () => { const b = $('gfRecalc'); b.disabled = true; b.textContent = 'Recalculando...'; const ok = await recalcularTodos(); aviso(`Painéis recalculados: ${ok} de ${(D.clientes || []).length}.`); b.disabled = false; b.textContent = 'Recalcular todos os painéis'; };
+  const f = $('gfForm'); if (!f) return;
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const x = GF_ED === 'novo' ? null : L.find(y => String(y.id) === GF_ED), g = (n) => (f.elements[n] ? String(f.elements[n].value).trim() : '');
+    let row, linhas;
+    if (mil) {
+      const nome = x ? x.programa : g('programa'), v = Number(String(g('valor_brl')).replace(',', '.'));
+      if (!nome || !(v >= 0) || g('valor_brl') === '') { aviso('Informe o programa e o valor.'); return; }
+      const dup = !x && L.find(y => CART.normProg(y.programa) === CART.normProg(nome));
+      if (dup) { aviso(`${dup.programa} já está na lista. Toque nele para mudar o valor.`); return; }
+      row = { valor_brl: v, observacao: g('observacao') || null, atualizado_em: new Date().toISOString() }; if (!x) row.programa = nome;
+      linhas = [esc(nome) + ': ' + (x ? brl2(+x.valor_brl || 0) + ' → ' : '') + brl2(v) + ' por milheiro.', (D.clientes || []).length === 1 ? 'O painel do cliente é recalculado com o valor novo.' : `Os painéis dos ${(D.clientes || []).length} clientes são recalculados com o valor novo.`];
+    } else {
+      row = {}; CAMPOS_G.forEach(([k]) => { row[k] = g(k) || null; }); row.ativo = f.elements.ativo.checked;
+      if (!row.nome) { aviso('Informe o nome.'); return; }
+      if (row.foto_url && !/^https:\/\//.test(row.foto_url)) { aviso('A foto precisa ser um link https.'); return; }
+      if (row.whatsapp) { row.whatsapp = row.whatsapp.replace(/\D/g, ''); if (row.whatsapp.length <= 11) row.whatsapp = '55' + row.whatsapp; }
+      if (row.cal_link) row.cal_link = row.cal_link.replace(/^https?:\/\/(app\.)?cal\.com\//, '').replace(/^\/+|\/+$/g, '');
+      const rot = Object.fromEntries(CAMPOS_G.map(([k, r]) => [k, r])); rot.ativo = 'Aparece no painel';
+      const mud = x ? Object.keys(row).filter(k => String(row[k] ?? '') !== String(x[k] ?? (k === 'ativo' ? true : ''))).map(k => rot[k]) : [];
+      if (x && !mud.length) { aviso('Nada mudou.'); return; }
+      linhas = x ? ['Muda: ' + mud.join(', ') + '.', nCli(x) ? (nCli(x) === 1 ? `O painel do cliente ligado a ${esc(x.nome)} mostra a mudança na hora.` : `O painel dos ${nCli(x)} clientes ligados a ${esc(x.nome)} mostra a mudança na hora.`) : ''] : ['Novo contato: ' + esc(row.nome) + '.', 'Ele aparece para o cliente quando for escolhido como responsável no cadastro do cliente.'];
+    }
+    if (!await confirmarFolha('Salvar?', linhas.filter(Boolean), mil ? 'Salvar e recalcular' : 'Salvar')) return;
+    const r = x ? await sb.from(tab).update(row).eq('id', x.id) : await sb.from(tab).insert(row);
+    if (r.error) { aviso('Não salvou: ' + limparTec(r.error.message)); return; }
+    GF_ED = null; SUJO = false; PREENCHIDO = false;
+    if (mil) { aviso('Valor salvo. Recalculando os painéis...'); const ok = await recalcularTodos(); aviso(`Valor salvo. Painéis recalculados: ${ok} de ${(D.clientes || []).length}.`); }
+    else { const gq = await sb.from('gestores').select('*'); if (!gq.error) D.gestores = gq.data || []; aviso('Contato salvo.'); }
+    if (GE_FERR) telaGeFerr(P);
+  };
 }
 function telaCiclo(P) {
   const k = mesKey(new Date());
@@ -6266,12 +6348,52 @@ function fiResumo(el, c) {
     <div class="bloco" style="margin-top:0">${eco.length ? eco.slice(0, 5).map(r => `<div class="lin"><span>${esc(r.descricao || r.categoria || '')}</span><span>${brl(ecoValor(r))}</span></div>`).join('') : '<div class="vazio">Nenhuma economia lançada neste ano.</div>'}</div>
     <div class="acoes" style="display:flex;gap:8px;margin-top:14px">
       <a class="sec" style="flex:1" href="/painel/relatorio.html?cliente=${encodeURIComponent(id)}" target="_blank" rel="noopener">Ver relatório</a>
-      <a class="sec" style="flex:1" href="${adminLink(id, 'cadastro')}">Editar cadastro</a>
-    </div>`;
+    </div>
+    <div class="secao">Cadastro</div>
+    <section class="bloco" style="margin-top:0" id="blCad">${htmlCadastroCli(c)}</section>`;
+  ligarCadastroCli(c);
   ligarContrato(c);
   if ($('blAssin')) CTR.bloco($('blAssin'), c, ctxCTR());
   el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FI_ABA = b.dataset.fa; telaFicha($('pagina'), c.id); });
   el.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
+}
+
+// cadastro do cliente (veio do /admin/): nome, responsável da equipe, convites e a tela de boas-vindas. Edita só a administração.
+function htmlCadastroCli(c, editar) {
+  const g = (D.gestores || []).find(x => x.id === c.gestor_id), lin = (k, v) => `<div class="cbr-l"><span>${k}</span><span>${v}</span></div>`;
+  if (!editar) return `<div class="cbr">${lin('Nome no painel', esc(c.nome_completo || ''))}${lin('Responsável da equipe', g ? esc(g.nome) : '<span class="alerta">Sem responsável</span>')}${lin('Convites disponíveis', esc(c.convites_disponiveis ?? 2))}${lin('Tela de boas-vindas', c.onboarding_concluido_em ? 'vista em ' + dataCurta(new Date(c.onboarding_concluido_em)) : 'ainda não vista')}</div>
+    ${ADMIN ? '<button type="button" class="ac-sec" id="cadEd" style="margin-top:10px">Editar cadastro</button>' : ''}`;
+  return `<form class="form" id="fCadCli" autocomplete="off">
+    <label class="fl"><span>Nome no painel</span><input name="nome_completo" required value="${esc(c.nome_completo || '')}"></label>
+    <label class="fl"><span>Responsável da equipe</span><select name="gestor_id"><option value="">Sem responsável</option>${(D.gestores || []).filter(x => x.ativo !== false || x.id === c.gestor_id).map(x => `<option value="${esc(x.id)}" ${x.id === c.gestor_id ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
+    <label class="fl"><span>Convites disponíveis</span><input name="convites_disponiveis" type="number" min="0" max="50" inputmode="numeric" value="${esc(c.convites_disponiveis ?? 2)}"></label>
+    ${c.onboarding_concluido_em ? '<label class="fc" style="margin:8px 0"><input type="checkbox" name="boas_vindas"><span>Mostrar a tela de boas-vindas de novo no próximo acesso</span></label>' : ''}
+    <button type="submit" class="ac-prim" style="margin-top:10px">Revisar e salvar</button><button type="button" class="ac-sec" id="cadCanc">Cancelar</button></form>`;
+}
+function ligarCadastroCli(c) {
+  const box = $('blCad'); if (!box) return;
+  if ($('cadEd')) $('cadEd').onclick = () => { box.innerHTML = htmlCadastroCli(c, true); ligarCadastroCli(c); };
+  if ($('cadCanc')) $('cadCanc').onclick = () => { SUJO = false; PREENCHIDO = false; box.innerHTML = htmlCadastroCli(c); ligarCadastroCli(c); };
+  const f = $('fCadCli'); if (!f) return;
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const upd = { nome_completo: f.elements.nome_completo.value.trim(), gestor_id: f.elements.gestor_id.value || null, convites_disponiveis: Number(f.elements.convites_disponiveis.value || 0) };
+    if (!upd.nome_completo) { aviso('Informe o nome.'); return; }
+    const bv = f.elements.boas_vindas && f.elements.boas_vindas.checked;
+    const nomeG = (id) => ((D.gestores || []).find(x => x.id === id) || {}).nome || 'sem responsável';
+    const L = [];
+    if (upd.nome_completo !== (c.nome_completo || '')) L.push(`Nome no painel: ${esc(c.nome_completo || '')} → ${esc(upd.nome_completo)}`);
+    if ((upd.gestor_id || null) !== (c.gestor_id || null)) L.push(`Responsável da equipe: ${esc(nomeG(c.gestor_id))} → ${esc(nomeG(upd.gestor_id))}`);
+    if (upd.convites_disponiveis !== Number(c.convites_disponiveis ?? 2)) L.push(`Convites disponíveis: ${esc(c.convites_disponiveis ?? 2)} → ${upd.convites_disponiveis}`);
+    if (bv) L.push('A tela de boas-vindas aparece de novo no próximo acesso do cliente');
+    if (!L.length) { aviso('Nada mudou.'); return; }
+    if (!await confirmarFolha('Salvar o cadastro?', L.map(x => x + '.'), 'Salvar')) return;
+    if (bv) upd.onboarding_concluido_em = null;
+    const { error } = await sb.from('clientes').update(upd).eq('id', c.id);
+    if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
+    Object.assign(c, upd); SUJO = false; PREENCHIDO = false; aviso('Cadastro salvo.');
+    box.innerHTML = htmlCadastroCli(c); ligarCadastroCli(c);
+  };
 }
 
 /* carteira no celular */
