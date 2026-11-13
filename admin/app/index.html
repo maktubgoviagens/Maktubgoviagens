@@ -1191,9 +1191,9 @@ import * as CRM from '/admin/app/crm.js?v=22';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=13';
-import * as COT from '/admin/app/cotador.js?v=56';
+import * as COT from '/admin/app/cotador.js?v=57';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=28';
+import * as VENDA from '/admin/app/venda.js?v=29';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=18';
 import * as CX from '/admin/app/caixa.js?v=4';
@@ -1500,6 +1500,17 @@ const editando = () => { if (SUJO) return true; if (calAberto()) return true; co
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || $('app').hidden || Date.now() - ULT_CARGA < 60e3) return;
   carregar(true, editando());
+});
+// toque numa notificação com o app aberto: troca de tela pelo caminho normal (pergunta antes de sair de um formulário preenchido)
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+  const m = e.data || {}; if (m.tipo !== 'abrir' || !m.url) return;
+  if (e.ports && e.ports[0]) e.ports[0].postMessage('ok');
+  let u; try { u = new URL(m.url, location.origin); } catch (_) { return; }
+  if (u.origin !== location.origin) return;
+  if (!u.pathname.startsWith('/admin/app')) { if (sairOk()) location.href = u.href; return; }
+  if (u.hash === location.hash || !sairOk()) return;
+  document.querySelectorAll('.folha').forEach(f => { f.hidden = true; });
+  history.pushState(null, '', u.pathname + u.search + u.hash); ANTERIOR = null; lerHash(); marcarNav(); tela(); scrollTo(0, 0);
 });
 window.addEventListener('popstate', () => {
   // voltar do celular (ou do app) com formulário não salvo: se a pessoa cancelar, fica na mesma tela com tudo preenchido
@@ -3468,9 +3479,23 @@ async function assumirAtendimento(id) {
   if (etapaDe(r) === 'Novo lead' && !ehGestao(r)) upd.etapa = 'Em cotação';
   if (ehGestao(r)) { if (!r.sdr_id) upd.sdr_id = D.meuId; if (etapaDe(r) === 'Novo lead') upd.etapa = 'Qualificação'; }
   if (upd.etapa) Object.assign(upd, passoPadraoRow(r, upd.etapa));
+  const antes = { ...r };
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não assumiu: ' + error.message + (/assumido/.test(error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
-  Object.assign(r, data); aviso(`${r.cliente} é seu. Estude o card e acione o cliente.`); tela();
+  Object.assign(r, data); aviso(`${r.cliente} é seu. Estude o card e acione o cliente.`);
+  if (!assumidoNoCardAberto(r, antes, upd)) tela();
+}
+// card aberto com algo digitado: não redesenha (o que foi digitado ficaria para trás). Troca só a linha de quem assumiu,
+// a ação principal e os campos que o assumir mudou e que a pessoa ainda não tinha mexido.
+function assumidoNoCardAberto(r, antes, upd) {
+  const f = $('fRe'); if (!f || String(RE_ED) !== String(r.id) || !SUJO) return false;
+  const txt = `Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_em ? ' desde ' + dataCurta(new Date(r.assumido_em)) : ''}`, a = $('assumirAt');
+  if (a) { const sub = a.closest('.sub'); if (sub) sub.innerHTML = txt; else a.outerHTML = `<div class="sub" style="margin-top:4px">${txt}</div>`; }
+  Object.keys(upd).forEach(k => { if (k === 'etapa') return; const el = f.elements[k]; if (!el || el instanceof RadioNodeList || el.type === 'checkbox') return;
+    const velho = antes[k] == null ? '' : String(antes[k]).slice(0, el.type === 'date' ? 10 : undefined); if (el.value === velho) el.value = upd[k] == null ? '' : String(upd[k]); });
+  if (upd.etapa && f.elements.etapa && f.elements.etapa.value === etapaDe(antes)) { const b = $('reRes') && [...$('reRes').children].find(x => x.dataset.v === upd.etapa); if (b) b.click(); }
+  const p = $('cbPrim'); if (p && p.dataset.acao === 'assumir') { const ac = cbAcao(r, r); if (ac) { p.dataset.acao = ac[0]; p.textContent = ac[1]; } else p.remove(); }
+  return true;
 }
 const reHash = (id) => '#' + (ABA === 'gestao' ? 'gestao/funil' : 'reunioes') + (id ? '/' + id : '');
 function abrirAtendimento(id, pre) {
@@ -6596,8 +6621,8 @@ function formConferencia(c, vals) {
   Object.values(leituras).forEach(L => { const p = W.programas.find(x => x.key === L.key); L.atual = p ? p.saldo : null; });
   const lista = () => progs.map(p => ({ nome: p.programa, atual: p.saldo, key: p.key })).concat(extras.map(n => ({ nome: n, atual: null, key: CART.normProg(n) })));
   $('cancConf').onclick = () => { FI_FORM = null; c._confExtra = []; c._prints = {}; box.innerHTML = ''; };
-  const valsDigitados = () => { const v = {}; lista().forEach((x, i) => { const inp = f.querySelector(`.conf[data-i="${i}"] [name=novo]`); if (inp && !inp.readOnly) v[x.key] = inp.value; }); return v; };
-  if (vals) lista().forEach((x, i) => { if (vals[x.key] !== undefined) f.querySelector(`.conf[data-i="${i}"] [name=novo]`).value = vals[x.key]; });
+  // tudo o que foi digitado, por programa (não pela posição): ler um print ou adicionar programa redesenha o formulário e devolve isto
+  const valsDigitados = () => { const v = { _data: f.elements.data.value, _lin: {} }; lista().forEach((x, i) => { const div = f.querySelector(`.conf[data-i="${i}"]`); if (!div) return; const o = {}; div.querySelectorAll('input[name], select[name]').forEach(el => { if (!(el.name === 'novo' && el.readOnly)) o[el.name] = el.value; }); v._lin[x.key] = o; }); return v; };
   const desenharPrints = () => { $('confPrints').innerHTML = Object.values(leituras).map(htmlLeitura).join(''); };
   const aplicarPrints = () => lista().forEach((x, i) => {
     const div = f.querySelector(`.conf[data-i="${i}"]`), inp = div.querySelector('[name=novo]'), sm = div.querySelector('.cab small'), L = leituras[x.key];
@@ -6642,10 +6667,8 @@ function formConferencia(c, vals) {
   $('confAdd').onclick = () => {
     const n = $('confNovoProg').value.trim(); if (!n) return;
     if (lista().some(x => x.key === CART.normProg(n))) { aviso('Esse programa já está na lista.'); return; }
-    const vals = [...f.querySelectorAll('.conf [name=novo]')].map(x => x.value);
-    extras.push(n); formConferencia(c);
-    $('fConf').querySelectorAll('.conf [name=novo]').forEach((x, i) => { if (vals[i] !== undefined) x.value = vals[i]; });
-    $('fConf').dispatchEvent(new Event('input'));
+    const v = valsDigitados();
+    extras.push(n); formConferencia(c, v);
   };
   const detalhe = (div, dif, atual) => {
     const d = div.querySelector('.det'), tipoAtual = d.dataset.t;
@@ -6684,6 +6707,14 @@ function formConferencia(c, vals) {
   };
   aplicarPrints(); desenharPrints();
   f.addEventListener('input', upd); f.addEventListener('change', upd); upd();
+  if (vals && vals._lin) {
+    if (vals._data) f.elements.data.value = vals._data;
+    const cada = (fn) => lista().forEach((x, i) => { const o = vals._lin[x.key], div = f.querySelector(`.conf[data-i="${i}"]`); if (o && div) fn(o, div); });
+    // primeiro o saldo (ele abre os detalhes), depois o tipo (ele mostra os campos certos), depois o resto
+    cada((o, div) => { const el = div.querySelector('[name=novo]'); if (o.novo !== undefined && !el.readOnly) el.value = o.novo; }); upd();
+    cada((o, div) => { const el = div.querySelector('[name=tipo]'); if (el && o.tipo !== undefined) el.value = o.tipo; }); upd();
+    cada((o, div) => { div.querySelectorAll('.det input[name]').forEach(el => { if (o[el.name] !== undefined) el.value = o[el.name]; }); }); upd();
+  }
   f.onsubmit = async (e) => {
     e.preventDefault();
     const data = tv(f, 'data'), R = ler(), linhas = [];
@@ -7024,7 +7055,13 @@ async function fiTarefas(el, c) {
   const modelo = tx.data ? tx.data.texto : '';
   $('gtMsg').value = tx.error ? GT_SQL : textoPreOnboard(c, modelo);
   $('gtModelo').value = modelo;
-  const enviado = async () => { if (L.some(t => t.chave === 'enviar_check' && !t.feito)) { await gtMarcarChave(c, 'enviar_check'); setTimeout(de, 400); } };
+  const enviado = async () => {
+    const t = L.find(x => x.chave === 'enviar_check' && !x.feito); if (!t || !(await gtMarcar(t.id, true))) return;
+    const cb = el.querySelector(`[data-gt="${t.id}"]`), row = cb && cb.closest('.gt'); if (cb) cb.checked = true;
+    if (row) { row.classList.add('ok'); const v = row.querySelector('[data-gt-ir="gtTexto"]'); if (v) v.remove(); }
+    const fe = L.filter(x => x.feito).length, b = el.querySelector('.meta .top b'), bar = el.querySelector('.meta .barra2 i');
+    if (b) b.textContent = `${fe} de ${L.length}`; if (bar) { bar.style.width = (fe / L.length * 100) + '%'; bar.classList.toggle('ok', fe === L.length); }
+  };
   $('gtZap').onclick = () => { window.open('https://wa.me/?text=' + encodeURIComponent($('gtMsg').value), '_blank', 'noopener'); enviado(); };
   $('gtCopiar').onclick = async () => { try { await navigator.clipboard.writeText($('gtMsg').value); aviso('Texto copiado.'); } catch (e) { $('gtMsg').select(); document.execCommand('copy'); aviso('Texto copiado.'); } enviado(); };
   $('gtModeloOk').onclick = async () => {

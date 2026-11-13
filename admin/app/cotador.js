@@ -84,7 +84,26 @@ async function lerImagens(P, X, fs) {
   if (!data || !data.ok) { X.aviso(msg || 'Não consegui ler o print. Tente de novo ou cole o texto.'); return; }
   if (!(data.voos || []).length) { X.aviso('Não achei voos nesse print. Confira se aparecem os horários e os aeroportos.'); return; }
   const ta = P.querySelector('#colaTxt'); if (ta) ta.value = textoDosVoos(data);
-  const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) b.click();
+  const b = P.querySelector('#rpColar, [data-colar="tudo"]'); if (b) comFoco(() => b.click());
+}
+// redesenhar tira o foco de quem estava digitando: guarda o campo e a posição do cursor e devolve depois
+export function comFoco(fn) {
+  const a = document.activeElement, q = a && a !== document.body ? (a.dataset && a.dataset.k ? `[data-k="${a.dataset.k}"]${a.dataset.it !== undefined ? `[data-it="${a.dataset.it}"]` : ''}` : a.id ? '#' + a.id : a.name ? `[name="${a.name}"]` : null) : null;
+  let pos = null; try { pos = a && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null; } catch (_) { pos = null; }
+  const r = fn();
+  if (!q) return r;
+  // a tela pode redesenhar na hora ou só quando a leitura termina: espera o campo antigo sair e põe o foco no novo
+  const devolve = () => {
+    if (a.isConnected) return document.activeElement !== a; // não redesenhou ainda; se a pessoa já foi para outro campo, para
+    const at = document.activeElement; if (at && at !== document.body) return true;
+    const b = document.querySelector(q); if (!b) return false;
+    b.focus(); try { if (pos) b.setSelectionRange(pos[0], pos[1]); } catch (_) { /* campo sem cursor */ }
+    return true;
+  };
+  if (devolve()) return r;
+  const ob = new MutationObserver(() => { if (devolve()) ob.disconnect(); });
+  ob.observe(document.body, { childList: true, subtree: true }); setTimeout(() => ob.disconnect(), 8000);
+  return r;
 }
 const imgsDoClipboard = (dt) => [...((dt && dt.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
 let colarGlobal = null;
