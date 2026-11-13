@@ -1048,6 +1048,8 @@ body.cb-leitura #montarCot{margin-top:8px}
 .fp-t{display:flex;justify-content:space-between;font-size:16px}.fp-t b{color:var(--verde);font-variant-numeric:tabular-nums}
 .fp-b{height:8px;border-radius:4px;background:var(--creme-2);margin-top:4px;overflow:hidden}.fp-b i{display:block;height:100%;background:var(--verde)}.fp-b i.ouro{background:var(--dourado-claro)}
 .fp-l small{display:block;font-size:14px;color:var(--tinta-3);margin-top:3px}
+.arq-l{align-items:center;gap:12px;cursor:default}
+.arq-l .arq-r{width:auto;flex:none;margin:0;padding:8px 14px}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1182,7 +1184,7 @@ import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=29';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=8';
-import * as CRM from '/admin/app/crm.js?v=21';
+import * as CRM from '/admin/app/crm.js?v=22';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=4';
 import * as FORN from '/admin/app/fornecedores.js?v=13';
@@ -1613,7 +1615,7 @@ function perguntarBilhete(tr, ref, voo) {
     document.body.appendChild(el);
   });
 }
-const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'calccartoes', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens'];
+const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'calccartoes', 'dre', 'compromissos', 'caixa', 'receber', 'pagar', 'conferir', 'opmilhas', 'inicio', 'emissoes', 'reunioes', 'gestao', 'agenda', 'financeiro', 'mais', 'leads', 'clientes', 'site', 'equipe', 'avisos', 'metas', 'custos', 'acervo', 'acessos', 'crm', 'fornecedores', 'cotador', 'atividades', 'indicacoes', 'origens', 'arquivados'];
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
@@ -1808,7 +1810,7 @@ function marcarNav() {
   document.body.classList.toggle('nav-exato', exato);
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades', arquivados: 'Arquivados' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -1961,7 +1963,7 @@ function ctxIND() {
   return { D, $, esc, sb, aviso, ir, pode, ADMIN, brlC, brl2, limparTec, nomeTime, aba: () => ABA, podeOrigens: podeAba('origens') };
 }
 function ctxCRM() {
-  return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN,
+  return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN, confirmarFolha,
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true), irOrigens: () => ir('origens'), IND,
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
@@ -2066,6 +2068,7 @@ function tela() {
   if (ABA === 'metas') return telaMetas(P);
   if (ABA === 'custos') return telaCustos(P);
   if (ABA === 'acessos') return telaAcessos(P);
+  if (ABA === 'arquivados') return telaArquivados(P);
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, GER: GER(), meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
@@ -3888,7 +3891,7 @@ function telaFormReuniao(P) {
       ${CB ? cbFecha : ''}${GB ? cbFecha + '</div>' : ''}
       <button class="zap grande${CB || GB ? ' cb-oculto' : ''}" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
       ${nova ? '' : '<div class="sub" id="rascInfo" style="margin-top:4px;text-align:center"></div>'}
-      ${ADMIN && !nova ? '<button class="sec grande" type="button" id="excluirRe" style="margin-top:8px;width:100%">Excluir</button>' : ''}
+      ${ADMIN && !nova ? '<button class="sec grande" type="button" id="arquivarRe" style="margin-top:8px;width:100%">Arquivar card</button>' : ''}
       <div class="sub" id="msgRe"></div>
     </form>
     ${CB || GB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
@@ -4365,11 +4368,14 @@ function telaFormReuniao(P) {
     aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Lead da Gestão registrado.' : 'Cotação registrada.') : 'Atualizado.');
     RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
-  if ($('excluirRe')) $('excluirRe').onclick = async () => {
-    if (CONFIRMA !== 're' + base.id) { CONFIRMA = 're' + base.id; $('excluirRe').textContent = 'Toque de novo para confirmar'; return; }
-    const { error } = await sb.from('atendimentos').delete().eq('id', base.id);
-    if (error) { aviso('Não excluiu: ' + error.message); return; }
-    D.reunioes = D.reunioes.filter(x => x.id !== base.id); CONFIRMA = null; aviso('Reunião excluída.'); RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P);
+  // arquivar no lugar de excluir: o card sai do funil, das listas e dos avisos (92-arquivar-avisos-ignoram-arquivados.sql), nada é apagado
+  if ($('arquivarRe')) $('arquivarRe').onclick = async () => {
+    const ok = await confirmarFolha('Arquivar o card de ' + (base.cliente || 'cliente') + '?', ['Ele sai do funil, das listas, dos números e dos avisos.', 'Nada é apagado. Dá para restaurar em Mais, Arquivados.'], 'Arquivar');
+    if (!ok) return;
+    const { error } = await sb.from('atendimentos').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', base.id);
+    if (error) { aviso('Não arquivou: ' + limparTec(error.message)); return; }
+    D.reunioes = D.reunioes.filter(x => x.id !== base.id); SUJO = false; PREENCHIDO = false;
+    aviso('Card arquivado.'); RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P);
   };
 }
 
@@ -5021,6 +5027,7 @@ const maisPartes = (t) => { const [a, ...b] = String(t).split(': '); const r = b
 function maisConta() {
   const L = [];
   if (ADMIN) L.push({ href: '/admin/', t: 'Administração completa', d: 'Carteiras e documentos', c: 'administração completa' }, { href: '/painel/', t: 'Meu painel de cliente', d: '', c: 'meu painel' });
+  if (ADMIN) L.push({ k: 'arquivados', t: 'Arquivados', d: 'Cards, cotações e fichas arquivados. Dá para restaurar', c: 'arquivados' });
   if (podeAba('opmilhas')) L.push({ k: 'opmilhas', t: 'Operação de milhas dos sócios', d: 'Arquivo', c: 'operação dos sócios' });
   if (podeAba('emissoes')) L.push({ b2b: 1, t: 'Emissão B2B para agências', d: 'Fora de uso, mas continua funcionando. O histórico fica em Emissões', c: 'B2B' });
   return L;
@@ -5031,6 +5038,46 @@ function maisAreas() {
   return A;
 }
 const maisLinha = (x) => { const [t, d] = x.k || x.href || x.b2b ? (x.d !== undefined ? [x.t, x.d] : maisPartes(x.t)) : [x.t, '']; return `<button class="ac-pes" type="button" ${x.k ? `data-ir="${x.k}"` : x.href ? `data-href="${x.href}"` : 'data-b2b'}><span><b>${esc(t)}</b>${d ? `<small>${esc(d)}</small>` : ''}</span>${x.n ? `<em class="mais-n">${x.n}</em>` : '<i>›</i>'}</button>`; };
+/* ---------- Arquivados: o que saiu das telas sem ser apagado. Só a administração vê e restaura. ---------- */
+let ARQ_TIPO = 'cards';
+const ARQ = {
+  cards: { t: 'Cards', tab: 'atendimentos', sel: 'id,cliente,produto,etapa,resultado,data,arquivado_em,arquivado_por', nome: (x) => x.cliente || 'Cliente',
+    det: (x) => [x.produto, x.resultado === 'Em andamento' ? x.etapa : x.resultado].filter(Boolean).join(' · '),
+    volta: (x) => ['Ele volta para o funil em "' + esc(x.resultado === 'Em andamento' ? x.etapa || 'Novo lead' : x.resultado || '') + '", do jeito que estava.', 'Os avisos de retorno voltam a valer para ele.'] },
+  cotacoes: { t: 'Cotações', tab: 'propostas', sel: 'id,titulo,modelo,atualizado_em,arquivado_em,arquivado_por', nome: (x) => x.titulo || 'Cotação sem título',
+    det: (x) => x.modelo ? 'Cotação ' + ({ go: 'Go', corp: 'Corporativo', rapida: 'Rápida' }[x.modelo] || x.modelo) : '', volta: () => ['Ela volta para a lista de cotações, do jeito que estava.'] },
+  fichas: { t: 'Fichas', tab: 'pessoas', sel: 'id,nome,celular,arquivado_em,arquivado_por', nome: (x) => x.nome || 'Ficha',
+    det: (x) => x.celular || '', volta: () => ['Ela volta para as fichas de clientes, com tudo o que estava ligado a ela.'] }
+};
+async function telaArquivados(P) {
+  P.innerHTML = '<h1 class="titulo">Arquivados</h1><div class="sub">Carregando…</div>';
+  const R = {};
+  await Promise.all(Object.entries(ARQ).map(async ([k, a]) => {
+    const q = await sb.from(a.tab).select(a.sel).not('arquivado_em', 'is', null).order('arquivado_em', { ascending: false }).limit(300);
+    R[k] = q.error ? null : q.data || [];
+  }));
+  if (ABA !== 'arquivados') return;
+  const a = ARQ[ARQ_TIPO], L = R[ARQ_TIPO];
+  const quando = (d) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  P.innerHTML = `
+    <button class="voltar" type="button" id="arqVoltar">‹ Mais</button>
+    <h1 class="titulo"><em>Arquivados</em></h1>
+    <div class="sub">Saíram das telas, dos números e dos avisos. Nada foi apagado.</div>
+    <div class="seg" id="arqTipo" style="margin-top:12px">${Object.entries(ARQ).map(([k, x]) => `<button type="button" data-t="${k}" class="${k === ARQ_TIPO ? 'on' : ''}">${x.t}${R[k] && R[k].length ? ' ' + R[k].length : ''}</button>`).join('')}</div>
+    ${L === null ? '<div class="vazio" style="margin-top:12px">Não deu para carregar agora. Tente de novo em instantes.</div>'
+      : L.length ? `<div class="ac-lista" style="margin-top:12px">${L.map(x => `<div class="ac-pes arq-l"><span><b>${esc(a.nome(x))}</b><small>${esc([a.det(x), 'arquivado em ' + quando(x.arquivado_em) + (nomeTime(x.arquivado_por) ? ' por ' + nomeTime(x.arquivado_por) : '')].filter(Boolean).join(' · '))}</small></span><button type="button" class="ac-sec arq-r" data-r="${esc(x.id)}">Restaurar</button></div>`).join('')}</div>`
+      : `<div class="vazio" style="margin-top:12px">Nenhum item arquivado em ${a.t.toLowerCase()}.</div>`}`;
+  $('arqVoltar').onclick = () => ir('mais');
+  P.querySelectorAll('#arqTipo [data-t]').forEach(b => b.onclick = () => { ARQ_TIPO = b.dataset.t; telaArquivados(P); });
+  P.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
+    const x = (L || []).find(y => String(y.id) === b.dataset.r); if (!x) return;
+    if (!await confirmarFolha('Restaurar ' + a.nome(x) + '?', a.volta(x), 'Restaurar')) return;
+    b.disabled = true;
+    const { error } = await sb.from(a.tab).update({ arquivado_em: null, arquivado_por: null }).eq('id', x.id);
+    if (error) { b.disabled = false; aviso('Não restaurou: ' + limparTec(error.message)); return; }
+    aviso('Restaurado.'); await carregar(true);
+  });
+}
 function telaMais(P) {
   const A = maisAreas(), area = MAIS_AREA && A.find(a => a.g === MAIS_AREA);
   if (area) {

@@ -280,7 +280,7 @@ function telaFicha(P, X) {
       <button class="sec" type="button" id="avaliarForn" style="margin-top:10px;width:100%">Registrar hotel ou serviço</button></section>`; })() : ''}
     <section class="bloco"><h2>Linha do tempo</h2>${linhaTempo(D, X, p)}</section>
     ${p.observacoes ? `<section class="bloco"><h2>Anotações</h2><div style="white-space:pre-wrap;color:var(--tinta-2)">${esc(p.observacoes)}</div></section>` : ''}
-    ${ADMIN ? '<button class="sec grande" id="excluirP" style="margin-top:14px;width:100%">Excluir ficha</button>' : ''}`;
+    ${ADMIN ? '<button class="sec grande" id="arquivarP" style="margin-top:14px;width:100%">Arquivar ficha</button>' : ''}`;
   organizarFicha(P);
   if ($('irPagarF')) $('irPagarF').onclick = () => X.irPagar();
   $('voltar').onclick = () => ir(X, 'lista');
@@ -339,13 +339,16 @@ function telaFicha(P, X) {
     D.vinculos = (D.vinculos || []).filter(v => !(v.pessoa_a === a && v.pessoa_b === c)).concat(data);
     X.aviso('Vinculado.'); telaFicha(P, X);
   };
-  if ($('excluirP')) $('excluirP').onclick = async () => {
+  // arquivar no lugar de excluir: a ficha sai das listas, nada é apagado e as vendas continuam ligadas a ela
+  if ($('arquivarP')) $('arquivarP').onclick = async () => {
+    if (p.cliente_id || p.parceiro_ref) return X.aviso('Esta ficha tem conta da Gestão ou cadastro de parceiro. Use "juntar fichas" em vez de arquivar.');
     const usos = (D.emissoes || []).filter(e => e.pessoa_id === p.id).length + (D.reunioes || []).filter(r => r.pessoa_id === p.id).length;
-    if (p.cliente_id || p.parceiro_ref) return X.aviso('Esta ficha tem conta da Gestão ou cadastro de parceiro. Use "juntar fichas" em vez de excluir.');
-    if (!confirm(usos ? `Excluir a ficha de ${p.nome}? As ${usos} vendas e atendimentos continuam no app, só deixam de estar ligados a ela.` : `Excluir a ficha de ${p.nome}?`)) return;
-    const { error } = await X.sb.from('pessoas').delete().eq('id', p.id);
-    if (error) return X.aviso('Não excluiu: ' + error.message);
-    D.pessoas = D.pessoas.filter(x => x.id !== p.id); X.aviso('Ficha excluída.'); ir(X, 'lista');
+    const ok = await X.confirmarFolha('Arquivar a ficha de ' + p.nome + '?', ['Ela sai das fichas de clientes e das buscas.',
+      usos ? `As ${usos} vendas e atendimentos dela continuam no app, ligados a ela.` : 'Nada é apagado.', 'Dá para restaurar em Mais, Arquivados. Se a pessoa voltar com o mesmo telefone, e-mail ou CPF, a ficha volta sozinha.'], 'Arquivar');
+    if (!ok) return;
+    const { error } = await X.sb.from('pessoas').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', p.id);
+    if (error) return X.aviso('Não arquivou: ' + X.limparTec(error.message));
+    D.pessoas = D.pessoas.filter(x => x.id !== p.id); X.aviso('Ficha arquivada.'); ir(X, 'lista');
   };
 }
 
