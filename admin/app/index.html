@@ -908,6 +908,29 @@ button,select,textarea,input{font-size:16px}
 /* topo: o nome da tela cabe numa linha */
 .topo>div:not(.acoes){min-width:0}
 .topo .n,.topo .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.08em}
+
+/* ===== Navegação (13/11/2026) ===== */
+.mais-busca{display:flex;align-items:center;gap:10px;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:0 14px;margin-top:12px;min-height:50px}
+.mais-busca:focus-within{border-color:var(--verde)}
+.mais-busca span{color:var(--tinta-3);font-size:18px}
+.mais-busca input{flex:1;border:0;background:none;outline:none;font-size:16px;padding:12px 0;min-width:0}
+.mais-n{font-style:normal;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--alerta);min-width:20px;text-align:right}
+.novo-topo{display:none}
+/* menu: no celular só os 5 principais; no computador, todas as áreas */
+.nav .nx,.nav .ng,.nav .nbusca{display:none}
+@media (min-width:1024px){
+  .fab{display:none!important}
+  .novo-topo:not([hidden]){display:inline-flex;align-items:center;background:var(--dourado-claro);color:var(--verde);border:0;border-radius:10px;padding:0 14px;height:38px;font-size:16px;font-weight:500;cursor:pointer;margin-right:4px}
+  .nav button[data-t="mais"]{display:none}
+  .nav .nbusca{display:flex;align-items:center;gap:8px;height:42px;margin:0 0 10px;padding:0 12px;border:1px solid var(--linha);border-radius:10px;background:var(--creme);color:var(--tinta-3);font-size:16px;flex:none;cursor:pointer}
+  .nav .ng{display:flex;justify-content:space-between;align-items:center;flex:none;height:auto;background:none;border:0;margin:14px 0 2px;padding:4px 14px;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dourado);cursor:pointer}
+  .nav .ng::after{content:'⌄';font-size:14px;color:var(--tinta-3)}
+  .nav .ng.fechado::after{content:'›'}
+  .nav .nx:not([hidden]){display:flex;align-items:center;justify-content:space-between;flex:none;height:auto;min-height:40px;padding:8px 14px;line-height:1.3;border:0;border-radius:8px;background:none;font-size:16px;color:var(--tinta-2);cursor:pointer;text-align:left;letter-spacing:0}
+  .nav .nx:hover{background:var(--creme)}
+  .nav .nx.on{background:var(--creme-2);color:var(--verde);font-weight:600}
+  .nav .nx .mais-n{font-size:18px}
+}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -931,6 +954,7 @@ button,select,textarea,input{font-size:16px}
     <img src="/ativos/simbolo-creme.png" alt="Maktub Go">
     <div><div class="n">Maktub Go</div><div class="s" id="topoS">Operação</div></div>
     <div class="acoes">
+      <button class="novo-topo" id="novoTopo" type="button" hidden>+ Novo</button>
       <button class="icone" id="recarregar" aria-label="Atualizar" title="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
       <button class="icone" id="sino" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20a2 2 0 0 0 4 0"/></svg><span class="bola" id="bSino" hidden></span></button>
       <button class="icone" id="clientesTopo" aria-label="Clientes" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/></svg></button>
@@ -1143,6 +1167,8 @@ let ADMIN = false;
 let GE_FUNIL = false;
 // Equipe e acessos: pessoa aberta, modo de mudar acessos e cadastro de pessoa nova
 let AC_VER = null, AC_EDIT = false, AC_LISTA = [], AC_NOVO = false;
+// Mais: área aberta e texto da busca
+let MAIS_AREA = null, MAIS_Q = '';
 let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI = null, SITE = null, SITE_DIAS = 28;
 
 /* ================= acesso ================= */
@@ -1233,6 +1259,7 @@ $('buscaG').oninput = () => {
 function mostrarFab() {
   const lista = { inicio: 1, reunioes: !RE_ED, gestao: !GE_FUNIL || !RE_ED, emissoes: !EM_ED, agenda: 1, empresa: 1, crm: CRM.emLista() }[ABA];
   $('fab').hidden = !lista || !acoesNovo().length; document.body.classList.toggle('com-fab', !$('fab').hidden);
+  if ($('novoTopo')) $('novoTopo').hidden = $('fab').hidden;
 }
 $('sair').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.replace('/acesso/'); };
 /* botão de refresh (todas as pessoas): recarrega a página inteira, como o F5, e volta na mesma tela.
@@ -1289,8 +1316,19 @@ async function pushNoSino() {
   if ($('spOff')) $('spOff').onclick = async () => { $('spOff').disabled = true; await desativarPush(); pushNoSino(); };
 }
 $('sino').onclick = () => ADMIN ? ir('avisos') : abrirSino();
-$('nav').onclick = (e) => { const b = e.target.closest('button'); if (b && sairOk()) ir(b.dataset.t); };
+$('nav').onclick = (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.ng) { const g = b.dataset.ng, f = b.classList.toggle('fechado'); $('nav').querySelectorAll('.nx').forEach(x => { if (x.dataset.grupo === g) x.hidden = f; });
+    try { const L = new Set(JSON.parse(localStorage.getItem('navFechados') || '[]')); f ? L.add(g) : L.delete(g); localStorage.setItem('navFechados', JSON.stringify([...L])); } catch (_) {} return; }
+  if (b.dataset.nbusca) { $('buscaTopo').click(); return; }
+  if (b.dataset.sair !== undefined || b.hasAttribute('data-sair')) return;
+  if (!sairOk()) return;
+  if (b.dataset.href) { location.href = b.dataset.href; return; }
+  if (b.hasAttribute('data-b2b')) { abrirB2B(); return; }
+  ir(b.dataset.t);
+};
 $('maisTopo').onclick = () => ir('mais');
+if ($('novoTopo')) $('novoTopo').onclick = () => $('fab').onclick();
 $('clientesTopo').onclick = () => { if (sairOk()) { CRM.abrir(null); ir('crm'); } };
 /* ao voltar para o app: atualiza os dados, mas não redesenha a tela se a pessoa estava digitando */
 let SUJO = false, ULT_CARGA = 0;
@@ -1548,7 +1586,11 @@ function montarNav() {
   $('sino').hidden = false; $('sino').setAttribute('aria-label', ADMIN ? 'Avisos' : 'Suas tarefas');
   $('maisTopo').hidden = !podeAba('mais') || navItens().some(([k]) => k === 'empresa' || k === 'mais');
   $('clientesTopo').hidden = !podeAba('crm') || navItens().some(([k]) => k === 'crm');
+  const naNav = new Set(itens.map(([k]) => k)); if (naNav.has('operacao')) { naNav.add('emissoes'); naNav.add('agenda'); }
+  let fech = []; try { fech = JSON.parse(localStorage.getItem('navFechados') || '[]'); } catch (_) {}
+  const extra = podeAba('mais') ? '<button class="nbusca" type="button" data-nbusca>⌕ Buscar</button>' + maisAreas().map(a => { const L = a.itens.filter(x => !(x.k && naNav.has(x.k))); return L.length ? `<button class="ng${fech.includes(a.g) ? ' fechado' : ''}" type="button" data-ng="${esc(a.g)}">${esc(a.g)}</button>${L.map(x => `<button class="nx" type="button" ${x.k ? `data-t="${x.k}"` : x.href ? `data-href="${x.href}"` : 'data-b2b'} data-grupo="${esc(a.g)}"${fech.includes(a.g) ? ' hidden' : ''}>${esc(x.k ? (NAV_CURTO[x.k] || maisPartes(x.t)[0]) : x.t)}${x.n ? `<em class="mais-n">${x.n}</em>` : ''}</button>`).join('')}` : ''; }).join('') + '<button class="nx" type="button" data-sair>Sair do app</button>' : '';
   $('nav').innerHTML = itens.map(([k, l]) => `<button data-t="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${NAV_IC[k]}</svg>${l}${k === 'operacao' ? '<span class="bola" id="bAgenda" hidden></span>' : ''}${k === 'gestao' ? '<span class="bola" id="bGestao" hidden></span>' : ''}${k === 'mais' || k === 'leads' ? '<span class="bola" id="bLeads" hidden></span>' : ''}</button>`).join('');
+  $('nav').insertAdjacentHTML('beforeend', extra);
 }
 
 // voltar de uma tela interna: se veio da tela de destino, volta no histórico (sem empilhar telas); senão, vai para ela
@@ -1642,7 +1684,9 @@ async function marcarInteresse(pid, gestao) {
 function marcarNav() {
   const naNav = (k) => navItens().some(([x]) => x === k);
   const alvo = ABA === 'marketing' && naNav('marketing') ? 'marketing' : OP_ABAS.includes(ABA) && naNav('operacao') ? 'operacao' : COM_ABAS.includes(ABA) && naNav('reunioes') ? 'reunioes' : (EMP_ABAS.includes(ABA) || COM_ABAS.includes(ABA)) && naNav('empresa') ? 'empresa' : ABA === 'crm' || ABA === 'origens' ? 'crm' : ABA === 'clientes' || ABA === 'cartoesbase' || ABA === 'calccartoes' ? 'gestao' : ABA === 'receber' && navItens().some(([k]) => k === 'financeiro') ? 'financeiro' : navItens().some(([k]) => k === ABA) ? ABA : 'mais';
-  [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.t === alvo));
+  const exato = [...$('nav').querySelectorAll('.nx')].some(b => b.dataset.t === ABA);
+  [...$('nav').children].forEach(b => b.classList.toggle('on', b.classList.contains('nx') ? b.dataset.t === ABA : !exato && b.dataset.t === alvo));
+  document.body.classList.toggle('nav-exato', exato);
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
   $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades' }[ABA] || 'Operação';
@@ -1883,6 +1927,7 @@ function tela() {
   document.body.classList.remove('cal-largo');
   document.body.classList.remove('ac-com-barra');
   if (ABA !== 'acessos') { AC_VER = null; AC_EDIT = false; AC_NOVO = false; }
+  if (ABA !== 'mais') { MAIS_AREA = null; MAIS_Q = ''; }
   if (ABA !== 'calccartoes') CALC.inicio();
   try { atualizarSino(); } catch (_) {}
   if (ABA === 'marketing') { mostrarFab(); return MKT.tela($('pagina'), ctxMKT()); }
@@ -4651,20 +4696,63 @@ const MAIS_GRUPOS = () => [
 const itemMaisOk = ([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
 function itensMais() { return MAIS_GRUPOS().flatMap(([, L]) => L).filter(itemMaisOk); }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
+/* Mais: busca, o que pede atenção e as áreas fechadas. Cada área abre a própria lista. */
+const MAIS_CURTO = { empresa: 'empresa', indicacoes: 'indicações', metas: 'metas', site: 'site', atividades: 'atividades', crm: 'fichas', origens: 'origens', clientes: 'carteira da Gestão', cartoesbase: 'base de cartões',
+  reunioes: 'comercial', cotador: 'cotações', leads: 'leads', fornecedores: 'hotéis', acervo: 'acervo', emissoes: 'emissões', agenda: 'agenda', financeiro: 'financeiro', receber: 'receber', pagar: 'pagar',
+  conferir: 'comprovantes', compromissos: 'compromissos', caixa: 'caixa', dre: 'DRE', custos: 'salários', equipe: 'comissões', comissao: 'minha comissão', acessos: 'acessos', avisos: 'avisos', marketing: 'posts, aprovação e estratégia' };
+// nomes curtos no menu lateral do computador
+const NAV_CURTO = { avisos: 'Avisos', atividades: 'Atividades', indicacoes: 'Indicações', crm: 'Fichas de clientes', acessos: 'Equipe e acessos', marketing: 'Marketing' };
+const maisJuntar = (L) => { const j = L.length < 2 ? L.join('') : L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1]; return j ? j[0].toUpperCase() + j.slice(1) : ''; };
+// "DRE da empresa: geral e detalhado" vira título e linha de apoio
+const maisPartes = (t) => { const [a, ...b] = String(t).split(': '); const r = b.join(': '); return [a, r ? r[0].toUpperCase() + r.slice(1) : '']; };
+// itens da conta e do arquivo (fora das áreas comuns)
+function maisConta() {
+  const L = [];
+  if (ADMIN) L.push({ href: '/admin/', t: 'Administração completa', d: 'Carteiras e documentos', c: 'administração completa' }, { href: '/painel/', t: 'Meu painel de cliente', d: '', c: 'meu painel' });
+  if (podeAba('opmilhas')) L.push({ k: 'opmilhas', t: 'Operação de milhas dos sócios', d: 'Arquivo', c: 'operação dos sócios' });
+  if (podeAba('emissoes')) L.push({ b2b: 1, t: 'Emissão B2B para agências', d: 'Fora de uso, mas continua funcionando. O histórico fica em Emissões', c: 'B2B' });
+  return L;
+}
+function maisAreas() {
+  const A = MAIS_GRUPOS().map(([g, L]) => [g, L.filter(itemMaisOk)]).filter(([, L]) => L.length).map(([g, L]) => ({ g, itens: L.map(([k, t, n]) => ({ k, t, n: +n || 0 })) }));
+  const C = maisConta(); if (C.length) A.push({ g: 'Conta e arquivo', itens: C });
+  return A;
+}
+const maisLinha = (x) => { const [t, d] = x.k || x.href || x.b2b ? (x.d !== undefined ? [x.t, x.d] : maisPartes(x.t)) : [x.t, '']; return `<button class="ac-pes" type="button" ${x.k ? `data-ir="${x.k}"` : x.href ? `data-href="${x.href}"` : 'data-b2b'}><span><b>${esc(t)}</b>${d ? `<small>${esc(d)}</small>` : ''}</span>${x.n ? `<em class="mais-n">${x.n}</em>` : '<i>›</i>'}</button>`; };
 function telaMais(P) {
-  const ok = itemMaisOk;
-  const linha = ([k, t, n]) => `<button data-ir="${k}"><span>${t}</span><span>${n ? `<b class="tem">${n}</b>` : ''}<span class="seta">›</span></span></button>`;
-  const arquivo = [podeAba('opmilhas') && '<button data-ir="opmilhas"><span>Operação de milhas dos sócios</span><span class="seta">›</span></button>',
-    podeAba('emissoes') && '<button data-b2b><span>Emissão B2B para agências<small style="display:block;font-size:13px;color:var(--tinta-3)">Fora de uso, mas continua funcionando. O histórico fica em Emissões</small></span><span class="seta">›</span></button>'].filter(Boolean);
-  P.innerHTML = `<h1 class="titulo">Mais</h1>
-    <div class="mais-grade">${MAIS_GRUPOS().map(([g, L]) => { const V = L.filter(ok); return V.length ? `<div><div class="secao">${g}</div><div class="pend">${V.map(linha).join('')}</div></div>` : ''; }).join('')}
-    ${ADMIN ? `<div><div class="secao">Conta</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div></div>` : ''}</div>
-    ${arquivo.length ? `<details class="gsec" style="margin-top:18px"><summary><span>Arquivo<small>O que saiu do dia a dia, mas continua guardado</small></span></summary><div class="pend" style="margin-top:10px">${arquivo.join('')}</div></details>` : ''}
-    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
-  P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
-  P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
-  P.querySelectorAll('[data-b2b]').forEach(b => b.onclick = () => abrirB2B());
+  const A = maisAreas(), area = MAIS_AREA && A.find(a => a.g === MAIS_AREA);
+  if (area) {
+    P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">${esc(area.g)}</h1><div class="ac-lista">${area.itens.map(maisLinha).join('')}</div>`;
+    $('voltar').onclick = () => { MAIS_AREA = null; telaMais(P); window.scrollTo(0, 0); };
+  } else {
+    const atencao = A.flatMap(a => a.itens).filter(x => x.n);
+    P.innerHTML = `<h1 class="titulo">Mais</h1>
+      <label class="mais-busca"><span aria-hidden="true">⌕</span><input type="search" id="maisQ" placeholder="Buscar tela, cliente ou localizador" autocomplete="off" value="${esc(MAIS_Q)}"></label>
+      <div id="maisCorpo"></div>`;
+    const corpo = () => {
+      const q = semAc(MAIS_Q).trim();
+      if (q) {
+        const T = A.flatMap(a => a.itens.map(x => ({ ...x, d: a.g }))).filter(x => semAc(x.t).includes(q));
+        $('maisCorpo').innerHTML = `${T.length ? `<div class="secao">Telas</div><div class="ac-lista">${T.map(maisLinha).join('')}</div>` : ''}
+          <div class="secao">Clientes, cards e emissões</div><div class="ac-lista"><button class="ac-pes" type="button" id="maisTudo"><span><b>Buscar "${esc(MAIS_Q.trim())}" em tudo</b><small>Nome, telefone, localizador, destino, hotel</small></span><i>›</i></button></div>`;
+        $('maisTudo').onclick = () => { $('buscaTopo').click(); $('buscaG').value = MAIS_Q.trim(); $('buscaG').oninput(); };
+      } else {
+        $('maisCorpo').innerHTML = `${atencao.length ? `<div class="secao">Pede sua atenção</div><div class="ac-lista">${atencao.map(maisLinha).join('')}</div>` : ''}
+          <div class="secao">Áreas</div><div class="ac-lista">${A.map(a => `<button class="ac-pes" type="button" data-area="${esc(a.g)}"><span><b>${esc(a.g)}</b><small>${esc(maisJuntar(a.itens.map(x => x.c || MAIS_CURTO[x.k] || maisPartes(x.t)[0].toLowerCase()).slice(0, 6)))}</small></span><i>›</i></button>`).join('')}</div>
+          <button type="button" class="ac-cortar" data-sair style="color:var(--dourado)">Sair do app</button>`;
+        $('maisCorpo').querySelectorAll('[data-area]').forEach(b => b.onclick = () => { MAIS_AREA = b.dataset.area; telaMais(P); window.scrollTo(0, 0); });
+      }
+      ligar($('maisCorpo'));
+    };
+    $('maisQ').oninput = () => { MAIS_Q = $('maisQ').value; corpo(); };
+    corpo();
+  }
+  ligar(P);
+  function ligar(R) {
+    R.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+    R.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
+    R.querySelectorAll('[data-b2b]').forEach(b => b.onclick = () => abrirB2B());
+  }
 }
 
 /* ---------- Empresa: painel de KPIs e atalhos ---------- */
@@ -4684,12 +4772,10 @@ function telaEmpresa(P) {
   const it = itensEmpresa();
   P.innerHTML = `
     <h1 class="titulo">Empresa</h1>
-    ${(L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe e acessos'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
+    ${verNum ? '' : (L => L.length >= 3 ? `<div class="chips" style="margin-top:8px">${L.map(([k, t]) => `<button data-ir="${k}">${t}</button>`).join('')}</div>` : '')([['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['metas', 'Metas'], ['atividades', 'Atividades'], ['acessos', 'Equipe e acessos'], ['cotador', 'Cotações']].filter(([k]) => podeAba(k)))}
     ${verNum ? '<div id="painelEmp"><div class="vazio">Carregando o painel...</div></div>' : ''}
-    ${EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
-    ${ADMIN ? `<div class="secao">Raramente usados</div><div class="pend"><button data-href="/admin/"><span>Administração completa (carteiras e documentos)</span><span class="seta">›</span></button>
-      <button data-href="/painel/"><span>Meu painel de cliente</span><span class="seta">›</span></button></div>` : ''}
-    <button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>`;
+    ${verNum ? '' : EMP_GRUPOS.map(([g, ks]) => { const L = ks.map(k => it.find(x => x[0] === k)).filter(Boolean); return L.length ? `<div class="secao">${g}</div><div class="pend">${L.map(([k, t]) => `<button data-ir="${k}"><span>${t}</span><span>${k === 'leads' && LE_NOVOS() ? `<b class="tem">${LE_NOVOS()}</b>` : ''}<span class="seta">›</span></span></button>`).join('')}</div>` : ''; }).join('')}
+    ${verNum ? '' : '<button class="sec" data-sair style="width:100%;margin-top:18px">Sair do app</button>'}`;
   P.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   P.querySelectorAll('[data-href]').forEach(b => b.onclick = () => location.href = b.dataset.href);
   if (verNum) painelEmp();
