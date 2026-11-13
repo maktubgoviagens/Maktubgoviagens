@@ -899,6 +899,17 @@ button,select,textarea,input{font-size:16px}
 .folha-caixa{border-radius:18px 18px 0 0}
 .folha-item{border-radius:12px;font-size:16px}
 .folha-item small{font-size:14px}
+.mesnav,.gatalhos button,details.gsec,.ev .ck,.kc .mv button,.emchk,.emchk button,.kpi,details.kalerta,.gjres button,.gjk,.gsec .ciclo,.resq button,.mini,.calc section.ent,.ind-conf{border-radius:12px}
+.gjseg,.resq{border-radius:12px;overflow:hidden}
+.gjseg button,.resq button{border-radius:0}
+#pagina input:not([type=checkbox]):not([type=radio]):not([type=range]),#pagina select,#pagina textarea,.folha input,.folha select{border-radius:12px}
+/* calendário do mês no celular: cada compromisso vira uma barrinha colorida; o texto aparece ao tocar no dia */
+@media (max-width:640px){.ag-chip,.cal-chip{font-size:0!important;height:6px;min-height:0;padding:0!important;margin-top:3px;border-radius:3px;box-shadow:none!important}.cal-mais{font-size:14px}}
+/* topo: o nome da tela cabe numa linha */
+.topo>div:not(.acoes){min-width:0}
+.topo .n,.topo .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.08em}
+/* <small> sem tamanho próprio encolhia para 11 a 13 px */
+#pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
 .fl span{font-size:14px;color:var(--tinta-2)}
 .fl small{font-size:14px}
