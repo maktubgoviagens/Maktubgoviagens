@@ -130,6 +130,16 @@ function painel(P, X) {
   const meses = []; for (let m = 1; m <= 12; m++) { const k = `${ANO}-${String(m).padStart(2, '0')}`; meses.push([k, porMes[k]]); }
   const maxM = Math.max(1, ...meses.map(([, x]) => x ? Math.abs(x.rend) : 0));
   const pend = alertaRendimento();
+  // rentabilidade por banco no ano: soma do rendimento, % de cada mês (rendimento sobre o saldo do fim do mês menos o rendimento)
+  // e o acumulado do ano, juntando os meses que têm saldo informado
+  const pctMes = (x) => x.saldo_fim != null && +x.saldo_fim - +x.rendimento > 0 ? +x.rendimento / (+x.saldo_fim - +x.rendimento) : null;
+  const porBanco = Object.values(doAno.reduce((o, x) => { const b = String(x.banco || 'Sem banco').trim(); (o[b] = o[b] || { banco: b, itens: [] }).itens.push(x); return o; }, {})).map(g => {
+    const itens = g.itens.slice().sort((a, b) => mk(a.mes).localeCompare(mk(b.mes))), ps = itens.map(pctMes).filter(v => v !== null), ult = [...itens].reverse().find(x => x.saldo_fim != null);
+    return { ...g, itens, rend: itens.reduce((t, x) => t + (+x.rendimento || 0), 0), meses: itens.length, nPct: ps.length,
+      acum: ps.length ? (ps.reduce((t, v) => t * (1 + v), 1) - 1) * 100 : null, media: ps.length ? ps.reduce((t, v) => t + v, 0) / ps.length * 100 : null, saldo: ult ? +ult.saldo_fim : null, ultMes: ult ? mk(ult.mes) : null };
+  }).sort((a, b) => b.rend - a.rend);
+  const maxB = Math.max(1, ...porBanco.map(b => Math.abs(b.rend)));
+  const pc2 = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
   const ativos = E.map(emp => ({ emp, ...resumo(emp, PG) })), abertos = ativos.filter(x => x.falta), quitados = ativos.filter(x => !x.falta);
   const divida = abertos.reduce((t, x) => t + x.faltaValor, 0), jurosTot = ativos.reduce((t, x) => t + x.juros, 0);
   const card = (x) => `<button class="card em" data-emp="${x.emp.id}">
@@ -154,6 +164,14 @@ function painel(P, X) {
     <section class="bloco"><h2>Rendimento por mês</h2>
       ${meses.map(([k, x]) => `<div class="barra" style="grid-template-columns:42px 1fr 96px"><span class="r">${nomeMes(k, true)}</span><span class="t"><i style="width:${x && x.rend ? Math.max(2, Math.abs(x.rend) / maxM * 100) : 0}%"></i></span><span class="q">${x ? brl2(x.rend) : ''}</span></div>`).join('')}
       <div class="sub">Lance todo dia ${DIA_LANCAR} o rendimento do mês anterior, copiado do relatório do banco. O app avisa no Início se esquecer.</div></section>
+    <section class="bloco"><h2>Rentabilidade por banco em ${ANO}</h2>
+      ${porBanco.length ? porBanco.map(b => `<details class="cx-banco"><summary>
+          <div class="cx-bt"><b>${esc(b.banco)}</b><span>${brl2(b.rend)}</span></div>
+          <span class="t"><i style="width:${Math.max(2, Math.abs(b.rend) / maxB * 100)}%"></i></span>
+          <small>${[b.acum !== null ? pc2(b.acum) + ' no ano' + (b.nPct < b.meses ? ` (${b.nPct} de ${b.meses} meses com saldo)` : '') : 'sem saldo informado para a %', b.media !== null ? pc2(b.media) + ' ao mês em média' : '', b.saldo !== null ? 'saldo ' + brlC(b.saldo) + ' em ' + nomeMes(b.ultMes, true) : ''].filter(Boolean).join(' · ')}</small></summary>
+          ${b.itens.map(x => { const v = pctMes(x); return `<div class="lin"><span>${nomeMes(mk(x.mes))}</span><span>${brl2(+x.rendimento || 0)}${v !== null ? ' · ' + pc2(v * 100) : ''}</span></div>`; }).join('')}</details>`).join('')
+        : '<div class="vazio">Nada lançado neste ano.</div>'}
+      <div class="sub">Toque num banco para ver mês a mês. A % do ano junta os meses com saldo informado; com retiradas no meio do mês, vale como referência.</div></section>
     <section class="bloco"><h2>Lançamentos de ${ANO}</h2>
       ${doAno.length ? doAno.map(x => { const p = x.saldo_fim != null && +x.saldo_fim - +x.rendimento > 0 ? pct(+x.rendimento / (+x.saldo_fim - +x.rendimento) * 100) : ''; return `<button class="lin" data-rend="${x.id}"><span>${nomeMes(mk(x.mes))} · ${esc(x.banco)}<small style="display:block;color:var(--tinta-3);font-size:12px">${x.saldo_fim != null ? 'saldo no fim do mês ' + brl2(x.saldo_fim) + (p ? ' · rendeu ' + p + ' no mês (aprox.)' : '') : 'sem saldo informado'}</small></span><span>${brl2(x.rendimento)}<b class="seta">›</b></span></button>`; }).join('') : '<div class="vazio">Nenhum rendimento lançado neste ano.</div>'}
       <div class="sub">A % do mês é aproximada: rendimento sobre o saldo do fim do mês menos o próprio rendimento. Com retiradas no meio do mês, vale como referência.</div></section>
