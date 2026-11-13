@@ -275,8 +275,9 @@ export function tela(P, ctx) {
     P.innerHTML = `<h1 class="titulo">Marketing</h1>${X.tec('<div class="config" style="margin-top:12px">O marketing ainda não foi ativado no Supabase. Rode o marketing.sql do guia.</div>')}${X.so ? sairBtn() : ''}`;
     return;
   }
-  const abas = X.COORD ? ['painel', 'producao', 'ideias', 'calendario', 'estrategia'] : ['semana', 'producao', 'ideias', 'calendario', 'estrategia'];
-  const vistas = X.DELEGA ? [...abas, 'tarefas'] : abas;
+  // a Estratégia sai das abas (é consultada de vez em quando) e abre por uma linha no fim do Painel e da Semana
+  const abas = X.COORD ? ['painel', 'producao', 'ideias', 'calendario'] : ['semana', 'producao', 'ideias', 'calendario'];
+  const vistas = X.DELEGA ? [...abas, 'estrategia', 'tarefas'] : [...abas, 'estrategia'];
   if (!vistas.includes(VIEW)) VIEW = vistas[0];
   if (!MES) MES = mesK(hoje());
   if (ED) { if (location.hash !== endereco()) history.replaceState(null, '', endereco()); return formPost(P); }
@@ -284,11 +285,12 @@ export function tela(P, ctx) {
   const nomes = { painel: 'Painel', calendario: 'Calendário', producao: 'Kanban', estrategia: 'Estratégia', semana: 'Semana', ideias: 'Ideias', tarefas: 'Tarefas' };
   const seg = `<div class="seg" id="mkSeg" style="margin-top:${X.COORD ? 12 : 16}px">${abas.map(v => `<button data-v="${v}" class="${VIEW === v ? 'on' : ''}">${nomes[v]}</button>`).join('')}</div>`;
   let html = '';
-  if (VIEW === 'painel') html = vPainel();
+  const linhaEst = '<div class="ac-lista" style="margin-top:16px"><button type="button" class="ac-pes" data-mkv="estrategia"><span><b>Estratégia</b><small>Pilares, tom de voz, público e metas do marketing</small></span><i>›</i></button></div>';
+  if (VIEW === 'painel') html = vPainel() + linhaEst;
   if (VIEW === 'calendario') html = vCalendario();
   if (VIEW === 'producao') html = vProducao();
-  if (VIEW === 'estrategia') html = vEstrategia();
-  if (VIEW === 'semana') html = vSemana();
+  if (VIEW === 'estrategia') html = `<button class="voltar" data-mkv="${abas[0]}">‹ ${nomes[abas[0]]}</button>` + vEstrategia();
+  if (VIEW === 'semana') html = vSemana() + linhaEst;
   if (VIEW === 'ideias') html = vIdeias();
   if (VIEW === 'tarefas') html = vTarefas();
   const topo = X.COORD
@@ -298,6 +300,7 @@ export function tela(P, ctx) {
   if (VIEW === 'semana') { const h = P.querySelector('.mk-hero'); if (h) h.insertAdjacentHTML('afterend', seg); }
   if (location.hash !== endereco()) history.replaceState(null, '', endereco());
   ligar(P);
+  P.querySelectorAll('[data-mkv]').forEach(b => b.onclick = () => { VIEW = b.dataset.mkv; rerender(); scrollTo(0, 0); });
 }
 const sairBtn = () => '<button class="sec" data-sair style="width:100%;margin-top:28px">Sair do app</button>';
 const rerender = () => { const P = document.getElementById('pagina'); if (P && X.aba() === 'marketing') tela(P, X); if (X.sino) X.sino(); };
