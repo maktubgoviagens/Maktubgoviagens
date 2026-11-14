@@ -191,7 +191,7 @@ function atendimentosHtml(D, X, p) {
     .sort((a, b) => ((a.resultado === 'Em andamento') === (b.resultado === 'Em andamento') ? String(b.data || '').localeCompare(String(a.data || '')) : a.resultado === 'Em andamento' ? -1 : 1));
   if (!L.length) return '';
   const tag = (r) => r.resultado === 'Em andamento' ? ['', r.etapa || 'Em andamento'] : r.resultado === 'Fechou' ? ['ok', 'Fechou'] : r.resultado === 'Não fechou' ? ['alerta', 'Não fechou'] : ['', r.resultado || ''];
-  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || r.produto || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>`; }).join('')}</section>`;
+  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || String(r.produto || '').replace('Viagem completa / pacote', 'Outro') || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>`; }).join('')}</section>`;
 }
 
 // ficha no celular: o que se usa sempre fica aberto; o resto abre ao tocar
@@ -224,12 +224,11 @@ function telaFicha(P, X) {
   const faltam = soNegocio ? [] : [!p.nascimento && 'nascimento', verDocs && !(doc && doc.cpf) && 'CPF'].filter(Boolean);
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ Clientes</button>
-    <h1 class="titulo" style="margin-top:6px">${esc(p.nome)}</h1>
+    <div class="tit-zap"><h1 class="titulo" style="margin-top:6px">${esc(p.nome)}</h1>${zap ? `<a class="zapico" href="${esc(zap)}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(p.nome)}">${X.ZAP}</a>` : ''}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${rotulos(D, p).map((t, i) => `<span class="tag ${i === 0 && ehCliente(D, p) ? 'ok' : t === 'Gestão' ? 'ouro' : ''}">${esc(t)}</span>`).join('')}${diasAniv !== null && diasAniv <= 7 ? `<span class="tag alerta">${diasAniv === 0 ? 'Aniversário hoje' : 'Aniversário em ' + diasAniv + (diasAniv === 1 ? ' dia' : ' dias')}</span>` : ''}</div>
     ${p.cliente_id && pode('gestao') ? abasFicha('dados') : ''}
     ${resumoPessoa(D, p)}
     <div class="botoes4" style="margin-top:12px">
-      ${zap ? `<a class="zap" href="${esc(zap)}" target="_blank" rel="noopener">${X.ZAP}WhatsApp</a>` : ''}
       <button class="sec" id="novaCot">Nova cotação</button>
       <button class="sec" id="linkCad">Link de cadastro</button>
       <button class="sec" id="editarP">Editar</button>

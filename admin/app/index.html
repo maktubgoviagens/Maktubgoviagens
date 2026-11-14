@@ -967,6 +967,12 @@ body.cb-leitura #montarCot{margin-top:8px}
 .kc2{border-radius:12px}
 /* frente do card: só o nome, ⋯ para as ações rápidas e borda dourada quando há alerta */
 .kc3{display:flex;align-items:center;gap:6px;cursor:pointer}
+.kc3-t{flex:1 1 auto;min-width:0}
+.kc3-t .ki{display:block;font-size:14px;color:var(--tinta-3);line-height:1.35;margin:-2px 0 6px}
+.tit-zap{display:flex;align-items:center;gap:12px}
+.tit-zap .titulo{flex:0 1 auto;min-width:0}
+.zapico{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--verde);color:var(--creme);margin-top:6px}
+.zapico svg{width:22px;height:22px;fill:currentColor}
 @media (min-width:1024px){.kanban-c .kcol{min-width:150px}.kanban-c .kcol h3{flex-wrap:wrap;gap:2px 8px}}
 .kc.kc3{padding:6px 4px 6px 12px}
 .kc3 .n{width:auto;flex:0 1 auto;min-width:0;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--verde);line-height:1.15;background:none;border:0;padding:8px 0;margin:0;text-align:left;cursor:pointer;overflow-wrap:anywhere}
@@ -1018,7 +1024,8 @@ a.cal-ok{text-decoration:none;display:inline-flex;align-items:center}
 /* fornecedor novo direto pela cotação */
 .forn-novo{display:block;background:none;border:0;padding:0 0 8px;margin-top:-4px;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 .so-pc{display:none}
-@media (max-width:1023px){.kanban.kanban-c{display:none}}
+/* o funil do Comercial é Kanban também no celular (a lista por etapa saiu) */
+.flista{display:none}
 @media (min-width:1024px){.flista{display:none}.so-pc{display:block}.kdica.so-pc{margin-bottom:8px}}
 
 /* ===== Início (13/11/2026) ===== */
@@ -1264,13 +1271,13 @@ import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=31';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
-import * as CRM from '/admin/app/crm.js?v=25';
+import * as CRM from '/admin/app/crm.js?v=26';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=31';
+import * as VENDA from '/admin/app/venda.js?v=32';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=22';
 import * as CX from '/admin/app/caixa.js?v=7';
@@ -3092,6 +3099,9 @@ async function telaMetas(P) {
 const RE_TIPOS = ['Reunião de venda', 'Cotação', 'Diagnóstico da Gestão de Milhas', 'Reunião com cliente', 'Pós-venda', 'Parceria', 'Reunião interna'];
 // "Viagem completa / pacote" saiu em 06/11/2026 (subjetivo: cada serviço é marcado à parte). Só aparece nos cards antigos que já têm
 const RE_PROD_ANTIGOS = ['Viagem completa / pacote'];
+// nome mostrado na tela: o produto antigo aparece como Outro (a planilha continua recebendo como antes)
+const rotProd = (p) => p === 'Viagem completa / pacote' ? 'Outro' : p;
+const prodTxt = (s) => String(s || '').split(' + ').map(rotProd).join(' + ');
 const RE_PRODUTOS = ['Passagens', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Transfer', 'Trem', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
 const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
@@ -4013,7 +4023,8 @@ function alertaKC(r) {
 }
 function htmlKCardC(r) {
   const al = alertaKC(r), fim = r.resultado !== 'Em andamento';
-  return `<div class="kc kc2 kc3${al ? ' kal' : ''}" ${fim ? '' : `data-kid="${r.id}"`} data-ab="${r.id}"${al ? ` title="${esc(al)}"` : ''}><button type="button" class="n" data-cli="${r.id}"${al ? ` aria-label="${esc(r.cliente + ': ' + al)}"` : ''}>${esc(r.cliente)}</button><button type="button" class="kmais" data-kmais="${r.id}" aria-label="Ações de ${esc(r.cliente)}">⋯</button></div>`;
+  const p = passoDe(r), info = [prodTxt(r.trecho || r.produto), !fim && p.data ? 'retorno ' + dataCurta(dia(p.data)) : ''].filter(Boolean).join(' · ');
+  return `<div class="kc kc2 kc3${al ? ' kal' : ''}" ${fim ? '' : `data-kid="${r.id}"`} data-ab="${r.id}"${al ? ` title="${esc(al)}"` : ''}><div class="kc3-t"><button type="button" class="n" data-cli="${r.id}"${al ? ` aria-label="${esc(r.cliente + ': ' + al)}"` : ''}>${esc(r.cliente)}</button>${info ? `<span class="ki">${esc(info)}</span>` : ''}</div><button type="button" class="kmais" data-kmais="${r.id}" aria-label="Ações de ${esc(r.cliente)}">⋯</button></div>`;
 }
 // colunas finais do funil do Comercial: Fechou (os que ainda esperam emissão e os fechados no mês escolhido) e Não fechou (do mês escolhido)
 const quandoNaoFechou = (r) => ((r.marcos || {})['Não fechou'] || {}).em || r.etapa_desde || r.data;
@@ -4107,7 +4118,7 @@ function telaReunioes(P) {
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE === 'aniv' && podeAba('crm') && D.pessoas ? htmlAniversarios(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
-    ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica so-pc">Arraste o card para mudar de etapa. Toque no nome para abrir a ficha do cliente.</div>' + htmlFunilCel(abertos)}
+    ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica">Arraste o card para mudar de etapa (no celular, segure o card antes de arrastar). Toque no nome para abrir a ficha do cliente.</div>'}
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
     <div class="kanban${G ? '' : ' kanban-c'}">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => G ? htmlKCard(r, etapasDe(ehGestao(r))) : htmlKCardC(r)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : colunasFinais().map(([et, L]) => `<div class="kcol kfim" data-ket="${esc(et)}"><h3>${esc(et)} <small>${L.length} · ${esc(mesCurtoKC())}</small></h3>${L.map(htmlKCardC).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`).join('')}</div>
 `}
@@ -4410,9 +4421,9 @@ function telaFormReuniao(P) {
     quem: 'SDR ' + (String(nomeTime(r.sdr_id) || 'a definir').split(' ')[0]) + ' · Closer ' + (String(nomeTime(r.closer_id) || 'a definir').split(' ')[0]),
     notas: (n => n ? n.slice(0, 70) + (n.length > 70 ? '…' : '') : 'Sem anotações')(ultimaNota(r)) } : {};
   const cbRes = CB ? (() => {
-    const prods = [...new Set(String(r.produto || '').split(' + ').filter(Boolean))].join(', ');
+    const prods = [...new Set(String(r.produto || '').split(' + ').filter(Boolean).map(rotProd))].join(', ');
     const rt = reunioesDe(base.id).length, nota = ultimaNota(r);
-    return { atend: prods || 'Nenhum produto marcado', cliente: [r.cliente, r.contato].filter(Boolean).join(' · '),
+    return { atend: prods || 'Nenhum produto marcado', cliente: r.cliente || '',
       viagem: [r.trecho || 'Sem trecho', r.data_viagem ? dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : '') : ''].filter(Boolean).join(' · '),
       etapa: etapaDe(r),
       acomp: r.resultado === 'Em andamento' ? (r.proximo_passo_data ? 'Retorno ' + dataCurta(dia(r.proximo_passo_data)) : 'Sem próximo passo') : 'Valores e responsável',
@@ -4451,7 +4462,7 @@ function telaFormReuniao(P) {
       </div>`;
   P.innerHTML = `
     <button class="voltar" id="voltar">‹ ${ABA === 'gestao' ? 'Funil da Gestão' : 'Comercial'}</button>
-    <h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>
+    <div class="tit-zap"><h1 class="titulo" style="margin-top:6px">${nova ? (G ? 'Lead da <em>Gestão</em>' : 'Novo <em>atendimento</em>') : `${VENDA.numCard(r) ? `<small style="font-size:.55em;color:var(--dourado)">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)}`}</h1>${!nova && zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zapico" id="cbZap" href="${esc(zapLink(r.contato, r.cliente, `Olá, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`))}" target="_blank" rel="noopener" aria-label="WhatsApp de ${esc(r.cliente)}">${ZAP}</a>` : ''}</div>
     ${!nova && !G ? (r.assumido_por ? `<div class="sub" style="margin-top:4px">Com ${esc(nomeTime(r.assumido_por) || '')}${r.assumido_por !== D.meuId ? ' · <button type="button" id="assumirAt" style="text-decoration:underline;color:var(--verde)">assumir</button>' : ''}</div>` : '<button class="zap grande" type="button" id="assumirAt" style="width:100%;margin-top:10px">Assumir este atendimento</button>') : ''}
     ${CB ? htmlCardLeitura(r, base) : ''}
     ${CB ? '<div class="secao">O card</div>' : ''}
@@ -4459,16 +4470,16 @@ function telaFormReuniao(P) {
     ${!nova && !G && podeAba('cotador') ? `${cotsDe(base.id).length ? `<div class="bloco" style="margin-top:10px;padding:10px 12px"><div class="sub" style="margin:0 0 4px"><b>Cotações deste card</b></div>${cotsDe(base.id).map(c => `<button type="button" class="cli" data-cotab="${c.id}" style="width:100%"><div><div class="nome">${esc(c.titulo || 'Cotação')}</div><div class="meta">${c.modelo === 'corp' ? 'Corporativo' : c.modelo === 'rapida' ? 'Rápida' : 'Maktub Go'} · ${resumoEnvios(c)}</div></div><div class="val"><span>abrir ›</span></div></button>`).join('')}</div>` : ''}<button class="${cotsDe(base.id).length ? 'sec' : 'zap'} grande" type="button" id="montarCot" style="width:100%;margin-top:10px">${cotsDe(base.id).length ? '+ Nova cotação para este cliente' : 'Montar cotação para este cliente ›'}</button>` : ''}
     ${CB && podeAba('cotador') ? cbFecha : ''}
     ${!nova && G ? htmlTopoGestao(base) + htmlPropostaIA(base) : ''}
-    ${!nova && G ? (lt => lt ? `<details class="gsec"><summary><span>Linha do tempo<small>Cada passo com data, hora e quem fez</small></span></summary>${lt}</details>` : '')(htmlLinhaTempo(base)) : ''}
+    ${!nova && G && ADMIN ? (lt => lt ? `<details class="gsec"><summary><span>Linha do tempo<small>Cada passo com data, hora e quem fez</small></span></summary>${lt}</details>` : '')(htmlLinhaTempo(base)) : ''}
     <form id="fRe" class="form" autocomplete="off" ${G ? 'novalidate' : ''} style="${G ? 'display:flex;flex-direction:column' : ''}">
-      ${G ? `${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}<div class="grupo">Atendimento</div><input type="hidden" name="data" value="${esc(dl(r.data))}">${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}<div class="grupo">Cliente</div>${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}<datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>${campo('contato', 'WhatsApp ou e-mail', r.contato)}<div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${G ? '</details><div style="order:-4">' + (GB ? cbAbre('quem', 'Quem conduz', gbRes.quem) : '') + htmlGestaoSdr(r) + (GB ? cbFecha : '') + '</div><div style="order:-5">' + (GB ? cbAbre('etapa', 'Etapa e próximo passo', gbRes.etapa) : '') : ''}<div class="grupo">Etapa</div><div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>` : `${CB ? cbAbre('cliente', 'Cliente', cbRes.cliente) : '<div class="grupo">Cliente</div>'}<div class="cli-lado">${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}${campo('contato', 'WhatsApp ou e-mail', r.contato)}</div><datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div><div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${CB ? cbFecha + cbAbre('etapa', 'Etapa', cbRes.etapa) : ''}<label class="fl"><span>Etapa</span><select id="reEtapaSel">${[...etapasDe(false), ...FINAIS].map(x => `<option value="${esc(x)}" ${x === etapaDe(r) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="etapas" id="reRes" hidden>${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}<input type="hidden" name="data" value="${esc(dl(r.data))}">`}
+      ${G ? `${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}<div class="grupo">Atendimento</div><input type="hidden" name="data" value="${esc(dl(r.data))}">${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}<div class="grupo">Cliente</div>${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}<datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>${campo('contato', 'WhatsApp ou e-mail', r.contato)}<div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${G ? '</details><div style="order:-4">' + (GB ? cbAbre('quem', 'Quem conduz', gbRes.quem) : '') + htmlGestaoSdr(r) + (GB ? cbFecha : '') + '</div><div style="order:-5">' + (GB ? cbAbre('etapa', 'Etapa e próximo passo', gbRes.etapa) : '') : ''}<div class="grupo">Etapa</div><div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>` : `${CB ? cbAbre('cliente', 'Cliente', cbRes.cliente) : '<div class="grupo">Cliente</div>'}<div class="cli-lado">${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}${campo('contato', 'WhatsApp ou e-mail', r.contato)}</div><datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div><div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${CB ? cbFecha + cbAbre('etapa', 'Etapa', cbRes.etapa) : ''}<label class="fl"><span>Etapa</span><select id="reEtapaSel">${[...etapasDe(false), ...FINAIS].map(x => `<option value="${esc(x)}" ${x === etapaDe(r) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="etapas" id="reRes" hidden>${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}<input type="hidden" name="data" value="${esc(dl(r.data))}">`}
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
       <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="sec grande" type="button" id="reEmitiu" style="width:100%;margin-top:8px" hidden>Emitiu? Preencher os dados da emissão</button><button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitiu: enviar para a planilha</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       ${G ? blAnd : ''}
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
-      ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
+      ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
         + (CB ? cbFecha + cbAbre('viagem', 'Viagem', cbRes.viagem) : '') + `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`
         + (CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas, 'Abrir') : '<div class="grupo">Anotações</div>') + htmlNotas(r, nova)
         + (CB ? cbFecha + cbAbre('acomp', 'Acompanhamento', cbRes.acomp, 'Abrir') + htmlAcompLeitura(r, base) + `${ADMIN || GER() ? `<label class="fl"><span>Trocar responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}` : '<div class="grupo">Acompanhamento</div>') + blAnd}
@@ -4488,7 +4499,7 @@ function telaFormReuniao(P) {
       ${G ? '</details>' : ''}
       ${GB ? '<div style="order:-1">' + cbAbre('notas', 'Anotações', gbRes.notas, 'Abrir') : ''}${G ? `<div style="${GB ? '' : 'order:-1'}">${htmlNotas(r, nova)}</div>` : ''}
       ${CB ? cbFecha : ''}${GB ? cbFecha + '</div>' : ''}
-      ${CB ? cbAbre('linha', 'Linha do tempo', 'Cada passo com data, hora e quem fez', 'Abrir') + htmlLinhaTempo(base) + cbFecha : ''}
+      ${CB && ADMIN ? cbAbre('linha', 'Linha do tempo', 'Cada passo com data, hora e quem fez', 'Abrir') + htmlLinhaTempo(base) + cbFecha : ''}
       <button class="zap grande${CB || GB ? ' cb-oculto' : ''}" type="submit" id="salvarRe" style="margin-top:14px;width:100%">${nova ? 'Registrar' : 'Salvar'}</button>
       ${nova ? '' : '<div class="sub" id="rascInfo" style="margin-top:4px;text-align:center"></div>'}
       ${ADMIN && !nova ? '<button class="sec grande" type="button" id="arquivarRe" style="margin-top:8px;width:100%">Arquivar card</button>' : ''}
@@ -4497,6 +4508,7 @@ function telaFormReuniao(P) {
     ${CB || GB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
   if (CB || GB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
+  if (CB) { const ref = $('salvarRe'); ['notas', 'atend', 'cots', 'viagem', 'cliente', 'etapa', 'acomp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
@@ -4534,7 +4546,8 @@ function telaFormReuniao(P) {
   }
   if (f.elements.nr_feita) f.elements.nr_feita.onchange = () => { $('nrResumo').hidden = !f.elements.nr_feita.checked; $('nrDica').hidden = f.elements.nr_feita.checked; };
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
-  if (!nova && (ADMIN || GER())) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
+  // histórico de alterações do card: só os sócios
+  if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
   if (CB || GB) ligarCardLeitura(P, f, r, base);
   if (!nova) ligarNotas(P, base, () => { const s = P.querySelector('.cb[data-cb="notas"] .cb-h small'); if (s) { const n = ultimaNota(base); s.textContent = n ? n.slice(0, 70) + (n.length > 70 ? '…' : '') : 'Sem anotações'; } });
   if (CB) { const b = P.querySelector('[data-cbed="reun"]'); if (b) b.addEventListener('click', () => { reunAberta = true; f._reunVis(); }); }
@@ -5259,13 +5272,27 @@ function cbAcao(r, base) {
   return null;
 }
 // topo do card: só a etapa, a ação principal e os atalhos. Valores, responsável e próximo passo ficam no Acompanhamento, no fim do card.
+// topo do card: a etapa, o resumo do que importa (viagem, serviços, próximo passo, valor e última anotação), a ação principal e os atalhos
 function htmlCardLeitura(r, base) {
-  const et = etapaDe(r), ativo = r.resultado === 'Em andamento';
+  const et = etapaDe(r), ativo = r.resultado === 'Em andamento', hoje = hojeISO();
   const acao = cbAcao(r, base);
-  const zap = typeof zapLink === 'function' && r.contato && String(r.contato).replace(/\D/g, '').length >= 10 ? zapLink(r.contato, r.cliente, `Olá, ${String(r.cliente || '').split(' ')[0]}! Aqui é da Maktub Go.`) : '';
+  const lin = (rot, val, cls) => `<div class="cbr-l"><span>${rot}</span><span class="${cls || ''}">${val}</span></div>`;
+  const IT = (r.itens || []).filter(x => !x.cancelado_em);
+  const prods = [...new Set((IT.length ? IT.map(x => x.produto) : String(r.produto || '').split(' + ')).filter(Boolean).map(rotProd))].join(', ');
+  const datas = r.data_viagem ? dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : '') : '';
+  const atras = ativo && r.proximo_passo_data && String(r.proximo_passo_data).slice(0, 10) < hoje;
+  const venda = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0) || +r.valor_fechado || 0, nota = ultimaNota(r);
   return `<span class="cb-etapa">${esc(et)}</span>
+    <div class="cbr">
+      ${lin('Viagem', esc([r.trecho || 'Sem trecho', datas].filter(Boolean).join(' · ')))}
+      ${lin('Serviços', esc(prods || 'Nenhum marcado'))}
+      ${ativo ? lin('Próximo passo', esc([r.proximo_passo, r.proximo_passo_data ? 'retorno ' + dataCurta(dia(r.proximo_passo_data)) : ''].filter(Boolean).join(' · ') || 'Sem próximo passo'), atras || (!r.proximo_passo && !r.proximo_passo_data) ? 'alerta' : '') : ''}
+      ${venda ? lin(r.resultado === 'Fechou' ? 'Venda' : 'Valor cotado', `<span class="cb-valor">${brl2(venda)}</span>`) : (+r.valor_estimado ? lin('Valor cotado', `<span class="cb-valor">${brl2(+r.valor_estimado)}</span>`) : '')}
+      ${nota ? lin('Última anotação', esc(nota.length > 110 ? nota.slice(0, 110) + '…' : nota)) : ''}
+      ${venda || +r.valor_estimado ? `<button type="button" class="cb-olho" id="cbOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button>` : ''}
+    </div>
     ${acao ? `<button type="button" class="ac-prim" id="cbPrim" data-acao="${acao[0]}">${acao[1]}</button>` : ''}
-    <div class="cb-txts">${ativo && et !== 'Não fechou' ? '<button type="button" data-cbt="perdeu">Não fechou</button>' : ''}<button type="button" data-cbt="etapa">Mudar etapa</button>${zap ? `<a href="${esc(zap)}" target="_blank" rel="noopener" id="cbZap">WhatsApp</a>` : ''}</div>`;
+    <div class="cb-txts">${ativo && et !== 'Não fechou' ? '<button type="button" data-cbt="perdeu">Não fechou</button>' : ''}<button type="button" data-cbt="etapa">Mudar etapa</button></div>`;
 }
 function htmlAcompLeitura(r, base) {
   const et = etapaDe(r);
@@ -5277,9 +5304,7 @@ function htmlAcompLeitura(r, base) {
   return `<div class="cbr" style="margin:0 0 12px">
       ${lin('Responsável', r.responsavel_id ? esc(nomeTime(r.responsavel_id) || 'Outra pessoa') : 'Sem responsável', r.responsavel_id ? '' : 'alerta')}
       ${podeAba('cotador') ? lin('Cotação', nc ? esc(nc + (nc === 1 ? ' ligada ao card' : ' ligadas ao card')) + (ult ? ' · ' + esc(resumoEnvios(ult)) : '') : 'Nenhuma ligada ao card', nc ? '' : (et === 'Cotação enviada' || et === 'Follow-up' ? 'alerta' : '')) : ''}
-      ${venda ? lin('Venda', `<span class="cb-valor">${brl2(venda)}</span>`) : (+r.valor_estimado ? lin('Valor cotado', `<span class="cb-valor">${brl2(+r.valor_estimado)}</span>`) : '')}
       ${venda && custo && verMg ? lin('Lucro bruto', `<span class="cb-valor">${brl2(venda - custo)}</span>`) : ''}
-      ${venda || +r.valor_estimado ? `<button type="button" class="cb-olho" id="cbOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button>` : ''}
     </div>`;
 }
 function ligarCardLeitura(P, f, r, base) {
