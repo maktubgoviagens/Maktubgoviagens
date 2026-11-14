@@ -183,12 +183,21 @@ function linhaTempo(D, X, p) {
     : '<div class="vazio">Nada registrado ainda. Use os botões acima para lançar.</div>';
 }
 
+// atendimentos do cliente (cards do Comercial e da Gestão): só a viagem e a etapa, sem datas; tocar abre o card.
+// Substitui a linha do tempo na ficha. Leads, reuniões e avaliações continuam nas telas de cada assunto.
+function atendimentosHtml(D, X, p) {
+  const { esc } = X;
+  const L = (D.reunioes || []).filter(r => r.pessoa_id === p.id && !r.arquivado_em)
+    .sort((a, b) => ((a.resultado === 'Em andamento') === (b.resultado === 'Em andamento') ? String(b.data || '').localeCompare(String(a.data || '')) : a.resultado === 'Em andamento' ? -1 : 1));
+  if (!L.length) return '';
+  const tag = (r) => r.resultado === 'Em andamento' ? ['', r.etapa || 'Em andamento'] : r.resultado === 'Fechou' ? ['ok', 'Fechou'] : r.resultado === 'Não fechou' ? ['alerta', 'Não fechou'] : ['', r.resultado || ''];
+  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || r.produto || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>`; }).join('')}</section>`;
+}
+
 // ficha no celular: o que se usa sempre fica aberto; o resto abre ao tocar
 const FICHA_RECOLHE = ['Kit de emissão', 'Como chegou', 'Família e acompanhantes', 'Hotéis e serviços que usou', 'O que já comprou', 'Contato'];
 function organizarFicha(P) {
   const secs = [...P.querySelectorAll(':scope > section.bloco')], titulo = (s) => (s.querySelector(':scope > h2') || {}).textContent || '';
-  const tempo = secs.find(s => titulo(s).startsWith('Linha do tempo')), num = P.querySelector(':scope > .numeros');
-  if (tempo && num) num.after(tempo);
   secs.filter(s => FICHA_RECOLHE.some(t => titulo(s).startsWith(t))).forEach(s => {
     const h = s.querySelector(':scope > h2'), d = document.createElement('details');
     d.className = s.className; d.id = s.id; const sm = document.createElement('summary'); sm.style.cursor = 'pointer'; sm.style.listStyle = 'none';
@@ -279,7 +288,7 @@ function telaFicha(P, X) {
     ${X.fornecedores ? (() => { const L = X.fornecedores.doCliente(p.id); const F = X.fornecedores.lista(); return `<section class="bloco"><h2>Hotéis e serviços que usou</h2>
       ${L.length ? L.map(a => { const f = F.find(x => x.id === a.fornecedor_id) || {}; return `<button class="lin" data-forn="${a.fornecedor_id}" style="width:100%;font-size:14px"><span>${esc(f.nome || 'Fornecedor')}<small style="display:block;color:var(--tinta-3)">${X.fornecedores.TIPOS[f.tipo] || ''}${f.cidade ? ' · ' + esc(f.cidade) : ''}${a.comentario ? ' · ' + esc(String(a.comentario).slice(0, 60)) : ''}</small></span><span>${a.nota ? 'nota ' + a.nota : 'sem nota'}<span class="seta">›</span></span></button>`; }).join('') : '<div class="vazio">Nenhuma avaliação registrada.</div>'}
       <button class="sec" type="button" id="avaliarForn" style="margin-top:10px;width:100%">Registrar hotel ou serviço</button></section>`; })() : ''}
-    <section class="bloco"><h2>Linha do tempo</h2>${linhaTempo(D, X, p)}</section>
+    ${atendimentosHtml(D, X, p)}
     ${p.observacoes ? `<section class="bloco"><h2>Anotações</h2><div style="white-space:pre-wrap;color:var(--tinta-2)">${esc(p.observacoes)}</div></section>` : ''}
     ${ADMIN ? '<button class="sec grande" id="arquivarP" style="margin-top:14px;width:100%">Arquivar ficha</button>' : ''}`;
   organizarFicha(P);
