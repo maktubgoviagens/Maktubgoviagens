@@ -1202,23 +1202,23 @@ body.cb-leitura #montarCot{margin-top:8px}
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import * as OPM from '/admin/app/op-milhas.js?v=6';
-import * as MKT from '/admin/app/marketing.js?v=26';
+import * as OPM from '/admin/app/op-milhas.js?v=7';
+import * as MKT from '/admin/app/marketing.js?v=27';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=30';
+import * as CARTOES from '/admin/app/cartoes.js?v=31';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
-import * as ACV from '/admin/app/acervo.js?v=8';
+import * as ACV from '/admin/app/acervo.js?v=9';
 import * as CRM from '/admin/app/crm.js?v=23';
 import * as CAL from '/admin/app/calendario.js?v=2';
-import * as CTR from '/admin/app/contrato.js?v=4';
+import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=58';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=30';
 import * as ATV from '/admin/app/atividades.js?v=3';
-import * as CMP from '/admin/app/compromissos.js?v=19';
-import * as CX from '/admin/app/caixa.js?v=5';
-import * as DRE from '/admin/app/dre.js?v=8';
+import * as CMP from '/admin/app/compromissos.js?v=20';
+import * as CX from '/admin/app/caixa.js?v=6';
+import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
 const EXIGIR_CODIGO = true;
@@ -2422,7 +2422,7 @@ function telaEmissoes(P) {
   });
   P.querySelectorAll('[data-ck-forn]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ckForn, e = D.emissoes.find(x => x.id === id), novo = !e.pago_fornecedor;
-    if (!novo && !b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo para desmarcar'; return; }
+    if (!novo && !await pergunta(`Desmarcar o pagamento ao fornecedor de ${e.comprador || 'esta venda'}?\n\nA venda volta para a lista de fornecedores a pagar.`, { sim: 'Desmarcar' })) return;
     b.disabled = true;
     const row = { pago_fornecedor: novo, pago_fornecedor_em: novo ? new Date().toISOString() : null };
     const { error } = await sb.from('emissoes').update(row).eq('id', id);
@@ -2431,7 +2431,7 @@ function telaEmissoes(P) {
   });
   P.querySelectorAll('[data-ck-nota]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ckNota, e = D.emissoes.find(x => x.id === id), novo = !e.nota_gerada;
-    if (!novo && !b.classList.contains('conf')) { b.classList.add('conf'); b.lastChild.textContent = 'Toque de novo para desmarcar'; return; }
+    if (!novo && !await pergunta(`Desmarcar a nota fiscal de ${e.comprador || 'esta venda'}?\n\nA venda volta a aparecer como sem nota emitida.`, { sim: 'Desmarcar' })) return;
     b.disabled = true;
     const { error } = await sb.from('emissoes').update({ nota_gerada: novo }).eq('id', id);
     if (error) { b.disabled = false; aviso('Não salvou: ' + error.message); return; }
@@ -2674,7 +2674,7 @@ function telaFormEmissao(P) {
     voltarSeguro('emissoes');
   };
   if ($('excluir')) $('excluir').onclick = async () => {
-    if (CONFIRMA !== e.id) { CONFIRMA = e.id; $('excluir').textContent = 'Toque de novo para confirmar a exclusão'; return; }
+    if (!await pergunta(`Excluir a emissão de ${e.comprador || 'cliente'}?\n\nNão dá para desfazer.`, { sim: 'Excluir', perigo: true })) return;
     const { error } = await sb.from('emissoes').delete().eq('id', e.id);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
     D.emissoes = D.emissoes.filter(x => x.id !== e.id); CONFIRMA = null; aviso('Emissão excluída.'); voltarSeguro('emissoes');
@@ -3336,7 +3336,7 @@ function ligarTopoGestao(P) {
   P.querySelectorAll('[data-lib-ini]').forEach(b => b.onclick = async () => { const r = achaR(b.dataset.libIni); if (!r) return; b.disabled = true; LIB_AUTO.add(r.id); if (await iniciarOnboarding(r)) redesenharTopo(r); else b.disabled = false; });
   P.querySelectorAll('[data-lib-pular]').forEach(b => b.onclick = async () => {
     const r = achaR(b.dataset.libPular); if (!r || !ADMIN) return;
-    if (CONFIRMA !== 'lib' + r.id) { CONFIRMA = 'lib' + r.id; b.textContent = 'Toque de novo para confirmar'; return; }
+    if (!await pergunta(`Liberar o card de ${r.cliente || 'cliente'} sem os checks?\n\nO onboarding começa mesmo sem cadastro, contrato ou pagamento confirmados.`, { sim: 'Liberar sem os checks' })) return;
     CONFIRMA = null; const now = new Date().toISOString();
     const { error } = await sb.from('atendimentos').update({ liberado_em: now }).eq('id', r.id);
     if (error) { aviso('Não salvou: ' + error.message); return; }
@@ -4616,7 +4616,7 @@ function telaFinanceiro(P) {
   ligarMes('finMes', () => telaFinanceiro(P));
   if ($('fechar')) $('fechar').onclick = async () => {
     const k = EM_MES + '-01';
-    if (CONFIRMA !== 'fech' + k) { CONFIRMA = 'fech' + k; $('fechar').textContent = fech ? 'Toque de novo para reabrir' : 'Toque de novo para fechar ' + mesNome(EM_MES); return; }
+    if (!await pergunta(fech ? `Reabrir ${mesNome(EM_MES)}?\n\nAs vendas e as comissões desse mês voltam a poder mudar.` : `Fechar ${mesNome(EM_MES)}?\n\nAs vendas e as comissões desse mês ficam como estão. Um ajuste feito depois entra no mês em que for feito.`, { sim: fech ? 'Reabrir o mês' : 'Fechar o mês' })) return;
     CONFIRMA = null;
     const r = fech ? await sb.from('fechamentos').delete().eq('mes', k) : await sb.from('fechamentos').insert({ mes: k });
     if (r.error) { aviso('Não foi possível: ' + r.error.message); return; }
@@ -4948,7 +4948,7 @@ async function carregarDRE(L) {
     aviso('Despesa lançada.'); carregarDRE(L);
   };
   el.querySelectorAll('[data-rmdesp]').forEach(b => b.onclick = async () => {
-    if (CONFIRMA !== 'desp' + b.dataset.rmdesp) { CONFIRMA = 'desp' + b.dataset.rmdesp; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Excluir esta despesa?\n\nEla sai do DRE e dos compromissos. Não dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONFIRMA = null;
     const { error } = await sb.from('despesas').delete().eq('id', b.dataset.rmdesp);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
@@ -5018,7 +5018,7 @@ async function telaCustos(P) {
     FX_ED = null; aviso('Despesa fixa atualizada. O DRE já considera os novos meses.'); telaCustos(P);
   });
   P.querySelectorAll('[data-fxdel]').forEach(b => b.onclick = async () => {
-    if (CONFIRMA !== 'fxdel' + b.dataset.fxdel) { CONFIRMA = 'fxdel' + b.dataset.fxdel; b.textContent = 'toque de novo para excluir de todos os meses'; return; }
+    if (!await pergunta('Excluir esta despesa fixa de todos os meses?\n\nNão dá para desfazer.', { sim: 'Excluir de todos os meses', perigo: true })) return;
     CONFIRMA = null;
     const { error } = await sb.from('despesas_fixas').delete().eq('id', b.dataset.fxdel);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
@@ -5065,7 +5065,7 @@ function telaPagar(P) {
     if (erro) { telaPagar(P); alert((feitos.length ? `Marcou ${feitos.length} de ${ids.length}. ` : '') + limparTec('Não salvou: ' + erro)); return; }
     aviso(msg); telaPagar(P);
   };
-  P.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { if (PG_CONF !== b.dataset.pg) { PG_CONF = b.dataset.pg; b.textContent = 'Confirmar'; return; } PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
+  P.querySelectorAll('[data-pg]').forEach(b => b.onclick = async () => { if (!await pergunta('Marcar o pagamento ao fornecedor como feito?', { sim: 'Marcar como pago' })) return; PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
   P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = async () => { const g = grupos[b.dataset.pgall]; if (!await pergunta(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`, { sim: 'Marcar como pagas' })) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
   P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
@@ -5109,7 +5109,7 @@ function telaConferir(P) {
   P.querySelectorAll('[data-cfver]').forEach(b => b.onclick = () => VENDA.verArquivo(ctxVenda(), b.dataset.cfver));
   P.querySelectorAll('[data-cfab]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.cfab));
   P.querySelectorAll('[data-cfok]').forEach(b => b.onclick = async () => {
-    if (CF_CONF !== b.dataset.cfok) { CF_CONF = b.dataset.cfok; b.textContent = 'Toque de novo para confirmar'; return; }
+    if (!await pergunta('Marcar este comprovante como conferido?', { sim: 'Conferido' })) return;
     CF_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
     if (await salvar(b.dataset.cfok, true)) { aviso('Comprovante conferido.'); telaConferir(P); } else { b.disabled = false; b.textContent = 'Conferido'; }
   });
@@ -5218,7 +5218,7 @@ async function blocoReembolsos() {
     </div>`).join('')}</div>`;
   el.querySelectorAll('[data-rbok]').forEach(b => b.onclick = async () => {
     const id = b.dataset.rbok;
-    if (RB_CONF !== id) { RB_CONF = id; b.textContent = 'Toque de novo para confirmar'; return; }
+    if (!await pergunta('Marcar o reembolso das taxas como recebido?', { sim: 'Recebido' })) return;
     RB_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
     const agora = new Date().toISOString();
     const { error: e } = await sb.from('reembolsos_taxas_gestao').update({ recebido: true, recebido_em: agora, recebido_por: D.meuId, updated_at: agora }).eq('id', id);
@@ -6336,7 +6336,7 @@ function ligarGestao(P) {
   });
   P.querySelectorAll('[data-recusa-sol],[data-recusa-ind]').forEach(b => b.onclick = async () => {
     const sol = !!b.dataset.recusaSol, id = b.dataset.recusaSol || b.dataset.recusaInd;
-    if (CONFIRMA !== 'rec' + id) { CONFIRMA = 'rec' + id; b.textContent = 'Toque de novo'; return; }
+    if (!await pergunta(sol ? 'Marcar este pedido de diagnóstico como recusado?' : 'Marcar esta indicação como recusada?', { sim: 'Recusar' })) return;
     CONFIRMA = null;
     if (await muda(sol ? 'solicitacoes_acesso' : 'convites', id, sol ? 'recusada' : 'recusado', sol ? D.sols : D.indic)) { aviso('Registrado.'); telaGestao(P); }
   });
@@ -6355,7 +6355,7 @@ function ligarGestao(P) {
     FI_FORM = 'uso';
   });
   P.querySelectorAll('[data-ignorar-em]').forEach(b => b.onclick = async () => {
-    if (CONFIRMA !== 'ign' + b.dataset.ignorarEm) { CONFIRMA = 'ign' + b.dataset.ignorarEm; b.textContent = 'Toque de novo'; return; }
+    if (!await pergunta('Esta emissão não usou milhas do cliente?\n\nEla sai da lista e não entra na carteira dele.', { sim: 'Não usou' })) return;
     CONFIRMA = null;
     const { error } = await sb.from('emissoes').update({ carteira_status: 'nao_se_aplica' }).eq('id', b.dataset.ignorarEm);
     if (error) { aviso(/carteira_status/.test(error.message) ? tec('Rode o 30-fechou-pela-emissao.sql no Supabase.') : 'Não salvou: ' + error.message); return; }
@@ -7429,7 +7429,7 @@ async function fiTarefas(el, c) {
     const t = D.gtar.find(x => String(x.id) === i.dataset.gtPz); if (t) t.prazo = i.value || null; aviso('Prazo salvo.'); de();
   });
   el.querySelectorAll('[data-gt-del]').forEach(b => b.onclick = async () => {
-    if (CONFIRMA !== 'gtd' + b.dataset.gtDel) { CONFIRMA = 'gtd' + b.dataset.gtDel; b.textContent = 'toque de novo'; return; }
+    if (!await pergunta('Excluir esta tarefa?', { sim: 'Excluir', perigo: true })) return;
     CONFIRMA = null;
     const { error } = await sb.from('gestao_tarefas').delete().eq('id', b.dataset.gtDel);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
@@ -7543,7 +7543,7 @@ function ligarContrato(c) {
   const B = $('blContrato'); if (!B) return;
   const atualiza = (d) => { Object.assign(c, d); B.innerHTML = htmlContrato(c); ligarContrato(c); };
   if ($('ctDescongelar')) $('ctDescongelar').onclick = async () => {
-    if (CONFIRMA !== 'desc' + c.id) { CONFIRMA = 'desc' + c.id; $('ctDescongelar').textContent = 'Toque de novo para retomar'; return; }
+    if (!await pergunta(`Retomar a Gestão de ${c.nome_completo || 'cliente'}?\n\nA Gestão sai do congelamento.`, { sim: 'Retomar' })) return;
     CONFIRMA = null;
     const { data, error } = await sb.rpc('gestao_descongelar', { p_cliente: c.id });
     if (error) { aviso(/gestao_descongelar/.test(error.message) ? 'Rode o 60-congelamento-gestao.sql no Supabase.' : 'Não retomou: ' + error.message); return; }
@@ -7557,7 +7557,7 @@ function ligarContrato(c) {
     atualiza(data); gtMarcarChave(c, 'data_entrada'); aviso(`Contrato até ${dataBR(data.gestao_vencimento)}.`);
   };
   if ($('ctRenovar')) $('ctRenovar').onclick = async () => {
-    if (CONFIRMA !== 'renov' + c.id) { CONFIRMA = 'renov' + c.id; $('ctRenovar').textContent = 'Toque de novo para confirmar a renovação'; return; }
+    if (!await pergunta(`Confirmar a renovação de ${c.nome_completo || 'cliente'}?\n\nUm novo ciclo começa logo depois do vencimento atual.`, { sim: 'Renovar' })) return;
     CONFIRMA = null;
     const { data, error } = await sb.rpc('gestao_renovar', { p_cliente: c.id });
     if (error) { aviso('Não renovou: ' + error.message); return; }
@@ -8160,7 +8160,7 @@ function telaFormAgenda(P) {
   };
   if ($('excluirAg')) $('excluirAg').onclick = async () => {
     const cancelar = base.status === 'Agendada';
-    if (CONFIRMA !== 'ag' + base.id) { CONFIRMA = 'ag' + base.id; $('excluirAg').textContent = cancelar ? 'Toque de novo para cancelar' : 'Toque de novo para excluir'; return; }
+    if (!await pergunta(cancelar ? 'Cancelar esta reunião?\n\nEla fica na agenda como cancelada.' : 'Excluir esta reunião?\n\nNão dá para desfazer.', { sim: cancelar ? 'Cancelar a reunião' : 'Excluir', nao: 'Voltar', perigo: !cancelar })) return;
     CONFIRMA = null;
     const r2 = cancelar ? await sb.from('agenda_reunioes').update({ status: 'Cancelada' }).eq('id', base.id).select().single() : await sb.from('agenda_reunioes').delete().eq('id', base.id);
     if (r2.error) { aviso('Não foi possível: ' + r2.error.message); return; }

@@ -5,6 +5,7 @@ const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${Strin
 // Quando cada valor sai do caixa fica em Compromissos a pagar.
 
 import * as CX from './caixa.js?v=1';
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 
 let MODO = 'mes', CONF = null, ABERTOS = new Set();
 
@@ -156,7 +157,7 @@ export async function tela(P, ctx) {
     aviso('Marcada como paga.'); tela(P, ctx);
   });
   P.querySelectorAll('[data-rmdesp]').forEach(b => b.onclick = async () => {
-    if (CONF !== 'rm' + b.dataset.rmdesp) { CONF = 'rm' + b.dataset.rmdesp; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Excluir esta despesa?\n\nEla sai do DRE. Não dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     await sb.from('pagamentos_feitos').delete().eq('tipo', 'avulsa').eq('ref', b.dataset.rmdesp);
     const { error } = await sb.from('despesas').delete().eq('id', b.dataset.rmdesp);

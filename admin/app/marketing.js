@@ -4,6 +4,7 @@
 // Sem mídia no app: os arquivos de cada post ficam numa pasta do Google Drive e aqui entra só o link da pasta.
 // Visão geral em três colunas (Planejado, Em andamento, Publicado), em Kanban e em Calendário.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const FMT = { reels: ['Reels', '#8a6520'], carrossel: ['Carrossel', '#2f6b4a'], feed: ['Feed', '#a0561f'], stories: ['Stories', '#2e5e6e'] };
 const ST = { ideia: 'Ideia', producao: 'Roteiro', gravacao: 'Gravar', edicao: 'Edição', aprovacao: 'Aprovação', agendado: 'Agendado', publicado: 'Publicado' };
 const ST_TAG = { ideia: '', producao: '', gravacao: 'ouro', edicao: '', aprovacao: 'alerta', agendado: 'ouro', publicado: 'ok' };
@@ -772,7 +773,7 @@ function formPost(P) {
   function msg(t, tipo) { const m = document.getElementById('mkMsg'); if (!m) return; m.textContent = t; m.className = 'mk-msg ' + (tipo || ''); m.hidden = !t; }
   if (document.getElementById('mkExcluir')) document.getElementById('mkExcluir').onclick = async () => {
     const b = document.getElementById('mkExcluir');
-    if (CONF !== base.id) { CONF = base.id; b.textContent = 'Toque de novo para excluir'; return; }
+    if (!await pergunta('Excluir este post?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     const { error } = await X.sb.from('marketing_posts').delete().eq('id', base.id);
     if (error) { X.aviso('Não excluiu: ' + error.message); return; }
@@ -839,7 +840,7 @@ function formEst(P) {
   };
   if (document.getElementById('mkExcluirE')) document.getElementById('mkExcluirE').onclick = async () => {
     const b = document.getElementById('mkExcluirE');
-    if (CONF !== e.id) { CONF = e.id; b.textContent = 'Toque de novo para excluir'; return; }
+    if (!await pergunta('Excluir este item da estratégia?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     const { error } = await X.sb.from('marketing_estrategia').delete().eq('id', e.id);
     if (error) { X.aviso('Não excluiu: ' + error.message); return; }

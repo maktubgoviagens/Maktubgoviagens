@@ -3,6 +3,7 @@
 // assim os dados da Maktub e do sócio não ficam em arquivo público, e o modelo pode mudar sem mexer no código.
 // Fluxo: conferir dados > gerar PDF > enviar ao Autentique (função contrato-autentique) > assinado volta para a ficha e para o painel do cliente.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const ESTADOS_CIVIS = ['solteiro(a)', 'casado(a)', 'divorciado(a)', 'viúvo(a)', 'separado(a)', 'em união estável'];
 const STATUS = { gerado: ['Gerado', ''], enviado: ['Aguardando assinatura', 'alerta'], assinado: ['Assinado', 'ok'], recusado: ['Recusado', 'alerta'], cancelado: ['Cancelado', ''] };
 const LIMITE_GRATIS = 10, AVISO_LIMITE = 8;
@@ -386,7 +387,7 @@ export async function bloco(el, c, X) {
     bloco(el, c, X);
   });
   el.querySelectorAll('[data-k-cancelar]').forEach(b => b.onclick = async () => {
-    if (b.dataset.conf !== '1') { b.dataset.conf = '1'; b.textContent = 'Toque de novo para cancelar'; return; }
+    if (!await pergunta('Cancelar este contrato no app?\n\nSe ele já foi enviado, cancele também no Autentique.', { sim: 'Cancelar o contrato', nao: 'Voltar', perigo: true })) return;
     const { error } = await sb.from('contratos').update({ status: 'cancelado' }).eq('id', b.dataset.kCancelar);
     if (error) X.aviso('Não cancelou: ' + error.message); else { X.aviso('Contrato cancelado no app. Se já foi enviado, cancele também no Autentique.'); bloco(el, c, X); }
   });

@@ -4,6 +4,7 @@ import * as IMPORTAR from '/admin/app/cartoes-importar.js?v=4';
 import { simular, OBJETIVOS, facilidade } from '/admin/app/cartoes-simulacao.js?v=10';
 import { desenharEstudo } from '/admin/app/cartoes-estudo.js?v=6';
 import { desenharTextoCliente } from '/admin/app/cartoes-texto-cliente.js?v=4';
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 
 export const MOEDAS = [['USD', 'pontos por US$ 1'], ['BRL', 'pontos por R$ 1'], ['PCT', '% de cashback']];
 let BASE = null, ED = null, BUSCA = '', FILTRO_C = 'todos', LIM_B = 30;
@@ -235,7 +236,7 @@ function formBase(P, X) {
     voltar();
   };
   if ($('bDel')) $('bDel').onclick = async (e) => {
-    if (e.target.dataset.ok !== '1') { e.target.dataset.ok = '1'; e.target.textContent = 'Toque de novo'; return; }
+    if (!await pergunta('Excluir este cartão da base?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     const { error } = await sb.from('cartoes_catalogo').delete().eq('id', ED);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
     BASE = BASE.filter(x => x.id !== ED); aviso('Cartão excluído da base.'); voltar();
@@ -761,7 +762,7 @@ export async function secaoCliente(box, c, X, onPrimeiro) {
   });
   box.querySelectorAll('[data-ce]').forEach(b => b.onclick = () => { const x = C.find(y => y.id === b.dataset.ce); const d = box.querySelector('#cxForm'); d.open = true; d.querySelector('summary').textContent = 'Editar cartão'; desenharForm(x); d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   box.querySelectorAll('[data-cd]').forEach(b => b.onclick = async () => {
-    if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Excluir este cartão do cliente?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     const { error } = await sb.from('cartoes').delete().eq('id', b.dataset.cd);
     if (error) { aviso('Não excluiu: ' + error.message); return; }
     secaoCliente(box, c, X, onPrimeiro);
@@ -1070,7 +1071,7 @@ async function usoSalas(ctx) {
   const q = (k) => box.querySelector(`[name=${k}]`);
   q('us_cartao').onchange = () => { const k = ctx.cartoes.find(x => x.id === q('us_cartao').value); box.querySelector('#usRedes').innerHTML = (k ? salasDe(k.catalogo_id) : []).map(r => `<option value="${esc(r)}">`).join(''); };
   box.querySelectorAll('[data-usx]').forEach(b => b.onclick = async () => {
-    if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Excluir este uso de sala VIP?', { sim: 'Excluir', perigo: true })) return;
     const { error } = await sb.from('cliente_salas_uso').delete().eq('id', b.dataset.usx);
     if (error) { X.aviso('Não excluiu: ' + X.limparTec(error.message)); return; }
     usoSalas(ctx);
@@ -1133,7 +1134,7 @@ function desenharBancos(ctx) {
   if (box.querySelector('#cbNovo')) box.querySelector('#cbNovo').onclick = () => { CB_ED = 'novo'; redesenhar(); };
   box.querySelectorAll('[data-cbe]').forEach(b => b.onclick = () => { CB_ED = b.dataset.cbe; redesenhar(); });
   box.querySelectorAll('[data-cbx]').forEach(b => b.onclick = async () => {
-    if (b.dataset.ok !== '1') { b.dataset.ok = '1'; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Excluir este banco do cliente?', { sim: 'Excluir', perigo: true })) return;
     const { error } = await X.sb.from('cliente_bancos').delete().eq('id', b.dataset.cbx);
     if (error) { X.aviso('Não excluiu: ' + X.limparTec(error.message)); return; }
     ctx.bancos = ctx.bancos.filter(x => x.id !== b.dataset.cbx); redesenhar();

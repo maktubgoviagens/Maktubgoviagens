@@ -2,6 +2,7 @@
 // Compras de milhas em promoções que os sócios revendem para a Maktub.
 // Fica separada do DRE da empresa; serve para saber quanto os sócios ganham no ano.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const PROGRAMAS = [['Azul Fidelidade', 15.5], ['Smiles (Gol)', 16.5], ['Latam Pass', 27], ['TAP Miles&Go', 45], ['Iberia Plus', 57], ['Outro', null]];
 let OM_ANO = String(new Date().getFullYear()), OM_ED = null, OM_PROG = 'todos', OM_CONF = null, LISTA = null;
 
@@ -132,7 +133,7 @@ function form(P, X) {
     aviso(nova ? 'Compra lançada.' : 'Compra atualizada.'); telaOpMilhas(P, X); scrollTo(0, 0);
   };
   if ($('omExcluir')) $('omExcluir').onclick = async () => {
-    if (OM_CONF !== o.id) { OM_CONF = o.id; $('omExcluir').textContent = 'Toque de novo para excluir'; return; }
+    if (!await pergunta('Excluir esta operação de milhas?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     OM_CONF = null;
     const r = await sb.from('operacoes_milhas').delete().eq('id', o.id);
     if (r.error) { aviso('Não excluiu: ' + r.error.message); return; }

@@ -1,6 +1,7 @@
 // Maktub Go: Acervo de viagens (só administradores).
 // Destinos: mapa e números tirados das emissões. Roteiros: biblioteca dos roteiros e propostas em HTML.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 let PAISES = null, ACV_ABA = 'destinos', ACV_PER = '12m', EMS = null, AERO = null, MAPA = null, RT = null, RT_TIPO = 'todos', RT_BUSCA = '', RT_NOVO = false, CONF = null, RT_PASTA = [], RT_EDIT = null;
 
 // nomes em português para os aeroportos mais comuns (o resto usa o nome da base aberta de aeroportos)
@@ -273,7 +274,7 @@ async function roteiros(el, X) {
   });
   el.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
     const x = achar(b.dataset.rm);
-    if (CONF !== 'rt' + x.id) { CONF = 'rt' + x.id; b.textContent = 'Toque de novo'; return; }
+    if (!await pergunta(`Excluir "${x.titulo || 'este roteiro'}" do acervo?\n\nO arquivo também é apagado. Não dá para desfazer.`, { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     if (x.arquivo_path) await sb.storage.from('roteiros').remove([x.arquivo_path]);
     const { error } = await sb.from('roteiros').delete().eq('id', x.id);
