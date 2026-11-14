@@ -4,6 +4,7 @@
 // vai para a coluna "ID sistema", então a emissão sincronizada já nasce ligada ao card.
 
 export const VOO = ['Passagens', 'Maktub Corporativo'];
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 export const HOTEL = 'Hotelaria';
 const ehVoo = (x) => VOO.includes(x.produto);
 const ehHotel = (x) => x.produto === HOTEL;
@@ -442,8 +443,8 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     el.querySelectorAll('[data-clatual]').forEach(b => b.onclick = async () => { if (!ctx.lancarCliente) return; b.disabled = true; await ctx.lancarCliente(IT[+b.dataset.clatual]); desenha(); });
     el.querySelectorAll('[data-clcanc]').forEach(b => b.onclick = async () => {
       const x = IT[+b.dataset.clcanc]; if (!ctx.cancelarCliente) return;
-      if (!confirm(x.gestao_manual ? 'Cancelar esta emissão com milhas do cliente?\n\nO voo sai do check-in. O Uso de milhas que já estava lançado à mão continua na ficha como está: se precisar, ajuste na Gestão.'
-        : 'Cancelar esta emissão com milhas do cliente?\n\nNada é apagado: o Uso de milhas fica marcado como cancelado, as milhas voltam ao saldo da carteira, a economia sai do painel do cliente e o voo sai do check-in. Taxa de cancelamento do programa, se houver, a equipe lança à parte.')) return;
+      if (!await pergunta(x.gestao_manual ? 'Cancelar esta emissão com milhas do cliente?\n\nO voo sai do check-in. O Uso de milhas que já estava lançado à mão continua na ficha como está: se precisar, ajuste na Gestão.'
+        : 'Cancelar esta emissão com milhas do cliente?\n\nNada é apagado: o Uso de milhas fica marcado como cancelado, as milhas voltam ao saldo da carteira, a economia sai do painel do cliente e o voo sai do check-in. Taxa de cancelamento do programa, se houver, a equipe lança à parte.', { sim: 'Cancelar a emissão', nao: 'Voltar', perigo: true })) return;
       b.disabled = true; await ctx.cancelarCliente(x); desenha(); });
     // custo por trecho
     el.querySelectorAll('[data-ctliga]').forEach(e => e.onchange = () => { const x = IT[+e.dataset.ctliga]; x.ct_on = e.checked; if (e.checked && !(x.ct || []).length) x.ct = null; desenha(); });
@@ -451,7 +452,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     const avisaMudou = () => el.dispatchEvent(new Event('change', { bubbles: true }));
     el.querySelectorAll('[data-ctsep]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.ctsep.split('|'); separarTrecho(IT, +i, +k); desenha(); avisaMudou(); X.aviso('Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.'); });
     el.querySelectorAll('[data-outraem]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.outraem]; IT.splice(+b.dataset.outraem + 1, 0, { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', pago_em: 'milhas' }); desenha(); avisaMudou(); });
-    el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.cttira.split('|'), l = IT[+i].ct[+k] || {}; if ((l.o || l.d || l.milhas || l.custo) && !confirm('Tirar este trecho? O que foi preenchido nele será apagado.')) return; IT[+i].ct.splice(+k, 1); desenha(); avisaMudou(); });
+    el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = async () => { const [i, k] = b.dataset.cttira.split('|'), l = IT[+i].ct[+k] || {}; if ((l.o || l.d || l.milhas || l.custo) && !await pergunta('Tirar este trecho?\n\nO que foi preenchido nele será apagado.', { sim: 'Tirar', perigo: true })) return; IT[+i].ct.splice(+k, 1); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
       const [i, k, campo] = e.dataset.ct.split('|'), x = IT[+i];
       e.oninput = () => { const l = x.ct[+k]; l[campo] = /^(o|d)$/.test(campo) ? e.value.trim().toUpperCase() : /^(milhas|milheiro|taxas|custo|pax)$/.test(campo) ? nb(e.value) : e.value; somarTrechos(x);
@@ -904,7 +905,7 @@ export async function lancarCliente(X, card, x, G) {
     if (r.error) return { ok: false, erro: r.error.message };
     if (r.data && r.data.ok === false && Array.isArray(r.data.duplicados) && r.data.duplicados.length) {
       const d0 = r.data.duplicados[0];
-      const mesmo = confirm(`Já existe um Uso de milhas lançado à mão na ficha da Gestão:\n${ddmm(d0.data)} · ${d0.programa} · ${milFmt(d0.milhas)} milhas${d0.descricao ? ' · ' + d0.descricao : ''}\n\nÉ esta mesma emissão?\n\nOK: é a mesma. O app não lança de novo e só liga o voo ao check-in.\nCancelar: é outra emissão. O app lança mais um Uso de milhas.`);
+      const mesmo = await pergunta(`Já existe um Uso de milhas lançado à mão na ficha da Gestão. É esta mesma emissão?\n\n${ddmm(d0.data)} · ${d0.programa} · ${milFmt(d0.milhas)} milhas${d0.descricao ? ' · ' + d0.descricao : ''}\n\nSe for a mesma, o app não lança de novo e só liga o voo ao check-in. Se for outra, o app lança mais um Uso de milhas.`, { sim: 'É a mesma', nao: 'É outra emissão', escolha: true });
       if (mesmo) { x.gestao_manual = d0.id; return lancarCliente(X, card, x, G); }
       x.dup_ok = true; r = await chamar();
       if (r.error) return { ok: false, erro: r.error.message };

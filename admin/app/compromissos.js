@@ -10,7 +10,8 @@
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
 import * as CX from './caixa.js?v=1';
-import { ehB2B } from '/admin/app/b2b.js?v=10';
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
+import { ehB2B } from '/admin/app/b2b.js?v=11';
 
 export const INICIO = '2026-09';
 const INICIO_CONTAS = '2026-10';
@@ -196,7 +197,7 @@ export async function tela(P, ctx) {
   });
   if ($('pagarHoje')) $('pagarHoje').onclick = async () => {
     const H = aPagar.filter(x => x.tipo !== 'emprestimo' && !(x.tipo === 'time' && x.aberto) && difDias(x.venc) === 0);
-    if (!confirm(`Marcar como pagos ${H.length} pagamentos de hoje, nos valores previstos?`)) return;
+    if (!await pergunta(`Marcar como pagos ${H.length} pagamentos de hoje, nos valores previstos?`, { sim: 'Marcar como pagos' })) return;
     for (const x of H) { const e = await pagar(x, x.valor, hojeLocal()); if (e) { aviso('Parou no pagamento de ' + x.titulo + ': ' + e.message); tela(P, ctx); return; } }
     aviso('Pagamentos de hoje marcados como pagos.'); tela(P, ctx);
   };

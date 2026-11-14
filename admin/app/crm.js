@@ -3,6 +3,7 @@
 // indicações ficam pendurados na ficha. O vendedor é de cada venda, não do cliente.
 
 const verValor = (X) => X.ADMIN || (X.pode && X.pode('financeiro'));
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro', fornecedor: 'Fornecedor' };
 const INTERESSES = { viagens: 'Viagens e passagens', gestao: 'Gestão de Milhas' };
 // Lead vira cliente na primeira compra: emissão ligada à ficha, atendimento fechado ou marcação manual (quem comprou antes do app)
@@ -290,7 +291,7 @@ function telaFicha(P, X) {
     box.innerHTML = `${p.origem_canal ? '<div class="sub">A correção fica registrada no histórico, com quem corrigiu e quando.</div>' : ''}${X.IND.htmlSeletor(X, {})}<button class="zap" type="button" id="confOrigem" style="width:100%;margin-top:10px">${p.origem_canal ? 'Salvar correção' : 'Confirmar origem'}</button><div class="sub" id="msgOrigem"></div>`;
     const S = X.IND.ligarSeletor(box.querySelector('.ind-sel'), X, { pessoa: p, C: { vendas: D.emissoes || [], parceiros: D.parceirosAdm && D.parceirosAdm.length ? D.parceirosAdm : (D.parc || []) } });
     $('confOrigem').onclick = async () => {
-      if (p.origem_canal && !confirm(`Corrigir a origem de ${p.nome}? A origem atual é ${X.IND.rotuloOrigem(p)}.`)) return;
+      if (p.origem_canal && !await pergunta(`Corrigir a origem de ${p.nome}?\n\nA origem atual é ${X.IND.rotuloOrigem(p)}.`, { sim: 'Corrigir' })) return;
       $('confOrigem').disabled = true; $('msgOrigem').textContent = 'Salvando...';
       const v = await S.valor();
       if (v.erro) { $('confOrigem').disabled = false; $('msgOrigem').textContent = v.erro; return; }
@@ -318,7 +319,7 @@ function telaFicha(P, X) {
   let tipo = 'familia';
   $('vTipo').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; tipo = b.dataset.v; [...$('vTipo').children].forEach(x => x.classList.toggle('on', x === b)); };
   P.querySelectorAll('[data-desv]').forEach(b => b.onclick = async () => {
-    if (!confirm('Desfazer o vínculo entre essas duas fichas? As fichas continuam, só deixam de estar ligadas.')) return;
+    if (!await pergunta('Desfazer o vínculo entre essas duas fichas?\n\nAs fichas continuam, só deixam de estar ligadas.', { sim: 'Desfazer o vínculo' })) return;
     const [a, c] = b.dataset.desv.split('|');
     const { error } = await X.sb.from('pessoas_vinculos').delete().eq('pessoa_a', a).eq('pessoa_b', c);
     if (error) return X.aviso('Não removeu: ' + error.message);
@@ -526,7 +527,7 @@ function telaDups(P, X) {
   };
   P.querySelectorAll('[data-j]').forEach(btn => btn.onclick = async () => {
     const [dup, manter, remover] = btn.dataset.j.split('|');
-    if (!confirm('Juntar as duas fichas? Tudo o que está na outra passa para esta. Isso não pode ser desfeito.')) return;
+    if (!await pergunta('Juntar as duas fichas?\n\nTudo o que está na outra passa para esta. Isso não pode ser desfeito.', { sim: 'Juntar', perigo: true })) return;
     btn.disabled = true;
     const { error } = await X.sb.rpc('pessoas_juntar', { p_manter: manter, p_remover: remover });
     if (error) { btn.disabled = false; return X.aviso('Não juntou: ' + error.message); }

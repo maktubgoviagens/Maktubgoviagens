@@ -6,6 +6,7 @@
 // Sócios (administradores) não recebem comissão. O check-in é da agência: o app não cobra.
 
 export const MARCA = 'B2B';
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 export const MARCA_OBS = 'B2B (check-in pela agência)';
 export const ehB2B = (e) => !!e && (/^B2B\b/.test(String(e.observacoes || '')) || String(e.cidade || '').trim().toUpperCase() === MARCA);
 export function comissaoB2B(milhas, cancelada) {
@@ -106,7 +107,7 @@ export function tela(P, X) {
     if (!c.mil) falta.push('milheiro de custo');
     if (!c.valor) falta.push(S.modo === 'milheiro' ? 'milheiro vendido' : 'valor do bilhete');
     if (falta.length) { $('#b2bMsg').innerHTML = '<b style="color:var(--alerta)">Falta:</b> ' + falta.join(', '); return; }
-    if (c.bruto < 0 && !confirm(`O valor (${X.brl2(c.valor)}) está abaixo do custo (${X.brl2(c.custo)}). Lançar mesmo assim?`)) return;
+    if (c.bruto < 0 && !await pergunta(`O valor (${X.brl2(c.valor)}) está abaixo do custo (${X.brl2(c.custo)}). Lançar mesmo assim?`, { sim: 'Lançar mesmo assim' })) return;
     const id = uuid();
     const obs = [MARCA_OBS, S.modo === 'milheiro' ? `milheiro vendido ${X.brl2(c.milVenda)}` : '', g('obs')].filter(Boolean).join(' · ');
     const dados = {
@@ -200,7 +201,7 @@ function ligarEstorno(P, e, X, depois) {
     if (est > custoDe(e) + 0.009) { X.aviso(`O estorno (${X.brl2(est)}) passa do custo da emissão (${X.brl2(custoDe(e))}).`); return; }
     const devolve = dest === 'cliente' ? est : 0;
     const val = r2((+e.valor_receber || 0) - devolve), cus = r2(custoDe(e) - est);
-    if (!confirm(`Registrar estorno de ${X.brl2(est)} (${dest === 'cliente' ? 'devolvido' : 'fica com a Maktub'})? Custo passa para ${X.brl2(cus)} e venda para ${X.brl2(val)}.`)) return;
+    if (!await pergunta(`Registrar estorno de ${X.brl2(est)} (${dest === 'cliente' ? 'devolvido' : 'fica com a Maktub'})?\n\nCusto passa para ${X.brl2(cus)} e venda para ${X.brl2(val)}.`, { sim: 'Registrar estorno' })) return;
     const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     const nota = `ESTORNO no-show em ${quando}: ${X.brl2(est)} ${dest === 'cliente' ? 'devolvido' : 'fica com a Maktub'}`;
     const obsx = P.querySelector('#estObs').value.trim(), b2b = ehB2B(e);
@@ -267,7 +268,7 @@ export function ligarCancelar(P, e, X, depois) {
     const { val, cus } = ler();
     const mot = P.querySelector('#cancMot').value.trim();
     if (!mot) { X.aviso('Informe o motivo do cancelamento.'); P.querySelector('#cancMot').focus(); return; }
-    if (!confirm(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}? Venda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`)) return;
+    if (!await pergunta(`Cancelar a emissão ${e.localizador || ''} de ${e.comprador || ''}?\n\nVenda fica em ${X.brl2(val)} e custo em ${X.brl2(cus)}.`, { sim: 'Cancelar a emissão', nao: 'Voltar', perigo: true })) return;
     const d = new Date(), quando = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     const nv = novosValores(e, X, val, cus), b2b = ehB2B(e);
     const det = comCusto ? `custo na cia ${X.brl2(cus)}, cobrado ${X.brl2(val)}, resultado ${X.brl2(val - cus)}` : 'sem custo';
