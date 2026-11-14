@@ -119,7 +119,7 @@ function telaLista(P, X) {
   const lista = todas.filter(p => FILTRO === 'todos' ? true : FILTRO === 'aniv' ? p.nascimento && new Date(p.nascimento + 'T12:00:00').getMonth() === mesAtual : FILTRO === 'cliente' ? ehCliente(D, p) : FILTRO === 'lead' ? ehLead(D, p) : (p.papeis || []).includes(FILTRO))
     .filter(p => !q || norm(p.nome).includes(q) || norm(p.apelido).includes(q) || (qd.length >= 4 && so(p.celular).includes(qd)) || norm(p.email).includes(q))
     .map(p => ({ p, r: resumo(D, p.id) }))
-    .sort((a, b) => FILTRO === 'aniv' ? new Date(a.p.nascimento).getDate() - new Date(b.p.nascimento).getDate() : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
+    .sort((a, b) => FILTRO === 'aniv' ? +String(a.p.nascimento).slice(8, 10) - +String(b.p.nascimento).slice(8, 10) : b.r.total - a.r.total || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   const dups = (D.dups || []).length;
   const semFiltro = !BUSCA && FILTRO === 'todos', V = vistos(), porId = new Map(lista.map(x => [x.p.id, x]));
   const recentes = semFiltro && !TODAS ? V.map(id => porId.get(id)).filter(Boolean) : [];
