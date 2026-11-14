@@ -199,14 +199,29 @@ const inp = (X, k, i, rot, v, t = 's', extra = '') => `<label class="fl"><span>$
 const dupla = (a, b) => `<div class="duas-col">${a}${b}</div>`;
 const chk = (X, k, i, rot, v, dis) => `<label class="fc" style="margin:8px 0"><input type="checkbox" data-it="${i}" data-k="${k}" data-t="b" ${v ? 'checked' : ''} ${dis ? 'disabled' : ''}><span>${rot}</span></label>`;
 
+// item ainda na cotação: o formato curto. Custos reais, dados do voo, milhas e emissão ficam para o fechamento (Emitiu).
+// Já emitido, já na planilha ou com milhas do cliente da Gestão: sempre o formulário completo.
+export const naCotacao = (x, ctx) => !!(ctx && ctx.cotacao) && !ehCliente(x) && !enviado(x) && !x.emitido;
+const campoForn = (X, x, i, rot) => `<label class="fl"><span>${rot}</span><input data-it="${i}" data-k="fornecedor" value="${X.esc(x.fornecedor || '')}" list="dlFornV" autocomplete="off" placeholder="Buscar ou cadastrar"></label><button type="button" class="forn-novo" data-fornnovo="${i}" hidden></button>`;
+function htmlItemCotacao(X, x, i, ctx) {
+  const voo = ehVoo(x), verCusto = X.verMargem !== false;
+  return `${voo ? inp(X, 'trecho', i, 'Trecho', x.trecho, 's', 'placeholder="Ex.: GRU-LIS ida e volta" autocomplete="off"') : ''}
+    <div class="cli-lado">${inp(X, 'nome', i, 'Nome', x.nome, 's', `placeholder="${voo ? 'Companhia ou tarifa' : ehHotel(x) ? 'Nome do hotel' : 'Nome do serviço'}" ${voo ? '' : 'list="dlServV"'} autocomplete="off"`)}<div>${campoForn(X, x, i, 'Fornecedor (onde cotou)')}</div></div>
+    ${dupla(inp(X, 'data_ida', i, voo ? 'Ida' : 'Check-in', x.data_ida ?? ctx.ida, 'd'), inp(X, 'data_volta', i, voo ? 'Volta' : 'Check-out', x.data_volta ?? ctx.volta, 'd'))}
+    ${dupla(inp(X, 'venda', i, 'Valor de venda (R$)', x.venda, 'n'), verCusto ? inp(X, 'custo_dia', i, 'Valor de custo do dia (R$)', x.custo_dia, 'n') : '<div></div>')}
+    ${verCusto ? '<div class="sub" style="margin:-2px 0 4px">O custo do dia é interno: não aparece para o cliente nem no link de cotação.</div>' : ''}`;
+}
+
 // detalhes de um serviço (dentro do atendimento)
 function htmlItem(X, x, i, ctx) {
   if (ehCliente(x)) return htmlCliente(X, x, i, ctx);
+  if (naCotacao(x, ctx)) return htmlItemCotacao(X, x, i, ctx);
   const trava = enviado(x);
   somarTrechos(x);
   const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
-  if (!ctx.detalhes) return base;
-  let det = '';
+  const ref = [x.trecho && ehVoo(x) ? 'Trecho cotado: ' + X.esc(x.trecho) : '', x.custo_dia != null && x.custo_dia !== '' && X.verMargem !== false ? 'Custo do dia na cotação: ' + X.brl2(+x.custo_dia) : ''].filter(Boolean).join(' · ');
+  if (!ctx.detalhes) return base + (ref ? `<div class="sub" style="margin:-2px 0 4px">${ref}</div>` : '');
+  let det = ref ? `<div class="sub" style="margin:0 0 6px">${ref}</div>` : '';
   if (ehVoo(x)) {
     det += `<div class="sub" style="margin:6px 0 0">Trecho</div>${seg('tipo_trecho', i, [['iv', 'Ida e volta'], ['ida', 'Só ida'], ['multi', 'Multitrecho']], x.tipo_trecho || ctx.tipoPadrao)}
       ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'))}
@@ -233,7 +248,7 @@ function htmlItem(X, x, i, ctx) {
   } else {
     det += `${dupla(inp(X, 'nome', i, 'Descrição', x.nome, 's', 'placeholder="O que foi comprado"'), inp(X, 'data_ida', i, 'Data', x.data_ida ?? ctx.ida, 'd'))}${inp(X, 'localizador', i, 'Código ou reserva', x.localizador)}`;
   }
-  det += `<label class="fl"><span>${usaMilhas(x) ? 'Fornecedor (se comprou milhas de alguém)' : 'Onde comprou (fornecedor)'}</span><input data-it="${i}" data-k="fornecedor" value="${X.esc(x.fornecedor || '')}" list="dlFornV"></label>`;
+  det += campoForn(X, x, i, usaMilhas(x) ? 'Fornecedor (se comprou milhas de alguém)' : 'Onde comprou (fornecedor)');
   det += chk(X, 'emitido', i, ehVoo(x) ? 'Emitido (bilhete gerado)' : 'Comprado / reservado', x.emitido, trava);
   const pend = pendenciasItem(x);
   det += trava ? `<div class="sub" style="color:var(--verde)">Enviado para a planilha${x.enviado_em ? ' em ' + new Date(x.enviado_em).toLocaleDateString('pt-BR') : ''}.</div>` : ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : '';
@@ -395,17 +410,27 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   const linhaCliente = () => { const L = IT.filter(x => ehCliente(x) && !x.cancelado_em); if (!L.length) return '';
     const porProg = {}; L.forEach(x => { const k = String(x.programa || 'milhas').trim(); porProg[k] = (porProg[k] || 0) + (+x.milhas || 0); });
     return `<div class="lin"><span>Com milhas do cliente</span><span>${Object.entries(porProg).map(([k, v]) => v ? milFmt(v) + ' ' + X.esc(k) : 'a preencher').join(' + ')}</span></div><div class="sub" style="margin:0">Fora de metas, comissão e planilha.</div>`; };
-  const resumo = () => { const t = tot(); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div>${X.verMargem === false ? '' : `<div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>`}` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
+  const resumo = () => { const t = tot(), soCot = IT.every(x => naCotacao(x, ctx)); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div>${X.verMargem === false || soCot ? '' : `<div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>`}` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
   const padroes = () => IT.forEach(x => {
     if (enviado(x)) return;
     if (ehCliente(x)) { prepararCliente(x, ctx); cabecalhoCliente(x); return; }
-    if (ehVoo(x)) { if (!x.tipo_trecho) x.tipo_trecho = ctx.tipoPadrao; if (!x.pago_em) x.pago_em = 'milhas'; }
+    if (ehVoo(x)) { if (!x.tipo_trecho) x.tipo_trecho = ctx.tipoPadrao; if (!x.pago_em) x.pago_em = 'milhas';
+      const m = /\b([A-Za-z]{3})\s*[-–>→\/]+\s*([A-Za-z]{3})\b/.exec(x.trecho || ''); if (m && !x.origem && !x.destino) { x.origem = m[1].toUpperCase(); x.destino = m[2].toUpperCase(); } }
     if (x.data_ida == null && ctx.ida) x.data_ida = ctx.ida;
     if (x.data_volta == null && ctx.volta && (ehVoo(x) || ehHotel(x)) && x.tipo_trecho !== 'ida') x.data_volta = ctx.volta;
   });
   const desenha = () => {
     if (ctx.detalhes) padroes();
-    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><datalist id="dlServV">${(X.servicos ? X.servicos() : []).map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) && !naCotacao(x, ctx) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    const nrmF = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    el.querySelectorAll('[data-fornnovo]').forEach(b => {
+      const inpF = el.querySelector(`input[data-it="${b.dataset.fornnovo}"][data-k="fornecedor"]`); if (!inpF || !X.novoFornecedor) return;
+      const mostra = () => { const v = inpF.value.trim(); b.hidden = !v || X.fornecedores().some(n => nrmF(n) === nrmF(v)); b.textContent = '+ Cadastrar "' + v + '" como fornecedor'; };
+      inpF.addEventListener('input', mostra); inpF.addEventListener('change', mostra); mostra();
+      // o toque no botão não tira o foco do campo: assim nada redesenha antes do cadastro
+      ['mousedown', 'pointerdown'].forEach(ev => b.addEventListener(ev, (e) => e.preventDefault()));
+      b.onclick = async () => { const v = inpF.value.trim(); if (!v) return; b.disabled = true; const ok = await X.novoFornecedor(v); b.disabled = false; if (ok) { IT[+b.dataset.fornnovo].fornecedor = v; desenha(); } };
+    });
     el.querySelectorAll('[data-hrm]').forEach(e => { const [i, k] = e.dataset.hrm.split('|'), x = IT[+i]; e.removeAttribute('data-it'); e.oninput = () => { x.hrs = Array.isArray(x.hrs) ? x.hrs : []; x.hrs[+k] = e.value; }; });
     el.querySelectorAll('input[data-it],textarea[data-it]').forEach(e => {
       const set = () => { const x = IT[+e.dataset.it], k = e.dataset.k, t = e.dataset.t; x[k] = t === 'b' ? e.checked : t === 'n' ? nb(e.value) : e.value.trim(); };
