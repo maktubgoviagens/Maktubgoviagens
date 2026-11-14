@@ -1008,7 +1008,12 @@ button.nota-m{cursor:pointer}
 .curva-col i{position:absolute;left:50%;width:9px;height:9px;margin:0 0 -4px -4px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 2px var(--branco)}
 .curva-col.on i{background:var(--dourado);width:11px;height:11px;margin:0 0 -5px -5px}
 .curva-col span{position:absolute;left:0;right:0;bottom:0;font-size:13px;color:var(--tinta-3);text-align:center}
+.ini4{display:grid;grid-template-columns:1fr;gap:4px 24px;margin-top:6px}
+@media (min-width:1024px){.ini4{grid-template-columns:1fr 1fr;align-items:start}}
+.ini4-b{min-width:0}
+.ini4-n{font-size:14px;letter-spacing:0;text-transform:none;color:var(--tinta-3);font-weight:400}
 .cal-ok{flex:none;background:var(--branco);border:1px solid var(--verde);color:var(--verde);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+a.cal-ok{text-decoration:none;display:inline-flex;align-items:center}
 .cal-ok.on,.cal-ok:disabled{border-color:var(--linha);color:var(--tinta-3);cursor:default}
 /* fornecedor novo direto pela cotação */
 .forn-novo{display:block;background:none;border:0;padding:0 0 8px;margin-top:-4px;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
@@ -2181,7 +2186,8 @@ function tela() {
   if (ABA === 'mais') return telaMais(P);
   if (ABA === 'empresa') return telaEmpresa(P);
   if (ABA === 'equipe') return telaEquipe(P);
-  if (!ADMIN && !GER() && ABA === 'inicio') return telaInicioColab(P);
+  // Início novo para todos: o antigo do colaborador (telaInicioColab) fica guardado no código, sem uso
+  if (!ADMIN && !GER() && ABA === 'inicio') return telaInicio(P);
   if (ABA === 'leads') return telaLeads(P);
   if (ABA === 'clientes') return CLI ? telaFicha(P, CLI) : telaClientes(P);
   if (ABA === 'agenda') return telaAgenda(P);
@@ -2215,7 +2221,89 @@ function blocoMesInicio(m, mesTxt) {
   if (p.length && p.every(x => x === 0)) return `<button type="button" class="ini-card" id="iniMes">${rot}<span class="ini-txt">Sem avanço registrado nas metas deste mês.</span><small>Ver as metas</small><i>›</i></button>`;
   return `<button type="button" class="ini-card" id="iniMes">${rot}${p.length ? `<b class="ini-num">${pct(v)}</b><small>da meta ${alvo >= 0 ? alvo + 1 : p.length} da Maktub${alvo < 0 ? ', batida' : ''}</small>` : '<span class="ini-txt">Nenhuma meta definida para este mês.</span>'}<i>›</i></button>`;
 }
+/* ---------- Início: checklist, coisas do dia, check-ins (48 h) e pendências por tipo ----------
+   O que saiu daqui continua nas telas de cada assunto: metas (Metas do mês), onde está travando (Resultados, funil),
+   reuniões e próximos na agenda (Coisas do dia e Agenda), remuneração (Comissão). */
+function checkins48() {
+  const G48 = (D.voos || []).filter(v => ['confirmado', 'checkin_aberto'].includes(v.status)).filter(v => { const d = dia(v.data_voo); if (v.hora_partida) { const [h, m] = v.hora_partida.split(':'); d.setHours(+h, +m); } const hrs = (d - Date.now()) / 36e5; return hrs >= 0 && hrs <= 48; });
+  const E = G48.map(v => ({ cid: v.cliente_id, d: dia(v.data_voo), hora: v.hora_partida ? v.hora_partida.slice(0, 5) : '', ic: 'voo', alerta: true,
+    t: `${v.origem_codigo || v.origem_cidade || '?'} → ${v.destino_codigo || v.destino_cidade || '?'}${v.companhia ? ' · ' + v.companhia : ''}${v.numero_voo ? ' ' + v.numero_voo : ''}`,
+    s: `${nomeCli(v.cliente_id)}${v.localizador ? ' · loc. ' + v.localizador : ''}`, href: adminLink(v.cliente_id, 'voos') }));
+  trechosEm().filter(t => t.em48).forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: true,
+    t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? (t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '') : t.tr === 'volta' ? ' · volta' : ''}`,
+    s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
+    href: t.v.milhas_cliente ? (t.v.atendimento_id ? '#reunioes/' + t.v.atendimento_id : '') : (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
+  return E.sort((a, b) => (a.d - b.d) || String(a.hora).localeCompare(String(b.hora)));
+}
+// o que o calendário tem hoje para a pessoa (reuniões, eventos, follow-ups, renovações) e os lembretes de aniversário
+function coisasDoDia() {
+  const h = hojeISO(); let E = [];
+  try { E = calItens(false, h, h).filter(it => !it.donos.length || it.donos.includes(D.meuId)); } catch (_) { E = []; }
+  E.sort((a, b) => (!!b.atr - !!a.atr) || String(a.hora || '99').localeCompare(String(b.hora || '99')));
+  return E.concat(lembretesAniv().map(({ p, falta, ano }) => ({ tipo: 'aniv', hora: '', t: 'Aniversário de ' + p.nome, s: falta === 0 ? 'é hoje' : falta === 1 ? 'amanhã' : 'em ' + falta + ' dias', p, ano, abrir: () => ir('crm', () => CRM.abrir(p.id)) })));
+}
+function htmlCoisasDoDia(L) {
+  CAL.estilos();
+  const cor = (it) => ((CAL_TIPOS.find(t => t[0] === it.tipo) || [])[2]) || 'var(--tinta-3)';
+  return `<div class="secao">Coisas do dia <button data-ir-cal="1">Ver calendário ›</button></div>${L.length ? L.map((it, i) => `<div class="cal-it ${it.cont ? 'cont' : ''}" style="--c:${cor(it)}"><button type="button" data-cdd="${i}">
+      <span class="t">${esc(it.t)}</span><span class="s">${it.atr ? `<span class="atr">${esc(it.atrTxt || 'Atrasado')}</span>` : ''}${it.hora ? `<span class="q">${esc(it.hora)}</span>` : ''}${esc(it.s || '')}</span></button>
+      ${(it.tipo === 'rv' || it.tipo === 'rg') && it.rid ? `<span class="ac"><button type="button" class="cal-ok" data-calok="${it.rid}">Feito</button></span>` : it.tipo === 'aniv' ? `<span class="ac">${it.p.celular ? `<a class="cal-ok" href="${esc(zapLink(it.p.celular, it.p.nome, textoParabens(it.p)))}" target="_blank" rel="noopener">Parabéns</a>` : ''}<button type="button" class="cal-ok" data-anivok="${it.p.id}|${it.ano}">Enviado</button></span>` : ''}</div>`).join('') : '<div class="vazio">Nada no calendário para hoje.</div>'}`;
+}
+// pendências por tipo: as quatro do Comercial primeiro; as demais (de quem já via) só quando houver
+function pendenciasInicio() {
+  const abV = D.reunioes.filter(r => r.resultado === 'Em andamento' && !ehGestao(r));
+  const incompletos = abV.filter(r => !r.proximo_passo_data || !(r.itens || []).length || (estadoKC(r) || [])[0] === 'Sem cotação');
+  const semDono = D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.assumido_por && etapaDe(r) === 'Novo lead');
+  const C = pode('comercial') || ADMIN;
+  return [
+    ...(C ? [['Pagamentos pendentes (vendas sem comprovante)', posVenda().filter(r => !(r.fech || {}).comprovante).length, () => ir('reunioes')]] : []),
+    ...(ADMIN ? [['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')]] : []),
+    ...(ADMIN || podeAba('emissoes') ? [['Voos sem data ou horário de saída', voosSemHorario().length, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
+    ...(C ? [['Cards incompletos (sem retorno, sem serviço ou sem cotação)', incompletos.length, () => ir('reunioes')]] : []),
+    ...(C ? [['Cards sem ninguém assumir', semDono.length, () => ir('reunioes')]] : []),
+    ['Leads do site esperando alguém assumir', leadsSemDono().filter(l => !cardDoLead(l)).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; })],
+    ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; })],
+    ...(C ? [['Vendas fechadas aguardando emissão ou planilha', posVenda().length, () => ir('reunioes')]] : []),
+    ...(ADMIN ? [['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')]] : []),
+    ...(ADMIN ? [['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')]] : []),
+    ...(ADMIN ? [['Fornecedores a pagar', aPagar().length, () => ir('pagar')]] : []),
+    ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
+    ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
+    ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
+    ...(ADMIN || pode('gestao') ? [['Gestão de Milhas', totalGestao(), () => ir('gestao')]] : []),
+    ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
+    ...(ADMIN ? [['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]] : []),
+    ...(ADMIN ? [['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
+    ...(ADMIN ? [['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
+    ...(ADMIN ? [['Avaliações no Google para responder', D.avGoogle ? avgPend().length : undefined, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('avgInicio'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
+    ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
+  ].filter(x => x[1] !== undefined);
+}
 function telaInicio(P) {
+  const hora = new Date().getHours(), CD = coisasDoDia(), CK = checkins48(), PD = pendenciasInicio(), comPend = PD.filter(x => x[1]);
+  const resolver = blocoSemHorario() + (ADMIN ? blocoAvgInicio() : '') + blocoPosViagem();
+  P.innerHTML = `
+    <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
+    <div class="sub">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, c => c.toUpperCase())}</div>
+    <div class="ini4">
+      <div class="ini4-b" id="tdBloco"></div>
+      <div class="ini4-b">${htmlCoisasDoDia(CD)}</div>
+      <div class="ini4-b"><div class="secao">Check-ins a fazer <small class="ini4-n">${CK.length ? 'próximas 48 horas' : ''}</small></div>${CK.length ? agrupar(CK) : '<div class="vazio">Nenhum check-in nas próximas 48 horas.</div>'}</div>
+      <div class="ini4-b"><div class="secao">Pendências</div>${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-pi="${PD.findIndex(x => x[0] === t)}"><span>${esc(t)}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
+        ${resolver.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:10px"><summary><span>Resolver por aqui<small>Voos sem horário e avaliações</small></span></summary>${resolver}</details>` : ''}</div>
+    </div>`;
+  P.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => PD[b.dataset.pi][2]());
+  P.querySelectorAll('[data-cdd]').forEach(b => b.onclick = () => { const it = CD[+b.dataset.cdd]; if (it && it.abrir) it.abrir(); });
+  P.querySelectorAll('[data-calok]').forEach(b => b.onclick = (e) => { e.stopPropagation(); acoesCard(b.dataset.calok, { feito: true }); });
+  P.querySelectorAll('[data-anivok]').forEach(b => b.onclick = async () => { const [pid, ano] = b.dataset.anivok.split('|'); if (await marcarAnivEnviado(pid, ano)) tela(); });
+  P.querySelectorAll('[data-ir-cal]').forEach(b => b.onclick = () => { RE_PARTE = 'cal'; try { localStorage.setItem('maktub_re_parte', 'cal'); } catch (_) {} ir('reunioes'); });
+  ligarSemHorario(P);
+  tarefasDia();
+  ligarPosViagem(P, () => telaInicio(P));
+  if (ADMIN) ligarAvg(P, () => telaInicio(P));
+}
+// Início antigo (administração e gerente): fica guardado no código, sem uso, para consulta
+function telaInicioAntigo(P) {
   const hora = new Date().getHours();
   const leads30 = D.leads.filter(r => Date.now() - new Date(r.created_at) <= 30 * 864e5).length;
   const itens = [
@@ -4197,7 +4285,7 @@ function htmlAniversarios(G) {
   CAL.estilos();
   const st = CAL_ST.aniv, per = CAL.periodo(st), E = CAL_ITENS = anivItens(G, per.de, per.ate);
   return `<div style="margin-top:12px"></div>${CAL.html(st, { itens: E, tipos: CAL_TIPOS.filter(([k]) => k === 'aniv'), esc,
-    extra: (it) => `${it.p && it.p.celular && !it.env ? `<a class="zap" href="${esc(zapLink(it.p.celular, it.p.nome, textoParabens(it.p)))}" target="_blank" rel="noopener">Parabéns</a>` : ''}<button type="button" class="cal-ok ${it.env ? 'on' : ''}" data-anivok="${it.p.id}|${it.ano}" ${it.env ? 'disabled' : ''}>${it.env ? 'Enviado ✓' : 'Marcar enviado'}</button>`,
+    extra: (it) => `${it.p && it.p.celular && !it.env ? `<a class="cal-ok" href="${esc(zapLink(it.p.celular, it.p.nome, textoParabens(it.p)))}" target="_blank" rel="noopener">Parabéns</a>` : ''}<button type="button" class="cal-ok ${it.env ? 'on' : ''}" data-anivok="${it.p.id}|${it.ano}" ${it.env ? 'disabled' : ''}>${it.env ? 'Enviado ✓' : 'Marcar enviado'}</button>`,
     dica: 'O lembrete chega 7 dias antes para os sócios e para o vendedor do cliente. Marcar enviado encerra o lembrete do ano.' })}`;
 }
 function calItens(G, de, ate) {
@@ -6205,9 +6293,10 @@ function trechosEm() {
       R.forEach(r => {
         const d = dia(r.data), k = difDias(d); if (k < -1) return;
         const hr = r.hora ? String(r.hora).slice(0, 5) : '', feito = !!r.checkin;
-        let pend = !feito && pendSemHora(k);
-        if (hr) { const ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
-        T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, de: r.origem, para: r.destino, v });
+        let pend = !feito && pendSemHora(k), ms = null;
+        if (hr) { ms = instanteVoo(String(r.data).slice(0, 10), hr, r.tz) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
+        const em48 = !feito && (ms !== null ? ms > 0 && ms <= 48 * 36e5 : k >= 0 && k <= 2);
+        T.push({ id: v.id, tr: 't' + r.n, n: r.n, total: R.length, d, hora: hr, feito, pendente: pend, em48, de: r.origem, para: r.destino, v });
       });
       return;
     }
@@ -6216,9 +6305,10 @@ function trechosEm() {
       const d = dia(data), k = difDias(d);
       if (k < -1) return;
       const H = (D.horas || {})[String(v.id)] || {}, hr = H['hora_' + tr];
-      let pend = !feito && pendSemHora(k);
-      if (hr) { const ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
-      T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, de, para, v });
+      let pend = !feito && pendSemHora(k), ms = null;
+      if (hr) { ms = instanteVoo(String(data).slice(0, 10), String(hr).slice(0, 5), H['tz_' + tr]) - Date.now(); pend = !feito && ms > 0 && ms <= 24 * 36e5; }
+      const em48 = !feito && (ms !== null ? ms > 0 && ms <= 48 * 36e5 : k >= 0 && k <= 2);
+      T.push({ id: v.id, tr, d, hora: hr ? String(hr).slice(0, 5) : '', feito, pendente: pend, em48, de, para, v });
     });
   });
   return T;
@@ -8379,7 +8469,7 @@ const avaliacoesParaPedir = (so) => D.avaliacoes ? (D.agenda || []).filter(x => 
 function blocoAnivHoje() {
   const L = lembretesAniv(); if (!L.length) return '';
   return `<div class="secao" id="anivHoje">Aniversários para mandar parabéns <button data-ir-aniv="1">Ver o calendário ›</button></div><div class="bloco" style="margin-top:0">${L.map(({ p, falta, ano }) => { const z = p.celular ? zapLink(p.celular, p.nome, textoParabens(p)) : '';
-    return `<div class="lin" style="align-items:center;gap:8px"><button type="button" data-ficha-aniv="${p.id}" style="text-align:left;color:var(--verde);font-weight:600;flex:1">${esc(p.nome)}<small style="display:block;color:var(--tinta-3);font-weight:400">${falta === 0 ? 'é hoje' : falta === 1 ? 'amanhã' : 'em ' + falta + ' dias'}</small></button>${z ? `<a class="zap" href="${esc(z)}" target="_blank" rel="noopener" style="padding:8px 12px">Parabéns</a>` : ''}<button type="button" class="cal-ok" data-anivok="${p.id}|${ano}">Enviado</button></div>`; }).join('')}</div>`;
+    return `<div class="lin" style="align-items:center;gap:8px"><button type="button" data-ficha-aniv="${p.id}" style="text-align:left;color:var(--verde);font-weight:600;flex:1">${esc(p.nome)}<small style="display:block;color:var(--tinta-3);font-weight:400">${falta === 0 ? 'é hoje' : falta === 1 ? 'amanhã' : 'em ' + falta + ' dias'}</small></button>${z ? `<a class="cal-ok" href="${esc(z)}" target="_blank" rel="noopener">Parabéns</a>` : ''}<button type="button" class="cal-ok" data-anivok="${p.id}|${ano}">Enviado</button></div>`; }).join('')}</div>`;
 }
 function ligarAnivHoje(P) { P.querySelectorAll('[data-ficha-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fichaAniv)));
   P.querySelectorAll('[data-ir-aniv]').forEach(b => b.onclick = () => irAniversarios());
