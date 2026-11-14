@@ -987,6 +987,27 @@ button.nota-m{cursor:pointer}
 .nota-ed{background:none;border:0;padding:2px 0;font:inherit;font-size:14px;color:var(--dourado);text-decoration:underline;cursor:pointer;margin-left:auto}
 .notas textarea,#notaForm textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--linha);border-radius:12px;padding:10px 12px;background:var(--branco)}
 #notaForm{margin-top:8px}
+.re-cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.re-abas{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border:1px solid var(--linha);border-radius:12px;background:var(--branco);padding:3px;max-width:100%}
+.re-abas::-webkit-scrollbar{display:none}
+.re-abas button{flex:none;border:0;background:none;padding:8px 14px;border-radius:9px;font:inherit;font-size:14px;color:var(--tinta-2);cursor:pointer;white-space:nowrap;min-height:40px}
+.re-abas button.on{background:var(--verde);color:var(--creme)}
+.re-cab-d{display:flex;gap:8px;align-items:center;margin-left:auto;flex:0 1 auto}
+.re-per{font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--branco);color:var(--verde);min-height:42px}
+.re-novo{width:auto;margin:0;padding:9px 14px;font-size:14px;border-radius:12px;white-space:nowrap;min-height:42px}
+@media (max-width:640px){.re-cab-d{flex:1 1 100%}.re-cab-d .re-per{flex:1}.re-abas{width:100%}.re-abas button{padding:8px 10px}}
+.num .d.sobe{color:var(--ok)}.num .d.desce{color:var(--alerta)}
+.curva-cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px}
+.curva-cab h2{margin:0}
+.curva-info{font-size:16px;color:var(--verde);margin:10px 0 4px;font-weight:500}
+.curva{position:relative;height:170px}
+.curva svg{position:absolute;inset:0 0 26px 0;width:100%;height:calc(100% - 26px)}
+.curva-cols{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr)}
+.curva-col{position:relative;background:none;border:0;padding:0;cursor:pointer;font:inherit;border-radius:8px}
+.curva-col:hover,.curva-col:focus-visible{background:rgba(25,56,38,.05)}
+.curva-col i{position:absolute;left:50%;width:9px;height:9px;margin:0 0 -4px -4px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 2px var(--branco)}
+.curva-col.on i{background:var(--dourado);width:11px;height:11px;margin:0 0 -5px -5px}
+.curva-col span{position:absolute;left:0;right:0;bottom:0;font-size:13px;color:var(--tinta-3);text-align:center}
 .cal-ok{flex:none;background:var(--branco);border:1px solid var(--verde);color:var(--verde);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
 .cal-ok.on,.cal-ok:disabled{border-color:var(--linha);color:var(--tinta-3);cursor:default}
 /* fornecedor novo direto pela cotação */
@@ -3589,6 +3610,73 @@ function conversao(L) {
   const decididas = fechou + perdeu;
   return { fechou, perdeu, decididas, andamento: L.filter(r => r.resultado === 'Em andamento').length, taxa: decididas ? fechou / decididas * 100 : null, valor: soma(L.filter(r => r.resultado === 'Fechou'), 'valor_fechado') };
 }
+/* ---------- Resultados do Comercial: período, indicadores, curva de 12 meses, funil, conversão, tempo, motivos e em aberto ---------- */
+let RE_CURVA = 'valor';
+function opcoesPeriodo() {
+  const k0 = mesKey(new Date()), y0 = +k0.slice(0, 4), sel = RE_MODO === 'ano' ? 'ano:' + EM_MES.slice(0, 4) : 'mes:' + EM_MES;
+  const meses = Array.from({ length: 24 }, (_, i) => mesMais(k0, -i)); if (RE_MODO !== 'ano' && !meses.includes(EM_MES)) meses.push(EM_MES);
+  const anos = [y0, y0 - 1]; if (RE_MODO === 'ano' && !anos.includes(+EM_MES.slice(0, 4))) anos.push(+EM_MES.slice(0, 4));
+  const op = (v, t) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(t)}</option>`;
+  return `<optgroup label="Mês">${meses.map(k => op('mes:' + k, mesNome(k).replace(' de ', ' '))).join('')}</optgroup><optgroup label="Ano">${anos.map(y => op('ano:' + y, String(y))).join('')}</optgroup>`;
+}
+// números de um conjunto de cards: valor fechado, conversão, ticket médio e margem (venda menos custo dos fechados com custo lançado)
+function numerosRes(L) {
+  const cv = conversao(L), fech = L.filter(r => r.resultado === 'Fechou' && !VENDA.soMilhasCliente(r));
+  const itens = (r) => (r.itens || []).filter(x => !x.cancelado_em);
+  const comCusto = fech.filter(r => itens(r).some(x => VENDA.custoDe(x) > 0));
+  const margem = comCusto.reduce((a, r) => { const v = itens(r).reduce((s, x) => s + VENDA.vendaDe(x), 0) || +r.valor_fechado || 0; return a + v - itens(r).reduce((s, x) => s + VENDA.custoDe(x), 0); }, 0);
+  return { cv, valor: cv.valor, taxa: cv.taxa, ticket: fech.length ? cv.valor / fech.length : null, margem: comCusto.length ? margem : null, semCusto: fech.length - comCusto.length, fechados: fech.length };
+}
+function varRes(a, b, nomeAnt, pontos) {
+  if (a == null || b == null || (!pontos && !b)) return `<div class="d">sem base em ${esc(nomeAnt)}</div>`;
+  const d = pontos ? Math.round(a - b) : Math.round((a - b) / Math.abs(b) * 100);
+  if (!d) return `<div class="d">igual a ${esc(nomeAnt)}</div>`;
+  return `<div class="d ${d > 0 ? 'sobe' : 'desce'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}${pontos ? (Math.abs(d) === 1 ? ' ponto' : ' pontos') : '%'} vs ${esc(nomeAnt)}</div>`;
+}
+function htmlResultadosTopo(G, base) {
+  const verV = ADMIN || GER(), ano = RE_MODO === 'ano';
+  const kAnt = ano ? (+EM_MES.slice(0, 4) - 1) + '-12' : mesMais(EM_MES, -1), nomeAnt = ano ? kAnt.slice(0, 4) : mesNomeCurto(kAnt);
+  const baseAnt = reunioesDoPeriodo(kAnt, RE_MODO).filter(daVista);
+  const N = numerosRes(base), NA = numerosRes(baseAnt);
+  const tile = (rot, v, d, cls) => `<div class="num ${cls || ''}"><div class="l">${rot}</div><div class="v">${v}</div>${d}</div>`;
+  const faixa = `<div class="numeros" style="margin-top:12px">
+    ${tile('Valor fechado', brlC(N.valor), varRes(N.valor, NA.valor, nomeAnt), 'destaque')}
+    ${tile('Conversão', N.taxa === null ? '-' : pct(N.taxa), varRes(N.taxa, NA.taxa, nomeAnt, true))}
+    ${verV ? tile('Ticket médio', N.ticket === null ? '-' : brlC(N.ticket), varRes(N.ticket, NA.ticket, nomeAnt)) : tile('Atendimentos', base.length, `<div class="d">${N.cv.andamento} ainda em aberto</div>`)}
+    ${verV ? tile('Margem', N.margem === null ? '-' : brlC(N.margem), varRes(N.margem, NA.margem, nomeAnt)) : tile('Não fecharam', N.cv.perdeu, '<div class="d">motivos abaixo</div>')}
+  </div>${verV && N.semCusto ? `<div class="sub" style="margin-top:4px">Margem dos fechados com custo lançado. ${N.semCusto} ${N.semCusto === 1 ? 'fechado ainda sem custo' : 'fechados ainda sem custo'}.</div>` : ''}`;
+  // curva de 12 meses (um eixo só: troca entre valor fechado e conversão)
+  const fim = ano ? (EM_MES.slice(0, 4) === mesKey(new Date()).slice(0, 4) ? mesKey(new Date()) : EM_MES.slice(0, 4) + '-12') : EM_MES;
+  const M = Array.from({ length: 12 }, (_, i) => mesMais(fim, i - 11)).map(k => { const n = numerosRes(reunioesDoPeriodo(k, 'mes').filter(daVista)); return { k, v: RE_CURVA === 'valor' ? n.valor : n.taxa, n }; });
+  const max = Math.max(...M.map(x => +x.v || 0), RE_CURVA === 'taxa' ? 1 : 1);
+  const pts = M.map((x, i) => [i * 100 + 50, 190 - (+x.v || 0) / max * 170]);
+  const linha = pts.map(p => p.join(',')).join(' '), area = `50,190 ${linha} 1150,190`;
+  const rotV = (x) => RE_CURVA === 'valor' ? brlC(x.n.valor) : x.n.taxa === null ? 'sem decisões' : pct(Math.round(x.n.taxa));
+  const atual = M[M.length - 1];
+  const curva = `<section class="bloco"><div class="curva-cab"><h2>Últimos 12 meses</h2><div class="chips" role="tablist">${[['valor', 'Valor fechado'], ['taxa', 'Conversão']].map(([k, t]) => `<button type="button" data-curva="${k}" class="${RE_CURVA === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>
+    <div class="curva-info" id="curvaInfo">${esc(mesNome(atual.k))}: ${esc(rotV(atual))}</div>
+    <div class="curva"><svg viewBox="0 0 1200 200" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="190" x2="1200" y2="190" stroke="var(--linha)" stroke-width="1" vector-effect="non-scaling-stroke"/><polygon points="${area}" fill="var(--creme-2)"/><polyline points="${linha}" fill="none" stroke="var(--verde)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <div class="curva-cols">${M.map((x, i) => `<button type="button" class="curva-col ${i === M.length - 1 ? 'on' : ''}" data-info="${esc(mesNome(x.k) + ': ' + rotV(x))}" aria-label="${esc(mesNome(x.k) + ': ' + rotV(x))}"><i style="bottom:calc(26px + (100% - 26px) * ${((+x.v || 0) / max * 0.85 + 0.05).toFixed(4)})"></i><span>${esc(mesNomeCurto(x.k).slice(0, 3))}</span></button>`).join('')}</div></div>
+    <div class="sub" style="margin-top:6px">Toque num mês para ver o número.</div></section>`;
+  // funil por etapa, com a etapa de maior perda
+  const Lf = base.filter(r => r.resultado !== 'Não se aplica' && !VENDA.soMilhasCliente(r));
+  let perda = '';
+  if (Lf.length) { const passos = Object.keys(etapasAlcancadas(Lf[0], G)), cont = passos.map(k => Lf.filter(r => etapasAlcancadas(r, G)[k]).length);
+    let pior = null; for (let i = 1; i < passos.length; i++) { if (!cont[i - 1]) continue; const t = cont[i] / cont[i - 1]; if (!pior || t < pior.t) pior = { t, de: passos[i - 1], para: passos[i] }; }
+    if (pior) perda = `<div class="sub" style="margin:8px 0 0">Maior perda: de <b>${esc(pior.de)}</b> para <b>${esc(pior.para)}</b> (${pct(Math.round((1 - pior.t) * 100))} ficam pelo caminho).</div>`; }
+  const funil = `<section class="bloco"><h2>Funil por etapa</h2>${htmlFunilPeriodo(base, baseAnt, G, nomeAnt)}${perda}<div class="sub" style="margin-top:6px">Cards anteriores a outubro de 2026 contam pela etapa em que estão hoje: esses meses são aproximados.</div></section>`;
+  // tempo médio até fechar
+  const dias = base.filter(r => r.resultado === 'Fechou' && r.fechado_em).map(r => Math.max(0, Math.round((new Date(r.fechado_em) - new Date(r.entrou_em || r.created_at || r.data)) / 864e5)));
+  const tempo = `<section class="bloco"><h2>Tempo médio até fechar</h2>${dias.length ? `<div class="ini-num">${Math.round(dias.reduce((a, b) => a + b, 0) / dias.length)} ${Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) === 1 ? 'dia' : 'dias'}</div><div class="sub" style="margin-top:2px">do cadastro ao Fechou, em ${dias.length} ${dias.length === 1 ? 'venda' : 'vendas'} do período</div>` : '<div class="vazio">Nenhuma venda fechada no período.</div>'}</section>`;
+  // motivos de não fechamento, em barras ordenadas
+  const mot = Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]);
+  const motivos = `<section class="bloco"><h2>Motivos de não fechamento</h2>${mot.length ? mot.map(([k, n]) => `<div class="conv"><span>${esc(k)}</span><b>${n}</b><span class="m"><i style="width:${n / mot[0][1] * 100}%"></i></span></div>`).join('') : '<div class="vazio">Nenhum card encerrado como Não fechou no período.</div>'}</section>`;
+  // em aberto: valor cotado sem decisão e follow-ups atrasados (de todos os períodos)
+  const ab = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento'), atr = ab.filter(r => r.proximo_passo_data && String(r.proximo_passo_data).slice(0, 10) < hojeISO());
+  const aberto = `<section class="bloco"><h2>Em aberto</h2>${verV ? `<div class="lin"><span>Valor cotado sem decisão</span><b>${brlC(soma(ab, 'valor_estimado'))}</b></div>` : ''}<div class="lin"><span>Cards em aberto</span><b>${ab.length}</b></div><button type="button" class="lin" id="reAtras" style="width:100%"><span>Follow-ups atrasados</span><b style="color:${atr.length ? 'var(--alerta)' : 'inherit'}">${atr.length} ›</b></button></section>`;
+  const conv = `${blocoConv('Conversão por origem', base, r => r.origem)}${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}${verV ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}`;
+  return faixa + curva + funil + conv + tempo + motivos + aberto;
+}
 function blocoConv(titulo, L, chave, rotulo) {
   const grupos = {};
   L.filter(r => r.resultado !== 'Não se aplica').forEach(r => { [].concat(chave(r) || 'Não informado').forEach(k => (grupos[k] = grupos[k] || []).push(r)); });
@@ -3843,11 +3931,12 @@ function htmlKCardC(r) {
 const quandoNaoFechou = (r) => ((r.marcos || {})['Não fechou'] || {}).em || r.etapa_desde || r.data;
 function colunasFinais() {
   const pv = posVenda(), ja = new Set(pv.map(r => r.id));
-  const fech = pv.concat(D.reunioes.filter(r => daVista(r) && !ehGestao(r) && r.resultado === 'Fechou' && !ja.has(r.id) && mesLocal(r.fechado_em || r.data) === EM_MES));
-  const perdeu = D.reunioes.filter(r => daVista(r) && !ehGestao(r) && r.resultado === 'Não fechou' && mesLocal(quandoNaoFechou(r)) === EM_MES);
+  const noPer = (ts) => RE_MODO === 'ano' ? mesLocal(ts).slice(0, 4) === EM_MES.slice(0, 4) : mesLocal(ts) === EM_MES;
+  const fech = pv.concat(D.reunioes.filter(r => daVista(r) && !ehGestao(r) && r.resultado === 'Fechou' && !ja.has(r.id) && noPer(r.fechado_em || r.data)));
+  const perdeu = D.reunioes.filter(r => daVista(r) && !ehGestao(r) && r.resultado === 'Não fechou' && noPer(quandoNaoFechou(r)));
   return [['Fechou', fech], ['Não fechou', perdeu]];
 }
-const mesCurtoKC = () => { const [y, m] = EM_MES.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''); };
+const mesCurtoKC = () => { if (RE_MODO === 'ano') return EM_MES.slice(0, 4); const [y, m] = EM_MES.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''); };
 // no celular: uma etapa por vez, escolhida nos chips
 function htmlFunilCel(abertos) {
   const cols = etapasDe(false).map(et => [et, abertos.filter(r => etapaDe(r) === et || (et === etapasDe(false)[0] && !etapasDe(false).includes(etapaDe(r))))]).concat(colunasFinais());
@@ -3925,8 +4014,8 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo atendimento da Gestão' : '+ Novo atendimento'}</button>
-    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button>${podeAba('crm') && D.pessoas ? `<button data-p="aniv" class="${RE_PARTE === 'aniv' ? 'on' : ''}">Aniversários</button>` : ''}<button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    <div class="re-cab"><div class="re-abas" id="reParte" role="tablist"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button>${podeAba('crm') && D.pessoas ? `<button data-p="aniv" class="${RE_PARTE === 'aniv' ? 'on' : ''}">Aniversários</button>` : ''}<button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+      <div class="re-cab-d"><select id="rePer" class="re-per" aria-label="Período">${opcoesPeriodo()}</select><button class="zap re-novo" id="novaR">${G ? '+ Atendimento da Gestão' : '+ Novo atendimento'}</button></div></div>
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE === 'aniv' && podeAba('crm') && D.pessoas ? htmlAniversarios(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
@@ -3934,26 +4023,17 @@ function telaReunioes(P) {
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
     <div class="kanban${G ? '' : ' kanban-c'}">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => G ? htmlKCard(r, etapasDe(ehGestao(r))) : htmlKCardC(r)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : colunasFinais().map(([et, L]) => `<div class="kcol kfim" data-ket="${esc(et)}"><h3>${esc(et)} <small>${L.length} · ${esc(mesCurtoKC())}</small></h3>${L.map(htmlKCardC).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`).join('')}</div>
 `}
-    ${RE_PARTE !== 'res' ? '' : `<div class="seg" id="reModo" style="margin-top:14px"><button data-m="mes" class="${RE_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${RE_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
-    ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
-      <div class="num"><div class="l">Atendimentos</div><div class="v">${base.length}</div><div class="d">${c.andamento} ainda em aberto</div></div>
-      <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">no período</div></div>
-      <div class="num"><div class="l">Não fecharam</div><div class="v">${c.perdeu}</div><div class="d">veja os motivos abaixo</div></div>
-    </div>
-    ${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}
-    ${ADMIN || GER() ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}
+    ${RE_PARTE !== 'res' ? '' : `${htmlResultadosTopo(G, base)}
     ${ADMIN && !G ? blocoPagamentos(base) : ''}
     ${(ADMIN || GER()) && semResp().length ? `<section class="bloco"><h2>Sem responsável</h2><div class="sub" style="margin-top:0">${semResp().length} ${semResp().length === 1 ? 'atendimento' : 'atendimentos'} de ${G ? 'Gestão de Milhas' : 'viagens'}, de todos os períodos, sem ninguém definido (a maioria veio do Iddas).</div>
       <div class="duas-col" style="margin-top:8px"><label class="fl"><span>Passar para</span><select id="loteResp">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === D.meuId ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label><button class="zap" type="button" id="loteRespB" style="align-self:end">Definir para todos</button></div></section>` : ''}
-    ${blocoConv('Conversão por origem', base, r => r.origem)}
     ${blocoAtendimento(base)}
-    ${(m => m.length ? `<section class="bloco"><h2>Por que não fechou</h2>${m.map(([k, n]) => `<div class="lin"><span>${esc(k)}</span><span>${n}</span></div>`).join('')}${base.filter(r => r.resultado === 'Não fechou' && r.motivo_detalhe).map(r => `<button class="lin" data-r="${r.id}" style="display:block;padding:10px 0"><b style="font-weight:600;color:var(--verde)">${esc(r.cliente)}</b> · ${esc(r.motivo_perda || 'sem motivo')}<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">${esc(r.motivo_detalhe)}</span></button>`).join('')}</section>` : '')(Object.entries(base.filter(r => r.resultado === 'Não fechou').reduce((o, r) => { const k = r.motivo_perda || 'Não informado'; o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]))}
+    ${(L => L.length ? `<section class="bloco"><h2>O que os clientes disseram</h2>${L.map(r => `<button class="lin" data-r="${r.id}" style="display:block;padding:10px 0"><b style="font-weight:600;color:var(--verde)">${esc(r.cliente)}</b> · ${esc(r.motivo_perda || 'sem motivo')}<span style="display:block;color:var(--tinta-2);white-space:normal;margin-top:2px">${esc(r.motivo_detalhe)}</span></button>`).join('')}</section>` : '')(base.filter(r => r.resultado === 'Não fechou' && r.motivo_detalhe))}
     <div class="secao">Histórico do período</div>
     <div class="chips" id="reFiltro">${[['todos', 'Todos'], ['Fechou', 'Fechou'], ['Não fechou', 'Não fechou'], ['Não se aplica', 'Não se aplica']].map(([v, l]) => `<button data-f="${esc(v)}" class="${v === RE_FILTRO ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
     <div class="lista" style="margin-top:8px">${hist.length ? hist.map(htmlReuniao).join('') : '<div class="vazio">Nada decidido neste período.</div>'}</div>
     <div class="sub">Conversão = fechou ÷ (fechou + não fechou). Sem data de retorno, você recebe um aviso quando um atendimento fica 3 dias parado.</div>`}`;
+  { const on = $('reParte').querySelector('.on'); if (on && $('reParte').scrollWidth > $('reParte').clientWidth) $('reParte').scrollLeft = on.offsetLeft - 8; }
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; try { localStorage.setItem('maktub_re_parte', RE_PARTE); } catch (_) {} telaReunioes(P); } };
   document.body.classList.toggle('cal-largo', RE_PARTE === 'cal');
   if (RE_PARTE === 'cal') ligarCalendario(P, ABA === 'gestao', () => telaReunioes(P));
@@ -3965,8 +4045,10 @@ function telaReunioes(P) {
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
   $('novaR').onclick = () => { if (!G) return escolherAtendimento(); RE_ED = 'nova'; history.pushState(null, '', reHash('nova')); telaReunioes(P); scrollTo(0, 0); };
-  if ($('reModo')) $('reModo').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_MODO = b.dataset.m; telaReunioes(P); } };
-  if ($('reMes')) ligarMes('reMes', () => telaReunioes(P));
+  if ($('rePer')) $('rePer').onchange = (e) => { const [m, v] = e.target.value.split(':'); RE_MODO = m; EM_MES = m === 'ano' ? (v === mesKey(new Date()).slice(0, 4) ? mesKey(new Date()) : v + '-12') : v; telaReunioes(P); };
+  P.querySelectorAll('[data-curva]').forEach(b => b.onclick = () => { RE_CURVA = b.dataset.curva; telaReunioes(P); });
+  P.querySelectorAll('.curva-col').forEach(b => { const mostra = () => { const c = P.querySelector('#curvaInfo'); if (c) c.textContent = b.dataset.info; }; b.onmouseenter = mostra; b.onfocus = mostra; b.onclick = mostra; });
+  if ($('reAtras')) $('reAtras').onclick = () => { RE_PARTE = 'cal'; try { localStorage.setItem('maktub_re_parte', 'cal'); } catch (_) {} telaReunioes(P); };
   if ($('reFiltro')) $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
   ligarCardsReuniao(P);
   // funil do Comercial: nome abre a ficha, ⋯ abre as ações rápidas, o resto do card abre o card
