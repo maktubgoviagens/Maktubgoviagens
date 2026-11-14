@@ -1072,6 +1072,9 @@ body.cb-leitura #montarCot{margin-top:8px}
 .cx-bt{display:flex;justify-content:space-between;gap:10px;font-size:16px}.cx-bt span{font-weight:500;white-space:nowrap}
 .cx-banco .t{display:block;height:8px;border-radius:999px;background:var(--linha);overflow:hidden}.cx-banco .t i{display:block;height:100%;background:var(--dourado-claro,#B49755)}
 .cx-banco small{font-size:14px;color:var(--tinta-3,#6b6b63)}.cx-banco .lin{font-size:14px;padding-left:4px}
+.pv-def{display:block;background:none;border:0;padding:4px 0 0;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.pv-def.perto{color:var(--dourado)}.pv-def.alerta{color:var(--alerta);font-weight:500}
+.pv-todas{display:block;width:100%;background:none;border:0;margin-top:8px;padding:8px 0;font:inherit;font-size:16px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -4986,20 +4989,49 @@ const devePagar = (e) => (+e.custo || 0) > 0;
 function aReceberCli(e) { return !e.pago && (+e.valor_receber || 0) > 0.009 && !B2B.ehAjuste(e); }
 const aPagar = () => D.emissoes.filter(e => devePagar(e) && !e.pago_fornecedor);
 let PG_CONF = null;
+// folha "Quando vence o pagamento?": data com atalhos contados da data da venda; devolve a data, '' para tirar ou null para voltar
+function folhaVencimento(titulo, base, atual) {
+  return new Promise((ok) => {
+    const mais = (n) => { const d = dia(base); d.setDate(d.getDate() + n); return isoLocal(d); };
+    const el = document.createElement('div'); el.className = 'folha';
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">Quando vence o pagamento?</div><p class="ac-fl">${esc(titulo)}</p>
+      <div class="td-dias">${[7, 15, 30].map(n => `<button type="button" class="ac-sec" data-n="${n}">Em ${n} dias</button>`).join('')}</div>
+      <label class="fl"><span>Data do vencimento</span><input type="date" id="pvData" value="${esc(atual || '')}"></label>
+      <p class="ac-fl" style="font-size:14px">Os atalhos contam a partir da data da venda (${dataBR(base)}).</p>
+      <button type="button" class="ac-prim" data-r="1">Salvar o vencimento</button>${atual ? '<button type="button" class="ac-sec" data-r="tirar">Tirar o vencimento</button>' : ''}<button type="button" class="ac-sec" data-r="0">Voltar</button></div>`;
+    const fim = (v) => { el.remove(); ok(v); };
+    el.querySelector('.folha-fundo').onclick = () => fim(null);
+    el.querySelector('[data-r="0"]').onclick = () => fim(null);
+    const t = el.querySelector('[data-r="tirar"]'); if (t) t.onclick = () => fim('');
+    el.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { el.querySelector('#pvData').value = mais(+b.dataset.n); });
+    el.querySelector('[data-r="1"]').onclick = () => { const v = el.querySelector('#pvData').value; if (!v) { el.querySelector('#pvData').focus(); return; } fim(v); };
+    document.body.appendChild(el);
+  });
+}
 function telaPagar(P) {
-  const L = aPagar().sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
+  // vencimento do fornecedor (97-vencimento-do-fornecedor.sql): só do app, a planilha não mexe nele
+  const venc = (e) => e.fornecedor_vence_em ? String(e.fornecedor_vence_em).slice(0, 10) : '';
+  const ordem = (a, b) => (venc(a) ? 0 : 1) - (venc(b) ? 0 : 1) || venc(a).localeCompare(venc(b)) || String(a.data_negociacao).localeCompare(String(b.data_negociacao));
+  const L = aPagar().sort(ordem), hojeI = hojeISO(), em7 = maisDias(7);
+  const vence7 = L.filter(e => venc(e) && venc(e) <= em7);
   const grupos = {}; L.forEach(e => { const f = fichaFornecedor(e.fornecedor), k = f ? 'f:' + f.id : 'n:' + nNome(e.fornecedor); (grupos[k] = grupos[k] || { nome: f ? f.nome : (e.fornecedor || 'Fornecedor não informado'), ficha: f, L: [] }).L.push(e); });
-  const G = Object.entries(grupos).sort((a, b) => soma(b[1].L, 'custo') - soma(a[1].L, 'custo'));
+  // fornecedor com o vencimento mais próximo primeiro; sem vencimento, pelo valor
+  const prox = (g) => g.L.map(venc).filter(Boolean).sort()[0] || '9999';
+  const G = Object.entries(grupos).sort((a, b) => prox(a[1]).localeCompare(prox(b[1])) || soma(b[1].L, 'custo') - soma(a[1].L, 'custo'));
+  const rotVenc = (e) => { const v = venc(e); if (!v) return '<button type="button" class="pv-def" data-pv="' + e.id + '">sem vencimento · definir</button>';
+    const d = Math.round((dia(v) - dia(hojeI)) / 864e5), cls = d < 0 ? 'alerta' : d <= 2 ? 'perto' : '';
+    return `<button type="button" class="pv-def ${cls}" data-pv="${e.id}">${d < 0 ? 'atrasado desde ' + dataBR(v) : d === 0 ? 'vence hoje' : 'vence ' + dataBR(v)}</button>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A pagar</div><div class="v">${brlC(soma(L, 'custo'))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'} · ${G.length} ${G.length === 1 ? 'fornecedor' : 'fornecedores'}</div></div>
+      <div class="num ${vence7.some(e => venc(e) < hojeI) ? 'alerta' : ''}"><div class="l">Vence em 7 dias</div><div class="v">${brlC(soma(vence7, 'custo'))}</div><div class="d">${vence7.length ? vence7.length + (vence7.length === 1 ? ' venda' : ' vendas') + (vence7.some(e => venc(e) < hojeI) ? ', com atraso' : '') : 'nada vencendo'}</div></div>
       <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(aReceberCli), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
     </div>
-    <div class="sub">O valor a pagar é o custo de cada venda. Pague venda por venda ou tudo de um fornecedor de uma vez.</div>
+    <div class="sub">O valor a pagar é o custo de cada venda. Toque na data para definir o vencimento: o app avisa 2 dias antes, no dia e enquanto estiver atrasado.</div>
     ${(R => R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Pagos nos últimos 30 dias (${R.length})</summary>${R.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.fornecedor || 'Fornecedor não informado')} · ${esc(e.comprador || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">pago em ${new Date(e.pago_fornecedor_em).toLocaleDateString('pt-BR')}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-desf="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : '')(D.emissoes.filter(e => e.pago_fornecedor && e.pago_fornecedor_em && Date.now() - new Date(e.pago_fornecedor_em) < 30 * 864e5).sort((a, b) => String(b.pago_fornecedor_em).localeCompare(String(a.pago_fornecedor_em))))}
     ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
-      ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
-      ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
+      ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small>${rotVenc(e)}</span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
+      ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button><button type="button" class="pv-todas" data-pvall="${esc(k)}">Definir o vencimento de todas</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
   $('voltar').onclick = () => voltarA('mais');
   const marcar = async (ids, msg) => {
     const agora = new Date().toISOString(), feitos = []; let erro = '';
@@ -5017,6 +5049,17 @@ function telaPagar(P) {
   P.querySelectorAll('[data-pg]').forEach(b => b.onclick = async () => { if (!await pergunta('Marcar o pagamento ao fornecedor como feito?', { sim: 'Marcar como pago' })) return; PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
   P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = async () => { const g = grupos[b.dataset.pgall]; if (!await pergunta(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`, { sim: 'Marcar como pagas' })) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
   P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
+  // vencimento: uma venda ou todas do fornecedor
+  const definirVenc = async (lista, titulo) => {
+    const base = lista.map(e => String(e.data_negociacao).slice(0, 10)).sort()[0] || hojeI, atual = lista.length === 1 ? venc(lista[0]) : '';
+    const v = await folhaVencimento(titulo, base, atual); if (v === null) return;
+    const ids = lista.map(e => e.id), { error } = await sb.from('emissoes').update({ fornecedor_vence_em: v || null }).in('id', ids);
+    if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
+    lista.forEach(e => { e.fornecedor_vence_em = v || null; });
+    aviso(v ? `Vencimento ${dataBR(v)} salvo.` : 'Vencimento tirado.'); telaPagar(P);
+  };
+  P.querySelectorAll('[data-pv]').forEach(b => b.onclick = () => { const e = L.find(x => x.id === b.dataset.pv); if (e) definirVenc([e], `${e.comprador || e.produto || 'Venda'}${e.localizador ? ' · ' + e.localizador : ''}`); });
+  P.querySelectorAll('[data-pvall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pvall]; if (g) definirVenc(g.L, `${g.L.length} vendas de ${g.nome}`); });
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
     b.disabled = true;
     const { error } = await sb.from('emissoes').update({ pago_fornecedor: false, pago_fornecedor_em: null }).eq('id', b.dataset.desf);
