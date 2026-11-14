@@ -5,6 +5,7 @@
 //    com as parcelas. As parcelas aparecem em Compromissos a pagar; o juro (parcelas acima do valor recebido)
 //    entra no DRE como despesa financeira. O valor recebido não é receita e a parte principal não é despesa.
 
+const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const ORIGENS = [['cartao', 'Cartão de crédito'], ['banco', 'Empréstimo bancário'], ['socios', 'Dinheiro dos sócios'], ['outro', 'Outro']];
 const DIA_LANCAR = 5; // dia do mês em que o rendimento do mês anterior já deve estar lançado
 
@@ -225,7 +226,7 @@ function formRend(P, X) {
     ED = null; ANO = el.mes.value.slice(0, 4); recarregar(); tela(P, X);
   };
   if ($('cxExcluir')) $('cxExcluir').onclick = async (ev) => {
-    if (CONF !== 'r' + x.id) { CONF = 'r' + x.id; ev.target.textContent = 'Toque de novo para confirmar'; return; }
+    if (!await pergunta('Excluir este lançamento de rendimento?\n\nNão dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     const r = await sb.from('investimentos_rendimentos').delete().eq('id', x.id);
     if (r.error) { aviso('Não excluiu: ' + r.error.message); return; }
@@ -291,7 +292,7 @@ function formEmp(P, X) {
     VER = novo ? r.data.id : x.id; ED = null; recarregar(); X.aoMudar && X.aoMudar(); tela(P, X);
   };
   if ($('cxExcluir')) $('cxExcluir').onclick = async (ev) => {
-    if (CONF !== 'e' + x.id) { CONF = 'e' + x.id; ev.target.textContent = 'Toque de novo para confirmar (apaga as parcelas pagas)'; return; }
+    if (!await pergunta('Excluir este empréstimo?\n\nAs parcelas pagas também são apagadas. Não dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
     CONF = null;
     const r = await sb.from('emprestimos').delete().eq('id', x.id);
     if (r.error) { aviso('Não excluiu: ' + r.error.message); return; }
@@ -331,7 +332,7 @@ function detalheEmp(P, X) {
     aviso('Parcela marcada como paga.'); X.aoMudar && X.aoMudar(); tela(P, X);
   });
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
-    if (CONF !== b.dataset.desf) { CONF = b.dataset.desf; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Desfazer o pagamento desta parcela?', { sim: 'Desfazer' })) return;
     CONF = null;
     const r = await desfazerParcela(sb, b.dataset.desf);
     if (r.error) { aviso('Não desfez: ' + r.error.message); return; }

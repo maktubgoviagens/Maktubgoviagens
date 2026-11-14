@@ -202,7 +202,7 @@ export async function tela(P, ctx) {
     aviso('Pagamentos de hoje marcados como pagos.'); tela(P, ctx);
   };
   P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
-    if (CONF !== b.dataset.desf) { CONF = b.dataset.desf; b.textContent = 'confirmar'; return; }
+    if (!await pergunta('Desfazer este pagamento?\n\nEle volta para a lista de a pagar.', { sim: 'Desfazer' })) return;
     CONF = null;
     const id = b.dataset.desf;
     const { error } = id.startsWith('emp:') ? await CX.desfazerParcela(sb, id.slice(4)) : await sb.from('pagamentos_feitos').delete().eq('id', id);
