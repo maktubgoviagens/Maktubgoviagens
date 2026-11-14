@@ -1850,7 +1850,7 @@ function marcarNav() {
   document.body.classList.toggle('nav-exato', exato);
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Contas', caixa: 'Investimentos e caixa', pagar: 'Contas', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Contas', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades', arquivados: 'Arquivados' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Contas', caixa: 'Investimentos e caixa', pagar: 'Contas', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Contas', conferir: 'Contas', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades', arquivados: 'Arquivados' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -2112,11 +2112,10 @@ function tela() {
   if (ABA === 'atividades') return ATV.tela(P, { sb, $, esc, aviso, ir, D, ADMIN, GER: GER(), meuId: D.meuId, nomeTime, etapaDe, abrirAtendimento, aba: () => ABA });
   if (ABA === 'cotador') return COT.tela(P, { D, $, esc, sb, aviso, ir, zapLink, aba: () => ABA, cotacaoEnviada, cotSalva, fornecedores: podeAba('fornecedores') ? { lista: FORN.lista } : null, acervoRecarregar: ACV.recarregar, ind: { ...ctxIND(), IND, temCol: temOrigemCol } });
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
-  if (ABA === 'receber') return telaReceber(P);
+  if (ABA === 'receber' || ABA === 'conferir') return telaContasReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
   if (ABA === 'compromissos' || ABA === 'pagar') return telaContasPagar(P);
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
-  if (ABA === 'conferir') return telaConferir(P);
   if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead, nomeTime, cardsDoCliente });
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
   if (ABA === 'opmilhas') return OPM.telaOpMilhas(P, { sb, $, esc, aviso, brl2, brlC, milC, num, pct, campo, ir, D, dia, dataCurta, soma, eu: D.eu, admin: ADMIN, aba: () => ABA });
@@ -5013,7 +5012,7 @@ function folhaVencimento(titulo, base, atual) {
    A pagar junta os fornecedores das vendas e os compromissos (equipe, contas fixas, despesas do DRE e parcelas dos empréstimos),
    em ordem de data. As ações ficam na folha que abre ao tocar na linha. Os endereços #pagar e #compromissos abrem aqui. */
 const segContas = (aba) => `<h1 class="titulo">Contas</h1>
-  <div class="seg" id="ctSeg" style="margin-top:8px">${[['receber', 'A receber'], ['pagar', 'A pagar']].filter(([k]) => podeAba(k) || (k === 'pagar' && podeAba('compromissos'))).map(([k, t]) => `<button type="button" data-t="${k}" class="${k === aba ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+  <div class="seg" id="ctSeg" style="margin-top:8px">${[['receber', 'A receber'], ['pagar', 'A pagar']].filter(([k]) => podeAba(k) || (k === 'pagar' && podeAba('compromissos')) || (k === 'receber' && podeAba('conferir'))).map(([k, t]) => `<button type="button" data-t="${k}" class="${k === aba ? 'on' : ''}">${t}</button>`).join('')}</div>`;
 const errCt = (e) => limparTec((e && e.message) || 'o banco não confirmou. Tente de novo.');
 const ligarSegContas = (P) => P.querySelectorAll('#ctSeg [data-t]').forEach(b => b.onclick = () => { if (b.classList.contains('on')) return; ir(b.dataset.t); });
 // folha genérica: devolve o elemento e a função de fechar
@@ -5035,7 +5034,7 @@ async function pagarFornecedores(ids) {
 }
 async function telaContasPagar(P) {
   const verForn = podeAba('pagar'), verCmp = podeAba('compromissos');
-  if (!$('ctSeg')) P.innerHTML = segContas('pagar') + '<div class="vazio" style="margin-top:12px">Carregando...</div>';
+  if (!$('ctSeg') || $('ctSeg').querySelector('.on')?.dataset.t !== 'pagar') P.innerHTML = segContas('pagar') + '<div class="vazio" style="margin-top:12px">Carregando...</div>';
   const V = verCmp ? await CMP.dadosPagar(ctxCMP()) : null;
   if (!['pagar', 'compromissos'].includes(ABA)) return;
   const hoje = dia(hojeISO()), dd = (d) => Math.round((d - hoje) / 864e5), quandoTxt = (d) => { const n = dd(d); return n < 0 ? `atrasado ${-n} ${-n === 1 ? 'dia' : 'dias'}` : n === 0 ? 'vence hoje' : n === 1 ? 'vence amanhã' : 'vence ' + dataCurta(d); };
@@ -5133,105 +5132,6 @@ function folhaFornecedor(i, depois) {
     g.L.forEach(e => { e.fornecedor_vence_em = v || null; }); aviso(v ? `Vencimento ${dataBR(v)} salvo.` : 'Vencimento tirado.'); depois();
   };
 }
-function telaPagar(P) {
-  // vencimento do fornecedor (97-vencimento-do-fornecedor.sql): só do app, a planilha não mexe nele
-  const venc = (e) => e.fornecedor_vence_em ? String(e.fornecedor_vence_em).slice(0, 10) : '';
-  const ordem = (a, b) => (venc(a) ? 0 : 1) - (venc(b) ? 0 : 1) || venc(a).localeCompare(venc(b)) || String(a.data_negociacao).localeCompare(String(b.data_negociacao));
-  const L = aPagar().sort(ordem), hojeI = hojeISO(), em7 = maisDias(7);
-  const vence7 = L.filter(e => venc(e) && venc(e) <= em7);
-  const grupos = {}; L.forEach(e => { const f = fichaFornecedor(e.fornecedor), k = f ? 'f:' + f.id : 'n:' + nNome(e.fornecedor); (grupos[k] = grupos[k] || { nome: f ? f.nome : (e.fornecedor || 'Fornecedor não informado'), ficha: f, L: [] }).L.push(e); });
-  // fornecedor com o vencimento mais próximo primeiro; sem vencimento, pelo valor
-  const prox = (g) => g.L.map(venc).filter(Boolean).sort()[0] || '9999';
-  const G = Object.entries(grupos).sort((a, b) => prox(a[1]).localeCompare(prox(b[1])) || soma(b[1].L, 'custo') - soma(a[1].L, 'custo'));
-  const rotVenc = (e) => { const v = venc(e); if (!v) return '<button type="button" class="pv-def" data-pv="' + e.id + '">sem vencimento · definir</button>';
-    const d = Math.round((dia(v) - dia(hojeI)) / 864e5), cls = d < 0 ? 'alerta' : d <= 2 ? 'perto' : '';
-    return `<button type="button" class="pv-def ${cls}" data-pv="${e.id}">${d < 0 ? 'atrasado desde ' + dataBR(v) : d === 0 ? 'vence hoje' : 'vence ' + dataBR(v)}</button>`; };
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Mais</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>fornecedores</em></h1>
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">A pagar</div><div class="v">${brlC(soma(L, 'custo'))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'} · ${G.length} ${G.length === 1 ? 'fornecedor' : 'fornecedores'}</div></div>
-      <div class="num ${vence7.some(e => venc(e) < hojeI) ? 'alerta' : ''}"><div class="l">Vence em 7 dias</div><div class="v">${brlC(soma(vence7, 'custo'))}</div><div class="d">${vence7.length ? vence7.length + (vence7.length === 1 ? ' venda' : ' vendas') + (vence7.some(e => venc(e) < hojeI) ? ', com atraso' : '') : 'nada vencendo'}</div></div>
-      <div class="num"><div class="l">A receber</div><div class="v">${brlC(soma(D.emissoes.filter(aReceberCli), 'valor_receber'))}</div><div class="d">dos clientes</div></div>
-    </div>
-    <div class="sub">O valor a pagar é o custo de cada venda. Toque na data para definir o vencimento: o app avisa 2 dias antes, no dia e enquanto estiver atrasado.</div>
-    ${(R => R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Pagos nos últimos 30 dias (${R.length})</summary>${R.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.fornecedor || 'Fornecedor não informado')} · ${esc(e.comprador || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">pago em ${new Date(e.pago_fornecedor_em).toLocaleDateString('pt-BR')}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-desf="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : '')(D.emissoes.filter(e => e.pago_fornecedor && e.pago_fornecedor_em && Date.now() - new Date(e.pago_fornecedor_em) < 30 * 864e5).sort((a, b) => String(b.pago_fornecedor_em).localeCompare(String(a.pago_fornecedor_em))))}
-    ${G.length ? G.map(([k, g]) => `<section class="bloco"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0">${g.ficha ? `<button type="button" data-fch="${g.ficha.id}" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer">${esc(g.nome)} ›</button>` : esc(g.nome)}</h2><b style="color:var(--verde)">${brl2(soma(g.L, 'custo'))}</b></div>
-      ${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">${dataCurta(dia(e.data_negociacao))}${e.origem && e.destino ? ' · ' + esc(e.origem) + ' → ' + esc(e.destino) : ''} · cliente ${e.pago ? 'já pagou' : 'ainda não pagou'}</small>${rotVenc(e)}</span><span style="white-space:nowrap">${brl2(e.custo)} <button class="sec" data-pg="${e.id}" style="padding:6px 10px;min-width:0;font-size:11px">Pago</button></span></div>`).join('')}
-      ${g.L.length > 1 ? `<button class="zap" type="button" data-pgall="${esc(k)}" style="width:100%;margin-top:10px">Pagar tudo de ${esc(g.nome)}: ${brl2(soma(g.L, 'custo'))}</button><button type="button" class="pv-todas" data-pvall="${esc(k)}">Definir o vencimento de todas</button>` : ''}</section>`).join('') : '<div class="vazio">Nada a pagar a fornecedores.</div>'}`;
-  $('voltar').onclick = () => voltarA('mais');
-  const marcar = async (ids, msg) => {
-    const agora = new Date().toISOString(), feitos = []; let erro = '';
-    for (let i = 0; i < ids.length; i += 100) {
-      const lote = ids.slice(i, i + 100);
-      const { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: agora }).in('id', lote);
-      if (error) { erro = error.message + (/pago_fornecedor/.test(error.message) ? ' (rode o 1-fornecedores-pagar.sql)' : ''); break; }
-      feitos.push(...lote);
-    }
-    D.emissoes.forEach(e => { if (feitos.includes(e.id)) { e.pago_fornecedor = true; e.pago_fornecedor_em = agora; } });
-    // com erro, a tela é redesenhada (o botão volta a funcionar) e o aviso fica até a pessoa fechar
-    if (erro) { telaPagar(P); alert((feitos.length ? `Marcou ${feitos.length} de ${ids.length}. ` : '') + limparTec('Não salvou: ' + erro)); return; }
-    aviso(msg); telaPagar(P);
-  };
-  P.querySelectorAll('[data-pg]').forEach(b => b.onclick = async () => { if (!await pergunta('Marcar o pagamento ao fornecedor como feito?', { sim: 'Marcar como pago' })) return; PG_CONF = null; b.disabled = true; marcar([b.dataset.pg], 'Pagamento ao fornecedor marcado.'); });
-  P.querySelectorAll('[data-pgall]').forEach(b => b.onclick = async () => { const g = grupos[b.dataset.pgall]; if (!await pergunta(`Marcar ${g.L.length} vendas de ${g.nome} como pagas (${brl2(soma(g.L, 'custo'))})?`, { sim: 'Marcar como pagas' })) return; b.disabled = true; marcar(g.L.map(e => e.id), `Pago a ${g.nome}.`); });
-  P.querySelectorAll('[data-fch]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fch)));
-  // vencimento: uma venda ou todas do fornecedor
-  const definirVenc = async (lista, titulo) => {
-    const base = lista.map(e => String(e.data_negociacao).slice(0, 10)).sort()[0] || hojeI, atual = lista.length === 1 ? venc(lista[0]) : '';
-    const v = await folhaVencimento(titulo, base, atual); if (v === null) return;
-    const ids = lista.map(e => e.id), { error } = await sb.from('emissoes').update({ fornecedor_vence_em: v || null }).in('id', ids);
-    if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
-    lista.forEach(e => { e.fornecedor_vence_em = v || null; });
-    aviso(v ? `Vencimento ${dataBR(v)} salvo.` : 'Vencimento tirado.'); telaPagar(P);
-  };
-  P.querySelectorAll('[data-pv]').forEach(b => b.onclick = () => { const e = L.find(x => x.id === b.dataset.pv); if (e) definirVenc([e], `${e.comprador || e.produto || 'Venda'}${e.localizador ? ' · ' + e.localizador : ''}`); });
-  P.querySelectorAll('[data-pvall]').forEach(b => b.onclick = () => { const g = grupos[b.dataset.pvall]; if (g) definirVenc(g.L, `${g.L.length} vendas de ${g.nome}`); });
-  P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
-    b.disabled = true;
-    const { error } = await sb.from('emissoes').update({ pago_fornecedor: false, pago_fornecedor_em: null }).eq('id', b.dataset.desf);
-    if (error) { b.disabled = false; aviso('Não desfez: ' + error.message); return; }
-    const e = D.emissoes.find(x => x.id === b.dataset.desf); if (e) { e.pago_fornecedor = false; e.pago_fornecedor_em = null; }
-    aviso('Voltou para a lista de a pagar.'); telaPagar(P);
-  });
-}
-// comprovantes anexados no fechamento que o financeiro ainda não conferiu (só administradores).
-// A venda com comprovante sai da coluna "Fechou · em emissão" do Comercial, por isso a lista vive aqui.
-let CF_CONF = null;
-function telaConferir(P) {
-  const qd = (r) => (r.fech || {}).enviado_em || r.data || '';
-  const val = (r) => +r.valor_fechado || (r.itens || []).reduce((t, x) => t + (+x.venda || 0), 0);
-  const forma = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix_cartao' ? `Pix + Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
-  const L = compParaConferir().sort((a, b) => String(qd(a)).localeCompare(String(qd(b))));
-  const R = D.reunioes.filter(r => r.fech && r.fech.comprovante && r.fech.conferido && r.fech.conferido_em && Date.now() - new Date(r.fech.conferido_em) < 30 * 864e5).sort((a, b) => String(b.fech.conferido_em).localeCompare(String(a.fech.conferido_em)));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Voltar</button><h1 class="titulo" style="margin-top:6px">Comprovantes para <em>conferir</em></h1>
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Para conferir</div><div class="v">${brlC(L.reduce((t, r) => t + val(r), 0))}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
-    </div>
-    <div class="sub">Abra o comprovante, confira com o extrato e toque em "Conferido". Toque no nome para abrir o card da venda.</div>
-    ${R.length ? `<details class="bloco" style="margin-top:12px"><summary style="cursor:pointer;color:var(--verde)">Conferidos nos últimos 30 dias (${R.length})</summary>${R.map(r => `<div class="lin" style="align-items:center"><span>${VENDA.numCard(r) ? VENDA.numCard(r) + ' · ' : ''}${esc(r.cliente)}<small style="display:block;color:var(--tinta-3)">conferido em ${new Date(r.fech.conferido_em).toLocaleDateString('pt-BR')}${r.fech.conferido_por && nomeTime(r.fech.conferido_por) ? ' por ' + esc(nomeTime(r.fech.conferido_por)) : ''}</small></span><span style="white-space:nowrap">${brl2(val(r))} <button class="sec" data-cfdesf="${r.id}" style="padding:6px 10px;min-width:0;font-size:11px">Desfazer</button></span></div>`).join('')}</details>` : ''}
-    <div class="lista">${L.length ? L.map(r => { const F = r.fech || {}; return `<div class="card">
-      <div class="cab"><div><button class="nome" data-cfab="${r.id}" style="background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer">${VENDA.numCard(r) ? `<small style="color:var(--dourado);font-weight:600">${VENDA.numCard(r)}</small> ` : ''}${esc(r.cliente)} ›</button>${forma(F) ? `<span class="tag ouro">${esc(forma(F))}</span>` : ''}</div><span class="quando">${qd(r) ? dataCurta(new Date(qd(r))) : ''}</span></div>
-      <div class="info"><div><span>Valor:</span> ${brl2(val(r))}${F.forma === 'cartao' && +F.bruto ? ' · cliente pagou ' + brl2(F.bruto) + ' no cartão' : ''}${F.forma === 'pix_cartao' ? ' · ' + brl2(F.pix_valor) + ' no Pix + ' + brl2(F.cartao_liq) + ' do cartão (cliente pagou ' + brl2(F.bruto) + ')' : ''}</div>
-        ${r.trecho ? `<div>${esc(r.trecho)}</div>` : ''}
-        ${nomeTime(r.responsavel_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(r.responsavel_id))}</div>` : ''}</div>
-      <div class="botoes4" style="margin-top:10px"><button class="sec" data-cfver="${esc(F.comprovante)}">Ver comprovante</button><button class="zap" data-cfok="${r.id}">Conferido</button></div>
-    </div>`; }).join('') : '<div class="vazio">Nenhum comprovante para conferir.</div>'}</div>`;
-  $('voltar').onclick = () => voltarA(ANTERIOR || 'inicio'); // volta para onde a pessoa estava (Início ou Empresa)
-  const salvar = async (id, ok) => {
-    const r = D.reunioes.find(x => x.id === id); if (!r) return false;
-    const fech = Object.assign({}, r.fech, ok ? { conferido: true, conferido_por: D.meuId, conferido_em: new Date().toISOString() } : { conferido: false, conferido_por: null, conferido_em: null });
-    const { error } = await sb.from('atendimentos').update({ fech }).eq('id', id);
-    if (error) { aviso('Não salvou: ' + error.message); return false; }
-    r.fech = fech; return true;
-  };
-  P.querySelectorAll('[data-cfver]').forEach(b => b.onclick = () => VENDA.verArquivo(ctxVenda(), b.dataset.cfver));
-  P.querySelectorAll('[data-cfab]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.cfab));
-  P.querySelectorAll('[data-cfok]').forEach(b => b.onclick = async () => {
-    if (!await pergunta('Marcar este comprovante como conferido?', { sim: 'Conferido' })) return;
-    CF_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
-    if (await salvar(b.dataset.cfok, true)) { aviso('Comprovante conferido.'); telaConferir(P); } else { b.disabled = false; b.textContent = 'Conferido'; }
-  });
-  P.querySelectorAll('[data-cfdesf]').forEach(b => b.onclick = async () => { b.disabled = true; if (await salvar(b.dataset.cfdesf, false)) { aviso('Voltou para a lista de conferir.'); telaConferir(P); } else b.disabled = false; });
-}
 /* recebimentos do cliente (96-recebimentos-do-cliente.sql): pagamento parcial com valor, data e forma.
    Quando a soma chega ao valor da venda, a venda fica paga (e a planilha recebe o "Pago" como sempre). Os parciais ficam só no app. */
 let RECEB = {}; // emissao_id -> recebimentos ativos
@@ -5269,80 +5169,130 @@ function folhaReceb(e, parcial) {
 // grava o recebimento e, se quitou, marca a venda como paga
 async function registrarReceb(e, v) {
   const ins = await sb.from('recebimentos_cliente').insert({ emissao_id: e.id, valor: v.valor, recebido_em: v.data, forma: v.forma }).select().single();
-  if (ins.error) { aviso('Não salvou: ' + limparTec(ins.error.message)); return false; }
+  if (ins.error) { aviso('Não salvou: ' + errCt(ins.error)); return false; }
   (RECEB[e.id] = RECEB[e.id] || []).push(ins.data);
   if (faltaDe(e) <= 0.009) {
     const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', e.id);
-    if (error) { aviso('O recebimento foi salvo, mas a venda não ficou paga: ' + limparTec(error.message)); return true; }
+    if (error) { aviso('O recebimento foi salvo, mas a venda não ficou paga: ' + errCt(error)); return true; }
     e.pago = true; aviso('Venda quitada. O "Pago" vai para a planilha em até 5 minutos.');
   } else aviso(`Recebimento salvo. Falta ${brl2(faltaDe(e))}.`);
   return true;
 }
-function telaReceber(P) {
-  const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
-  P.innerHTML = `${segContas('receber')}
-    <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(L.reduce((t, e) => t + faltaDe(e), 0))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>
-    </div>
-    <div class="sub">Registre cada valor com a data em que entrou. Quando a venda fica quitada, o "Pago" vai para a planilha em até 5 minutos.</div>
-    <div class="lista">${L.length ? L.map(e => `<div class="card" data-rc="${e.id}">
-      <div class="cab"><div><div class="nome">${esc(e.comprador || e.produto || e.servico)}</div><span class="tag ${ehMilhas(e.servico) ? '' : 'ouro'}">${esc(e.servico)}</span></div><span class="quando">${dataCurta(dia(e.data_negociacao))}</span></div>
-      <div class="info"><div><span>Valor:</span> ${brl2(e.valor_receber)}${e.forma_pagamento ? ' · ' + esc(e.forma_pagamento) : ''}</div>
-        ${e.origem || e.destino ? `<div>${esc(e.origem || '?')} → ${esc(e.destino || '?')}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}</div>` : ''}
-        ${nomeTime(e.vendedor_id) ? `<div><span>Vendedor:</span> ${esc(nomeTime(e.vendedor_id))}</div>` : ''}</div>
-      ${recebidoDe(e) ? `<div class="info"><div><span>Recebido:</span> ${brl2(recebidoDe(e))} de ${brl2(e.valor_receber)} · <b>faltam ${brl2(faltaDe(e))}</b></div></div>` : ''}
-      ${(RECEB[e.id] || []).length ? `<div class="rc-lin">${RECEB[e.id].map(x => `<div class="lin"><span>${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}</span><button class="mini" data-rcarq="${x.id}" data-em="${e.id}">arquivar</button></div>`).join('')}</div>` : ''}
-      <div class="rc-bt"><button class="zap" data-ok="${e.id}">Recebido o restante</button><button class="sec" data-parc="${e.id}">+ Recebimento parcial</button></div>
-    </div>`).join('') : '<div class="vazio">Nenhum pagamento em aberto.</div>'}</div><div id="rbBloco"></div>`;
-  // os recebimentos parciais chegam por trás e a tela atualiza uma vez
+/* Contas · A receber: vendas com valor a receber do cliente (com recebimento parcial), reembolsos das taxas da Gestão
+   e comprovantes que os clientes enviaram, para conferir. As ações ficam na folha que abre ao tocar na linha.
+   Os endereços #receber e #conferir abrem aqui. */
+const valCard = (r) => +r.valor_fechado || (r.itens || []).reduce((t, x) => t + (+x.venda || 0), 0);
+const formaCard = (F) => F.forma === 'cartao' ? `Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix_cartao' ? `Pix + Cartão${F.parcelas ? ' em ' + F.parcelas + 'x' : ''}` : F.forma === 'pix' ? 'Pix' : '';
+let RB_LISTA = null; // reembolsos de taxas ainda não recebidos (null = não carregou)
+async function carregarReembolsos() {
+  const { data, error } = await sb.from('reembolsos_taxas_gestao').select('*').is('cancelado_em', null).eq('recebido', false).order('pago_em').limit(500);
+  RB_LISTA = error ? null : (data || []);
+}
+async function salvarConferido(id, ok) {
+  const r = D.reunioes.find(x => x.id === id); if (!r) return false;
+  const fech = Object.assign({}, r.fech, ok ? { conferido: true, conferido_por: D.meuId, conferido_em: new Date().toISOString() } : { conferido: false, conferido_por: null, conferido_em: null });
+  const { error } = await sb.from('atendimentos').update({ fech }).eq('id', id);
+  if (error) { aviso('Não salvou: ' + errCt(error)); return false; }
+  r.fech = fech; return true;
+}
+async function telaContasReceber(P) {
+  const verVendas = podeAba('receber'), verConf = podeAba('conferir');
+  const L = verVendas ? D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao))) : [];
+  if (!$('ctSeg') || $('ctSeg').querySelector('.on')?.dataset.t !== 'receber') P.innerHTML = segContas('receber') + '<div class="vazio" style="margin-top:12px">Carregando...</div>';
   const semRec = L.filter(e => !RECEB[e.id]).map(e => e.id);
-  if (semRec.length) carregarReceb(semRec).then(() => { if (ABA === 'receber' && $('rbBloco')) telaReceber(P); });
-  blocoReembolsos();
+  await Promise.all([carregarReceb(semRec), verVendas ? carregarReembolsos() : null]);
+  if (!['receber', 'conferir'].includes(ABA)) return;
+  const RB = verVendas ? (RB_LISTA || []) : [];
+  const qd = (r) => (r.fech || {}).enviado_em || r.data || '';
+  const C = verConf ? compParaConferir().sort((a, b) => String(qd(a)).localeCompare(String(qd(b)))) : [];
+  const CR = verConf ? D.reunioes.filter(r => r.fech && r.fech.comprovante && r.fech.conferido && r.fech.conferido_em && Date.now() - new Date(r.fech.conferido_em) < 30 * 864e5).sort((a, b) => String(b.fech.conferido_em).localeCompare(String(a.fech.conferido_em))) : [];
+  const nomeRb = (r) => ((D.reunioes || []).find(x => String(x.id) === String(r.atendimento_id)) || {}).cliente || 'Cliente da Gestão';
+  const totV = r2(L.reduce((t, e) => t + faltaDe(e), 0)), totR = r2(RB.reduce((t, r) => t + (+r.valor || 0), 0));
+  const hoje = dia(hojeISO()), dias = (iso) => Math.max(0, Math.round((hoje - dia(String(iso).slice(0, 10))) / 864e5)), haDias = (n) => n === 0 ? 'hoje' : n === 1 ? 'há 1 dia' : `há ${n} dias`;
+  const linha = (k, id, tit, sub, valor, dir, alerta) => `<button type="button" class="ac-pes ct-l" data-${k}="${esc(id)}"><span><b>${esc(tit)}</b><small>${esc(sub)}</small></span><span class="ct-v"><b class="cb-valor">${brl2(valor)}</b><small class="${alerta ? 'alerta' : ''}">${esc(dir)}</small></span></button>`;
+  const partes = [verVendas ? `Vendas ${brl2(totV)}` : '', totR ? `Reembolsos da Gestão ${brl2(totR)}` : ''].filter(Boolean);
+  P.innerHTML = `${segContas('receber')}
+    ${verVendas ? `<div class="ini-card" style="margin-top:12px"><span class="ini-rot">A receber <button type="button" class="ac-i" id="ctAjuda" aria-label="O que entra aqui">?</button></span><b class="ini-num"><span class="cb-valor">${brl2(r2(totV + totR))}</span></b>
+      <span class="ini-txt">${partes.map(t => `<span style="white-space:nowrap">${t}</span>`).join(' · ')}</span></div>
+    <div class="sub" id="ctAjudaT" hidden>Aqui entram as vendas com valor a receber do cliente e os reembolsos das taxas que a Maktub pagou em emissões feitas com as milhas do cliente da Gestão. Registre cada valor com a data em que entrou: quando a venda fica quitada, o "Pago" vai para a planilha em até 5 minutos. O reembolso de taxas é movimento neutro: fica fora de vendas, metas, comissão e DRE, e não vai para a planilha.${verConf ? ' Os comprovantes que os clientes enviam aparecem em "Comprovantes para conferir": abra, confira com o extrato e marque como conferido.' : ''}</div>` : ''}
+    ${verVendas && RB_LISTA === null ? '<div class="config" style="margin-top:10px">Os reembolsos de taxas não carregaram agora. As vendas aparecem abaixo.</div>' : ''}
+    ${C.length ? `<div class="secao">Comprovantes para conferir</div><div class="ac-lista">${C.map(r => linha('cf', r.id, (VENDA.numCard(r) ? VENDA.numCard(r) + ' · ' : '') + r.cliente, [formaCard(r.fech || {}), nomeTime(r.responsavel_id)].filter(Boolean).join(' · ') || 'Comprovante enviado', valCard(r), qd(r) ? 'enviado ' + haDias(dias(qd(r))) : '', qd(r) && dias(qd(r)) > 3)).join('')}</div>` : ''}
+    ${verVendas ? `<div class="secao">Vendas</div>${L.length ? `<div class="ac-lista">${L.map(e => linha('rv', e.id, e.comprador || e.produto || e.servico, [e.servico, nomeTime(e.vendedor_id)].filter(Boolean).join(' · '), faltaDe(e), recebidoDe(e) ? `já recebeu ${brl2(recebidoDe(e))}` : 'venda ' + dataCurta(dia(e.data_negociacao)), false)).join('')}</div>` : '<div class="vazio">Nenhuma venda com valor a receber.</div>'}` : ''}
+    ${RB.length ? `<div class="secao">Reembolso de taxas · Gestão</div><div class="ac-lista">${RB.map(r => linha('rb', r.id, nomeRb(r), r.descricao || 'Taxas da emissão com milhas do cliente', +r.valor || 0, 'pago em ' + dataCurta(dia(r.pago_em)), false)).join('')}</div>` : ''}
+    ${!verVendas && !C.length ? '<div class="vazio" style="margin-top:12px">Nenhum comprovante para conferir.</div>' : ''}
+    ${CR.length ? `<details class="gsec" style="margin-top:14px"><summary><span>Conferidos nos últimos 30 dias<small>${CR.length} ${CR.length === 1 ? 'comprovante' : 'comprovantes'} · ${brl2(CR.reduce((t, r) => t + valCard(r), 0))}</small></span></summary>
+      ${CR.map(r => `<div class="lin" style="align-items:center"><span>${VENDA.numCard(r) ? VENDA.numCard(r) + ' · ' : ''}${esc(r.cliente)}<small style="display:block;color:var(--tinta-3)">conferido em ${dataBR(String(r.fech.conferido_em).slice(0, 10))}${r.fech.conferido_por && nomeTime(r.fech.conferido_por) ? ' por ' + esc(nomeTime(r.fech.conferido_por)) : ''}</small></span><span style="white-space:nowrap">${brl2(valCard(r))} <button class="mini" data-cfdesf="${r.id}">desfazer</button></span></div>`).join('')}</details>` : ''}`;
   ligarSegContas(P);
-  P.querySelectorAll('[data-ok], [data-parc]').forEach(b => b.onclick = async () => {
-    const id = b.dataset.ok || b.dataset.parc, e = D.emissoes.find(x => x.id === id); if (!e) return;
-    if (!RECEB[e.id]) await carregarReceb([e.id]);
-    const v = await folhaReceb(e, !!b.dataset.parc); if (!v) return;
-    b.disabled = true; if (await registrarReceb(e, v)) telaReceber(P); else b.disabled = false;
-  });
-  // recebimento lançado errado: arquiva (nada se apaga) e a venda volta a ter saldo a receber
-  P.querySelectorAll('[data-rcarq]').forEach(b => b.onclick = async () => {
-    const e = D.emissoes.find(x => x.id === b.dataset.em), x = e && (RECEB[e.id] || []).find(y => String(y.id) === b.dataset.rcarq); if (!x) return;
-    if (!await confirmarFolha('Arquivar este recebimento?', [`${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}.`, `A venda volta a ter ${brl2(r2(faltaDe(e) + (+x.valor || 0)))} a receber.`], 'Arquivar')) return;
-    const { error } = await sb.from('recebimentos_cliente').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', x.id);
-    if (error) { aviso('Não arquivou: ' + limparTec(error.message)); return; }
-    RECEB[e.id] = RECEB[e.id].filter(y => y !== x); aviso('Recebimento arquivado.'); telaReceber(P);
+  if ($('ctAjuda')) $('ctAjuda').onclick = () => { $('ctAjudaT').hidden = !$('ctAjudaT').hidden; };
+  const de = () => telaContasReceber(P);
+  P.querySelectorAll('[data-rv]').forEach(b => b.onclick = () => { const e = D.emissoes.find(x => x.id === b.dataset.rv); if (e) folhaVendaReceber(e, de); });
+  P.querySelectorAll('[data-rb]').forEach(b => b.onclick = () => { const r = RB.find(x => String(x.id) === b.dataset.rb); if (r) folhaReembolso(r, nomeRb(r), de); });
+  P.querySelectorAll('[data-cf]').forEach(b => b.onclick = () => { const r = D.reunioes.find(x => String(x.id) === b.dataset.cf); if (r) folhaComprovante(r, de); });
+  P.querySelectorAll('[data-cfdesf]').forEach(b => b.onclick = async () => {
+    if (!await pergunta('Desfazer a conferência?\n\nO comprovante volta para a lista de conferir.', { sim: 'Desfazer' })) return;
+    b.disabled = true; if (await salvarConferido(b.dataset.cfdesf, false)) { aviso('Voltou para a lista de conferir.'); de(); } else b.disabled = false;
   });
 }
-
-// reembolso das taxas que a Maktub pagou numa emissão com as milhas do cliente da Gestão: movimento neutro,
-// separado das vendas (fora de vendas, metas, comissão, DRE e planilha)
-let RB_CONF = null;
-async function blocoReembolsos() {
-  if (!$('rbBloco')) return;
-  const { data, error } = await sb.from('reembolsos_taxas_gestao').select('*').is('cancelado_em', null).eq('recebido', false).order('pago_em').limit(500);
-  const el = $('rbBloco'); if (!el) return;
-  if (error || !data || !data.length) { el.innerHTML = ''; return; }
-  const nome = (r) => ((D.reunioes || []).find(x => String(x.id) === String(r.atendimento_id)) || {}).cliente || 'Cliente da Gestão';
-  const tot = data.reduce((t, r) => t + (+r.valor || 0), 0);
-  el.innerHTML = `<div class="secao">Reembolso de taxas · Gestão</div>
-    <div class="numeros" style="margin-top:0"><div class="num"><div class="l">Reembolsos a receber</div><div class="v">${brlC(tot)}</div><div class="d">${data.length} ${data.length === 1 ? 'emissão' : 'emissões'} com milhas do cliente</div></div></div>
-    <div class="sub">Taxas que a Maktub pagou em emissões feitas com as milhas do cliente da Gestão. Movimento neutro: fora de vendas, metas, comissão e DRE, e não vai para a planilha.</div>
-    <div class="lista">${data.map(r => `<div class="card">
-      <div class="cab"><div><div class="nome">${esc(nome(r))}</div><span class="tag">Milhas do cliente</span></div><span class="quando">pago em ${dataCurta(dia(r.pago_em))}</span></div>
-      <div class="info"><div><span>Valor:</span> ${brl2(r.valor)}</div>${r.descricao ? `<div>${esc(r.descricao)}</div>` : ''}${r.atendimento_id ? `<div><a href="#reunioes/${esc(r.atendimento_id)}">Abrir o card</a></div>` : ''}</div>
-      <button class="zap grande" data-rbok="${esc(r.id)}" style="margin-top:10px;width:100%">Reembolso recebido</button>
-    </div>`).join('')}</div>`;
-  el.querySelectorAll('[data-rbok]').forEach(b => b.onclick = async () => {
-    const id = b.dataset.rbok;
-    if (!await pergunta('Marcar o reembolso das taxas como recebido?', { sim: 'Recebido' })) return;
-    RB_CONF = null; b.disabled = true; b.textContent = 'Salvando...';
-    const agora = new Date().toISOString();
-    const { error: e } = await sb.from('reembolsos_taxas_gestao').update({ recebido: true, recebido_em: agora, recebido_por: D.meuId, updated_at: agora }).eq('id', id);
-    if (e) { b.disabled = false; b.textContent = 'Reembolso recebido'; aviso('Não salvou: ' + e.message); return; }
-    if (typeof CX.recarregar === 'function') CX.recarregar();
-    aviso('Reembolso marcado como recebido. Não vai para a planilha.'); blocoReembolsos();
+// folha da venda: o que falta, os recebimentos já lançados e as ações (restante, parcial, arquivar um recebimento)
+function folhaVendaReceber(e, depois) {
+  const R = RECEB[e.id] || [], trecho = e.origem || e.destino ? `${e.origem || '?'} → ${e.destino || '?'}${e.data_ida ? ' · ida ' + dataCurta(dia(e.data_ida)) : ''}` : '';
+  const { el, fechar } = abrirFolhaCt(`<div class="ac-ftit">${esc(e.comprador || e.produto || e.servico)}</div>
+    <p class="ac-fl">${esc(e.servico || '')}${trecho ? ' · ' + esc(trecho) : ''}</p>
+    <p class="ac-fl">Valor da venda ${brl2(e.valor_receber)}${e.forma_pagamento ? ' · ' + esc(e.forma_pagamento) : ''}<br>Venda em ${dataBR(String(e.data_negociacao).slice(0, 10))}${nomeTime(e.vendedor_id) ? ' · ' + esc(nomeTime(e.vendedor_id)) : ''}</p>
+    ${R.length ? `<div class="secao" style="margin-top:10px">Já recebido: ${brl2(recebidoDe(e))}</div>${R.map(x => `<div class="lin" style="align-items:center"><span>${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}</span><button class="mini" data-rcarq="${x.id}">arquivar</button></div>`).join('')}` : ''}
+    <p class="ac-fl" style="margin-top:10px">Falta receber <b>${brl2(faltaDe(e))}</b></p>
+    <button type="button" class="ac-prim" data-a="tudo">Recebido o restante: ${brl2(faltaDe(e))}</button>
+    <button type="button" class="ac-sec" data-a="parc">Recebimento parcial</button><button type="button" class="ac-sec" data-x>Voltar</button>`);
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = fechar);
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    fechar(); const v = await folhaReceb(e, b.dataset.a === 'parc'); if (!v) return;
+    await registrarReceb(e, v); depois();
   });
+  // recebimento lançado errado: arquiva (nada se apaga) e a venda volta a ter saldo a receber
+  el.querySelectorAll('[data-rcarq]').forEach(b => b.onclick = async () => {
+    const x = R.find(y => String(y.id) === b.dataset.rcarq); if (!x) return;
+    fechar();
+    if (!await confirmarFolha('Arquivar este recebimento?', [`${dataBR(x.recebido_em)} · ${brl2(x.valor)}${x.forma ? ' · ' + esc(x.forma) : ''}.`, `A venda volta a ter ${brl2(r2(faltaDe(e) + (+x.valor || 0)))} a receber.`], 'Arquivar')) return;
+    const { error } = await sb.from('recebimentos_cliente').update({ arquivado_em: new Date().toISOString(), arquivado_por: D.meuId }).eq('id', x.id);
+    if (error) { aviso('Não arquivou: ' + errCt(error)); return; }
+    RECEB[e.id] = (RECEB[e.id] || []).filter(y => y !== x); aviso('Recebimento arquivado.'); depois();
+  });
+}
+// folha do reembolso de taxas da Gestão
+function folhaReembolso(r, nome, depois) {
+  const { el, fechar } = abrirFolhaCt(`<div class="ac-ftit">${esc(nome)}</div>
+    <p class="ac-fl">Reembolso de taxas · <b>${brl2(r.valor)}</b></p>
+    <p class="ac-fl">${r.descricao ? esc(r.descricao) + '<br>' : ''}A Maktub pagou em ${dataBR(String(r.pago_em).slice(0, 10))}, numa emissão feita com as milhas do cliente da Gestão.</p>
+    <p class="ac-fl" style="font-size:14px">Movimento neutro: fica fora de vendas, metas, comissão e DRE, e não vai para a planilha.</p>
+    <button type="button" class="ac-prim" id="rbOk">Reembolso recebido</button>
+    ${r.atendimento_id ? '<button type="button" class="ac-sec" id="rbCard">Abrir o card</button>' : ''}<button type="button" class="ac-sec" data-x>Voltar</button>`);
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = fechar);
+  const cb = el.querySelector('#rbCard'); if (cb) cb.onclick = () => { fechar(); location.hash = '#reunioes/' + r.atendimento_id; };
+  el.querySelector('#rbOk').onclick = async (ev) => {
+    const b = ev.currentTarget; b.disabled = true; const agora = new Date().toISOString();
+    const { error } = await sb.from('reembolsos_taxas_gestao').update({ recebido: true, recebido_em: agora, recebido_por: D.meuId, updated_at: agora }).eq('id', r.id);
+    if (error) { b.disabled = false; aviso('Não salvou: ' + errCt(error)); return; }
+    if (typeof CX.recarregar === 'function') CX.recarregar();
+    fechar(); aviso('Reembolso marcado como recebido. Não vai para a planilha.'); depois();
+  };
+}
+// folha do comprovante: valor, forma, ver o arquivo, abrir o card e marcar como conferido
+function folhaComprovante(r, depois) {
+  const F = r.fech || {}, qd = F.enviado_em || r.data || '';
+  const { el, fechar } = abrirFolhaCt(`<div class="ac-ftit">${VENDA.numCard(r) ? esc(VENDA.numCard(r)) + ' · ' : ''}${esc(r.cliente)}</div>
+    <p class="ac-fl"><b>${brl2(valCard(r))}</b>${formaCard(F) ? ' · ' + esc(formaCard(F)) : ''}${F.forma === 'cartao' && +F.bruto ? '<br>Cliente pagou ' + brl2(F.bruto) + ' no cartão' : ''}${F.forma === 'pix_cartao' ? '<br>' + brl2(F.pix_valor) + ' no Pix + ' + brl2(F.cartao_liq) + ' do cartão (cliente pagou ' + brl2(F.bruto) + ')' : ''}</p>
+    <p class="ac-fl">${r.trecho ? esc(r.trecho) + '<br>' : ''}${nomeTime(r.responsavel_id) ? 'Vendedor: ' + esc(nomeTime(r.responsavel_id)) + '<br>' : ''}${qd ? 'Enviado em ' + dataBR(String(qd).slice(0, 10)) : ''}</p>
+    <p class="ac-fl" style="font-size:14px">Abra o comprovante, confira com o extrato e marque como conferido.</p>
+    <button type="button" class="ac-sec" id="cfVer">Ver comprovante</button>
+    <button type="button" class="ac-prim" id="cfOk">Conferido</button>
+    <button type="button" class="ac-sec" id="cfCard">Abrir o card</button><button type="button" class="ac-sec" data-x>Voltar</button>`);
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = fechar);
+  el.querySelector('#cfVer').onclick = () => VENDA.verArquivo(ctxVenda(), F.comprovante);
+  el.querySelector('#cfCard').onclick = () => { fechar(); abrirAtendimento(r.id); };
+  el.querySelector('#cfOk').onclick = async (ev) => {
+    const b = ev.currentTarget; b.disabled = true;
+    if (await salvarConferido(r.id, true)) { fechar(); aviso('Comprovante conferido. Para desfazer, abra "Conferidos nos últimos 30 dias".'); depois(); } else b.disabled = false;
+  };
 }
 
 /* ---------- mais (administradores) ---------- */
@@ -5356,7 +5306,7 @@ const MAIS_GRUPOS = () => [
   ['Marketing', [['marketing', 'Marketing: posts, aprovação e estratégia']]]
 ];
 // não consulta a barra (a barra consulta o Mais): o índice mostra tudo o que a pessoa pode abrir
-const itemMaisOk = ([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
+const itemMaisOk = ([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(k === 'conferir' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
 function itensMais() { return MAIS_GRUPOS().flatMap(([, L]) => L).filter(itemMaisOk); }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
 /* Mais: busca, o que pede atenção e as áreas fechadas. Cada área abre a própria lista. */
@@ -5513,7 +5463,7 @@ function itensEmpresa() {
     ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Contas a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['pagar', 'Contas: o que entra e o que sai'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN || GER() ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
-  ].filter(([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
+  ].filter(([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(k === 'conferir' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
   const verNum = ADMIN; // painel da empresa (lucro, faturamento): só a administração
