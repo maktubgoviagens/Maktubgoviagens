@@ -1075,6 +1075,8 @@ body.cb-leitura #montarCot{margin-top:8px}
 .pv-def{display:block;background:none;border:0;padding:4px 0 0;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 .pv-def.perto{color:var(--dourado)}.pv-def.alerta{color:var(--alerta);font-weight:500}
 .pv-todas{display:block;width:100%;background:none;border:0;margin-top:8px;padding:8px 0;font:inherit;font-size:16px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.ct-l{align-items:center}.ct-v{display:flex;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap}.ct-v small{font-size:14px;color:var(--tinta-3,#6b6b63)}.ct-v small.alerta,.ini-txt .alerta{color:var(--alerta)}
+.ct-vendas{max-height:40vh;overflow:auto;margin:6px 0 10px;border-top:1px solid var(--linha)}
 /* <small> sem tamanho próprio encolhia para 11 a 13 px */
 #pagina small,.folha small{font-size:14px}
 /* rótulo do campo e legenda */
@@ -1217,8 +1219,8 @@ import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=30';
 import * as ATV from '/admin/app/atividades.js?v=3';
-import * as CMP from '/admin/app/compromissos.js?v=20';
-import * as CX from '/admin/app/caixa.js?v=6';
+import * as CMP from '/admin/app/compromissos.js?v=21';
+import * as CX from '/admin/app/caixa.js?v=7';
 import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
@@ -1848,7 +1850,7 @@ function marcarNav() {
   document.body.classList.toggle('nav-exato', exato);
   $('maisTopo').classList.toggle('on', alvo === 'mais');
   $('clientesTopo').classList.toggle('on', alvo === 'crm');
-  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Compromissos', caixa: 'Investimentos e caixa', pagar: 'Pagamentos a fornecedores', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Pagamentos a receber', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades', arquivados: 'Arquivados' }[ABA] || 'Operação';
+  $('topoS').textContent = { marketing: 'Marketing', dre: 'DRE', compromissos: 'Contas', caixa: 'Investimentos e caixa', pagar: 'Contas', cotador: 'Cotações', fornecedores: 'Hotéis e serviços', empresa: 'Empresa', crm: 'Clientes', origens: 'Clientes', indicacoes: 'Indicações', opmilhas: 'Operação de milhas', receber: 'Contas', clientes: 'Carteira da Gestão', cartoesbase: 'Gestão de Milhas', calccartoes: 'Gestão de Milhas', inicio: ADMIN ? 'Início' : 'Meu dia', emissoes: 'Emissões', agenda: 'Agenda', financeiro: 'Financeiro das vendas', comissao: 'Comissão', reunioes: 'Comercial', gestao: 'Gestão de Milhas', acessos: 'Equipe e acessos', custos: 'Salários e despesas', acervo: 'Acervo de viagens', avisos: 'Avisos', metas: 'Metas', mais: 'Mais', leads: 'Leads do site', site: 'Números do site', equipe: 'Comissões e regras', atividades: 'Atividades', arquivados: 'Arquivados' }[ABA] || 'Operação';
 }
 
 /* ================= dados ================= */
@@ -2112,9 +2114,8 @@ function tela() {
   if (ABA === 'acervo') return ACV.telaAcervo(P, { sb, $, esc, aviso, brl2, brlC, num, campo, ir, voltarCom: voltarCom(), aba: () => ABA });
   if (ABA === 'receber') return telaReceber(P);
   if (ABA === 'dre') return DRE.tela(P, ctxDRE());
-  if (ABA === 'compromissos') return CMP.tela(P, ctxCMP());
+  if (ABA === 'compromissos' || ABA === 'pagar') return telaContasPagar(P);
   if (ABA === 'caixa') return CX.tela(P, { sb, $, esc, aviso, brl2, brlC, pct, campo, ir, aba: () => ABA, aoMudar: () => CMP.carregar(ctxCMP()), nomeCard: (id) => ((D.reunioes || []).find(r => String(r.id) === String(id)) || {}).cliente || '' });
-  if (ABA === 'pagar') return telaPagar(P);
   if (ABA === 'conferir') return telaConferir(P);
   if (ABA === 'calccartoes') return CALC.tela(P, { sb, esc, aviso, ir, D, CART, tec, limparTec, aba: () => ABA, calc: CARTOES.calc, carregarBase: CARTOES.carregarBase, salaVip: CARTOES.salaVip, abrirFicha, abrirAtendimento, gastoDoLead, nomeTime, cardsDoCliente });
   if (ABA === 'cartoesbase') return CARTOES.telaBase(P, { sb, $, esc, aviso, campo, ir, D, num, brl, tec, CART, limparTec, admin: ADMIN, aba: () => ABA });
@@ -5008,6 +5009,130 @@ function folhaVencimento(titulo, base, atual) {
     document.body.appendChild(el);
   });
 }
+/* ---------- Contas: o que entra (A receber) e o que sai (A pagar), numa tela só ----------
+   A pagar junta os fornecedores das vendas e os compromissos (equipe, contas fixas, despesas do DRE e parcelas dos empréstimos),
+   em ordem de data. As ações ficam na folha que abre ao tocar na linha. Os endereços #pagar e #compromissos abrem aqui. */
+const segContas = (aba) => `<h1 class="titulo">Contas</h1>
+  <div class="seg" id="ctSeg" style="margin-top:8px">${[['receber', 'A receber'], ['pagar', 'A pagar']].filter(([k]) => podeAba(k) || (k === 'pagar' && podeAba('compromissos'))).map(([k, t]) => `<button type="button" data-t="${k}" class="${k === aba ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+const errCt = (e) => limparTec((e && e.message) || 'o banco não confirmou. Tente de novo.');
+const ligarSegContas = (P) => P.querySelectorAll('#ctSeg [data-t]').forEach(b => b.onclick = () => { if (b.classList.contains('on')) return; ir(b.dataset.t); });
+// folha genérica: devolve o elemento e a função de fechar
+function abrirFolhaCt(html) {
+  const el = document.createElement('div'); el.className = 'folha';
+  el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa">${html}</div>`;
+  const fechar = () => el.remove();
+  el.querySelector('.folha-fundo').onclick = fechar;
+  document.body.appendChild(el); return { el, fechar };
+}
+async function pagarFornecedores(ids) {
+  const agora = new Date().toISOString(), feitos = []; let erro = '';
+  for (let i = 0; i < ids.length; i += 100) {
+    const lote = ids.slice(i, i + 100), { error } = await sb.from('emissoes').update({ pago_fornecedor: true, pago_fornecedor_em: agora }).in('id', lote);
+    if (error) { erro = error.message || 'o banco não confirmou'; break; } feitos.push(...lote);
+  }
+  D.emissoes.forEach(e => { if (feitos.includes(e.id)) { e.pago_fornecedor = true; e.pago_fornecedor_em = agora; } });
+  return { feitos, erro };
+}
+async function telaContasPagar(P) {
+  const verForn = podeAba('pagar'), verCmp = podeAba('compromissos');
+  if (!$('ctSeg')) P.innerHTML = segContas('pagar') + '<div class="vazio" style="margin-top:12px">Carregando...</div>';
+  const V = verCmp ? await CMP.dadosPagar(ctxCMP()) : null;
+  if (!['pagar', 'compromissos'].includes(ABA)) return;
+  const hoje = dia(hojeISO()), dd = (d) => Math.round((d - hoje) / 864e5), quandoTxt = (d) => { const n = dd(d); return n < 0 ? `atrasado ${-n} ${-n === 1 ? 'dia' : 'dias'}` : n === 0 ? 'vence hoje' : n === 1 ? 'vence amanhã' : 'vence ' + dataCurta(d); };
+  const itens = [];
+  if (V && !V.erro) V.aPagar.forEach(x => {
+    const nf = V.naoFechou(x);
+    itens.push({ k: 'c' + CMP.chave(x), tipo: 'cmp', x, venc: x.venc, valor: x.valor, nf,
+      titulo: x.titulo + (x.tipo === 'emprestimo' && x.obs ? ' · ' + x.obs : ''), sub: x.desc + (nf ? ' · o mês ainda não fechou' : '') });
+  });
+  if (verForn) {
+    const G = {}; aPagar().forEach(e => { const f = fichaFornecedor(e.fornecedor), k = f ? 'f:' + f.id : 'n:' + nNome(e.fornecedor); (G[k] = G[k] || { k, nome: f ? f.nome : (e.fornecedor || 'Fornecedor não informado'), L: [] }).L.push(e); });
+    Object.values(G).forEach(g => {
+      const vs = g.L.map(e => e.fornecedor_vence_em ? String(e.fornecedor_vence_em).slice(0, 10) : '').filter(Boolean).sort();
+      itens.push({ k: 'f' + g.k, tipo: 'forn', g, venc: vs[0] ? dia(vs[0]) : null, valor: soma(g.L, 'custo'), titulo: g.nome,
+        sub: `Fornecedor · ${g.L.length} ${g.L.length === 1 ? 'venda' : 'vendas'}${vs.length < g.L.length ? ' · ' + (vs.length ? 'parte sem vencimento' : 'sem vencimento') : ''}` });
+    });
+  }
+  const conta = itens.filter(i => !i.nf), atras = conta.filter(i => i.venc && dd(i.venc) < 0), semana = conta.filter(i => i.venc && dd(i.venc) >= 0 && dd(i.venc) <= 7);
+  const total = conta.reduce((t, i) => t + (+i.valor || 0), 0), somaL = (L) => L.reduce((t, i) => t + (+i.valor || 0), 0);
+  const blocos = [['Atrasado', i => i.venc && dd(i.venc) < 0], ['Esta semana', i => i.venc && dd(i.venc) >= 0 && dd(i.venc) <= 7], ['Depois', i => i.venc && dd(i.venc) > 7], ['Sem data de vencimento', i => !i.venc]]
+    .map(([t, f]) => [t, itens.filter(f).sort((a, b) => (a.venc || 0) - (b.venc || 0))]).filter(([, L]) => L.length);
+  const linha = (i) => `<button type="button" class="ac-pes ct-l" data-ct="${esc(i.k)}"><span><b>${esc(i.titulo)}</b><small>${esc(i.sub)}</small></span><span class="ct-v"><b class="cb-valor">${brl2(i.valor)}</b><small class="${i.venc && dd(i.venc) < 0 ? 'alerta' : ''}">${i.venc ? quandoTxt(i.venc) : 'definir data'}</small></span></button>`;
+  // pagos nos últimos 30 dias (compromissos e fornecedores), com desfazer
+  const lim = Date.now() - 30 * 864e5;
+  const pagosC = V && !V.erro ? V.pagos.filter(x => new Date(x.pago.pago_em) >= lim).map(x => ({ id: x.pago.id, t: x.titulo, d: x.desc, v: +x.pago.valor || x.valor, em: x.pago.pago_em, tipo: 'c' })) : [];
+  const pagosF = verForn ? D.emissoes.filter(e => e.pago_fornecedor && e.pago_fornecedor_em && new Date(e.pago_fornecedor_em) >= lim).map(e => ({ id: e.id, t: e.fornecedor || 'Fornecedor', d: [e.comprador || e.servico, e.localizador].filter(Boolean).join(' · '), v: +e.custo || 0, em: e.pago_fornecedor_em, tipo: 'f' })) : [];
+  const pagos = pagosC.concat(pagosF).sort((a, b) => String(b.em).localeCompare(String(a.em)));
+  P.innerHTML = `${segContas('pagar')}
+    <div class="ini-card" style="margin-top:12px"><span class="ini-rot">A pagar <button type="button" class="ac-i" id="ctAjuda" aria-label="O que entra aqui">?</button></span><b class="ini-num"><span class="cb-valor">${brl2(total)}</span></b>
+      <span class="ini-txt">${atras.length ? `<span class="alerta" style="white-space:nowrap">Atrasado ${brl2(somaL(atras))}</span> · ` : 'Nada atrasado · '}<span style="white-space:nowrap">Esta semana ${brl2(somaL(semana))}</span></span></div>
+    <div class="sub" id="ctAjudaT" hidden>Aqui entram os fornecedores das vendas (o custo de cada venda), o fechamento de cada pessoa da equipe (salário fixo + 1ª metade da comissão das vendas do mês + 2ª metade das viagens que embarcaram no mês, pago no mês seguinte), as despesas fixas com dia de vencimento, as despesas do mês lançadas no DRE e as parcelas dos empréstimos para o caixa. Toque numa linha para pagar ou ver o detalhe.</div>
+    ${V && V.erro ? `<div class="config" style="margin-top:10px">Os compromissos não carregaram agora. Os fornecedores aparecem abaixo.</div>` : ''}
+    ${blocos.length ? blocos.map(([t, L]) => `<div class="secao">${t}${t === 'Atrasado' ? '' : ''}</div><div class="ac-lista">${L.map(linha).join('')}</div>`).join('') : '<div class="vazio" style="margin-top:12px">Nada a pagar por enquanto.</div>'}
+    ${pagos.length ? `<details class="gsec" style="margin-top:14px"><summary><span>Pagos nos últimos 30 dias<small>${pagos.length} ${pagos.length === 1 ? 'pagamento' : 'pagamentos'} · ${brl2(pagos.reduce((t, x) => t + x.v, 0))}</small></span></summary>
+      ${pagos.map(x => `<div class="lin" style="align-items:center"><span>${esc(x.t)}<small style="display:block;color:var(--tinta-3)">${esc(x.d)} · pago em ${dataBR(String(x.em).slice(0, 10))}</small></span><span style="white-space:nowrap">${brl2(x.v)} <button class="mini" data-desf="${x.tipo}:${esc(x.id)}">desfazer</button></span></div>`).join('')}</details>` : ''}
+    ${V && !V.erro ? `<details class="gsec"><summary><span>Previsão e ajustes<small>Próximos fechamentos, dia de pagamento de cada pessoa e o que falta preencher</small></span></summary>
+      <div class="secao">Previsão dos próximos meses</div>
+      <section class="bloco" style="margin-top:0">${V.futuro.length ? V.futuro.map(x => `<div class="lin"><span>${esc(x.titulo)} · fechamento de ${V.nomeMes(x.comp)}, paga em ${dataCurta(x.venc)}<small style="display:block;color:var(--tinta-3)">fixo ${brl2(x.fixo)} + comissões já garantidas ${brl2(x.com)}</small></span><span>${brl2(x.valor)}</span></div>`).join('') : '<div class="vazio">Sem previsão além dos próximos pagamentos.</div>'}
+        <div class="sub">Conta o salário atual e as metades de comissão de embarques já vendidos. Vendas novas ainda vão somar.</div></section>
+      ${V.semFixa.length ? `<div class="secao">Despesas fixas sem dia de vencimento</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin-top:0">Sem o dia, o app não avisa o pagamento. Preencha em Salários e despesas fixas.</div>${V.semFixa.map(x => `<button class="lin" data-irfixas><span>${esc(x.descricao)} · ${esc(x.categoria || 'Despesa fixa')}</span><span>${brl2(+x.valor || 0)}<b class="seta">›</b></span></button>`).join('')}</section>` : ''}
+      ${V.semIda.length ? `<div class="secao">Vendas sem data de ida</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin-top:0">A 1ª metade da comissão já entra no pagamento. A 2ª metade só entra quando a data de ida for preenchida.</div>${V.semIda.map(e => `<button class="lin" data-em="${e.id}"><span>${esc(e.comprador || e.produto || e.servico || 'Venda')} · ${esc(nomeTime(e.vendedor_id))}</span><span>${brl2(Number(e.comissao) - Math.round(Number(e.comissao) / 2 * 100) / 100)} aguardando<b class="seta">›</b></span></button>`).join('')}</section>` : ''}
+      ${V.pessoas.length ? `<div class="secao">Dia de pagamento de cada pessoa</div><section class="bloco" style="margin-top:0">${V.pessoas.map(ps => `<div class="lin"><span>${esc(ps.nome)}</span><span><select data-dia="${ps.id}">${Array.from({ length: 28 }, (_, i) => `<option ${i + 1 === ps.dia ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></span></div>`).join('')}</section>` : ''}
+    </details>` : ''}`;
+  ligarSegContas(P);
+  $('ctAjuda').onclick = () => { $('ctAjudaT').hidden = !$('ctAjudaT').hidden; };
+  const de = () => telaContasPagar(P);
+  P.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { const i = itens.find(y => y.k === b.dataset.ct); if (i) (i.tipo === 'cmp' ? folhaCompromisso(i, de) : folhaFornecedor(i, de)); });
+  P.querySelectorAll('[data-desf]').forEach(b => b.onclick = async () => {
+    const [tipo, ...r] = b.dataset.desf.split(':'), id = r.join(':');
+    if (!await pergunta('Desfazer este pagamento?\n\nEle volta para a lista de a pagar.', { sim: 'Desfazer' })) return;
+    let error;
+    if (tipo === 'f') { ({ error } = await sb.from('emissoes').update({ pago_fornecedor: false, pago_fornecedor_em: null }).eq('id', id)); if (!error) { const e = D.emissoes.find(x => x.id === id); if (e) { e.pago_fornecedor = false; e.pago_fornecedor_em = null; } } }
+    else error = await CMP.desfazerPagamento(ctxCMP(), id);
+    if (error) { aviso('Não desfez: ' + errCt(error)); return; }
+    aviso('Voltou para a lista de a pagar.'); de();
+  });
+  P.querySelectorAll('[data-dia]').forEach(s => s.onchange = async () => { const error = await CMP.definirDia(ctxCMP(), s.dataset.dia, s.value); if (error) { aviso('Não salvou: ' + errCt(error)); return; } aviso('Dia de pagamento salvo.'); de(); });
+  P.querySelectorAll('[data-irfixas]').forEach(b => b.onclick = () => ir('custos'));
+  P.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { location.hash = '#emissoes/' + b.dataset.em; });
+}
+// folha de um compromisso: o detalhe da conta, "Pago" com o valor previsto e a data de hoje, ou outro valor e data
+function folhaCompromisso(i, depois) {
+  const x = i.x, det = x.tipo === 'time' ? `${x.fixo ? `<div class="lin"><span>Salário fixo</span><span>${brl2(x.fixo)}</span></div>` : ''}${(x.itens || []).map(t => `<div class="lin"><span>${esc(t.nome)}<small style="display:block;color:var(--tinta-3)">${esc(t.tipo)}</small></span><span>${brl2(t.valor)}</span></div>`).join('')}` : '';
+  const { el, fechar } = abrirFolhaCt(`<div class="ac-ftit">${esc(i.titulo)}</div><p class="ac-fl">${esc(x.desc)} · ${x.tipo === 'time' ? 'pagar em' : 'vence'} ${dataBR(isoLocal(x.venc))}</p>
+    <p class="ac-fl"><b>${brl2(x.valor)}</b></p>${det ? `<details style="margin:6px 0"><summary class="sub" style="cursor:pointer">Ver a conta</summary>${det}</details>` : ''}
+    ${i.nf ? `<p class="ac-fl">O mês ainda não fechou. Dá para marcar como pago a partir do dia 1º do mês seguinte.</p><button type="button" class="ac-sec" data-x>Voltar</button>`
+      : `<div id="ctOutro" hidden><label class="fl"><span>Valor pago (R$)</span><input id="ctVal" type="number" step="0.01" inputmode="decimal" value="${(+x.valor || 0).toFixed(2)}"></label><label class="fl"><span>Pago em</span><input id="ctDia" type="date" value="${hojeISO()}"></label></div>
+      <button type="button" class="ac-prim" id="ctPago">Pago</button><button type="button" class="ac-sec" id="ctOutroB">Outro valor ou data</button><button type="button" class="ac-sec" data-x>Voltar</button>`}`);
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = fechar);
+  const ob = el.querySelector('#ctOutroB'); if (ob) ob.onclick = () => { el.querySelector('#ctOutro').hidden = false; ob.remove(); el.querySelector('#ctPago').textContent = 'Salvar o pagamento'; };
+  const pb = el.querySelector('#ctPago'); if (pb) pb.onclick = async () => {
+    const valor = Number(String(el.querySelector('#ctVal').value).replace(',', '.')); if (!(valor >= 0)) { aviso('Valor inválido.'); return; }
+    pb.disabled = true; const error = await CMP.pagarItem(ctxCMP(), x, valor, el.querySelector('#ctDia').value);
+    if (error) { pb.disabled = false; aviso('Não salvou: ' + errCt(error)); return; }
+    fechar(); aviso('Marcado como pago. Para desfazer, abra "Pagos nos últimos 30 dias".'); depois();
+  };
+}
+// folha de um fornecedor: as vendas a pagar, pagar uma ou todas e definir o vencimento
+function folhaFornecedor(i, depois) {
+  const g = i.g, venc = (e) => e.fornecedor_vence_em ? String(e.fornecedor_vence_em).slice(0, 10) : '';
+  const { el, fechar } = abrirFolhaCt(`<div class="ac-ftit">${esc(g.nome)}</div><p class="ac-fl">${g.L.length} ${g.L.length === 1 ? 'venda' : 'vendas'} · <b>${brl2(soma(g.L, 'custo'))}</b></p>
+    <div class="ct-vendas">${g.L.map(e => `<div class="lin" style="align-items:center"><span>${esc(e.comprador || e.produto || e.servico)}${e.localizador ? ' · ' + esc(e.localizador) : ''}<small style="display:block;color:var(--tinta-3)">venda ${dataCurta(dia(e.data_negociacao))} · ${venc(e) ? 'vence ' + dataBR(venc(e)) : 'sem vencimento'}</small></span><span style="white-space:nowrap">${brl2(e.custo)} <button class="mini" data-pg1="${e.id}">marcar pago</button></span></div>`).join('')}</div>
+    <button type="button" class="ac-prim" id="ctPagaTudo">${g.L.length > 1 ? 'Pagar tudo: ' + brl2(soma(g.L, 'custo')) : 'Pago'}</button>
+    <button type="button" class="ac-sec" id="ctVenc">${g.L.length > 1 ? 'Definir o vencimento de todas' : 'Definir o vencimento'}</button><button type="button" class="ac-sec" data-x>Voltar</button>`);
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = fechar);
+  const pagar = async (ids, msg) => { const r = await pagarFornecedores(ids); if (r.erro) { aviso((r.feitos.length ? `Marcou ${r.feitos.length} de ${ids.length}. ` : '') + limparTec('Não salvou: ' + r.erro)); } else aviso(msg); fechar(); depois(); };
+  el.querySelector('#ctPagaTudo').onclick = async () => { if (g.L.length > 1 && !await pergunta(`Marcar as ${g.L.length} vendas de ${g.nome} como pagas ao fornecedor?\n\nTotal ${brl2(soma(g.L, 'custo'))}. Dá para desfazer em "Pagos nos últimos 30 dias".`, { sim: 'Marcar como pagas' })) return; pagar(g.L.map(e => e.id), g.L.length > 1 ? `${g.L.length} vendas de ${g.nome} marcadas como pagas.` : 'Pagamento ao fornecedor marcado.'); };
+  el.querySelectorAll('[data-pg1]').forEach(b => b.onclick = () => pagar([b.dataset.pg1], 'Pagamento ao fornecedor marcado.'));
+  el.querySelector('#ctVenc').onclick = async () => {
+    fechar();
+    const base = g.L.map(e => String(e.data_negociacao).slice(0, 10)).sort()[0] || hojeISO(), atual = g.L.length === 1 ? venc(g.L[0]) : '';
+    const v = await folhaVencimento(g.L.length > 1 ? `${g.L.length} vendas de ${g.nome}` : g.nome, base, atual); if (v === null) return;
+    const { error } = await sb.from('emissoes').update({ fornecedor_vence_em: v || null }).in('id', g.L.map(e => e.id));
+    if (error) { aviso('Não salvou: ' + errCt(error)); return; }
+    g.L.forEach(e => { e.fornecedor_vence_em = v || null; }); aviso(v ? `Vencimento ${dataBR(v)} salvo.` : 'Vencimento tirado.'); depois();
+  };
+}
 function telaPagar(P) {
   // vencimento do fornecedor (97-vencimento-do-fornecedor.sql): só do app, a planilha não mexe nele
   const venc = (e) => e.fornecedor_vence_em ? String(e.fornecedor_vence_em).slice(0, 10) : '';
@@ -5155,7 +5280,7 @@ async function registrarReceb(e, v) {
 }
 function telaReceber(P) {
   const L = D.emissoes.filter(aReceberCli).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
-  P.innerHTML = `<button class="voltar" id="voltar">‹ Voltar</button><h1 class="titulo" style="margin-top:6px">Pagamentos a <em>receber</em></h1>
+  P.innerHTML = `${segContas('receber')}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">A receber</div><div class="v">${brlC(L.reduce((t, e) => t + faltaDe(e), 0))}</div><div class="d">${L.length} emiss${L.length === 1 ? 'ão' : 'ões'}</div></div>
     </div>
@@ -5173,7 +5298,7 @@ function telaReceber(P) {
   const semRec = L.filter(e => !RECEB[e.id]).map(e => e.id);
   if (semRec.length) carregarReceb(semRec).then(() => { if (ABA === 'receber' && $('rbBloco')) telaReceber(P); });
   blocoReembolsos();
-  $('voltar').onclick = () => voltarA(ANTERIOR || 'financeiro'); // volta para onde a pessoa estava (Início, Financeiro ou Empresa)
+  ligarSegContas(P);
   P.querySelectorAll('[data-ok], [data-parc]').forEach(b => b.onclick = async () => {
     const id = b.dataset.ok || b.dataset.parc, e = D.emissoes.find(x => x.id === id); if (!e) return;
     if (!RECEB[e.id]) await carregarReceb([e.id]);
@@ -5226,18 +5351,18 @@ const MAIS_GRUPOS = () => [
   ['Números', [['empresa', 'Painel da empresa: números, metas e atalhos'], ['indicacoes', 'Indicações e origem dos clientes'], ['metas', 'Metas do mês'], ['site', 'Números do site'], ['atividades', ADMIN || GER() ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']]],
   ['Clientes', [['crm', 'Clientes: fichas, família e cadastro', ADMIN ? (D.dups || []).length : 0], ['origens', 'Origens para marcar', IND.pendentes(ctxIND())], ['clientes', 'Carteira da Gestão'], ['cartoesbase', 'Base de cartões']]],
   ['Vendas', [['reunioes', 'Comercial: funil e atendimentos'], ['cotador', 'Cotações'], ['leads', 'Leads do site', LE_NOVOS()], ['fornecedores', 'Hotéis e serviços'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['emissoes', 'Emissões'], ['agenda', 'Agenda da operação']]],
-  ['Dinheiro', [['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['dre', 'DRE da empresa: geral e detalhado'], ['custos', 'Salários e despesas fixas'], ['equipe', 'Comissões e regras'], ['comissao', 'Minha comissão']]],
+  ['Dinheiro', [['financeiro', 'Financeiro das vendas'], ['pagar', 'Contas: o que entra e o que sai'], ['conferir', 'Comprovantes para conferir'], ['compromissos', 'Contas a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['dre', 'DRE da empresa: geral e detalhado'], ['custos', 'Salários e despesas fixas'], ['equipe', 'Comissões e regras'], ['comissao', 'Minha comissão']]],
   ['Equipe', [['acessos', 'Equipe e acessos'], ['avisos', 'Avisos no celular, Telegram e WhatsApp', ADMIN ? avisosNovos().length : 0]]],
   ['Marketing', [['marketing', 'Marketing: posts, aprovação e estratégia']]]
 ];
 // não consulta a barra (a barra consulta o Mais): o índice mostra tudo o que a pessoa pode abrir
-const itemMaisOk = ([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
+const itemMaisOk = ([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'empresa'); // painel da empresa: só a administração
 function itensMais() { return MAIS_GRUPOS().flatMap(([, L]) => L).filter(itemMaisOk); }
 const LE_NOVOS = () => pode('leads') ? leadsSemResposta().length : 0;
 /* Mais: busca, o que pede atenção e as áreas fechadas. Cada área abre a própria lista. */
 const MAIS_CURTO = { empresa: 'empresa', indicacoes: 'indicações', metas: 'metas', site: 'site', atividades: 'atividades', crm: 'fichas', origens: 'origens', clientes: 'carteira da Gestão', cartoesbase: 'base de cartões',
-  reunioes: 'comercial', cotador: 'cotações', leads: 'leads', fornecedores: 'hotéis', acervo: 'acervo', emissoes: 'emissões', agenda: 'agenda', financeiro: 'financeiro', receber: 'receber', pagar: 'pagar',
-  conferir: 'comprovantes', compromissos: 'compromissos', caixa: 'caixa', dre: 'DRE', custos: 'salários', equipe: 'comissões', comissao: 'minha comissão', acessos: 'acessos', avisos: 'avisos', marketing: 'posts, aprovação e estratégia' };
+  reunioes: 'comercial', cotador: 'cotações', leads: 'leads', fornecedores: 'hotéis', acervo: 'acervo', emissoes: 'emissões', agenda: 'agenda', financeiro: 'financeiro', receber: 'receber', pagar: 'contas',
+  conferir: 'comprovantes', compromissos: 'contas a pagar', caixa: 'caixa', dre: 'DRE', custos: 'salários', equipe: 'comissões', comissao: 'minha comissão', acessos: 'acessos', avisos: 'avisos', marketing: 'posts, aprovação e estratégia' };
 // nomes curtos no menu lateral do computador
 const NAV_CURTO = { avisos: 'Avisos', atividades: 'Atividades', indicacoes: 'Indicações', crm: 'Fichas de clientes', acessos: 'Equipe e acessos', marketing: 'Marketing' };
 const maisJuntar = (L) => { const j = L.length < 2 ? L.join('') : L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1]; return j ? j[0].toUpperCase() + j.slice(1) : ''; };
@@ -5385,10 +5510,10 @@ let EMP_TOP = 'fat', PNL_PER = 'mes', PNL_REF = null, PNL_ABA = 'vendas', PNL_CO
 const EMP_GRUPOS = [['Dinheiro', ['dre', 'compromissos', 'caixa', 'financeiro', 'receber', 'pagar', 'conferir', 'metas', 'custos', 'equipe', 'comissao']], ['Comercial', ['indicacoes', 'leads', 'cotador', 'fornecedores', 'acervo']], ['Equipe', ['atividades', 'acessos', 'avisos']], ['Marketing', ['marketing']], ['Site', ['site']], ['Sócios', ['opmilhas']]];
 function itensEmpresa() {
   return [
-    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Compromissos a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['receber', 'Pagamentos a receber'], ['pagar', 'Pagamentos a fornecedores'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
+    ['fornecedores', 'Hotéis e serviços'], ['dre', 'DRE da empresa: geral e detalhado'], ['compromissos', 'Contas a pagar: salários e contas'], ['caixa', 'Investimentos e caixa'], ['financeiro', 'Financeiro das vendas'], ['pagar', 'Contas: o que entra e o que sai'], ['conferir', 'Comprovantes para conferir'], ['metas', 'Metas do mês'], ['custos', 'Salários e despesas fixas'],
     ['equipe', 'Comissões e regras'], ['acessos', 'Equipe e acessos'], ['leads', 'Leads do site'], ['site', 'Números do site'],
     ['marketing', 'Marketing: posts, aprovação e estratégia'], ['acervo', 'Acervo de viagens: destinos e roteiros'], ['cotador', 'Cotações'], ['opmilhas', 'Operação de milhas dos sócios'], ['avisos', 'Avisos no celular, Telegram e WhatsApp'], ['comissao', 'Minha comissão'], ['indicacoes', 'Indicações e origem dos clientes'], ['atividades', ADMIN || GER() ? 'Atividades da equipe e tempo por etapa' : 'Minhas atividades e tempos']
-  ].filter(([k]) => podeAba(k) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
+  ].filter(([k]) => podeAba(k) && !(k === 'compromissos' && podeAba('pagar')) && !(ADMIN && k === 'comissao') && !(!ADMIN && k === 'marketing'));
 }
 function telaEmpresa(P) {
   const verNum = ADMIN; // painel da empresa (lucro, faturamento): só a administração

@@ -9,7 +9,7 @@
 
 // Primeiro fechamento do time controlado aqui: setembro/2026 (pago em 05/10/2026).
 // Despesas fixas e avulsas: a partir de outubro/2026.
-import * as CX from './caixa.js?v=1';
+import * as CX from './caixa.js?v=7';
 const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 import { ehB2B } from '/admin/app/b2b.js?v=11';
 
@@ -217,4 +217,40 @@ export async function tela(P, ctx) {
   P.querySelectorAll('[data-irpagar]').forEach(b => b.onclick = () => ir('pagar'));
   P.querySelectorAll('[data-irfixas]').forEach(b => b.onclick = () => ir('custos'));
   P.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { location.hash = '#emissoes/' + b.dataset.em; });
+}
+
+/* ---------- para a tela Contas (aba A pagar, index.html): os mesmos dados e as mesmas regras desta tela ---------- */
+export const chave = (x) => x.tipo + x.ref + x.comp;
+export async function dadosPagar(ctx) {
+  await carregar(ctx);
+  if (C.erro) return { erro: C.erro };
+  const { pessoas, L } = montar(ctx), atual = mk(hojeLocal());
+  const aPagar = L.filter(x => !x.pago && (x.comp <= atual || difDias(x.venc) <= 40));
+  return {
+    aPagar,
+    futuro: L.filter(x => !x.pago && x.tipo === 'time' && !aPagar.includes(x)),
+    pagos: L.filter(x => x.pago),
+    pessoas: pessoas.filter(p => L.some(x => x.ref === p.id)),
+    semFixa: C.fixas.filter(x => !x.dia_vencimento && (!x.ate || mk(x.ate) >= atual)),
+    semIda: ctx.D.emissoes.filter(e => (Number(e.comissao) || 0) > 0 && !e.data_ida && !e.data_volta && pessoas.some(p => p.id === e.vendedor_id) && mk(e.data_negociacao) >= mesMais(INICIO, -6)),
+    naoFechou: (x) => x.tipo === 'time' && x.comp >= mk(hojeLocal()),
+    nomeMes
+  };
+}
+// marca como pago (o fechamento do time só depois que o mês fecha; ao pagar, o mês fecha sozinho)
+export async function pagarItem(ctx, x, valor, data) {
+  const { sb } = ctx;
+  if (x.tipo === 'time' && x.comp >= mk(hojeLocal())) return { message: 'o mês ainda não fechou' };
+  const { error } = x.tipo === 'emprestimo' ? await CX.marcarParcela(sb, x.ref, x.parcela, valor, data)
+    : await sb.from('pagamentos_feitos').insert({ tipo: x.tipo, ref: x.ref, competencia: x.comp + '-01', valor, pago_em: data || undefined });
+  if (!error && x.tipo === 'time' && ctx.fecharMes && x.comp < mk(hojeLocal())) await ctx.fecharMes(x.comp);
+  return error;
+}
+export async function desfazerPagamento(ctx, id) {
+  const { error } = id.startsWith('emp:') ? await CX.desfazerParcela(ctx.sb, id.slice(4)) : await ctx.sb.from('pagamentos_feitos').delete().eq('id', id);
+  return error;
+}
+export async function definirDia(ctx, uid, dia) {
+  const { error } = await ctx.sb.rpc('dia_pagamento_definir', { p_user: uid, p_dia: Number(dia) });
+  return error;
 }

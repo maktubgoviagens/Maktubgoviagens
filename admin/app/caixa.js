@@ -72,7 +72,7 @@ export function compromissos() {
   const ate = mesMais(hojeK(), 1), L = [];
   E.forEach(emp => parcelasDe(emp, PG).forEach(p => {
     if (p.comp > ate && !p.pago) return;
-    L.push({ tipo: 'emprestimo', ref: emp.id, parcela: p.n, comp: p.comp, titulo: emp.descricao,
+    L.push({ tipo: 'emprestimo', ref: emp.id, parcela: p.n, comp: p.comp, titulo: emp.descricao, obs: emp.obs || '',
       desc: `Parcela ${p.n} de ${emp.parcelas} · ${origemNome(emp.origem)}${emp.de_quem ? ' de ' + emp.de_quem : ''}`, venc: p.venc, valor: p.valor,
       pago: p.pago ? { id: 'emp:' + p.pago.id, valor: p.pago.valor, pago_em: p.pago.pago_em } : null });
   }));
