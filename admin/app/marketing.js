@@ -7,7 +7,6 @@
 const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const FMT = { reels: ['Reels', '#8a6520'], carrossel: ['Carrossel', '#2f6b4a'], feed: ['Feed', '#a0561f'], stories: ['Stories', '#2e5e6e'] };
 const ST = { ideia: 'Ideia', producao: 'Roteiro', gravacao: 'Gravar', edicao: 'Edição', aprovacao: 'Aprovação', agendado: 'Agendado', publicado: 'Publicado' };
-const ST_TAG = { ideia: '', producao: '', gravacao: 'ouro', edicao: '', aprovacao: 'alerta', agendado: 'ouro', publicado: 'ok' };
 /* dois caminhos: vídeo (roteiro, gravação, edição) e arte (criação direto para aprovação) */
 const ETAPAS_VIDEO = ['ideia', 'producao', 'gravacao', 'edicao', 'aprovacao', 'agendado', 'publicado'];
 const ETAPAS_ARTE = ['ideia', 'producao', 'aprovacao', 'agendado', 'publicado'];
@@ -183,11 +182,6 @@ body.mk-arrastando *{cursor:grabbing!important}
 .mk-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--tinta-2);margin-top:8px}.mk-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 @media (max-width:699px){.mk-chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:14px;padding:2px 3px;word-break:break-word;hyphens:auto}.mk-chip .f{display:none}}
 @media (min-width:700px){.mk-cm{margin:10px 0 0}.mk-cm .d{min-height:110px;padding:4px}.mk-chip{font-size:14px;padding:3px 6px}}
-.mk-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
-.mk-cal .h{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);text-align:center;padding:4px 0}
-.mk-cal button{aspect-ratio:1/1.05;background:var(--branco);border:1px solid var(--linha);font-size:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:6px;gap:4px;color:var(--tinta)}
-.mk-cal button.fora{visibility:hidden}.mk-cal button.hj{border-color:var(--dourado)}.mk-cal button.sel{background:var(--verde);color:var(--creme);border-color:var(--verde)}
-.mk-cal button.sel .mk-dots i{border-color:var(--creme)!important}
 .mk-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:90%}.mk-dots i{width:6px;height:6px;border-radius:50%}
 .mk-fmts{display:flex;gap:6px;flex-wrap:wrap}
 .mk-fmts label{cursor:pointer}.mk-fmts input{position:absolute;opacity:0;pointer-events:none}
@@ -951,18 +945,12 @@ function ligar(P) {
   q('[data-p]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); abrirPost(b.dataset.p); });
   q('[data-novo]').forEach(b => b.onclick = () => abrirPost('nova', { status: b.dataset.novo }));
   q('[data-novo-dia]').forEach(b => b.onclick = () => abrirPost('nova', { status: 'producao', data_prevista: b.dataset.novoDia }));
-  q('[data-mudar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const st = b.dataset.st; mudar(b.dataset.mudar, { status: st, ...(st === 'aprovacao' ? { ajuste: null } : {}) }, { producao: 'Foi para o roteiro ou a criação.', edicao: 'Foi para a edição.', aprovacao: 'Enviado para aprovação dos sócios.', agendado: 'Marcado como agendado.' }[st] || 'Atualizado.'); });
   q('[name=fconta]').forEach(r => r.onchange = () => { FCONTA = r.value; rerender(); });
   q('[name=sofalta]').forEach(r => r.onchange = () => { SO_FALTA = !!r.value; rerender(); });
   q('[data-tf]').forEach(i => i.onchange = () => { const c = i.dataset.campo, v = i.value || null, nome = primeiro(nomeT(v)); escalar(i.dataset.tf, { [c]: v }, c === 'gravacao_data' ? 'Prazo de gravação salvo.' : v ? `Salvo: ${nome} ${{ responsavel_id: 'faz essa parte', edicao_por: 'edita', postagem_por: 'posta' }[c]}.` : 'Salvo: ninguém escalado.'); });
   q('[data-tfg]').forEach(i => i.onchange = () => { const id = i.dataset.tfg, L = [...P.querySelectorAll(`[data-tfg="${id}"]:checked`)].map(x => x.value); escalar(id, { gravacao_equipe: L, gravacao_por: L[0] || null }, L.length ? `Salvo: grava ${L.map(u => primeiro(nomeT(u))).join(' e ')}.` : 'Salvo: ninguém grava.'); });
-  q('[data-mover]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); mover(b.dataset.mover, b.dataset.g); });
-  q('[data-gravar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); const pp = LISTA.find(x => x.id === b.dataset.gravar); if (!pp) return;
-    if (!equipeG(pp).length) { abrirPost(pp.id, { status: 'gravacao' }); X.aviso('Escolha quem grava e até quando, e salve.'); return; }
-    mudar(pp.id, { status: 'gravacao' }, `Foi para a gravação com ${nomesG(pp)}.`); });
   q('[data-aprovar]').forEach(b => b.onclick = () => passar(b.dataset.aprovar));
   q('[data-passar]').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); passar(b.dataset.passar); });
-  q('[data-publicar]').forEach(b => b.onclick = () => { abrirPost(b.dataset.publicar, { status: 'publicado' }); X.aviso('Cole o link do post no Instagram e salve.'); });
   q('[data-aj]').forEach(b => b.onclick = () => { AJ = b.dataset.aj; rerender(); const t = by('mkAjTxt'); if (t) t.focus(); });
   q('[data-ajc]').forEach(b => b.onclick = () => { AJ = null; rerender(); });
   q('[data-ajok]').forEach(b => b.onclick = () => { const t = (by('mkAjTxt').value || '').trim(); if (!t) { X.aviso('Escreva o que precisa ajustar.'); return; } AJ = null; { const pp = LISTA.find(x => x.id === b.dataset.ajok) || {}; mudar(b.dataset.ajok, { status: voltaAjuste(pp), ajuste: t }, ehVideo(pp) ? 'Devolvido para a edição com o ajuste.' : 'Devolvido para a criação com o ajuste.'); } });

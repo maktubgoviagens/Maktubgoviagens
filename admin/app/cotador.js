@@ -967,14 +967,6 @@ async function tirarVoo(T, i, siteK, porK, F) {
 }
 const btnX = (attr) => `<button type="button" ${attr} aria-label="Tirar este trecho" style="flex:none;width:32px;height:32px;border:1px solid var(--linha);background:var(--papel, #fff);color:var(--tinta-2, inherit);font-size:18px;line-height:1;cursor:pointer;padding:0">×</button>`;
 const linhaX = (conteudo, attr) => `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><div style="flex:1;min-width:0">${conteudo}</div>${btnX(attr)}</div>`;
-function rapRota() { const v = rapVoos()[0]; if (!v) return ''; const a = cidadeDe(v.ocod) || v.onome || v.ocod, b = cidadeDe(v.dcod) || v.dnome || v.dcod; return `${a} ${rapVoos().length > 1 ? '⇄' : '→'} ${b}`; }
-// a rápida vira uma cotação corporativa de uma opção para gerar o link
-function rapParaCorp() {
-  const v0 = rapVoos()[0];
-  return { modelo: 'corp', marca: S.marca, codigo: '', passageiro: S.cliente || '', pessoas: S.pessoas || '1', validade: hoje(), cia: S.cia || '', rota: rapRota(),
-    destino: v0 ? (cidadeDe(v0.dcod) || v0.dnome || '') : '', voos: rapVoos(), bagagem: S.bagagem || '', print: mostraEco() ? (S.prints[0] || '') : '',
-    de: mostraEco() ? S.de : '', por: S.por, forma: [S.forma, parcTxt() ? 'ou ' + parcTxt() : ''].filter(Boolean).join(' · '), obs: S.obs || '', rodape: RAP_RODAPE };
-}
 // estado da bagagem: o que foi marcado ou, numa cotação antiga, o que está escrito no texto
 const bagMao = () => typeof S.bag_mao === 'boolean' ? S.bag_mao : S.bag_mao === 'cabine' || (S.bag_mao === undefined && /cabine|de m[aã]o/i.test(S.bagagem || ''));
 const bagDesp = () => S.bag_desp != null ? +S.bag_desp || 0 : +((/(\d)\s*malas?\s*despachada/i.exec(S.bagagem || '') || [, 0])[1]);
