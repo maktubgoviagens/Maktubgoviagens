@@ -2206,7 +2206,7 @@ function telaInicio(P) {
     <button type="button" class="ini-card ${garg ? 'ouro' : ''}" id="iniGarg"><span class="ini-rot">Onde está travando</span>${garg ? `<span class="ini-txt"><b>${garg.n} ${garg.n === 1 ? 'card parado' : 'cards parados'}</b> em ${esc(garg.etapa)} há mais de 2 dias.</span>` : '<span class="ini-txt">Nenhum card do Comercial parado há mais de 2 dias.</span>'}<i>›</i></button>
     ${blocoMesInicio(D.metas, mesTxt)}
     ${blocoReunioes(reun)}
-    <div class="secao">Próximos compromissos <button data-ir="agenda">Ver agenda ›</button></div>
+    <div class="secao">Próximos na agenda <button data-ir="agenda">Ver agenda ›</button></div>
     ${prox.length ? agrupar(prox.slice(0, 3)) : '<div class="vazio">Nada marcado nos próximos dias.</div>'}
     </div></div>`;
   $('iniHoje').onclick = () => { if (totalHoje) $('iniLista').classList.toggle('aberta'); };
@@ -2373,7 +2373,7 @@ function telaEmissoes(P) {
       return `<div class="sub" style="margin-top:10px">Últimos 12 meses, sem depender do mês escolhido acima.</div><div class="numeros" style="margin-top:8px"><div class="num destaque"><div class="l">Cancelamentos</div><div class="v">${nC}</div><div class="d">com e sem custo</div></div><div class="num"><div class="l">No-shows</div><div class="v">${nN}</div><div class="d">estornos de taxa</div></div></div>`; })() : ''}
     <div class="numeros" style="margin-top:10px" ${CANC ? 'hidden' : ''}>
       <div class="num destaque"><div class="l">Emissões</div><div class="v">${L.length}</div><div class="d">${VER ? brlC(soma(L, 'valor_receber')) + ' em vendas' : LST ? L.filter(minha).length + ' suas no mês' : 'no mês'}</div></div>
-      ${VER ? `<div class="num"><div class="l">Lucro das vendas</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
+      ${VER ? `<div class="num"><div class="l">Lucro líquido das vendas</div><div class="v">${brlC(soma(L, 'lucro_liquido'))}</div><div class="d">${brlC(soma(L, 'comissao'))} em comissões</div></div>`
               : `<div class="num"><div class="l">Sua comissão</div><div class="v">${brlC(soma(L.filter(minha), 'comissao'))}</div><div class="d">${mesFechado(EM_MES) ? 'mês fechado' : 'parcial do mês'}</div></div>`}
     </div>
     <div class="lista">${L.length ? L.map(e => `<button class="card em" data-e="${e.id}">
@@ -2943,7 +2943,7 @@ async function telaMetas(P) {
   };
 }
 
-/* ================= reuniões e conversão ================= */
+/* ================= atendimentos e conversão ================= */
 const RE_TIPOS = ['Reunião de venda', 'Cotação', 'Diagnóstico da Gestão de Milhas', 'Reunião com cliente', 'Pós-venda', 'Parceria', 'Reunião interna'];
 // "Viagem completa / pacote" saiu em 06/11/2026 (subjetivo: cada serviço é marcado à parte). Só aparece nos cards antigos que já têm
 const RE_PROD_ANTIGOS = ['Viagem completa / pacote'];
@@ -3748,7 +3748,7 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo lead ou reunião da Gestão' : '+ Novo atendimento'}</button>
+    <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo atendimento da Gestão' : '+ Novo atendimento'}</button>
     <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
@@ -3760,7 +3760,7 @@ function telaReunioes(P) {
     ${RE_MODO === 'mes' ? seletorMes('reMes') : `<div class="mesnav" id="reMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Conversão</div><div class="v">${c.taxa === null ? '-' : pct(c.taxa)}</div><div class="d">${c.fechou} de ${c.decididas} decididas</div></div>
-      <div class="num"><div class="l">${G ? 'Leads e reuniões' : 'Cotações e reuniões'}</div><div class="v">${base.length}</div><div class="d">${c.andamento} ainda em aberto</div></div>
+      <div class="num"><div class="l">Atendimentos</div><div class="v">${base.length}</div><div class="d">${c.andamento} ainda em aberto</div></div>
       <div class="num"><div class="l">Valor fechado</div><div class="v">${brlC(c.valor)}</div><div class="d">no período</div></div>
       <div class="num"><div class="l">Não fecharam</div><div class="v">${c.perdeu}</div><div class="d">veja os motivos abaixo</div></div>
     </div>
@@ -3997,7 +3997,7 @@ function telaFormReuniao(P) {
     <form id="fRe" class="form" autocomplete="off" ${G ? 'novalidate' : ''} style="${G ? 'display:flex;flex-direction:column' : ''}">
       ${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}
       ${CB ? cbAbre('atend', 'Atendimento e serviços', cbRes.atend) : ''}
-      <div class="grupo">${G ? 'Reunião' : 'Atendimento'}</div>
+      <div class="grupo">Atendimento</div>
       ${campo('data', 'Data e hora ' + fusoRotulo(), dl(r.data), 'datetime-local', 'required')}
       ${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}
       ${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.concat(RE_PROD_ANTIGOS.filter(o => (Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : String(r.produto || '').split(' + ')).includes(o))).map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}
@@ -4529,7 +4529,7 @@ function telaFormReuniao(P) {
       if (nr.error) falhas.push('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
     if (falhas.length) alert('O card foi salvo, mas:\n\n' + falhas.map(t => '- ' + limparTec(t)).join('\n'));
-    aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Lead da Gestão registrado.' : 'Cotação registrada.') : 'Atualizado.');
+    aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Atendimento da Gestão registrado.' : 'Atendimento registrado.') : 'Atualizado.');
     RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
   // arquivar no lugar de excluir: o card sai do funil, das listas e dos avisos (92-arquivar-avisos-ignoram-arquivados.sql), nada é apagado
@@ -4590,7 +4590,7 @@ function telaFinanceiro(P) {
     <div class="seg" id="finModo"><button data-m="mes" class="${FIN_MODO === 'mes' ? 'on' : ''}">Mês</button><button data-m="ano" class="${FIN_MODO === 'ano' ? 'on' : ''}">Ano</button></div>
     ${FIN_MODO === 'mes' ? seletorMes('finMes') : `<div class="mesnav" id="finMes"><button data-n="-12">‹</button><span>${EM_MES.slice(0, 4)}</span><button data-n="12">›</button></div>`}
     <div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(liq)}</div><div class="d">margem de ${vendas ? pct(liq / vendas * 100) : '0%'} sobre vendas</div></div>
+      <div class="num destaque"><div class="l">Lucro líquido das vendas</div><div class="v">${brlC(liq)}</div><div class="d">margem de ${vendas ? pct(liq / vendas * 100) : '0%'} sobre vendas</div></div>
       <div class="num"><div class="l">Vendas</div><div class="v">${brlC(vendas)}</div><div class="d">${L.length} emissões</div></div>
       <div class="num"><div class="l">Lucro bruto</div><div class="v">${brlC(soma(L, 'lucro_bruto'))}</div><div class="d">custo ${brlC(soma(L, 'custo'))}</div></div>
       <div class="num"><div class="l">Imposto</div><div class="v">${brlC(soma(L, 'imposto'))}</div><div class="d">${pct(D.cfg ? D.cfg.imposto_pct : 6)} sobre o lucro</div></div>
@@ -5530,7 +5530,7 @@ function abaVendas(L, per) {
   });
   return `<div class="numeros" style="margin-top:10px">
       <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
-      <div class="num destaque"><div class="l">Lucro das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
+      <div class="num destaque"><div class="l">Lucro líquido das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
       <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
@@ -6541,7 +6541,7 @@ function fiResumo(el, c) {
     ${ADMIN || pode('gestao') ? '<div class="secao">Contrato para assinatura</div><section class="bloco" style="margin-top:0" id="blAssin"><div class="vazio">Carregando...</div></section>' : ''}
     <div class="secao">Programas <button data-fa="carteira">Abrir carteira ›</button></div>
     <div class="bloco" style="margin-top:0">${progs.length ? progs.map(p => { const v = p.vencimento_data ? dia(p.vencimento_data) : null; return `<div class="prog"><div><div class="p">${esc(p.programa)}</div><div class="s">${num(p.saldo)} ${esc(p.unidade || 'milhas')}</div></div><div class="v">${p.patrimonio_brl ? brlC(p.patrimonio_brl) : ''}</div>${v && Number(p.vencimento_quantidade) > 0 && difDias(v) >= 0 ? `<div class="s" style="grid-column:1/-1;${difDias(v) <= 30 ? 'color:var(--alerta)' : ''}">${num(p.vencimento_quantidade)} vencem em ${dataBR(p.vencimento_data)}</div>` : ''}</div>`; }).join('') : '<div class="vazio">Nenhum saldo lançado ainda.</div>'}</div>
-    <div class="secao">Próximos compromissos</div>
+    <div class="secao">Próximos na agenda</div>
     ${ev.length ? agrupar(ev) : '<div class="vazio">Nada marcado.</div>'}
     <div class="secao">Economias recentes</div>
     <div class="bloco" style="margin-top:0">${eco.length ? eco.slice(0, 5).map(r => `<div class="lin"><span>${esc(r.descricao || r.categoria || '')}</span><span>${brl(ecoValor(r))}</span></div>`).join('') : '<div class="vazio">Nenhuma economia lançada neste ano.</div>'}</div>
