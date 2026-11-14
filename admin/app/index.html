@@ -4426,6 +4426,7 @@ function telaFormReuniao(P) {
     return { atend: prods || 'Nenhum produto marcado', cliente: r.cliente || '',
       viagem: [r.trecho || 'Sem trecho', r.data_viagem ? dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : '') : ''].filter(Boolean).join(' · '),
       etapa: etapaDe(r),
+      resp: r.responsavel_id ? (nomeTime(r.responsavel_id) || 'Outra pessoa') : 'Sem responsável',
       acomp: r.resultado === 'Em andamento' ? (r.proximo_passo_data ? 'Retorno ' + dataCurta(dia(r.proximo_passo_data)) : 'Sem próximo passo') : 'Valores e responsável',
       reun: rt ? rt + (rt === 1 ? ' reunião' : ' reuniões') : 'Nenhuma reunião', notas: nota ? nota.slice(0, 70) + (nota.length > 70 ? '…' : '') : 'Sem anotações',
       cots: (n => n ? n + (n === 1 ? ' cotação' : ' cotações') : 'Nenhuma ligada ao card')(cotsDe(base.id).length) };
@@ -4482,7 +4483,8 @@ function telaFormReuniao(P) {
       ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
         + (CB ? cbFecha + cbAbre('viagem', 'Viagem', cbRes.viagem) : '') + `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`
         + (CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas, 'Abrir') : '<div class="grupo">Anotações</div>') + htmlNotas(r, nova)
-        + (CB ? cbFecha + cbAbre('acomp', 'Acompanhamento', cbRes.acomp, 'Abrir') + htmlAcompLeitura(r, base) + `${ADMIN || GER() ? `<label class="fl"><span>Trocar responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}` : '<div class="grupo">Acompanhamento</div>') + blAnd}
+        + (CB ? cbFecha + cbAbre('acomp', 'Valores e próximo passo', cbRes.acomp, 'Abrir') + htmlAcompLeitura(r, base) : '<div class="grupo">Valores e próximo passo</div>') + blAnd
+        + (CB ? cbFecha + cbAbre('resp', 'Responsável', cbRes.resp, ADMIN || GER() ? 'Trocar' : 'Abrir') + `<div class="sub" style="margin:0 0 8px">${esc(r.responsavel_id ? nomeTime(r.responsavel_id) || 'Outra pessoa' : 'Sem responsável')}${r.responsavel_id ? '' : ': o card fica com quem assumir.'}</div>${ADMIN || GER() ? `<label class="fl"><span>Trocar responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}` : '')}
       ${CB ? cbFecha + cbAbre('reun', 'Reuniões', cbRes.reun, 'Acrescentar reunião') : ''}
       ${!G ? '<button type="button" id="reunMostra" hidden style="background:none;border:0;color:var(--tinta-2);text-decoration:underline;font:inherit;font-size:13px;padding:10px 0;margin-top:2px">+ registrar uma reunião</button>' : ''}
       ${G ? '<details class="gsec" style="order:-2"><summary><span>Reuniões<small>Diagnóstico e outras reuniões, na agenda e no TickTick</small></span></summary>' : ''}
@@ -4508,7 +4510,7 @@ function telaFormReuniao(P) {
     ${CB || GB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
   if (CB || GB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
-  if (CB) { const ref = $('salvarRe'); ['notas', 'atend', 'cots', 'viagem', 'cliente', 'etapa', 'acomp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
+  if (CB) { const ref = $('salvarRe'); ['cliente', 'viagem', 'atend', 'cots', 'notas', 'etapa', 'acomp', 'resp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
@@ -5302,7 +5304,6 @@ function htmlAcompLeitura(r, base) {
   const nc = cotsDe(base.id).length, ult = nc ? cotsDe(base.id)[0] : null;
   const lin = (rot, val, cls) => `<div class="cbr-l"><span>${rot}</span><span class="${cls || ''}">${val}</span></div>`;
   return `<div class="cbr" style="margin:0 0 12px">
-      ${lin('Responsável', r.responsavel_id ? esc(nomeTime(r.responsavel_id) || 'Outra pessoa') : 'Sem responsável', r.responsavel_id ? '' : 'alerta')}
       ${podeAba('cotador') ? lin('Cotação', nc ? esc(nc + (nc === 1 ? ' ligada ao card' : ' ligadas ao card')) + (ult ? ' · ' + esc(resumoEnvios(ult)) : '') : 'Nenhuma ligada ao card', nc ? '' : (et === 'Cotação enviada' || et === 'Follow-up' ? 'alerta' : '')) : ''}
       ${venda && custo && verMg ? lin('Lucro bruto', `<span class="cb-valor">${brl2(venda - custo)}</span>`) : ''}
     </div>`;
