@@ -987,6 +987,8 @@ button.nota-m{cursor:pointer}
 .nota-ed{background:none;border:0;padding:2px 0;font:inherit;font-size:14px;color:var(--dourado);text-decoration:underline;cursor:pointer;margin-left:auto}
 .notas textarea,#notaForm textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--linha);border-radius:12px;padding:10px 12px;background:var(--branco)}
 #notaForm{margin-top:8px}
+/* fornecedor novo direto pela cotação */
+.forn-novo{display:block;background:none;border:0;padding:0 0 8px;margin-top:-4px;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 .so-pc{display:none}
 @media (max-width:1023px){.kanban.kanban-c{display:none}}
 @media (min-width:1024px){.flista{display:none}.so-pc{display:block}.kdica.so-pc{margin-bottom:8px}}
@@ -1240,7 +1242,7 @@ import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=30';
+import * as VENDA from '/admin/app/venda.js?v=31';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=22';
 import * as CX from '/admin/app/caixa.js?v=7';
@@ -3630,7 +3632,18 @@ function htmlReuniao(r) {
     ${r.resultado === 'Em andamento' ? `<div class="resq"><button class="f" data-mv="${r.id}" data-et="Fechou">Fechou</button><button class="n" data-mv="${r.id}" data-et="Não fechou">Não fechou</button></div>` : ''}
   </div>`;
 }
-const ctxVenda = () => ({ sb, D, esc, brl2, aviso, limparTec, ADMIN, meuId: D.meuId, zapLink, nomeTime, fornecedores: () => fornecedoresFichas().map(p => p.nome) });
+const ctxVenda = () => ({ sb, D, esc, brl2, aviso, limparTec, ADMIN, meuId: D.meuId, zapLink, nomeTime, fornecedores: () => fornecedoresFichas().map(p => p.nome),
+  // nomes de hotéis e serviços cadastrados (sugestão do campo Nome do item da cotação)
+  servicos: () => (FORN.lista ? FORN.lista() : []).map(x => x.nome).filter(Boolean),
+  novoFornecedor });
+// fornecedor (onde cotou ou comprou) cadastrado na hora, pela cotação: vira ficha de fornecedor no CRM e fica para as próximas vezes
+async function novoFornecedor(nome) {
+  nome = String(nome || '').replace(/\s+/g, ' ').trim(); if (!nome) return false;
+  if (fornecedoresFichas().some(p => p.nome.toLowerCase() === nome.toLowerCase())) return true;
+  const { data, error } = await sb.from('pessoas').insert({ nome, papeis: ['fornecedor'], interesse: [] }).select().single();
+  if (error) { aviso('Não cadastrou o fornecedor: ' + limparTec(error.message)); return false; }
+  (D.pessoas = D.pessoas || []).push(data); aviso(nome + ' cadastrado como fornecedor.'); return true;
+}
 const posVenda = () => D.reunioes.filter(r => r.resultado === 'Fechou' && !ehGestao(r) && (r.itens || []).length && !VENDA.concluida(r));
 const compParaConferir = () => D.reunioes.filter(r => r.fech && r.fech.comprovante && !r.fech.conferido);
 /* ---------- anotações do card (97-ajustes-comercial.sql): histórico, cada uma com data e assinatura ----------
@@ -4321,7 +4334,7 @@ function telaFormReuniao(P) {
       // retrato do card assim que termina de desenhar (com os padrões já preenchidos): é a base para saber se mudou
       setTimeout(() => { f._ultRasc = snap(); }, 0);
     }
-    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
+    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get cotacao() { return f.elements.etapa.value !== 'Fechou'; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); rotFech(); });
     // cliente da Gestão dono das milhas: a opção "Milhas do cliente da Gestão" só aparece com contrato ativo.
     // Vem de uma função do banco (o Comercial nem sempre carrega a lista da Gestão). Não redesenha enquanto alguém digita.
@@ -4407,7 +4420,8 @@ function telaFormReuniao(P) {
     desenhaModo();
     if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (IV().length === 1 || (modoV() === 'total' && IV().length > 1)) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
     $('reItens').addEventListener('input', () => somaVenda());
-    $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IV().length > 1) { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); rotFech(); });
+    // o rateio do valor integral só vale no Fechou; na cotação cada serviço tem a sua venda (e a tela não redesenha à toa)
+    $('reItens').addEventListener('change', () => { if (modoV() === 'total' && IV().length > 1 && f.elements.etapa.value === 'Fechou') { ratear(); EDIT.desenha(); } else somaVenda(); desenhaModo(); rotFech(); });
     f._ratear = () => { ratear(); EDIT.desenha(); desenhaModo(); };
     // Fechou: a venda vem preenchida da cotação ligada ao card (rota, datas, passageiros, companhia, hotéis e valor)
     const opsCot = () => (CDADOS || []).flatMap(c => COT.opcoesCotacao(c.dados).map((o, k) => ({ c, k, o })));
@@ -4971,8 +4985,8 @@ function htmlCardLeitura(r, base) {
 function htmlAcompLeitura(r, base) {
   const et = etapaDe(r);
   const IT = (r.itens || []).filter(x => !x.cancelado_em);
-  const venda = IT.reduce((a, x) => a + (+x.venda || 0), 0) || +r.valor_fechado || 0, custo = IT.reduce((a, x) => a + (+x.custo || 0), 0);
-  const verMg = ADMIN || VER_MARGEM() || base.responsavel_id === D.meuId;
+  const venda = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0) || +r.valor_fechado || 0, custo = IT.reduce((a, x) => a + VENDA.custoDe(x), 0);
+  const verMg = (ADMIN || VER_MARGEM() || base.responsavel_id === D.meuId) && r.resultado === 'Fechou';
   const nc = cotsDe(base.id).length, ult = nc ? cotsDe(base.id)[0] : null;
   const lin = (rot, val, cls) => `<div class="cbr-l"><span>${rot}</span><span class="${cls || ''}">${val}</span></div>`;
   return `<div class="cbr" style="margin:0 0 12px">
