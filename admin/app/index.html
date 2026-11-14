@@ -792,8 +792,6 @@ button[data-pg],button[data-desf],button[data-cfdesf],button[data-avgok]{min-hei
   :root .mk-arr-fantasma{font-size:14px}
   :root .mk-leg{font-size:14px}
   :root .mk-chip{font-size:14px}
-  :root .mk-cal .h{font-size:14px;letter-spacing:0.06em}
-  :root .mk-cal button{font-size:14px}
   :root .mk-fmts span{font-size:14px}
   :root .mk-ajuste{font-size:14px}
   :root .mk-pilar b{font-size:22px}
@@ -1203,7 +1201,7 @@ body.cb-leitura #montarCot{margin-top:8px}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=7';
-import * as MKT from '/admin/app/marketing.js?v=27';
+import * as MKT from '/admin/app/marketing.js?v=28';
 import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=31';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
@@ -1212,7 +1210,7 @@ import * as CRM from '/admin/app/crm.js?v=23';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
-import * as COT from '/admin/app/cotador.js?v=58';
+import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=30';
 import * as ATV from '/admin/app/atividades.js?v=3';
@@ -4905,56 +4903,7 @@ async function historico(tabela, id) {
 
 /* ---------- DRE da empresa (administradores) ---------- */
 const CAT_DESP = ['Marketing', 'Ferramentas', 'Contabilidade', 'Pessoal', 'Viagens', 'Taxas e tarifas', 'Escritório', 'Outros'];
-async function carregarDRE(L) {
-  const el = $('dreBloco'); if (!el) return;
-  const y = EM_MES.slice(0, 4), mesModo = FIN_MODO === 'mes', alvo = EM_MES;
-  const [cu, dv] = await Promise.all([
-    sb.rpc('dre_custos', { p_ini: mesModo ? EM_MES + '-01' : y + '-01-01', p_fim: mesModo ? EM_MES + '-01' : y + '-12-01' }),
-    mesModo ? sb.from('despesas').select('*').eq('mes', EM_MES + '-01').order('criado_em', { ascending: false }) : Promise.resolve({ data: [] })
-  ]);
-  if (ABA !== 'financeiro' || !$('dreBloco') || EM_MES !== alvo) return;
-  if (cu.error) { el.innerHTML = '<div class="vazio">O DRE é ativado pelo 27-dre-e-salarios.sql no Supabase.</div>'; return; }
-  const C = cu.data || [], tot = (k) => C.reduce((t, r) => t + (+r[k] || 0), 0);
-  const rec = soma(L, 'valor_receber'), cus = soma(L, 'custo'), lb = soma(L, 'lucro_bruto'), imp = soma(L, 'imposto'), com = soma(L, 'comissao'), rep = soma(L, 'repasse');
-  const margem = lb - imp - com - rep, sal = tot('salarios'), fix = tot('fixas'), avu = tot('avulsas'), res = margem - sal - fix - avu;
-  const ln = (t, v, cls) => `<div class="lin ${cls || ''}"><span>${t}</span><span>${v < 0 ? '− ' + brl2(-v) : brl2(v)}</span></div>`;
-  const pessoas = mesModo && C[0] ? (C[0].por_pessoa || []) : [];
-  let porMes = '';
-  if (!mesModo) porMes = `<section class="bloco"><h2>Resultado por mês</h2>${C.map(r => { const k = String(r.mes).slice(0, 7), E = doMes(k); const mg = soma(E, 'lucro_bruto') - soma(E, 'imposto') - soma(E, 'comissao') - soma(E, 'repasse'); const rr = mg - (+r.salarios || 0) - (+r.fixas || 0) - (+r.avulsas || 0); return E.length || +r.salarios || +r.fixas || +r.avulsas ? `<button class="lin" data-mesdre="${k}"><span>${mesNome(k)}</span><span style="color:${rr < 0 ? 'var(--alerta)' : 'var(--verde)'}">${rr < 0 ? '− ' + brl2(-rr) : brl2(rr)}<b class="seta">›</b></span></button>` : ''; }).join('') || '<div class="vazio">Sem movimento no ano.</div>'}</section>`;
-  el.innerHTML = `<section class="bloco dre"><h2>DRE ${mesModo ? 'de ' + mesNome(EM_MES).toLowerCase() : 'de ' + y}</h2>
-      ${ln('Receita das vendas', rec)}${ln('(−) Custo das emissões', -cus)}${ln('= Lucro bruto', lb, 'sub')}
-      ${ln('(−) Imposto', -imp)}${ln('(−) Comissões do time', -com)}${ln('(−) Parceiros', -rep)}${ln('= Margem de contribuição', margem, 'sub')}
-      ${ln('(−) Salários fixos', -sal)}${ln('(−) Despesas fixas', -fix)}${ln('(−) Despesas do mês', -avu)}
-      <div class="lin forte"><span>= Resultado da empresa</span><span style="color:${res < 0 ? 'var(--alerta)' : 'var(--verde)'}">${res < 0 ? '− ' + brl2(-res) : brl2(res)}</span></div>
-      ${rec ? `<div class="sub" style="margin-top:6px">Margem final de ${pct(res / rec * 100)} sobre as vendas.</div>` : ''}
-      ${pessoas.length ? `<div class="sub" style="margin-top:8px">Fixos: ${pessoas.map(p => esc(p.nome) + ' ' + brl(p.fixo)).join(' · ')}</div>` : ''}
-    </section>
-    ${porMes}
-    ${mesModo ? `<div class="secao">Despesas do mês <button id="abrirDesp">+ Lançar</button></div>
-    <form class="bloco form" id="fDesp" hidden style="margin-top:0">
-      <div class="duas-col">${campo('descricao', 'Descrição', '', 'text', 'required placeholder="Ex.: tráfego pago, bônus"')}${campo('valor', 'Valor (R$)', '', 'number', 'required')}</div>
-      <label class="fl"><span>Categoria</span><select name="categoria">${CAT_DESP.map(c => `<option>${c}</option>`).join('')}</select></label>
-      <button class="zap" type="submit" style="margin-top:8px;width:100%">Lançar em ${mesNome(EM_MES).toLowerCase()}</button>
-    </form>
-    <div class="bloco" style="margin-top:0">${(dv.data || []).length ? dv.data.map(d => `<div class="lin"><span>${esc(d.descricao)} · ${esc(d.categoria)}</span><span>${brl2(d.valor)} <button class="mini" data-rmdesp="${d.id}">excluir</button></span></div>`).join('') : '<div class="vazio">Nenhuma despesa avulsa neste mês.</div>'}
-      <div class="sub">Salários e despesas que se repetem todo mês ficam em <a href="#custos" id="irCustos">Mais > Salários e despesas fixas</a>.</div></div>` : ''}`;
-  el.querySelectorAll('[data-mesdre]').forEach(b => b.onclick = () => { FIN_MODO = 'mes'; EM_MES = b.dataset.mesdre; telaFinanceiro($('pagina')); scrollTo(0, 0); });
-  if ($('irCustos')) $('irCustos').onclick = (e) => { e.preventDefault(); ir('custos'); };
-  if ($('abrirDesp')) $('abrirDesp').onclick = () => { $('fDesp').hidden = !$('fDesp').hidden; };
-  if ($('fDesp')) $('fDesp').onsubmit = async (e) => {
-    e.preventDefault(); const f = e.target;
-    const { error } = await sb.from('despesas').insert({ mes: EM_MES + '-01', descricao: f.elements.descricao.value.trim(), categoria: f.elements.categoria.value, valor: Number(String(f.elements.valor.value).replace(',', '.')) });
-    if (error) { aviso('Não salvou: ' + error.message); return; }
-    aviso('Despesa lançada.'); carregarDRE(L);
-  };
-  el.querySelectorAll('[data-rmdesp]').forEach(b => b.onclick = async () => {
-    if (!await pergunta('Excluir esta despesa?\n\nEla sai do DRE e dos compromissos. Não dá para desfazer.', { sim: 'Excluir', perigo: true })) return;
-    CONFIRMA = null;
-    const { error } = await sb.from('despesas').delete().eq('id', b.dataset.rmdesp);
-    if (error) { aviso('Não excluiu: ' + error.message); return; }
-    aviso('Despesa excluída.'); carregarDRE(L);
-  });
-}
+// o DRE completo fica em Mais > DRE (dre.js); o bloco antigo daqui não era mais desenhado por nenhuma tela
 
 /* ---------- salários e despesas fixas (administradores) ---------- */
 let FX_ED = null;
@@ -5933,7 +5882,6 @@ function listaLeads() {
   if (!podeAba('reunioes') && !pode('gestao')) el.querySelectorAll('[data-reu]').forEach(b => b.remove());
   if (!podeAba('reunioes') && !pode('gestao')) el.querySelectorAll('[data-abrir-card]').forEach(b => b.remove());
   el.querySelectorAll('[data-abrir-card]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.abrirCard));
-  el.querySelectorAll('[data-zaps]').forEach(a => a.addEventListener('click', () => marcarContato(cardDaSol((D.sols || []).find(x => String(x.id) === a.dataset.zaps)))));
   el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => abrirAtendimento('nova', JSON.parse(b.dataset.reu)));
   el.querySelectorAll('select[data-t]').forEach(s => s.onchange = async () => {
     const { error } = await sb.from(s.dataset.t).update({ status: s.value }).eq('id', s.dataset.id);
