@@ -987,6 +987,8 @@ button.nota-m{cursor:pointer}
 .nota-ed{background:none;border:0;padding:2px 0;font:inherit;font-size:14px;color:var(--dourado);text-decoration:underline;cursor:pointer;margin-left:auto}
 .notas textarea,#notaForm textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--linha);border-radius:12px;padding:10px 12px;background:var(--branco)}
 #notaForm{margin-top:8px}
+.cal-ok{flex:none;background:var(--branco);border:1px solid var(--verde);color:var(--verde);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.cal-ok.on,.cal-ok:disabled{border-color:var(--linha);color:var(--tinta-3);cursor:default}
 /* fornecedor novo direto pela cotação */
 .forn-novo{display:block;background:none;border:0;padding:0 0 8px;margin-top:-4px;font:inherit;font-size:14px;color:var(--verde);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 .so-pc{display:none}
@@ -1236,7 +1238,7 @@ import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=31';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
-import * as CRM from '/admin/app/crm.js?v=24';
+import * as CRM from '/admin/app/crm.js?v=25';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
@@ -1456,6 +1458,7 @@ function minhasTarefas() {
   if (!soMarketing()) {
     if (pode('comercial')) retornosHoje().filter(r => r.responsavel_id === eu || r.assumido_por === eu).forEach(r => add('Comercial', r.cliente || 'Atendimento', (passoDe(r).data < hj ? 'Retorno atrasado' : 'Retorno para hoje') + ': ' + passoDe(r).txt, () => abrirAtendimento(r.id), r.proximo_passo_data < hj));
     const av = avaliacoesParaPedir(true).length; if (av) add('Comercial', n2(av, 'avaliação de atendimento para pedir', 'avaliações de atendimento para pedir'), 'Reuniões realizadas nos últimos 14 dias', () => ir('agenda'));
+    lembretesAniv().forEach(({ p, falta }) => add('Comercial', 'Aniversário de ' + p.nome, falta === 0 ? 'É hoje: mande os parabéns' : 'Em ' + falta + (falta === 1 ? ' dia' : ' dias') + ': mande os parabéns', () => irAniversarios()));
     if (pode('checkin')) { const n = checkinsEm().length; if (n) add('Operação', n2(n, 'check-in para fazer', 'check-ins para fazer'), 'Voos nas próximas 24 horas', () => ir('agenda'), true); }
     if (pode('gestao')) { const n = tarefasParaHoje().length; if (n) add('Gestão de Milhas', n2(n, 'tarefa da Gestão para hoje', 'tarefas da Gestão para hoje'), 'Implantação e acompanhamento dos clientes', () => ir('gestao')); }
   }
@@ -1898,7 +1901,7 @@ async function carregar(silencioso, manterTela) {
   // tudo em paralelo (antes eram ~15 buscas uma depois da outra, o que deixava a abertura lenta)
   const nada = Promise.resolve({ data: [], error: null, count: 0 });
   const G = pode('gestao'), LE = pode('leads'), CRMok = podeAba('crm'), k0 = mesKey(new Date());
-  const [comum, pc, ar, tt, cl, ci, mp, vt, q, gx, px, av, pv, ag, , , , , nt] = await Promise.all([
+  const [comum, pc, ar, tt, cl, ci, mp, vt, q, gx, px, av, pv, ag, , , , , nt, ae] = await Promise.all([
     Promise.all([
       sb.from('emissoes').select('*').gte('data_negociacao', desde).order('data_negociacao', { ascending: false }).limit(5000),
       sb.from('configuracoes').select('*').eq('id', 1).maybeSingle(),
@@ -1961,13 +1964,17 @@ async function carregar(silencioso, manterTela) {
     podeAba('marketing') ? MKT.carregar(sb) : null,
     recarregarGravar(),
     // anotações dos cards (97-ajustes-comercial.sql); sem a tabela, o card volta ao texto único de antes
-    podeAba('reunioes') || pode('gestao') ? sb.from('atendimento_anotacoes').select('*').order('criado_em', { ascending: false }).limit(20000) : null
+    podeAba('reunioes') || pode('gestao') ? sb.from('atendimento_anotacoes').select('*').order('criado_em', { ascending: false }).limit(20000) : null,
+    // parabéns já enviados (97-ajustes-comercial.sql): encerram o lembrete de aniversário do ano
+    CRMok ? sb.from('aniversarios_envios').select('pessoa_id,ano').limit(50000) : null
   ]);
+  D.anivEnv = ae && !ae.error ? (ae.data || []) : [];
   D.notas = nt ? (nt.error ? null : (nt.data || [])) : [];
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
   D.renovT = comum[7] && !comum[7].error ? (comum[7].data || []) : [];
   if (pc) D.cots = pc.error ? [] : (pc.data || []);
-  D.agenda = ar.error ? null : (ar.data || []); D.areu = D.agenda;
+  D.agenda = ar.error ? null : (ar.data || []).filter(x => !ehEvento(x)); D.areu = D.agenda;
+  D.eventos = ar.error ? [] : (ar.data || []).filter(ehEvento);
   D.tt = tt.error ? null : tt.data;
   D.cal = cl.error ? null : (cl.data || []);
   if (ci) D.calInfo = ci.error ? null : ci.data;
@@ -2207,7 +2214,7 @@ function telaInicio(P) {
     ...(ADMIN || pode('gestao') ? [['Gestão de Milhas', totalGestao(), () => ir('gestao')]] : []),
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
-    ['Aniversários de clientes hoje', aniversariosHoje().length, () => { const el = $('anivHoje'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }],
+    ['Aniversários para mandar parabéns', lembretesAniv().length, () => { const el = $('anivHoje'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }],
     ...(ADMIN ? [['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]] : []),
     ...(ADMIN ? [['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
     ...(ADMIN ? [['Posts do marketing atrasados', MKT.pend().atrasados, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
@@ -3703,14 +3710,14 @@ function ligarNotas(P, r, aoMudar) {
   });
 }
 /* ---------- ações rápidas do card no funil (botão ⋯): retorno, Fechou e Não fechou com poucos toques ---------- */
-function folhaAcoesCard(r) {
+function folhaAcoesCard(r, o = {}) {
   return new Promise((ok) => {
     const ativo = r.resultado === 'Em andamento', el = document.createElement('div'); el.className = 'folha';
-    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${esc(r.cliente || 'Cliente')}</div>
+    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${esc(r.cliente || 'Cliente')}</div>${o.feito ? `<p class="ac-fl">Follow-up feito${passoDe(r).txt ? ': ' + esc(passoDe(r).txt) : ''}. Qual o próximo retorno?</p>` : ''}
       <button type="button" class="folha-item" data-a="abrir">Abrir o card<span>›</span></button>
-      ${ativo ? `<div class="folha-tit" style="margin-top:12px">Chamar de novo</div>
+      ${ativo ? `<div class="folha-tit" style="margin-top:12px">${o.feito ? 'Próximo retorno' : 'Chamar de novo'}</div>
       <div class="td-dias">${[[1, 'Amanhã'], [3, 'Em 3 dias'], [7, 'Em 1 semana']].map(([n, t]) => `<button type="button" class="ac-sec" data-n="${n}">${t}</button>`).join('')}</div>
-      <label class="fl" style="margin-top:8px"><span>Anotação (opcional)</span><input id="acNota" maxlength="500" placeholder="Ex.: vai decidir com a família"></label>
+      <label class="fl" style="margin-top:8px"><span>${o.feito ? 'Observação (opcional, vai para as anotações do card)' : 'Anotação (opcional)'}</span><input id="acNota" maxlength="500" placeholder="Ex.: vai decidir com a família"></label>
       <div class="duas-col" style="margin-top:10px"><button type="button" class="ac-sec" data-a="fechou">Fechou</button><button type="button" class="ac-sec" data-a="perdeu">Não fechou</button></div>` : ''}
       <button type="button" class="sec" data-a="0" style="width:100%;margin-top:10px">Voltar</button></div>`;
     const fim = (v) => { el.remove(); ok(v); };
@@ -3743,12 +3750,12 @@ async function encerrarNaoFechou(r) {
   if (error) { aviso('Não salvou: ' + limparTec(error.message)); return false; }
   Object.assign(r, data); aviso(`${r.cliente}: Não fechou.`); return true;
 }
-async function acoesCard(id) {
+async function acoesCard(id, o = {}) {
   const r = D.reunioes.find(x => String(x.id) === String(id)); if (!r) return;
-  const v = await folhaAcoesCard(r); if (!v) return;
+  const v = await folhaAcoesCard(r, o); if (!v) return;
   if (v.a === 'abrir') return abrirAtendimento(r.id);
   if (v.a === 'fechou') return abrirAtendimento(r.id, { etapa: 'Fechou' });
-  if (v.a === 'perdeu') { if (await encerrarNaoFechou(r)) tela(); return; }
+  if (v.a === 'perdeu') { if (ehGestao(r)) return abrirAtendimento(r.id, { etapa: 'Não fechou' }); if (await encerrarNaoFechou(r)) tela(); return; }
   // novo retorno: o passo continua o mesmo; a anotação, se houver, entra no histórico do card
   const tipo = r.proximo_passo_tipo || passoDe(r).tipo || null, antes = r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : null;
   const { data, error } = await sb.from('atendimentos').update({ proximo_passo_data: v.data, ...(tipo ? { proximo_passo_tipo: tipo } : {}) }).eq('id', r.id).select().single();
@@ -3907,6 +3914,7 @@ function telaReunioes(P) {
   if (ABA === 'gestao') RE_VISTA = 'gestao';
   else if (!RE_ED || !pode('gestao')) RE_VISTA = 'viagens'; // sem a chave da Gestão, o Comercial mostra só viagens
   if (RE_ED) return telaFormReuniao(P);
+  if (RE_PARTE === 'aniv' && !(podeAba('crm') && D.pessoas)) RE_PARTE = 'funil';
   const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
   if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
@@ -3918,8 +3926,9 @@ function telaReunioes(P) {
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
     <button class="zap grande" id="novaR" style="margin-top:10px;width:100%">${G ? '+ Novo atendimento da Gestão' : '+ Novo atendimento'}</button>
-    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button><button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    <div class="seg" id="reParte" style="margin-top:12px"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button>${podeAba('crm') && D.pessoas ? `<button data-p="aniv" class="${RE_PARTE === 'aniv' ? 'on' : ''}">Aniversários</button>` : ''}<button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
+    ${RE_PARTE === 'aniv' && podeAba('crm') && D.pessoas ? htmlAniversarios(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica so-pc">Arraste o card para mudar de etapa. Toque no nome para abrir a ficha do cliente.</div>' + htmlFunilCel(abertos)}
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
@@ -3948,6 +3957,10 @@ function telaReunioes(P) {
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; try { localStorage.setItem('maktub_re_parte', RE_PARTE); } catch (_) {} telaReunioes(P); } };
   document.body.classList.toggle('cal-largo', RE_PARTE === 'cal');
   if (RE_PARTE === 'cal') ligarCalendario(P, ABA === 'gestao', () => telaReunioes(P));
+  if (RE_PARTE === 'aniv' && $('calModo')) {
+    CAL.ligar(P, CAL_ST.aniv, { itens: CAL_ITENS }, () => telaReunioes(P), (it) => it && it.abrir && it.abrir());
+    P.querySelectorAll('[data-anivok]').forEach(b => b.onclick = async (e) => { e.stopPropagation(); const [pid, ano] = b.dataset.anivok.split('|'); if (await marcarAnivEnviado(pid, ano)) telaReunioes(P); });
+  }
   if ($('gePrio')) $('gePrio').onclick = (e) => { const b = e.target.closest('button'); if (b) { GE_PRIO = b.dataset.p; telaReunioes(P); } };
   if ($('reVista')) $('reVista').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_VISTA = b.dataset.v; RE_FILTRO = 'todos'; telaReunioes(P); } };
   if ($('voltarG')) $('voltarG').onclick = () => voltarA('gestao');
@@ -3988,12 +4001,13 @@ const CAL_TIPOS = [
   ['reu', 'Reunião', '#6B3A4A'],
   ['ren', 'Vencimento do contrato', '#8A6D3B'],
   ['ren90', 'Começa a renovação (90 dias antes)', '#8A6D3B', true],
-  ['aniv', 'Aniversário', '#7A6A55']
+  ['aniv', 'Aniversário', '#7A6A55'],
+  ['evt', 'Fora (evento avulso)', '#A88B4A']
 ];
 // filtro por tipo: renovação junta o vencimento e o marco de 90 dias
-const CAL_FILTRO_TIPOS = [['rv', 'Retornos de viagens', '#2E5E6E'], ['rg', 'Retornos da Gestão', '#715E32'], ['reu', 'Reuniões', '#6B3A4A'], ['ren', 'Renovações', '#8A6D3B'], ['aniv', 'Aniversários', '#7A6A55']];
+const CAL_FILTRO_TIPOS = [['rv', 'Retornos de viagens', '#2E5E6E'], ['rg', 'Retornos da Gestão', '#715E32'], ['reu', 'Reuniões', '#6B3A4A'], ['ren', 'Renovações', '#8A6D3B'], ['evt', 'Eventos avulsos', '#A88B4A']];
 const calGrupo = (t) => t === 'ren90' ? 'ren' : t;
-const CAL_ST = { reunioes: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() }, gestao: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() } };
+const CAL_ST = { aniv: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() }, reunioes: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() }, gestao: { modo: 'mes', mes: hojeISO().slice(0, 7), sem: CAL.segunda(hojeISO()), dia: hojeISO() } };
 let CAL_F = (() => { try { return JSON.parse(localStorage.getItem('maktub_cal_filtro') || 'null') || {}; } catch (_) { return {}; } })();
 const calSalvarFiltro = () => { try { localStorage.setItem('maktub_cal_filtro', JSON.stringify(CAL_F)); } catch (_) {} };
 const calAberto = () => (ABA === 'reunioes' || (ABA === 'gestao' && GE_FUNIL)) && !RE_ED && RE_PARTE === 'cal';
@@ -4011,6 +4025,99 @@ function abrirClienteCal(id, aba) {
   if (p && podeAba('crm')) return ir('crm', () => CRM.abrir(p.id));
   aviso('A ficha deste cliente fica na Gestão, e o seu acesso não inclui a carteira.');
 }
+/* ---------- eventos avulsos (99-eventos-avulsos.sql): a pessoa fica fora num horário e ninguém marca reunião de cliente por cima ----------
+   Ficam em agenda_reunioes com o tipo 'Evento avulso', mas fora de D.agenda (não contam como reunião em nenhuma tela). */
+const EVT = 'Evento avulso';
+const ehEvento = (x) => !!x && x.tipo === EVT;
+const fimDe = (x) => new Date(new Date(x.data).getTime() + (+x.duracao_min || 60) * 6e4);
+const hmD = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+function bloqueioEm(ids, ini, fim, ignorar) {
+  ids = [...new Set((ids || []).filter(Boolean))]; if (!ids.length || isNaN(ini) || isNaN(fim)) return null;
+  return (D.eventos || []).find(e => e.status !== 'Cancelada' && e.id !== ignorar && (e.participantes || []).some(p => ids.includes(p)) && new Date(e.data) < fim && fimDe(e) > ini) || null;
+}
+const msgBloqueio = (e) => `${primeiroN((e.participantes || [])[0]) || 'Essa pessoa'} está fora das ${hmD(new Date(e.data))} às ${hmD(fimDe(e))}${e.titulo ? ' (' + e.titulo + ')' : ''}. Escolha outro horário.`;
+// folha do evento: cada pessoa cria o seu; a administração cria e muda o de qualquer pessoa
+function folhaEvento(x) {
+  const nova = !x, podeMudar = nova || ADMIN || (x.participantes || []).includes(D.meuId) || x.created_by === D.meuId;
+  if (!podeMudar) { aviso('Evento de ' + (primeiroN((x.participantes || [])[0]) || 'outra pessoa') + '. Só a pessoa ou a administração muda.'); return; }
+  const ini = x ? new Date(x.data) : null, fim = x ? fimDe(x) : null, quem = x ? (x.participantes || [])[0] : D.meuId;
+  const el = document.createElement('div'); el.className = 'folha'; SUJO = true;
+  el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${nova ? 'Novo evento' : 'Evento'}</div>
+    <p class="ac-fl">Bloqueia a agenda: todo o time vê que a pessoa está fora, e o app não deixa marcar reunião de cliente por cima.</p>
+    <form id="fEvt" class="form" autocomplete="off">
+      <label class="fl"><span>Título</span><input name="titulo" required maxlength="120" value="${esc(x ? x.titulo || '' : '')}" placeholder="Ex.: evento externo, consulta médica"></label>
+      ${ADMIN ? `<label class="fl"><span>Pessoa</span><select name="pessoa">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === quem ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
+      <label class="fl"><span>Data</span><input name="data" type="date" required value="${ini ? isoLocal(ini) : hojeISO()}"></label>
+      <div class="duas-col"><label class="fl"><span>Início</span><input name="ini" type="time" required value="${ini ? hmD(ini) : '08:00'}"></label><label class="fl"><span>Fim</span><input name="fim" type="time" required value="${fim ? hmD(fim) : '12:00'}"></label></div>
+      <div class="sub" id="msgEvt" style="color:var(--alerta)"></div>
+      <div class="duas-col" style="margin-top:8px"><button type="button" class="ac-sec" data-a="0">Voltar</button><button type="submit" class="ac-prim" style="margin-top:10px">${nova ? 'Criar evento' : 'Salvar'}</button></div>
+      ${nova ? '' : '<button type="button" class="sec" data-a="canc" style="width:100%;margin-top:10px">Cancelar o evento</button>'}
+    </form></div>`;
+  const fim0 = () => { el.remove(); SUJO = false; };
+  el.querySelector('.folha-fundo').onclick = fim0; el.querySelector('[data-a="0"]').onclick = fim0;
+  const f = el.querySelector('#fEvt');
+  const canc = el.querySelector('[data-a="canc"]');
+  if (canc) canc.onclick = async () => {
+    const { data, error } = await sb.from('agenda_reunioes').update({ status: 'Cancelada' }).eq('id', x.id).select().single();
+    if (error) { el.querySelector('#msgEvt').textContent = limparTec('Não cancelou: ' + error.message); return; }
+    Object.assign(x, data); fim0(); aviso('Evento cancelado. A agenda fica livre.'); tela();
+  };
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
+    const a = new Date(`${g('data')}T${g('ini')}`), b = new Date(`${g('data')}T${g('fim')}`);
+    if (!(b > a)) { el.querySelector('#msgEvt').textContent = 'O fim precisa ser depois do início.'; return; }
+    const row = { titulo: g('titulo'), tipo: EVT, data: a.toISOString(), duracao_min: Math.round((b - a) / 6e4), status: 'Agendada', participantes: [g('pessoa') || quem || D.meuId] };
+    const q = nova ? sb.from('agenda_reunioes').insert(row).select().single() : sb.from('agenda_reunioes').update(row).eq('id', x.id).select().single();
+    const { data, error } = await q;
+    if (error) { el.querySelector('#msgEvt').textContent = limparTec('Não salvou: ' + error.message); return; }
+    if (nova) (D.eventos = D.eventos || []).push(data); else Object.assign(x, data);
+    fim0(); aviso(nova ? 'Evento criado. A agenda fica bloqueada nesse horário.' : 'Evento atualizado.'); tela();
+  };
+  document.body.appendChild(el);
+}
+/* ---------- aniversários: calendário próprio e um lembrete 7 dias antes ----------
+   O lembrete vai só para os sócios (todos os clientes) e para o vendedor do cliente (responsável do card mais recente).
+   "Enviado" (aniversarios_envios) encerra o lembrete daquele ano. */
+const anivEnviado = (pid, ano) => (D.anivEnv || []).some(x => String(x.pessoa_id) === String(pid) && +x.ano === +ano);
+const vendedorDoCliente = (pid) => { const r = (D.reunioes || []).filter(x => x.pessoa_id === pid).sort((a, b) => String(b.data).localeCompare(String(a.data)))[0]; return r ? (r.responsavel_id || r.assumido_por || null) : null; };
+const dataAniv = (nasc, y) => { const md = String(nasc).slice(5, 10); return `${y}-${md === '02-29' && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? '02-28' : md}`; };
+function lembretesAniv() {
+  if (!podeAba('crm') || soMarketing() || !D.pessoas) return [];
+  const h = hojeISO(), L = [];
+  D.pessoas.filter(p => p.nascimento && CRM.leadOuCliente(D, p)).forEach(p => {
+    let y = +h.slice(0, 4), d = dataAniv(p.nascimento, y); if (d < h) { y++; d = dataAniv(p.nascimento, y); }
+    const falta = Math.round((dia(d) - dia(h)) / 864e5); if (falta > 7 || anivEnviado(p.id, y)) return;
+    if (!(ADMIN || vendedorDoCliente(p.id) === D.meuId)) return;
+    L.push({ p, falta, ano: y, d });
+  });
+  return L.sort((a, b) => a.falta - b.falta);
+}
+async function marcarAnivEnviado(pid, ano) {
+  if (anivEnviado(pid, ano)) return true;
+  const { error } = await sb.from('aniversarios_envios').insert({ pessoa_id: pid, ano: +ano });
+  if (error && !/duplicate/i.test(error.message)) { aviso('Não marcou: ' + limparTec(error.message)); return false; }
+  (D.anivEnv = D.anivEnv || []).push({ pessoa_id: pid, ano: +ano }); aviso('Parabéns marcado como enviado.'); atualizarSino(); return true;
+}
+const textoParabens = (p) => `Oi, ${String(p.nome || '').split(' ')[0]}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`;
+function anivItens(G, de, ate) {
+  const E = [], noPer = (d) => d && d >= de && d <= ate, idsG = new Set(clientesCal().map(c => String(c.id)));
+  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || (p.cliente_id != null && idsG.has(String(p.cliente_id))))).forEach(p => {
+    for (let y = +de.slice(0, 4); y <= +ate.slice(0, 4); y++) {
+      const d = dataAniv(p.nascimento, y); if (!noPer(d)) continue;
+      const env = anivEnviado(p.id, y);
+      E.push({ d, hora: '', tipo: 'aniv', t: p.nome, s: 'Faz ' + (y - +p.nascimento.slice(0, 4)) + ' anos' + (env ? ' · parabéns enviado' : '') + (p.celular ? '' : ' · sem WhatsApp na ficha'), passado: env, donos: [], p, ano: y, env, abrir: () => ir('crm', () => CRM.abrir(p.id)) });
+    }
+  });
+  return E;
+}
+function htmlAniversarios(G) {
+  CAL.estilos();
+  const st = CAL_ST.aniv, per = CAL.periodo(st), E = CAL_ITENS = anivItens(G, per.de, per.ate);
+  return `<div style="margin-top:12px"></div>${CAL.html(st, { itens: E, tipos: CAL_TIPOS.filter(([k]) => k === 'aniv'), esc,
+    extra: (it) => `${it.p && it.p.celular && !it.env ? `<a class="zap" href="${esc(zapLink(it.p.celular, it.p.nome, textoParabens(it.p)))}" target="_blank" rel="noopener">Parabéns</a>` : ''}<button type="button" class="cal-ok ${it.env ? 'on' : ''}" data-anivok="${it.p.id}|${it.ano}" ${it.env ? 'disabled' : ''}>${it.env ? 'Enviado ✓' : 'Marcar enviado'}</button>`,
+    dica: 'O lembrete chega 7 dias antes para os sócios e para o vendedor do cliente. Marcar enviado encerra o lembrete do ano.' })}`;
+}
 function calItens(G, de, ate) {
   const hj = hojeISO(), E = [], noPer = (d) => d && d >= de && d <= ate;
   const hm = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -4022,7 +4129,7 @@ function calItens(G, de, ate) {
     if (PASSO_REUNIAO.includes(pe.tipo) && reunioesDe(r.id).some(a => a.status === 'Agendada' && isoLocal(new Date(a.data)) === d0)) return;
     const donos = [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].filter(Boolean);
     const quem = [...new Set(donos)].map(primeiroN).filter(Boolean).join(' e ');
-    E.push({ d, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', t: r.cliente || 'Card sem nome', s: [pe.txt || 'Sem passo definido', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
+    E.push({ d, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', rid: r.id, t: r.cliente || 'Card sem nome', s: [pe.txt || 'Sem passo definido', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
   });
   // reuniões da agenda (inclui as que chegam pelo Cal.com e o diagnóstico e a proposta marcados no card)
   (D.agenda || []).filter(x => (x.status === 'Agendada' || x.status === 'Realizada') && (G ? reuDaGestao(x) : reuDoComercial(x))).forEach(x => {
@@ -4030,7 +4137,9 @@ function calItens(G, de, ate) {
     const card = x.atendimento_id ? D.reunioes.find(r => r.id === x.atendimento_id) : null;
     const quem = [x.vendedor_id, ...(x.participantes || [])].filter(Boolean);
     const passou = x.status === 'Realizada' || new Date(x.data) < Date.now() - 3 * 36e5;
-    E.push({ d, hora: hm(x.data), tipo: 'reu', t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
+    // reunião (inclusive a que o cliente marca pelo Cal.com) em cima de um bloqueio: aparece com aviso
+    const bq = !passou && x.status === 'Agendada' ? bloqueioEm(quem, new Date(x.data), fimDe(x)) : null;
+    E.push({ d, hora: hm(x.data), tipo: 'reu', ...(bq ? { atr: true, atrTxt: 'Conflito: ' + primeiroN((bq.participantes || [])[0]) + ' está fora' } : {}), t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
       abrir: () => podeAba('agenda') ? abrirReuniao(x.id) : card ? abrirAtendimento(card.id) : aviso('Seu acesso não inclui a agenda.') });
   });
   // pedidos de reunião que o cliente da Gestão fez pelo painel
@@ -4052,15 +4161,13 @@ function calItens(G, de, ate) {
     if (noPer(v)) E.push({ d: v, hora: '', tipo: 'ren', t: 'Vence o contrato: ' + c.nome_completo, s: 'Reunião de renovação' + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
     if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
   });
-  // aniversários da ficha única (leads e clientes), todo ano
-  const idsG = new Set(CLG.map(c => String(c.id)));
-  (D.pessoas || []).filter(p => p.nascimento && CRM.leadOuCliente(D, p) && (!G || (p.papeis || []).includes('gestao') || (p.interesse || []).includes('gestao') || (p.cliente_id != null && idsG.has(String(p.cliente_id))))).forEach(p => {
-    const md = String(p.nascimento).slice(5, 10);
-    for (let y = +de.slice(0, 4); y <= +ate.slice(0, 4); y++) {
-      const d = `${y}-${md === '02-29' && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? '02-28' : md}`;
-      if (noPer(d)) E.push({ d, hora: '', tipo: 'aniv', t: 'Aniversário: ' + p.nome, s: 'Faz ' + (y - +p.nascimento.slice(0, 4)) + ' anos' + (p.celular ? '' : ' · sem WhatsApp na ficha'), donos: [], p, abrir: () => ir('crm', () => CRM.abrir(p.id)) });
-    }
+  // eventos avulsos: quem está fora e em que horário (todo o time vê)
+  (D.eventos || []).filter(x => x.status !== 'Cancelada').forEach(x => {
+    const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
+    const quem = x.participantes || [];
+    E.push({ d, hora: hm(x.data), tipo: 'evt', t: 'Fora: ' + (quem.map(primeiroN).filter(Boolean).join(', ') || 'equipe') + (x.titulo ? ' · ' + x.titulo : ''), s: hm(x.data) + ' às ' + hmD(fimDe(x)), donos: quem, abrir: () => folhaEvento(x) });
   });
+  // aniversários saíram daqui: ficam na aba Aniversários (anivItens), com o lembrete e o "enviado"
   return E;
 }
 // filtros: responsável (itens sem responsável, como aniversário e renovação, aparecem em qualquer filtro) e tipo
@@ -4078,7 +4185,7 @@ function htmlCalendario(G) {
     .filter(r => { const quem = CAL_F.resp === 'eu' ? D.meuId : CAL_F.resp || ''; return !quem || [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].includes(quem); });
   const semCtr = (pode('gestao') && !(CAL_F.fora || []).includes('ren')) ? semContrato() : [];
   const tiposF = calTiposDe(G);
-  const filtros = `<div class="cal-filtros" style="margin-top:12px">
+  const filtros = `<button type="button" class="sec" id="calEvento" style="margin-top:12px">+ Evento (ficar fora)</button><div class="cal-filtros" style="margin-top:12px">
       <label class="fl" style="margin:0"><span>Responsável</span><select id="calResp"><option value="">Todo o time</option><option value="eu" ${CAL_F.resp === 'eu' ? 'selected' : ''}>Só os meus</option>${D.time.filter(t => t.user_id !== D.meuId).map(t => `<option value="${t.user_id}" ${CAL_F.resp === t.user_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>
       <div class="chips cal-tipos" id="calTipos" style="margin-top:8px">${tiposF.map(([k, n, c]) => `<button type="button" data-k="${k}" class="${(CAL_F.fora || []).includes(k) ? '' : 'on'}" style="--c:${c}"><i></i>${esc(n)}</button>`).join('')}</div>
     </div>`;
@@ -4088,9 +4195,9 @@ function htmlCalendario(G) {
   CAL_DESENHO = ULT_CARGA;
   return `${filtros}
     ${CAL.html(st, { itens: E, tipos: CAL_TIPOS.filter(([k]) => tiposF.some(t => t[0] === calGrupo(k))), esc, rodape,
-      extra: (it) => it.tipo === 'aniv' && it.p && it.p.celular ? `<a class="zap" href="${esc(zapLink(it.p.celular, it.p.nome, `Oi, ${String(it.p.nome || '').split(' ')[0]}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`))}" target="_blank" rel="noopener">Mandar parabéns</a>` : '',
+      extra: (it) => (it.tipo === 'rv' || it.tipo === 'rg') && it.rid ? `<button type="button" class="cal-ok" data-calok="${it.rid}">Feito</button>` : '',
       dica: 'Toque no dia para ver tudo dele. Toque no item para abrir o card ou a ficha.' })}
-    <div class="cal-vazio" id="calAtual" style="margin-top:14px">Dados de ${ag}. <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button></div>`;
+    <div class="cal-vazio" id="calAtual" style="margin-top:14px"><button type="button" class="mini" id="calAtualizar">Atualizar</button></div>`;
 }
 function ligarCalendario(P, G, redesenhar) {
   const st = CAL_ST[G ? 'gestao' : 'reunioes'];
@@ -4100,6 +4207,9 @@ function ligarCalendario(P, G, redesenhar) {
   P.querySelectorAll('[data-cal-card]').forEach(b => b.onclick = () => abrirAtendimento(b.dataset.calCard));
   P.querySelectorAll('[data-cal-ficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.calFicha));
   if ($('calAtualizar')) $('calAtualizar').onclick = () => carregar(false);
+  // follow-up feito: pede o próximo retorno (ou encerra) e a observação vai para o histórico do card
+  P.querySelectorAll('[data-calok]').forEach(b => b.onclick = (e) => { e.stopPropagation(); acoesCard(b.dataset.calok, { feito: true }); });
+  if ($('calEvento')) $('calEvento').onclick = () => folhaEvento(null);
 }
 // com o calendário aberto, os dados se atualizam por trás sem redesenhar: só avisa que tem novidade
 function calAvisarNovo() {
@@ -4569,6 +4679,11 @@ function telaFormReuniao(P) {
     const oriRe = f._origem ? await f._origem() : { ok: true };
     if (oriRe.erro) { $('msgRe').textContent = oriRe.erro; return; }
     if (g('nr_assunto') && !g('nr_data')) { $('msgRe').textContent = 'Informe a data e a hora da reunião.'; f.elements.nr_data.focus(); return; }
+    { const mudou = (v, a) => v && (!a || Math.abs(new Date(v) - new Date(a.data)) > 6e4), L = [];
+      if (g('nr_assunto') && g('nr_data') && !(f.elements.nr_feita && f.elements.nr_feita.checked)) L.push([[g('responsavel_id') || base.responsavel_id || D.meuId], g('nr_data')]);
+      if (G && mudou(g('mg_diag'), nova ? null : agDiag(base))) L.push([[g('closer_id') || base.closer_id || D.meuId], g('mg_diag')]);
+      if (G && mudou(g('mg_prop'), nova ? null : agProp(base))) L.push([[g('closer_id') || base.closer_id || D.meuId], g('mg_prop')]);
+      for (const [ids, t] of L) { const ini = new Date(t), bq = bloqueioEm(ids, ini, new Date(ini.getTime() + 36e5)); if (bq) { $('msgRe').textContent = msgBloqueio(bq); return; } } }
     // todo card em aberto tem um passo definido e uma data; "Aguardando o cliente" vai até 7 dias
     if (res === 'Em andamento' && !(G && et === 'Follow-up')) {
       const tp = g('proximo_passo_tipo'), dt = g('proximo_passo_data'), antes = base.proximo_passo_data ? String(base.proximo_passo_data).slice(0, 10) : '';
@@ -8180,11 +8295,14 @@ function htmlIndicacoes(trecho) {
 const avaliacoesParaPedir = (so) => D.avaliacoes ? (D.agenda || []).filter(x => x.status === 'Realizada' && new Date(x.data) > Date.now() - 14 * 864e5 && (x.pessoa_id || x.atendimento_id || x.cliente_id) && !(avDe(x.id) || {}).enviada_em && (!so || [x.vendedor_id, ...(x.participantes || [])].includes(D.meuId))) : [];
 // aniversariantes de hoje no Início, com o botão de mandar parabéns; os do mês ficam em Clientes
 function blocoAnivHoje() {
-  const L = podeAba('crm') ? aniversariosHoje() : []; if (!L.length) return '';
-  return `<div class="secao" id="anivHoje">Aniversários de hoje <button data-ir-aniv="1">Ver os do mês ›</button></div><div class="bloco" style="margin-top:0">${L.map(p => { const pr = String(p.nome || '').split(' ')[0], z = p.celular ? zapLink(p.celular, p.nome, `Oi, ${pr}! Feliz aniversário! Que o seu novo ano venha cheio de viagens incríveis. Um abraço do time Maktub Go.`) : '';
-    return `<div class="lin" style="align-items:center"><button type="button" data-ficha-aniv="${p.id}" style="text-align:left;color:var(--verde);font-weight:600">${esc(p.nome)}<small style="display:block;color:var(--tinta-3);font-weight:400">faz ${idadeAnos(p.nascimento)} anos</small></button>${z ? `<a class="zap" href="${esc(z)}" target="_blank" rel="noopener" style="padding:8px 12px">Mandar parabéns</a>` : '<span class="sub" style="margin:0">sem WhatsApp</span>'}</div>`; }).join('')}</div>`;
+  const L = lembretesAniv(); if (!L.length) return '';
+  return `<div class="secao" id="anivHoje">Aniversários para mandar parabéns <button data-ir-aniv="1">Ver o calendário ›</button></div><div class="bloco" style="margin-top:0">${L.map(({ p, falta, ano }) => { const z = p.celular ? zapLink(p.celular, p.nome, textoParabens(p)) : '';
+    return `<div class="lin" style="align-items:center;gap:8px"><button type="button" data-ficha-aniv="${p.id}" style="text-align:left;color:var(--verde);font-weight:600;flex:1">${esc(p.nome)}<small style="display:block;color:var(--tinta-3);font-weight:400">${falta === 0 ? 'é hoje' : falta === 1 ? 'amanhã' : 'em ' + falta + ' dias'}</small></button>${z ? `<a class="zap" href="${esc(z)}" target="_blank" rel="noopener" style="padding:8px 12px">Parabéns</a>` : ''}<button type="button" class="cal-ok" data-anivok="${p.id}|${ano}">Enviado</button></div>`; }).join('')}</div>`;
 }
-function ligarAnivHoje(P) { P.querySelectorAll('[data-ficha-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fichaAniv))); P.querySelectorAll('[data-ir-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.filtrar('aniv'))); }
+function ligarAnivHoje(P) { P.querySelectorAll('[data-ficha-aniv]').forEach(b => b.onclick = () => ir('crm', () => CRM.abrir(b.dataset.fichaAniv)));
+  P.querySelectorAll('[data-ir-aniv]').forEach(b => b.onclick = () => irAniversarios());
+  P.querySelectorAll('#anivHoje + .bloco [data-anivok]').forEach(b => b.onclick = async () => { const [pid, ano] = b.dataset.anivok.split('|'); if (await marcarAnivEnviado(pid, ano)) tela(); }); }
+const irAniversarios = () => { RE_PARTE = 'aniv'; try { localStorage.setItem('maktub_re_parte', 'aniv'); } catch (_) {} ir('reunioes'); };
 const idadeAnos = (n) => { const d = new Date(n + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - d.getFullYear(); if (h.getMonth() < d.getMonth() || (h.getMonth() === d.getMonth() && h.getDate() < d.getDate())) a--; return a; };
 const aniversariosHoje = () => { const h = new Date(); return (D.pessoas || []).filter(p => p.nascimento && +p.nascimento.slice(5, 7) === h.getMonth() + 1 && +p.nascimento.slice(8, 10) === h.getDate()); };
 const meuCal = () => ((D.cal || []).find(x => x.user_id === D.meuId) || {}).cal_link || '';
@@ -8368,6 +8486,7 @@ function telaFormAgenda(P) {
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
     const parts = [...f.querySelectorAll('[name=part]:checked')].map(c => c.value);
     if (!parts.length) { $('msgAg').textContent = 'Marque pelo menos um participante da Maktub.'; return; }
+    if (g('status') === 'Agendada') { const ini = new Date(g('data')), bq = bloqueioEm([...parts, g('vendedor_id')], ini, new Date(ini.getTime() + (Number(g('duracao_min')) || 60) * 6e4)); if (bq) { $('msgAg').textContent = msgBloqueio(bq); return; } }
     const row = { vendedor_id: g('vendedor_id') || null, titulo: g('titulo'), tipo: g('tipo'), data: new Date(g('data')).toISOString(), duracao_min: Number(g('duracao_min') || 60), link: g('link') || null,
       cliente_id: g('cliente_id') || null, atendimento_id: g('atendimento_id') || null, cliente: g('cliente') || null, participantes: parts,
       status: g('status'), resumo: g('status') === 'Realizada' ? (g('resumo') || null) : (x.resumo || null), publicar_no_painel: !!(f.elements.publicar_no_painel && f.elements.publicar_no_painel.checked && g('cliente_id')) };
