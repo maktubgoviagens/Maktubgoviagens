@@ -976,7 +976,6 @@ body.cb-leitura #montarCot{margin-top:8px}
 @media (min-width:1024px){.kanban-c .kcol{min-width:150px}.kanban-c .kcol h3{flex-wrap:wrap;gap:2px 8px}}
 .kc.kc3{padding:6px 4px 6px 12px}
 .kc3 .n{width:auto;flex:0 1 auto;min-width:0;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--verde);line-height:1.15;background:none;border:0;padding:8px 0;margin:0;text-align:left;cursor:pointer;overflow-wrap:anywhere}
-.kc3 .n:hover{text-decoration:underline;text-decoration-color:var(--dourado);text-underline-offset:3px}
 .kmais{margin-left:auto;flex:none;width:44px;height:44px;border:0;background:none;color:var(--tinta-3);font-size:22px;line-height:1;cursor:pointer;border-radius:12px}
 .kmais:hover{background:var(--creme-2);color:var(--verde)}
 .kc3.kal{border-left:3px solid var(--dourado)}
@@ -4118,7 +4117,7 @@ function telaReunioes(P) {
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE === 'aniv' && podeAba('crm') && D.pessoas ? htmlAniversarios(ABA === 'gestao') : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
-    ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica">Arraste o card para mudar de etapa (no celular, segure o card antes de arrastar). Toque no nome para abrir a ficha do cliente.</div>'}
+    ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica">Arraste o card para mudar de etapa (no celular, segure o card antes de arrastar). Toque no card para abrir.</div>'}
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
     <div class="kanban${G ? '' : ' kanban-c'}">${etapasDe(G).map(et => { const cs = abertos.filter(r => !G || GE_PRIO === 'todas' || (GE_PRIO === 'sem' ? !prioDe(r) : prioDe(r) === GE_PRIO)).filter(r => etapaDe(r) === et || (et === etapasDe(G)[0] && !etapasDe(G).includes(etapaDe(r)))); const v = soma(cs, 'valor_estimado'); return `<div class="kcol" data-ket="${esc(et)}"><h3>${esc(et)} <small>${cs.length}${v ? ' · ' + brlC(v) : ''}</small></h3>${cs.map(r => G ? htmlKCard(r, etapasDe(ehGestao(r))) : htmlKCardC(r)).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`; }).join('')}${G ? '' : colunasFinais().map(([et, L]) => `<div class="kcol kfim" data-ket="${esc(et)}"><h3>${esc(et)} <small>${L.length} · ${esc(mesCurtoKC())}</small></h3>${L.map(htmlKCardC).join('') || '<div class="vazio" style="padding:6px 2px">Nada aqui.</div>'}</div>`).join('')}</div>
 `}
@@ -4151,7 +4150,8 @@ function telaReunioes(P) {
   if ($('reFiltro')) $('reFiltro').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_FILTRO = b.dataset.f; telaReunioes(P); } };
   ligarCardsReuniao(P);
   // funil do Comercial: nome abre a ficha, ⋯ abre as ações rápidas, o resto do card abre o card
-  P.querySelectorAll('[data-cli]').forEach(b => b.onclick = (e) => { e.stopPropagation(); abrirNomeCard(b.dataset.cli); });
+  // no Comercial só importa o próprio card: o nome também abre o card (a ficha do cliente fica no bloco Cliente, dentro do card)
+  P.querySelectorAll('[data-cli]').forEach(b => b.onclick = (e) => { e.stopPropagation(); abrirAtendimento(b.dataset.cli); });
   P.querySelectorAll('[data-kmais]').forEach(b => b.onclick = (e) => { e.stopPropagation(); acoesCard(b.dataset.kmais); });
   P.querySelectorAll('[data-ab]').forEach(c => c.onclick = () => abrirAtendimento(c.dataset.ab));
   if ($('loteRespB')) $('loteRespB').onclick = async () => {
