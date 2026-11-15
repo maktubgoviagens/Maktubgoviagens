@@ -357,6 +357,45 @@ button.lin .seta{color:var(--dourado);margin-left:6px}
 body.ac-com-barra #pagina{padding-bottom:150px}
 .ac-ftit{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--verde);margin:4px 0 8px;line-height:1.15}
 .ac-fl{font-size:16px;line-height:1.5;margin:6px 0}.ac-fl .mais{color:var(--verde)}.ac-fl .menos{color:var(--alerta)}.ac-fl b{font-weight:500}
+/* tela curta do Fechou (fechou.js): só os campos do mínimo que faltam */
+.fch .folha-caixa{max-width:560px}
+.fch-bl{background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin:12px 0}
+.fch-sec{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:0 0 2px}
+.fch-rot{font-size:14px;color:var(--tinta-2);margin:10px 0 0}
+.fch .fl input{border-radius:12px}
+.fch .seg{border-radius:12px;overflow:hidden}
+.fch .seg button{text-transform:none;letter-spacing:0;font-size:16px}
+.fch .emchk{border:0;padding:0;margin:10px 0 0;background:none}
+.fch .emchk button{border-radius:12px;font-size:16px}
+.fch-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px}.fch-3>*,.fch-4>*{min-width:0}
+.fch-4{display:grid;grid-template-columns:1fr 1fr 1.3fr 1fr;gap:0 10px}
+@media (max-width:520px){.fch-3{grid-template-columns:1fr 1fr}.fch-4{grid-template-columns:1fr 1fr}}
+.fch-voo{border-top:1px solid var(--linha);margin-top:10px}.fch-voo:first-of-type{border-top:0}
+.fch-tot{margin-top:10px}
+.fch-msg{color:var(--alerta);font-size:16px;line-height:1.45;margin-top:8px}.fch-msg:empty{display:none}
+.fl-conf{display:inline-block;margin-left:6px;font-size:14px;color:var(--dourado);font-family:'Jost',sans-serif}
+/* Vendas a conferir (conferencia.js) */
+.vc-lista{display:flex;flex-direction:column;gap:8px}
+.vc-l{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer;color:var(--tinta)}
+.vc-l b{display:block;font-weight:500;color:var(--verde);font-size:16px}.vc-l small{display:block;font-size:14px;color:var(--tinta-3);margin-top:2px}
+.vc-n{flex:0 0 auto;font-size:14px;color:var(--dourado);border:1px solid rgba(113,94,50,.35);border-radius:999px;padding:3px 10px;white-space:nowrap}.vc-n.alerta{color:var(--alerta);border-color:rgba(160,86,31,.4)}
+.vc-mais{background:none;border:0;color:var(--verde);font:inherit;font-size:16px;text-decoration:underline;padding:10px 0;cursor:pointer}
+.vc .folha-caixa{max-width:600px}
+.vc-dica{font-size:16px;color:var(--tinta-2)}
+.vc-bl{background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin:12px 0}
+.vc-sec{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dourado);font-weight:600;margin:0 0 4px}
+.vc-it{border-top:1px solid var(--linha);padding:10px 0 4px}.vc-it:first-of-type{border-top:0}
+.vc-rot{display:flex;gap:8px;align-items:flex-start;font-size:16px;color:var(--alerta);font-weight:500}
+.vc-it.ok .vc-rot{color:var(--verde);font-weight:400}
+.vc-ck{flex:0 0 18px;text-align:center}
+.vc .fl input{border-radius:12px}
+.vc .seg{border-radius:12px;overflow:hidden}.vc .seg button{text-transform:none;letter-spacing:0;font-size:16px}
+.vc .emchk{border:0;padding:0;margin:8px 0 0;background:none}.vc .emchk button{border-radius:12px;font-size:16px}
+.vc-pax{border-left:3px solid var(--linha);padding-left:10px;margin:8px 0}
+.vc-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px}.vc-3>*{min-width:0}
+@media (max-width:520px){.vc-3{grid-template-columns:1fr 1fr}}
+.vc-val summary{cursor:pointer;color:var(--verde);font-size:16px;padding:6px 0}
+.vc-bts .ac-sec{margin-top:6px}
 @media (prefers-reduced-motion:reduce){.ac-tg,.ac-tg:after{transition:none}}
 @media (min-width:1024px){.ac-barra{left:var(--lado);bottom:0}}
 .folha{position:fixed;inset:0;z-index:60}
@@ -1276,7 +1315,9 @@ import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=32';
+import * as VENDA from '/admin/app/venda.js?v=33';
+import * as FCH from '/admin/app/fechou.js?v=1';
+import * as CONF from '/admin/app/conferencia.js?v=1';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=22';
 import * as CX from '/admin/app/caixa.js?v=7';
@@ -1694,12 +1735,24 @@ const refEmissao = (id) => { const e = (D.emissoes || []).find(x => x.id === id)
   return { id, rotulo: [e.comprador, e.sobrenome].filter(Boolean).join(' ') || v.passageiro || '', nome: e.comprador || v.passageiro || '', contato: e.contato || v.contato || '',
     origem: e.origem || v.origem || '', destino: e.destino || v.destino || '', loc: String(e.localizador || v.localizador || '').toUpperCase(), ida: e.data_ida || v.data_ida, volta: e.data_volta || v.data_volta }; };
 /* check-in só fecha depois de confirmar que o bilhete foi enviado ao cliente */
+// passageiros da venda sem CPF ou nascimento (deixaram de travar o Fechou): o check-in aparece igual e avisa aqui
+function paxSemDocs(emissaoId) {
+  if (!emissaoId) return 0;
+  for (const r of D.reunioes || []) for (const x of (r.itens || [])) {
+    if (String(x.planilha_id) !== String(emissaoId) && String(x.ref) !== String(emissaoId)) continue;
+    const n = Math.max(parseInt(x.passageiros, 10) || 0, 0), P = (x.pax || []).slice(0, n);
+    return n ? P.filter(p => !VENDA.cpfValido(p.cpf) || !p.nasc).length + Math.max(0, n - P.length) : 0;
+  }
+  return 0;
+}
 function perguntarBilhete(tr, ref, voo) {
   return new Promise((ok) => {
+    const semDocs = paxSemDocs(ref && ref.id);
     const el = document.createElement('div');
     el.className = 'folha';
     el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="folha-tit">Check-in ${voo ? `do voo ${voo.n} de ${voo.total}${voo.de || voo.para ? ' · ' + esc([voo.de, voo.para].filter(Boolean).join(' → ')) : ''}` : tr === 'volta' ? 'da volta' : 'da ida'}</div>
       <div style="font-size:17px;color:var(--verde);margin:4px 0 14px">O check-in só fecha com o bilhete enviado ao cliente.</div>
+      ${semDocs ? `<div class="config" style="margin:0 0 12px">${semDocs === 1 ? 'Falta CPF ou nascimento de 1 passageiro' : `Faltam CPF ou nascimento de ${semDocs} passageiros`} desta venda. Se a companhia pedir no check-in, complete na conferência da venda (Início, Vendas a conferir).</div>` : ''}
       ${ref && zapNum(ref.contato) ? `<button class="zap grande" type="button" id="bZap" style="width:100%;margin-bottom:8px">Enviar bilhete pelo WhatsApp</button><div class="sub" style="margin:-2px 0 10px">Abre a conversa com a mensagem pronta. Anexe o cartão de embarque e envie.</div>` : '<div class="sub" style="margin:0 0 10px">Esta venda não tem o WhatsApp do cliente: envie o bilhete pelo canal de sempre.</div>'}
       <div class="botoes4"><button class="sec" type="button" data-r="1">Já enviei o bilhete</button><button class="sec" type="button" data-r="0">Voltar</button></div></div>`;
     const bz = el.querySelector('#bZap'); if (bz) bz.onclick = () => {
@@ -1718,7 +1771,7 @@ const ABAS_ADMIN = ['marketing', 'empresa', 'cartoesbase', 'calccartoes', 'dre',
 /* O que cada colaborador pode ver e fazer. O último número é o padrão para quem ainda não teve a caixa marcada (1 = liberado). */
 const PERMS = [
   ['Operação', [['emissoes', 'Voos e emissões', 'Vê os voos de toda a Maktub e as próprias vendas', 1], ['vendas_todas', 'Ver todas as vendas', 'Vê as vendas de toda a Maktub (cliente, rota, datas, vendedor), sem valores, lucro ou comissão dos outros', 0], ['checkin', 'Marcar check-in', 'Pode marcar check-in feito', 1], ['agenda', 'Agenda e reuniões internas', 'Vê e edita a agenda da equipe', 1]]],
-  ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0], ['valores_vendas', 'Valores e margem nas vendas', 'Perfil de gerente: vê valor, custo e lucro bruto de todas as vendas e cards, o responsável dos cards, a conversão por pessoa, o histórico dos cards e os acordos com hotéis. Não vê a comissão dos outros, lucro líquido, painel da empresa, DRE nem salários', 0]]],
+  ['Comercial', [['comercial', 'Cotações e atendimentos', 'Funil de viagens e as próprias cotações', 1], ['leads', 'Leads do site', 'Leads e pedidos da Gestão que chegam pelo site; pode assumir', 0], ['conferir_vendas', 'Conferir vendas', 'Vê "Vendas a conferir" no Início e completa o que falta das vendas lançadas (comprovante, passageiros, CPF, bagagem, print). Correção de valor ou custo vai para a planilha', 0], ['valores_vendas', 'Valores e margem nas vendas', 'Perfil de gerente: vê valor, custo e lucro bruto de todas as vendas e cards, o responsável dos cards, a conversão por pessoa, o histórico dos cards e os acordos com hotéis. Não vê a comissão dos outros, lucro líquido, painel da empresa, DRE nem salários', 0]]],
   ['Gestão de Milhas', [['gestao', 'Carteira da Gestão de Milhas', 'Carteiras, conferência mensal, relatórios, documentos e renovações', 0], ['opmilhas', 'Operação de milhas dos sócios', 'Compras de milhas dos sócios e o resultado do ano', 0]]],
   ['Financeiro', [['financeiro', 'Financeiro das vendas', 'Vendas e lucro de toda a equipe e pagamentos a receber', 0], ['dre', 'DRE, salários e despesas', 'Resultado da empresa, salário de cada pessoa e despesas', 0], ['metas', 'Metas em reais', 'Valores das metas e o realizado de cada vendedor', 0], ['comissao', 'Própria comissão', 'Vê só a remuneração dela', 1]]],
   ['Marketing', [['marketing', 'Marketing', 'Calendário de posts, produção, ideias e estratégia. Não vê vendas, clientes nem financeiro', 0], ['mkt_aprovar', 'Coordenação do marketing', 'Acesso total ao marketing: aprova e valida posts e vídeos, marca publicado, vê o painel e o calendário, define metas e quem grava cada vídeo', 0], ['mkt_delegar', 'Distribuir tarefas do marketing', 'Escolhe quem faz o roteiro ou a arte, quem grava, quem edita e quem posta cada post. Não aprova posts', 0]]],
@@ -2273,7 +2326,8 @@ function pendenciasInicio() {
     ...(ADMIN ? [['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')]] : []),
     ...(ADMIN ? [['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')]] : []),
     ...(ADMIN ? [['Fornecedores a pagar', aPagar().length, () => ir('pagar')]] : []),
-    ...(ADMIN ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
+    // a conferência de comprovante entrou em "Vendas a conferir" (bloco do Início)
+    ...(ADMIN && !verConferir() ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ...(ADMIN || pode('gestao') ? [['Gestão de Milhas', totalGestao(), () => ir('gestao')]] : []),
@@ -2295,10 +2349,12 @@ function telaInicio(P) {
       <div class="ini4-b" id="tdBloco"></div>
       <div class="ini4-b">${htmlCoisasDoDia(CD)}</div>
       <div class="ini4-b"><div class="secao">Check-ins a fazer <small class="ini4-n">${CK.length ? 'próximas 48 horas' : ''}</small></div>${CK.length ? agrupar(CK) : '<div class="vazio">Nenhum check-in nas próximas 48 horas.</div>'}</div>
+      ${verConferir() ? '<div class="ini4-b" id="vcBloco"></div>' : ''}
       <div class="ini4-b"><div class="secao">Pendências</div>${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-pi="${PD.findIndex(x => x[0] === t)}"><span>${esc(t)}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
         ${resolver.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:10px"><summary><span>Resolver por aqui<small>Voos sem horário e avaliações</small></span></summary>${resolver}</details>` : ''}</div>
     </div>`;
   P.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => PD[b.dataset.pi][2]());
+  blocoConferir();
   P.querySelectorAll('[data-cdd]').forEach(b => b.onclick = () => { const it = CD[+b.dataset.cdd]; if (it && it.abrir) it.abrir(); });
   P.querySelectorAll('[data-calok]').forEach(b => b.onclick = (e) => { e.stopPropagation(); acoesCard(b.dataset.calok, { feito: true }); });
   P.querySelectorAll('[data-anivok]').forEach(b => b.onclick = async () => { const [pid, ano] = b.dataset.anivok.split('|'); if (await marcarAnivEnviado(pid, ano)) tela(); });
@@ -3939,7 +3995,7 @@ async function acoesCard(id, o = {}) {
   const r = D.reunioes.find(x => String(x.id) === String(id)); if (!r) return;
   const v = await folhaAcoesCard(r, o); if (!v) return;
   if (v.a === 'abrir') return abrirAtendimento(r.id);
-  if (v.a === 'fechou') return abrirAtendimento(r.id, { etapa: 'Fechou' });
+  if (v.a === 'fechou') return ehGestao(r) ? abrirAtendimento(r.id, { etapa: 'Fechou' }) : fecharVenda(r.id);
   if (v.a === 'perdeu') { if (ehGestao(r)) return abrirAtendimento(r.id, { etapa: 'Não fechou' }); if (await encerrarNaoFechou(r)) tela(); return; }
   // novo retorno: o passo continua o mesmo; a anotação, se houver, entra no histórico do card
   const tipo = r.proximo_passo_tipo || passoDe(r).tipo || null, antes = r.proximo_passo_data ? String(r.proximo_passo_data).slice(0, 10) : null;
@@ -4022,7 +4078,7 @@ function alertaKC(r) {
 }
 function htmlKCardC(r) {
   const al = alertaKC(r), fim = r.resultado !== 'Em andamento';
-  const p = passoDe(r), info = [prodTxt(r.trecho || r.produto), !fim && p.data ? 'retorno ' + dataCurta(dia(p.data)) : ''].filter(Boolean).join(' · ');
+  const p = passoDe(r), info = [prodTxt(r.trecho || r.produto), !fim && p.data ? 'retorno ' + dataCurta(dia(p.data)) : '', r.resultado === 'Fechou' && r.conferencia_status === 'a_conferir' ? 'A conferir' : ''].filter(Boolean).join(' · ');
   return `<div class="kc kc2 kc3${al ? ' kal' : ''}" ${fim ? '' : `data-kid="${r.id}"`} data-ab="${r.id}"${al ? ` title="${esc(al)}"` : ''}><div class="kc3-t"><button type="button" class="n" data-cli="${r.id}"${al ? ` aria-label="${esc(r.cliente + ': ' + al)}"` : ''}>${esc(r.cliente)}</button>${info ? `<span class="ki">${esc(info)}</span>` : ''}</div><button type="button" class="kmais" data-kmais="${r.id}" aria-label="Ações de ${esc(r.cliente)}">⋯</button></div>`;
 }
 // colunas finais do funil do Comercial: Fechou (os que ainda esperam emissão e os fechados no mês escolhido) e Não fechou (do mês escolhido)
@@ -4040,7 +4096,7 @@ function htmlFunilCel(abertos) {
   const cols = etapasDe(false).map(et => [et, abertos.filter(r => etapaDe(r) === et || (et === etapasDe(false)[0] && !etapasDe(false).includes(etapaDe(r))))]).concat(colunasFinais());
   if (!RE_ETC || !cols.some(c => c[0] === RE_ETC)) RE_ETC = (cols.find(c => c[1].length) || cols[0])[0];
   const lin = (r) => { const al = alertaKC(r);
-    return `<div class="ac-pes fl-row kc3${al ? ' kal' : ''}" data-ab="${r.id}"${al ? ` title="${esc(al)}"` : ''}><button type="button" class="n" data-cli="${r.id}"${al ? ` aria-label="${esc(r.cliente + ': ' + al)}"` : ''}>${esc(r.cliente)}</button><button type="button" class="kmais" data-kmais="${r.id}" aria-label="Ações de ${esc(r.cliente)}">⋯</button></div>`; };
+    return `<div class="ac-pes fl-row kc3${al ? ' kal' : ''}" data-ab="${r.id}"${al ? ` title="${esc(al)}"` : ''}><button type="button" class="n" data-cli="${r.id}"${al ? ` aria-label="${esc(r.cliente + ': ' + al)}"` : ''}>${esc(r.cliente)}${r.resultado === 'Fechou' && r.conferencia_status === 'a_conferir' ? ' <small class="fl-conf">A conferir</small>' : ''}</button><button type="button" class="kmais" data-kmais="${r.id}" aria-label="Ações de ${esc(r.cliente)}">⋯</button></div>`; };
   const fin = (et) => et === 'Fechou' || et === 'Não fechou';
   return `<div class="flista"><div class="chips" id="flChips">${cols.map(([et, L]) => `<button type="button" data-fl="${esc(et)}" class="${et === RE_ETC ? 'on' : ''}">${esc(et)} ${L.length}</button>`).join('')}</div>
     ${cols.map(([et, L]) => `<div class="fl-col" data-flc="${esc(et)}" ${et === RE_ETC ? '' : 'hidden'}>${fin(et) ? `<div class="sub" style="margin:0 0 8px">${et === 'Fechou' ? 'Esperando emissão e fechados' : 'Encerrados'} em ${esc(mesCurtoKC())}</div>` : ''}${L.length ? `<div class="ac-lista">${L.map(lin).join('')}</div>` : '<div class="vazio">Nenhum card nesta etapa.</div>'}</div>`).join('')}</div>`;
@@ -4076,6 +4132,8 @@ async function moverEtapa(id, etapa) {
   const r = D.reunioes.find(x => x.id === id); if (!r) return;
   // Não fechou no funil do Comercial: só o motivo, numa folha, sem abrir o card
   if (etapa === 'Não fechou' && !ehGestao(r)) { await encerrarNaoFechou(r); tela(); return; }
+  // Fechou no funil do Comercial (arrastar, botão ou menu do card): a venda é lançada na hora ou abre a tela curta do que falta
+  if (etapa === 'Fechou' && !ehGestao(r)) return fecharVenda(id);
   if (etapa === 'Fechou' || etapa === 'Não fechou') return abrirAtendimento(id, { etapa });
   if (ehGestao(r) && ['Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta'].includes(etapa)) return abrirAtendimento(id, { etapa });
   if (!etapasDe(ehGestao(r)).includes(etapa)) { aviso(ehGestao(r) ? 'Card da Gestão: assuma e siga pelas etapas da Gestão (diagnóstico, proposta).' : 'Essa etapa é do funil da Gestão.'); tela(); return; }
@@ -4086,6 +4144,124 @@ async function moverEtapa(id, etapa) {
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não moveu: ' + error.message); return; }
   Object.assign(r, data); aviso(`${r.cliente}: ${etapa}.`); tela();
+}
+/* ---------- Vendas a conferir (Início): Isadora, Matheus e quem tem "Conferir vendas" ---------- */
+const verConferir = () => ADMIN || pode('conferir_vendas');
+const ctxConf = () => ({ ...ctxVenda(), V: VENDA, nomeTime, dataBR, mesFechado, depoisCliente: depoisMilhasCliente, abrirCard: (id) => abrirAtendimento(id) });
+let VC_VER = (() => { try { return matchMedia('(min-width:900px)').matches ? 5 : 3; } catch (_) { return 3; } })();
+function blocoConferir() {
+  const el = $('vcBloco'); if (!el) return;
+  const L = CONF.lista(D, ehGestao);
+  el.innerHTML = CONF.htmlBloco(ctxConf(), L, VC_VER);
+  el.querySelectorAll('[data-vconf]').forEach(b => b.onclick = async () => {
+    const r = D.reunioes.find(x => String(x.id) === b.dataset.vconf); if (!r) return;
+    if (await CONF.folha(ctxConf(), r)) blocoConferir();
+  });
+  const m = $('vcMais'); if (m) m.onclick = () => { VC_VER += 10; blocoConferir(); };
+}
+/* ---------- Fechou: a venda sobe sozinha (14/11/2026) ----------
+   Ao virar Fechou, a venda vai para a planilha, para as metas (pela data do Fechou) e para o app.
+   Só trava o mínimo (fechou.js e venda.js, faltasMinimo); o resto vira "Vendas a conferir". */
+const ctxFechar = () => ({ ...ctxVenda(), V: VENDA, COT });
+// cotação de onde vem o fechamento: a opção que o cliente escolheu no link ou a última enviada
+async function cotacaoDoCard(r) {
+  const CD = cotsDe(r.id); if (!CD.length) return null;
+  const q = await sb.from('propostas').select('id,titulo,modelo,dados,atualizado_em').in('id', CD.map(c => c.id));
+  const L = q.error ? [] : (q.data || []).filter(c => c.dados);
+  if (!L.length) return null;
+  const quando = (c) => { const H = (c.dados && c.dados.historico) || []; return String((H[H.length - 1] || {}).em || c.atualizado_em || ''); };
+  L.sort((a, b) => quando(b).localeCompare(quando(a)));
+  const refs = L.map(c => c.dados.escolha_ref).filter(Boolean);
+  if (refs.length) {
+    const e = await sb.from('cotacao_escolhas').select('ref,opcao,criado_em').in('ref', refs).order('criado_em', { ascending: false }).limit(1);
+    const x = !e.error && e.data && e.data[0], c = x && L.find(c => c.dados.escolha_ref === x.ref);
+    if (c && COT.opcoesCotacao(c.dados)[x.opcao - 1]) return { dados: c.dados, k: x.opcao - 1 };
+  }
+  return COT.opcoesCotacao(L[0].dados).length ? { dados: L[0].dados, k: 0 } : null;
+}
+// card sem serviço preenchido: os serviços vêm da cotação (rota, datas, horários, passageiros, companhia e valor)
+async function prepararFechou(r, IT) {
+  const vazio = !IT.some(x => x.venda || x.custo || x.localizador || VENDA.enviado(x));
+  const cot = await cotacaoDoCard(r).catch(() => null);
+  if (vazio && cot) {
+    await COT.prepararAero().catch(() => {});
+    const z = COT.itensDaCotacao(cot.dados, cot.k);
+    if (z.itens.length) {
+      // o custo do dia digitado na cotação vem junto, como sugestão para o custo
+      z.itens.forEach(x => { const a = IT.find(y => y.produto === x.produto && y.custo_dia != null && y.custo_dia !== ''); if (a) x.custo_dia = a.custo_dia; });
+      IT.splice(0, IT.length, ...z.itens);
+      const L = IT.filter(x => !VENDA.ehCliente(x));
+      if (z.valor && L.length > 1 && !L.some(x => +x.venda)) { let resto = z.valor; L.forEach((x, k) => { const v = k === L.length - 1 ? Math.round(resto * 100) / 100 : Math.round(z.valor / L.length * 100) / 100; resto -= v; x.venda = v; }); }
+    }
+  }
+  IT.forEach(x => {
+    if (x.data_ida == null && r.data_viagem) x.data_ida = r.data_viagem;
+    if (x.data_volta == null && r.data_volta && x.tipo_trecho !== 'ida' && (VENDA.ehVoo(x) || VENDA.ehHotel(x))) x.data_volta = r.data_volta;
+  });
+  return cot;
+}
+// lança a venda: emissões com milhas do cliente na Gestão, vendas na fila da planilha e o card em Fechou (com a conferência)
+async function lancarVenda(r, IT, F, extra = {}) {
+  const card = { ...r, ...extra };
+  IT.forEach(x => { if (!x.cancelado_em && !VENDA.enviado(x) && !x.gestao_em) x.emitido = true; });
+  const fechadoEm = r.resultado === 'Fechou' && r.fechado_em ? r.fechado_em : new Date().toISOString();
+  // metas e comissão contam pela data do Fechou; se o mês dela já fechou, a venda entra no dia do lançamento
+  const dataNeg = mesFechado(mesLocal(fechadoEm)) ? hojeISO() : isoLocal(new Date(fechadoEm));
+  const A = VENDA.aEnviar(IT), antes = IT.map(x => x.planilha_id), clientesG = [], avisosG = [];
+  if (A.cliente.length) {
+    await VENDA.salvarPassageiros(ctxVenda(), A.cliente);
+    for (const x of A.cliente) {
+      const z = await VENDA.lancarCliente(ctxVenda(), card, x, null);
+      if (!z.ok) { await sb.from('atendimentos').update({ itens: IT, fech: F }).eq('id', r.id); return { ok: false, erro: 'Não lançou na Gestão: ' + z.erro }; }
+      clientesG.push(z.cliente_id); if (z.avisoVoos) avisosG.push(z.avisoVoos);
+    }
+  }
+  let r1 = { ok: true, n: 0 };
+  if (A.vendas.length) {
+    r1 = await VENDA.enviarParaPlanilha(ctxVenda(), card, IT, F, { dataNeg });
+    if (!r1.ok) { if (A.cliente.length) await sb.from('atendimentos').update({ itens: IT }).eq('id', r.id); return { ok: false, erro: 'Não enviou para a planilha: ' + r1.erro }; }
+  }
+  const soCli = IT.filter(x => !x.cancelado_em).every(VENDA.ehCliente), tot = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0);
+  const est = VENDA.estadoConferencia({ itens: IT, fech: F }, D.meuId);
+  const up = await sb.from('atendimentos').update({ itens: IT, fech: F, resultado: 'Fechou', etapa: 'Fechou', fechado_em: fechadoEm,
+    valor_fechado: soCli ? null : (extra.valor_fechado || tot || null), proximo_passo: null, proximo_passo_tipo: null, proximo_passo_data: null,
+    ...est, conferencia_desde: r.conferencia_desde || new Date().toISOString() }).eq('id', r.id).select().single();
+  if (up.error) {
+    // o card não salvou: as linhas que acabaram de entrar na fila saem (ainda não foram para a planilha)
+    const novos = IT.filter((x, k) => x.planilha_id && x.planilha_id !== antes[k]).map(x => x.planilha_id);
+    if (novos.length) await sb.from('fila_planilha').delete().in('id', novos);
+    IT.forEach((x, k) => { if (x.planilha_id !== antes[k]) { delete x.planilha_id; delete x.enviado_em; delete x.plan_dados; delete x.plan_data; } });
+    return { ok: false, erro: 'Não salvou o card: ' + up.error.message + (A.cliente.length ? ' A emissão com milhas do cliente já está na Gestão.' : '') };
+  }
+  const k = D.reunioes.findIndex(x => x.id === r.id); if (k >= 0) D.reunioes[k] = up.data; else D.reunioes.unshift(up.data);
+  if (clientesG.length) await depoisMilhasCliente(clientesG);
+  if (up.data.pessoa_id) await virarCliente(up.data.pessoa_id);
+  const msg = A.vendas.length ? 'Venda lançada. Vai para a planilha em até 5 minutos.' : A.cliente.length ? (A.cliente.length === 1 ? 'Emissão lançada na Gestão do cliente.' : 'Emissões lançadas na Gestão do cliente.') : 'Venda lançada.';
+  return { ok: true, msg: [msg, ...avisosG].join(' '), card: up.data };
+}
+// Fechou fora do card aberto (funil, menu do card): com o mínimo completo lança na hora; se faltar, abre a tela curta
+let FECHANDO = null;
+async function fecharVenda(id) {
+  if (FECHANDO) return; FECHANDO = id;
+  try {
+    const r = D.reunioes.find(x => x.id === id); if (!r) return;
+    if (VENDA.concluida(r)) { aviso('Esta venda já foi lançada.'); return; }
+    const IT = JSON.parse(JSON.stringify(r.itens || [])), F = JSON.parse(JSON.stringify(r.fech || {}));
+    const cot = await prepararFechou(r, IT);
+    if (!IT.filter(x => !x.cancelado_em).length) { aviso('Marque os serviços do card antes de fechar.'); abrirAtendimento(id); return; }
+    if (VENDA.faltasMinimo({ itens: IT, fech: F }).length) {
+      const ok = await FCH.folhaFechar(ctxFechar(), { card: r, IT, F, cot });
+      if (!ok) {
+        // voltar sem fechar: o que foi digitado fica guardado no card, que continua na etapa em que estava
+        const g = await sb.from('atendimentos').update({ itens: IT, fech: F }).eq('id', r.id).select().single();
+        if (!g.error) Object.assign(r, g.data);
+        tela(); return;
+      }
+    }
+    const z = await lancarVenda(r, IT, F);
+    if (!z.ok) { alert(limparTec(z.erro)); tela(); return; }
+    aviso(z.msg); tela();
+  } finally { FECHANDO = null; }
 }
 // atendimentos da vista atual sem responsável (ou com alguém que saiu da equipe)
 // só cards em andamento: o histórico antigo (até setembro de 2026) fica como "histórico sem responsável"
@@ -4476,7 +4652,7 @@ function telaFormReuniao(P) {
       ${G ? `${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}<div class="grupo">Atendimento</div><input type="hidden" name="data" value="${esc(dl(r.data))}">${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}<div class="grupo">Cliente</div>${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}<datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>${campo('contato', 'WhatsApp ou e-mail', r.contato)}<div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${G ? '</details><div style="order:-4">' + (GB ? cbAbre('quem', 'Quem conduz', gbRes.quem) : '') + htmlGestaoSdr(r) + (GB ? cbFecha : '') + '</div><div style="order:-5">' + (GB ? cbAbre('etapa', 'Etapa e próximo passo', gbRes.etapa) : '') : ''}<div class="grupo">Etapa</div><div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>` : `${CB ? cbAbre('cliente', 'Cliente', cbRes.cliente) : '<div class="grupo">Cliente</div>'}<div class="cli-lado">${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}${campo('contato', 'WhatsApp ou e-mail', r.contato)}</div><datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div><div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${CB ? cbFecha + cbAbre('etapa', 'Etapa', cbRes.etapa) : ''}<label class="fl"><span>Etapa</span><select id="reEtapaSel">${[...etapasDe(false), ...FINAIS].map(x => `<option value="${esc(x)}" ${x === etapaDe(r) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="etapas" id="reRes" hidden>${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}<input type="hidden" name="data" value="${esc(dl(r.data))}">`}
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
-      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend"></div>${!nova ? '<button class="sec grande" type="button" id="reEmitiu" style="width:100%;margin-top:8px" hidden>Emitiu? Preencher os dados da emissão</button><button class="zap grande" type="button" id="enviarPlan" style="width:100%;margin-top:8px">Emitiu: enviar para a planilha</button>' : ''}`}</div>
+      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend">${r.resultado === 'Fechou' && VENDA.concluida(r) ? 'Venda lançada na planilha.' + (r.conferencia_status === 'a_conferir' ? ' Está em Vendas a conferir.' : r.conferencia_status === 'conferida' ? ` Conferida${r.conferida_por && nomeTime(r.conferida_por) ? ' por ' + esc(nomeTime(r.conferida_por)) : ''}${r.conferida_em ? ' em ' + dataBR(String(r.conferida_em).slice(0, 10)) : ''}.` : '') : 'Ao salvar como Fechou, a venda vai sozinha para a planilha. Se faltar algo do mínimo (valor, custo, pagamento, comprovante, localizador ou horário dos voos), o app mostra só o que falta.'}</div>${!nova && r.resultado === 'Fechou' && !VENDA.concluida(r) ? '<button class="sec grande" type="button" id="reLancar" style="width:100%;margin-top:8px">Fechar venda</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       ${G ? blAnd : ''}
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
@@ -4527,7 +4703,7 @@ function telaFormReuniao(P) {
   if (G && !nova) { ligarTopoGestao(P); ligarPropostaIA(P, base); }
   f.addEventListener('click', (e) => { const b = e.target.closest('[data-fup]'); if (!b || !f.elements.mg_fup) return; const d = new Date(); if (+b.dataset.fup % 30 === 0) d.setMonth(d.getMonth() + b.dataset.fup / 30); else d.setDate(d.getDate() + +b.dataset.fup); f.elements.mg_fup.value = isoLocal(d); [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b)); });
   if ($('reEtapaSel')) $('reEtapaSel').onchange = () => { const b = $('reRes').querySelector(`[data-v="${$('reEtapaSel').value}"]`); if (b) b.click(); };
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; if ($('reEtapaSel')) $('reEtapaSel').value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; if ($('reEtapaSel')) $('reEtapaSel').value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => { const e = $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   // próximo passo: troca de etapa traz o padrão; atalhos mudam a data; aviso quando passa do padrão
   const passoInfo = () => {
     const el = $('passoPadrao'); if (!el || !f.elements.proximo_passo_tipo) return;
@@ -4658,10 +4834,8 @@ function telaFormReuniao(P) {
     if (ADMIN || pode('gestao')) ctxI.verFicha = (cid) => { if (cid) abrirFicha(cid, 'carteira'); };
     f._ctxCliente = ctxI;
     // botão do Fechou: diz o que vai acontecer (planilha, Gestão ou os dois); pagamento só aparece quando há venda
-    function rotFech() { const b = $('enviarPlan'), A = VENDA.aEnviar(IT), soCli = IT.length > 0 && IT.every(VENDA.ehCliente);
-      if ($('reFech')) $('reFech').hidden = soCli;
-      if (!b || b.disabled) return;
-      b.textContent = A.cliente.length && !A.vendas.length ? 'Emitiu: lançar na Gestão do cliente' : A.cliente.length ? 'Emitiu: enviar para a planilha e lançar na Gestão' : 'Emitiu: enviar para a planilha'; }
+    // pagamento só aparece quando há venda (emissão só com milhas do cliente não tem pagamento)
+    function rotFech() { const soCli = IT.length > 0 && IT.every(VENDA.ehCliente); if ($('reFech')) $('reFech').hidden = soCli; }
     f._rotFech = rotFech; setTimeout(rotFech, 0);
     const marcar = () => $('reProd').querySelectorAll('button').forEach(b => b.classList.toggle('on', IT.some(x => x.produto === b.dataset.p)));
     $('reProd').querySelectorAll('button').forEach(b => b.onclick = async () => {
@@ -4680,6 +4854,7 @@ function telaFormReuniao(P) {
     // valor da venda pela cotação rápida ligada ao card: a escolhida no Fechou ou a mais recente
     // cotação de onde vem o valor: a escolhida no Fechou ou a última enviada (qualquer modelo)
     const cotFech = () => { const L = (CDADOS || []).filter(c => c.dados); const c = (SEL && L.find(c => SEL.startsWith(c.id + '|'))) || L[0] || null; return c ? { c, k: SEL && SEL.startsWith(c.id + '|') ? +SEL.split('|')[1] || 0 : 0 } : null; };
+    f._cot = () => { const z = cotFech(); return z ? { dados: z.c.dados, k: z.k } : null; };
     const ctxF = { total: () => EDIT.tot(), cliente: () => f.elements.cliente.value, contato: () => f.elements.contato.value, taxa: (n) => COT.taxaCartao(n),
       // o que o cliente paga na forma escolhida (no cartão, o total da maquininha); a venda recebe sempre o líquido
       alvo: (forma, n) => { const z = cotFech(); return z ? COT.valorDaOpcao(z.c.dados, z.k, forma, n) : null; },
@@ -4736,7 +4911,10 @@ function telaFormReuniao(P) {
       SEL = c.id + '|' + k; desenhaCot();
       if (!auto) aviso('Venda preenchida com a cotação. Confira e salve.');
     };
-    f._prepFechou = async () => {
+    // uma preparação por vez: o botão Fechou espera a cotação entrar antes de conferir o mínimo
+    let prepP = null;
+    f._prepFechou = () => prepP || (prepP = prepFechou().finally(() => { prepP = null; }));
+    const prepFechou = async () => {
       if (!CD.length || f.elements.etapa.value !== 'Fechou') return;
       await COT.prepararAero();
       if (!CDADOS) { const q = await sb.from('propostas').select('id,titulo,modelo,dados,atualizado_em').in('id', CD.map(c => c.id)).order('atualizado_em', { ascending: false }); CDADOS = q.error ? [] : (q.data || []);
@@ -4754,7 +4932,8 @@ function telaFormReuniao(P) {
     };
     // Fechou em dois passos. No Fechou: a opção da cotação, o valor e a forma de pagamento.
     // Os dados da emissão (custo, localizador, passageiros, print) ficam para o passo Emitiu, quando a passagem sai.
-    let EMITIR = false;
+    // o Fechou é um passo só: os serviços aparecem inteiros (o antigo passo "Emitiu" deixou de existir)
+    const EMITIR = true;
     const resumoFech = () => {
       const el = $('reResumoFech'); if (!el) return;
       const L = IT.filter(x => !x.cancelado_em);
@@ -4765,11 +4944,8 @@ function telaFormReuniao(P) {
       const so = f.elements.etapa.value === 'Fechou' && !IT.some(VENDA.enviado) && !EMITIR;
       if ($('reServicos')) $('reServicos').hidden = so;
       if ($('reResumoFech')) $('reResumoFech').hidden = !so;
-      if ($('reEmitiu')) $('reEmitiu').hidden = !so;
-      if ($('enviarPlan')) $('enviarPlan').hidden = so;
       if (so) resumoFech();
     };
-    if ($('reEmitiu')) $('reEmitiu').onclick = () => { EMITIR = true; f._modoFech(); const el = $('reServicos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
   f._fech = () => F;
   if ($('segIV')) {
@@ -4780,7 +4956,7 @@ function telaFormReuniao(P) {
   }
   mostrar(); f._reunVis(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
-  if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => $('blFechou').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => { const e = $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
   // frases do "não fechou": mudam com o motivo, um toque escolhe
   if ($('frasesPerda') && f.elements.motivo_perda) {
     const desenhaFrases = () => { const L = RE_FRASES[f.elements.motivo_perda.value] || [], atual = f.elements.motivo_frase.value;
@@ -4790,60 +4966,8 @@ function telaFormReuniao(P) {
     f.elements.motivo_perda.addEventListener('change', () => { f.elements.motivo_frase.value = ''; desenhaFrases(); }); desenhaFrases();
   }
   $('voltar').onclick = () => voltarSeguro(GE_FUNIL ? 'gestao' : 'reunioes');
-  if ($('enviarPlan')) $('enviarPlan').onclick = async () => {
-    const IT = f._itens ? f._itens() : [], Fh = f._fech();
-    const pend = VENDA.pendenciasFechamento({ itens: IT, fech: Fh }), A = VENDA.aEnviar(IT);
-    if (!A.vendas.length && !A.cliente.length) { aviso('Tudo já foi lançado.'); return; }
-    if (pend.length) { $('reFechPend').innerHTML = '<b style="color:var(--alerta)">Antes de enviar, falta:</b><br>' + pend.map(esc).join('<br>'); $('reFechPend').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-    $('reFechPend').innerHTML = '';
-    const nV = A.vendas.length, nC = A.cliente.length;
-    const partes = [nV ? `enviar ${nV} ${nV === 1 ? 'serviço' : 'serviços'} para a planilha como ${nV === 1 ? 'emitido e pago' : 'emitidos e pagos'}` : '', nC ? `lançar ${nC === 1 ? 'a emissão' : nC + ' emissões'} com milhas do cliente na ficha da Gestão` : ''].filter(Boolean).join(' e ');
-    if (!await pergunta(partes.charAt(0).toUpperCase() + partes.slice(1) + '?', { sim: 'Confirmar' })) return;
-    const antes = IT.map(x => x.planilha_id), bt = $('enviarPlan');
-    bt.disabled = true; bt.textContent = 'Enviando...';
-    const fim = () => { bt.disabled = false; if (f._rotFech) f._rotFech(); };
-    const card = { ...base, cliente: f.elements.cliente.value, contato: f.elements.contato.value, pessoa_id: f.elements.pessoa_id.value || base.pessoa_id };
-    // 1. emissões com milhas do cliente: Uso de milhas na ficha da Gestão, voo no check-in. Não é venda.
-    const clientesG = [], avisosG = [];
-    if (nC) {
-      await VENDA.salvarPassageiros(ctxVenda(), A.cliente);
-      const G = f._ctxCliente ? f._ctxCliente.gestao : null;
-      for (const x of A.cliente) {
-        const r = await VENDA.lancarCliente(ctxVenda(), card, x, G);
-        if (!r.ok) {
-          fim(); await sb.from('atendimentos').update({ itens: IT }).eq('id', base.id);
-          aviso('Não lançou na Gestão: ' + r.erro); return;
-        }
-        clientesG.push(r.cliente_id); if (r.avisoVoos) avisosG.push(r.avisoVoos);
-      }
-    }
-    // 2. vendas da Maktub: planilha, como sempre
-    let r1 = { ok: true, n: 0 };
-    if (nV) {
-      r1 = await VENDA.enviarParaPlanilha(ctxVenda(), card, IT, Fh);
-      if (!r1.ok) { fim(); if (nC) await sb.from('atendimentos').update({ itens: IT }).eq('id', base.id); aviso('Não enviou: ' + r1.erro + (/fila_planilha/.test(r1.erro) ? ' (rode o SQL do processo de cotação)' : '')); return; }
-    }
-    fim();
-    // valor fechado: só a parte vendida (o que está digitado no campo, ou a soma das vendas)
-    const tot = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0);
-    const vfCampo = f.elements.valor_fechado && f.elements.valor_fechado.value.trim() ? Number(f.elements.valor_fechado.value.trim().replace(',', '.')) : null;
-    const soCli = IT.every(VENDA.ehCliente);
-    const up = await sb.from('atendimentos').update({ itens: IT, fech: Fh, resultado: 'Fechou', etapa: 'Fechou', valor_fechado: soCli ? null : (vfCampo || base.valor_fechado || tot || null) }).eq('id', base.id).select().single();
-    if (up.error) {
-      const novos = IT.filter((x, k) => x.planilha_id && x.planilha_id !== antes[k]).map(x => x.planilha_id);
-      if (novos.length) await sb.from('fila_planilha').delete().in('id', novos);
-      IT.forEach((x, k) => { if (x.planilha_id !== antes[k]) { delete x.planilha_id; delete x.enviado_em; } });
-      aviso('Não salvou o card: ' + up.error.message + (nC ? ' A emissão com milhas do cliente já está na Gestão; toque de novo para atualizar o card.' : '')); return;
-    }
-    const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = up.data;
-    if (clientesG.length) await depoisMilhasCliente(clientesG);
-    aviso([nV ? `${r1.n} ${r1.n === 1 ? 'serviço vai' : 'serviços vão'} para a planilha em até 5 minutos.` : '', nC ? (nC === 1 ? 'Emissão lançada na Gestão do cliente.' : 'Emissões lançadas na Gestão do cliente.') : '', ...avisosG].filter(Boolean).join(' '));
-    // o card é redesenhado com o que foi enviado; anotações e próximos passos digitados e ainda não salvos voltam para os campos
-    const fora = (el) => !el.name || ['etapa', 'resultado', 'valor_fechado', 'pessoa_id'].includes(el.name) || el.closest('#reItens, #reFech, #reProd') || ['checkbox', 'radio', 'file', 'hidden'].includes(el.type);
-    const digitado = [...f.elements].filter(el => !fora(el) && el.value).map(el => [el.name, el.value]);
-    telaFormReuniao(P);
-    const f2 = $('fRe'); if (f2) { let mudou = false; digitado.forEach(([n, v]) => { const el = f2.elements[n]; if (el && !(el instanceof RadioNodeList) && !fora(el) && el.value !== v) { el.value = v; mudou = true; } }); if (mudou) { PREENCHIDO = true; SUJO = true; URL_PREENCHIDO = location.href; FORM_PREENCHIDO = f2; if ($('msgRe')) $('msgRe').textContent = 'Os serviços foram enviados. Você ainda tem anotações não salvas neste card: toque em Salvar.'; } }
-  };
+  // card que já estava em Fechou sem lançar (de antes do Fechou automático): lança pelo mesmo caminho do Salvar
+  if ($('reLancar')) $('reLancar').onclick = () => { f._lancar = true; f.requestSubmit(); };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
@@ -4885,11 +5009,18 @@ function telaFormReuniao(P) {
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (IT) { row.itens = IT; if (res === 'Fechou' && row.valor_fechado == null) { const v = IT.reduce((a, x) => a + (+x.venda || 0), 0); if (v) row.valor_fechado = v; } }
     if (!G) { row.fech = f._fech(); if (f.elements.cotacao_inicio) row.cotacao_inicio = g('cotacao_inicio') || null; }
-    // ao virar Fechou: forma de pagamento obrigatória (quando há venda da Maktub) e a data do Fechou gravada sozinha
-    if (res === 'Fechou' && base.resultado !== 'Fechou') {
-      if (!G && (IT || []).some(x => !VENDA.ehCliente(x) && !x.cancelado_em) && !(row.fech && row.fech.forma)) { $('msgRe').textContent = 'Escolha a forma de pagamento do cliente.'; const e = $('reFech'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-      if (!base.fechado_em) row.fechado_em = new Date().toISOString();
+    // Fechou da venda do Comercial: só vira Fechou com o mínimo completo. Faltando algo, abre a tela curta só com o que falta;
+    // completo, o card é salvo e a venda vai sozinha para a planilha, as metas e o app (lancarVenda, logo depois de salvar).
+    const lancar = !G && !!IT && IT.length > 0 && res === 'Fechou' && (base.resultado !== 'Fechou' || f._lancar) && !VENDA.concluida({ ...base, resultado: 'Fechou', itens: IT, fech: row.fech });
+    f._lancar = false;
+    if (lancar && VENDA.faltasMinimo({ itens: IT, fech: row.fech }).length) {
+      const ok = await FCH.folhaFechar(ctxFechar(), { card: { ...base, cliente: g('cliente') }, IT, F: row.fech, cot: f._cot ? f._cot() : null });
+      if (EDIT) EDIT.desenha(); if (FECH) FECH.desenha();
+      if (!ok) { $('msgRe').textContent = 'A venda ainda não foi fechada. Falta: ' + VENDA.pendenciasMinimo({ itens: IT, fech: row.fech }).join('; ') + '.'; return; }
+      if (row.valor_fechado == null || f.elements.valor_fechado) { const v = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0); if (v) row.valor_fechado = Math.round(v * 100) / 100; }
     }
+    // ao virar Fechou, a data do Fechou é gravada sozinha
+    if (res === 'Fechou' && base.resultado !== 'Fechou' && !base.fechado_em) row.fechado_em = new Date().toISOString();
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     if (f.elements.responsavel_id) row.responsavel_id = g('responsavel_id') || null; else if (nova && !(ADMIN || GER())) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
@@ -4948,6 +5079,12 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    let lancada = '';
+    if (lancar) {
+      const z = await lancarVenda(data, IT, row.fech, { valor_fechado: row.valor_fechado });
+      if (!z.ok) falhas.push('O card foi salvo, mas a venda não foi lançada: ' + z.erro + ' Toque em Fechar venda no card para tentar de novo.');
+      else lancada = z.msg;
+    }
     if (nova && D.notas !== null && g('nota_inicial')) { const x = await gravarNota(data.id, g('nota_inicial')); if (x.erro) falhas.push('O card foi salvo, mas a anotação não: ' + x.erro); }
     // Gestão: reunião de proposta entra na agenda; Fechou ou Não fechou marca a reunião como realizada, com o resumo
     if (G && D.agenda && (g('mg_prop') || ((data.resultado === 'Fechou' || data.resultado === 'Não fechou') && g('mg_resprop')))) {
@@ -4980,7 +5117,7 @@ function telaFormReuniao(P) {
     if (nova && data.lead_id) { const ld = (D.leads || []).find(x => x.id === data.lead_id); if (ld && ld.status === 'novo') { const u = await sb.from('leads').update({ status: 'em conversa' }).eq('id', ld.id); if (!u.error) ld.status = 'em conversa'; } }
     // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
     if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
-    if (data.pessoa_id) { if (res === 'Fechou') virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
+    if (data.pessoa_id) { if (res === 'Fechou' && !lancada) virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
     if (g('nr_assunto') && D.agenda) {
       const feita = f.elements.nr_feita.checked;
       const nr = await sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: g('nr_assunto'), tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens', data: new Date(g('nr_data')).toISOString(),
@@ -4988,7 +5125,7 @@ function telaFormReuniao(P) {
       if (nr.error) falhas.push('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
     if (falhas.length) alert('O card foi salvo, mas:\n\n' + falhas.map(t => '- ' + limparTec(t)).join('\n'));
-    aviso(res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Atendimento da Gestão registrado.' : 'Atendimento registrado.') : 'Atualizado.');
+    aviso(lancada ? lancada : res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Atendimento da Gestão registrado.' : 'Atendimento registrado.') : 'Atualizado.');
     RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
   // arquivar no lugar de excluir: o card sai do funil, das listas e dos avisos (92-arquivar-avisos-ignoram-arquivados.sql), nada é apagado
@@ -5270,7 +5407,8 @@ function cbAcao(r, base) {
   if (r.resultado === 'Em andamento' && !r.assumido_por) return ['assumir', 'Assumir'];
   if (et === 'Novo lead' || et === 'Em cotação') return podeAba('cotador') ? ['cotar', cotsDe(base.id).length ? 'Nova cotação' : 'Montar a cotação'] : ['etapa', 'Mudar etapa'];
   if (et === 'Cotação enviada' || et === 'Follow-up') return ['fechou', 'Fechou'];
-  if (et === 'Fechou' && !(IT.length && IT.every(VENDA.enviado))) return ['emitiu', 'Emitiu'];
+  // card em Fechou que ainda não foi lançado (de antes do Fechou automático): o botão abre a tela curta do que falta
+  if (r.resultado === 'Fechou' && IT.length && !VENDA.concluida(r)) return ['lancar', 'Fechar venda'];
   return null;
 }
 // topo do card: só a etapa, a ação principal e os atalhos. Valores, responsável e próximo passo ficam no Acompanhamento, no fim do card.
@@ -5319,8 +5457,9 @@ function ligarCardLeitura(P, f, r, base) {
     const a = $('cbPrim').dataset.acao;
     if (a === 'assumir' && $('assumirAt')) return $('assumirAt').click();
     if (a === 'cotar' && $('montarCot')) return $('montarCot').click();
-    if (a === 'fechou') return etapa('Fechou');
-    if (a === 'emitiu') { abrir('etapa'); const c = abrir('atend'); if ($('reEmitiu') && !$('reEmitiu').hidden) $('reEmitiu').click(); ver($('reServicos') || c); return; }
+    // Fechou: escolhe a etapa e salva; o Salvar lança a venda (ou abre a tela curta do que falta)
+    if (a === 'fechou') { const b = $('reRes') && $('reRes').querySelector('[data-v="Fechou"]'); if (b) b.click(); f._lancar = true; return Promise.resolve(f._prepFechou && f._prepFechou()).catch(() => {}).then(() => f.requestSubmit()); }
+    if (a === 'lancar') { f._lancar = true; return f.requestSubmit(); }
     etapa(null);
   };
   if ($('cbZap')) $('cbZap').addEventListener('click', () => marcarContato(r));
