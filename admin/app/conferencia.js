@@ -36,8 +36,8 @@ export function htmlBloco(X, L, mostrar) {
 export function folha(X, r0) {
   const { V, esc } = X;
   const r = r0, IT = JSON.parse(JSON.stringify(r.itens || [])), F = JSON.parse(JSON.stringify(r.fech || {}));
-  // retrato de cada linha já enviada, para mandar à planilha só o que for mexido nesta conferência
-  const antes = IT.map(x => V.enviado(x) && !V.ehCliente(x) ? V.retratoLinha(X, r, IT, x, F) : null);
+  // como cada linha está na planilha (retrato guardado no serviço): só o que for mexido vai para a planilha
+  V.garantirRetrato(X, r, IT, F);
   // o que aparece é decidido ao abrir (o que estava em aberto); o check de cada item muda enquanto a pessoa corrige
   const f0 = V.faltasConferencia({ itens: IT, fech: F });
   const comp = f0.some(p => p.i < 0);
@@ -153,7 +153,7 @@ export function folha(X, r0) {
             if (x.gestao_em && x.gestao_snap !== V.snapCliente(x)) { const z = await V.lancarCliente(X, r, x, null); if (!z.ok) erros.push('Gestão: ' + z.erro); else clientes.push(z.cliente_id); }
             continue;
           }
-          const z = await V.atualizarNaPlanilha(X, r, IT, F, x, { antes: antes[i], fechado: X.mesFechado });
+          const z = await V.atualizarNaPlanilha(X, r, IT, F, x, { fechado: X.mesFechado });
           if (!z.ok) erros.push('Planilha: ' + z.erro); else nFila += z.n;
         }
       } catch (e) { erros.push(String(e && e.message || e)); }

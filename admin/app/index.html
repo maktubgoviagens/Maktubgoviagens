@@ -1315,9 +1315,9 @@ import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=59';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=33';
+import * as VENDA from '/admin/app/venda.js?v=34';
 import * as FCH from '/admin/app/fechou.js?v=1';
-import * as CONF from '/admin/app/conferencia.js?v=1';
+import * as CONF from '/admin/app/conferencia.js?v=2';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=22';
 import * as CX from '/admin/app/caixa.js?v=7';
@@ -4806,6 +4806,8 @@ function telaFormReuniao(P) {
       setTimeout(() => { f._ultRasc = snap(); }, 0);
     }
     const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get cotacao() { return f.elements.etapa.value !== 'Fechou'; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
+    // venda já lançada: guarda como cada serviço está na planilha, para mandar só o que for corrigido aqui
+    if (!nova) VENDA.garantirRetrato(XV, base, IT, F);
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); rotFech(); });
     // cliente da Gestão dono das milhas: a opção "Milhas do cliente da Gestão" só aparece com contrato ativo.
     // Vem de uma função do banco (o Comercial nem sempre carrega a lista da Gestão). Não redesenha enquanto alguém digita.
@@ -5074,6 +5076,17 @@ function telaFormReuniao(P) {
       const ja = D.reunioes.find(x => ehGestao(x) && x.pessoa_id === row.pessoa_id && ['Em andamento', 'Fechou'].includes(x.resultado));
       if (ja && await pergunta(`${ja.cliente} já tem um card da Gestão (${ja.resultado === 'Fechou' ? 'fechado' : etapaDe(ja)}).`, { sim: 'Abrir o card que já existe', nao: 'Criar outro mesmo assim', escolha: true })) { $('salvarRe').disabled = false; $('msgRe').textContent = ''; SUJO = false; abrirAtendimento(ja.id); return; }
     }
+    // venda já lançada: o que mudou nos serviços enviados vai para a mesma linha da planilha antes de o card ser salvo
+    // (valor ou custo de mês de comissão fechado: ajuste no mês atual). Se a planilha não receber, o card não salva.
+    let corrigidas = 0;
+    if (!G && IT && !nova && IT.some(VENDA.enviado)) {
+      const z = await VENDA.corrigirNaPlanilha(ctxVenda(), { ...base, ...row }, IT, row.fech || f._fech(), { fechado: mesFechado });
+      if (!z.ok) { $('salvarRe').disabled = false; $('msgRe').textContent = limparTec('Não salvou: a correção não chegou à fila da planilha (' + z.erro + '). Tente de novo.'); return; }
+      corrigidas = z.n;
+      if (res === 'Fechou' && IT.every(x => x.cancelado_em || VENDA.enviado(x) || VENDA.ehCliente(x))) { const v = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0); if (v) row.valor_fechado = Math.round(v * 100) / 100; }
+      // a conferência acompanha a correção: o que ainda falta continua em "Vendas a conferir"
+      if (base.conferencia_status) { const est = VENDA.estadoConferencia({ itens: IT, fech: row.fech || f._fech() }, D.meuId); if (!(est.conferencia_status === 'conferida' && base.conferencia_status === 'conferida')) Object.assign(row, est); }
+    }
     const q = nova ? sb.from('atendimentos').insert(row).select().single() : sb.from('atendimentos').update(row).eq('id', base.id).select().single();
     const { data, error } = await q;
     $('salvarRe').disabled = false;
@@ -5117,7 +5130,7 @@ function telaFormReuniao(P) {
     if (nova && data.lead_id) { const ld = (D.leads || []).find(x => x.id === data.lead_id); if (ld && ld.status === 'novo') { const u = await sb.from('leads').update({ status: 'em conversa' }).eq('id', ld.id); if (!u.error) ld.status = 'em conversa'; } }
     // passageiros de voo já emitido viram ficha no CRM com CPF e nascimento na hora de salvar
     if (IT && IT.some(x => x.emitido)) await VENDA.salvarPassageiros(ctxVenda(), IT.filter(x => x.emitido));
-    if (data.pessoa_id) { if (res === 'Fechou' && !lancada) virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
+    if (data.pessoa_id) { if (res === 'Fechou' && !lancada) await virarCliente(data.pessoa_id); else if (nova) marcarInteresse(data.pessoa_id, G); }
     if (g('nr_assunto') && D.agenda) {
       const feita = f.elements.nr_feita.checked;
       const nr = await sb.from('agenda_reunioes').insert({ atendimento_id: data.id, titulo: g('nr_assunto'), tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens', data: new Date(g('nr_data')).toISOString(),
@@ -5125,7 +5138,7 @@ function telaFormReuniao(P) {
       if (nr.error) falhas.push('O atendimento foi salvo, mas a reunião não: ' + nr.error.message); else D.agenda.unshift(nr.data);
     }
     if (falhas.length) alert('O card foi salvo, mas:\n\n' + falhas.map(t => '- ' + limparTec(t)).join('\n'));
-    aviso(lancada ? lancada : res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Atendimento da Gestão registrado.' : 'Atendimento registrado.') : 'Atualizado.');
+    aviso(lancada ? lancada : corrigidas ? 'Correção salva. A planilha atualiza em até 5 minutos.' : res === 'Fechou' && G ? 'Fechou! Defina a data de entrada na ficha do cliente para contar os 12 meses.' : res === 'Fechou' ? 'Venda registrada na conversão.' : nova ? (G ? 'Atendimento da Gestão registrado.' : 'Atendimento registrado.') : 'Atualizado.');
     RE_ED = null; ANTERIOR = null; history.replaceState(null, '', reHash()); telaReunioes(P); scrollTo(0, 0);
   };
   // arquivar no lugar de excluir: o card sai do funil, das listas e dos avisos (92-arquivar-avisos-ignoram-arquivados.sql), nada é apagado
