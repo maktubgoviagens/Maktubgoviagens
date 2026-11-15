@@ -374,6 +374,10 @@ body.ac-com-barra #pagina{padding-bottom:150px}
 .fch-tot{margin-top:10px}
 .fch-msg{color:var(--alerta);font-size:16px;line-height:1.45;margin-top:8px}.fch-msg:empty{display:none}
 .fl-conf{display:inline-block;margin-left:6px;font-size:14px;color:var(--dourado);font-family:'Jost',sans-serif}
+/* pagamento previsto da Gestão (topo do card, fundo verde) */
+.glib small.alerta{color:var(--dourado-claro);font-weight:600}
+.glib.gpag{margin-top:10px}
+.gpag-prev{align-items:center}.gpag-prev input{flex:1 1 160px;width:auto;max-width:240px;margin-top:0}
 /* Vendas a conferir (conferencia.js) */
 .vc-lista{display:flex;flex-direction:column;gap:8px}
 .vc-l{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:var(--branco);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer;color:var(--tinta)}
@@ -2326,6 +2330,8 @@ function pendenciasInicio() {
     ...(ADMIN ? [['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')]] : []),
     ...(ADMIN ? [['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')]] : []),
     ...(ADMIN ? [['Fornecedores a pagar', aPagar().length, () => ir('pagar')]] : []),
+    // Gestão: pagamento com data prevista que já chegou e o Matheus ainda não confirmou
+    ...(ADMIN ? [['Pagamentos da Gestão previstos até hoje', pagGestaoVencidos().length, () => { const L = pagGestaoVencidos(); if (L.length === 1) abrirAtendimento(L[0].id); else ir('gestao'); }]] : []),
     // a conferência de comprovante entrou em "Vendas a conferir" (bloco do Início)
     ...(ADMIN && !verConferir() ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
@@ -2471,7 +2477,7 @@ function telaInicioColab(P) {
 }
 
 /* ================= operação: emissões, comissão, financeiro, equipe ================= */
-const SERVICOS = ['Passagens (Milhas)', 'Passagens (Consolidadora)', 'Hotéis', 'Seguro viagem', 'Aluguel de carro', 'Trem', 'Transfer', 'Passeios', 'Ingressos', 'Roteiro', 'Pacotes', 'Serviços / Consultoria', 'Gestão de Milhas'];
+const SERVICOS = ['Passagens (Milhas)', 'Passagens (Consolidadora)', 'Hotéis', 'Seguro viagem', 'Aluguel de carro', 'Trem', 'Ônibus', 'Transfer', 'Passeios', 'Ingressos', 'Roteiro', 'Pacotes', 'Serviços / Consultoria', 'Gestão de Milhas'];
 const ehMilhas = (s) => s === 'Passagens (Milhas)';
 const brl2 = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n) => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
@@ -3157,7 +3163,7 @@ const RE_PROD_ANTIGOS = ['Viagem completa / pacote'];
 // nome mostrado na tela: o produto antigo aparece como Outro (a planilha continua recebendo como antes)
 const rotProd = (p) => p === 'Viagem completa / pacote' ? 'Outro' : p;
 const prodTxt = (s) => String(s || '').split(' + ').map(rotProd).join(' + ');
-const RE_PRODUTOS = ['Passagens', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Transfer', 'Trem', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
+const RE_PRODUTOS = ['Passagens', 'Hotelaria', 'Seguro viagem', 'Aluguel de carro', 'Transfer', 'Trem', 'Ônibus', 'Passeios e ingressos', 'Roteiro', 'Maktub Corporativo', 'Taxa de Planejamento', 'Outro'];
 const RE_ORIGENS = ['Indicação de cliente', 'Parceiro', 'Instagram', 'Site', 'Google', 'WhatsApp', 'Cliente recorrente', 'Prospecção ativa', 'Outro'];
 const RE_RES = ['Em andamento', 'Fechou', 'Não fechou', 'Não se aplica'];
 const RE_MOTIVOS = ['Preço', 'Fechou com outro', 'Desistiu ou adiou a viagem', 'Parou de responder', 'Datas ou disponibilidade', 'Outro'];
@@ -3308,6 +3314,20 @@ function liberacaoDe(r) {
   const ok = [!!cli, !!ctr, !!r.pagamento_ok_em];
   return { cli, ctr, aberto, ok, feitos: ok.filter(Boolean).length, prox: !ok[0] ? 'Cadastrar o cliente na Gestão' : !ok[1] ? (aberto && aberto.status === 'enviado' ? 'Aguardando a assinatura do contrato' : 'Gerar e enviar o contrato') : !ok[2] ? 'Matheus confirmar o pagamento' : 'Começar o onboarding' };
 }
+// pagamento da Gestão: a data prevista (o cliente avisa quando vai pagar) fica no card até o Matheus confirmar o recebimento.
+// Vale antes e depois de o onboarding começar. Fica no fech do card, que o card da Gestão não usa para mais nada.
+const pagPrevisto = (r) => String(((r && r.fech) || {}).pagamento_previsto || '');
+const pagGestaoVencidos = () => (D.reunioes || []).filter(r => ehGestao(r) && r.resultado === 'Fechou' && !r.arquivado_em && !r.pagamento_ok_em && pagPrevisto(r) && pagPrevisto(r) <= hojeISO());
+function htmlPagamentoPrevisto(r) {
+  if (r.pagamento_ok_em) return '';
+  const pv = pagPrevisto(r), hoje = hojeISO();
+  const quando = pv ? dia(pv).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '') : '';
+  const txt = pv ? `Pagamento previsto para ${esc(quando)}${pv < hoje ? ': a data já passou' : pv === hoje ? ': é hoje' : ''}.` : 'Sem data prevista para o pagamento.';
+  return `<small>${souMatheus() ? 'Confira o recebimento e confirme.' : 'Aguardando o Matheus confirmar o recebimento.'}</small>
+    <small class="${pv && pv <= hoje ? 'alerta' : ''}">${txt}${pv && ((r.fech || {}).previsto_por) && nomeTime(r.fech.previsto_por) ? ` Anotado por ${esc(String(nomeTime(r.fech.previsto_por)).split(' ')[0])}.` : ''}</small>
+    ${ADMIN || pode('gestao') ? `<div class="ac gpag-prev"><input type="date" data-lib-prevd="${r.id}" value="${esc(pv)}" aria-label="Data prevista do pagamento"><button type="button" data-lib-prev="${r.id}">Salvar previsão</button></div>` : ''}
+    ${souMatheus() ? `<div class="ac"><button type="button" class="p" data-lib-pag="${r.id}" data-v="1">Confirmar pagamento</button></div>` : ''}`;
+}
 function htmlLiberacao(r, L) {
   const pf = r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null;
   const I = (ok, n) => `<i class="${ok ? 'ok' : ''}">${ok ? '✓' : n}</i>`;
@@ -3319,8 +3339,7 @@ function htmlLiberacao(r, L) {
     : L.aberto && L.aberto.status === 'enviado' ? `<small>Enviado${L.aberto.enviado_em ? ' em ' + dataBR(String(L.aberto.enviado_em).slice(0, 10)) : ''}, aguardando a assinatura.</small><div class="ac"><button type="button" class="p" data-lib-ctrst="${L.aberto.id}" data-lib-r="${r.id}">Atualizar status</button><button type="button" data-gficha="${L.cli.id}">Ver contrato ›</button></div>`
     : `<small>${L.aberto ? 'Contrato gerado, ainda não enviado.' : 'Gere o contrato com um toque e envie pelo Autentique.'}</small><div class="ac"><button type="button" class="p" data-gficha="${L.cli.id}">${L.aberto ? 'Enviar para assinatura ›' : 'Gerar o contrato ›'}</button></div>`;
   const pag = L.ok[2] ? `<small>Confirmado por ${esc(String(nomeTime(r.pagamento_ok_por) || 'Matheus').split(' ')[0])} em ${dataBR(String(r.pagamento_ok_em).slice(0, 10))}.</small>${souMatheus() ? `<div class="ac"><button type="button" data-lib-pag="${r.id}" data-v="0">Desfazer</button></div>` : ''}`
-    : souMatheus() ? `<small>Confira o recebimento e confirme.</small><div class="ac"><button type="button" class="p" data-lib-pag="${r.id}" data-v="1">Confirmar pagamento</button></div>`
-    : '<small>Aguardando o Matheus confirmar o recebimento.</small>';
+    : htmlPagamentoPrevisto(r);
   const pronto = L.feitos === 3 ? `<div class="ac"><button type="button" class="p" data-lib-ini="${r.id}" style="width:100%">Começar o onboarding (D0 hoje) ›</button></div>` : '';
   return `<div class="glib"><div>${I(L.ok[0], 1)}<div class="x"><b>Cadastro na Gestão</b>${cad}</div></div><div>${I(L.ok[1], 2)}<div class="x"><b>Contrato assinado</b>${ctr}</div></div><div>${I(L.ok[2], 3)}<div class="x"><b>Pagamento confirmado</b>${pag}</div></div></div>${pronto}${ADMIN && L.feitos < 3 ? `<button type="button" class="pular" data-lib-pular="${r.id}">Cliente antigo, já em andamento: liberar sem estes checks</button>` : ''}`;
 }
@@ -3364,9 +3383,11 @@ function htmlTopoGestao(r) {
   if (perdeu) { rot = 'Não fechou'; t = esc(r.motivo_perda || 'Sem motivo registrado'); d = esc(r.motivo_detalhe || ''); }
   else if (r.resultado === 'Fechou') {
     rot = pv.idx === NF_G ? 'Fechou · a liberar' : pv.idx === NF_G + 1 ? 'Onboarding D0 a D7' : 'Cliente ativo';
+    // onboarding já começou e o pagamento ainda não foi confirmado: a previsão e a confirmação continuam no topo do card
+    const pagAberto = r.pagamento_ok_em ? '' : `<div class="glib gpag"><div><i>○</i><div class="x"><b>Pagamento confirmado</b>${htmlPagamentoPrevisto(r)}</div></div></div>`;
     if (pv.idx === NF_G) { const L = liberacaoDe(r); t = `Liberar o onboarding: ${L.feitos} de 3`; d = htmlLiberacao(r, L); }
-    else if (pv.idx === NF_G + 1) { const nx = tarefasOb(pv.cli.id).find(x => !x.feito); t = `Onboarding: ${pv.f} de ${pv.T} passos`; d = nx ? 'Próximo: ' + esc((nx.dia ? nx.dia + ' · ' : '') + nx.titulo) : ''; bt = B('Abrir o checklist ›', `data-gficha="${pv.cli.id}" data-gfa="tarefas"`, 1); }
-    else { t = 'Cliente ativo na Gestão'; d = pv.cli.gestao_vencimento ? 'Ciclo até ' + dataBR(pv.cli.gestao_vencimento) + '.' : 'Defina a data de entrada na ficha para contar os 12 meses.'; bt = B('Abrir a base do cliente ›', `data-gficha="${pv.cli.id}"`, 1); }
+    else if (pv.idx === NF_G + 1) { const nx = tarefasOb(pv.cli.id).find(x => !x.feito); t = `Onboarding: ${pv.f} de ${pv.T} passos`; d = (nx ? 'Próximo: ' + esc((nx.dia ? nx.dia + ' · ' : '') + nx.titulo) : '') + pagAberto; bt = B('Abrir o checklist ›', `data-gficha="${pv.cli.id}" data-gfa="tarefas"`, 1); }
+    else { t = 'Cliente ativo na Gestão'; d = (pv.cli.gestao_vencimento ? 'Ciclo até ' + dataBR(pv.cli.gestao_vencimento) + '.' : 'Defina a data de entrada na ficha para contar os 12 meses.') + pagAberto; bt = B('Abrir a base do cliente ›', `data-gficha="${pv.cli.id}"`, 1); }
   }
   else if (atual === 0) { t = 'Assumir e mandar as perguntas'; d = 'O SDR assume, manda as perguntas pelo WhatsApp e liga com o Granola gravando.'; bt = (!r.assumido_por ? B('Assumir', `data-gassumir="${r.id}"`, 1) : '') + (zap ? `<a class="${r.assumido_por ? 'p' : 's'}" target="_blank" rel="noopener" href="${esc(zap)}">Mandar as perguntas</a>` : ''); }
   else if (atual === 1) { t = 'Qualificar e passar para o closer'; d = q.gasto || q.granola ? 'Qualificação registrada. Escolha o closer e agende o diagnóstico.' : 'Ligue com o Granola gravando, cole o resumo e preencha o gasto mensal.'; bt = B('Passar para o closer ›', 'data-gir="Diagnóstico agendado"', 1) + B('Qualificação', 'data-gqual="1"'); }
@@ -3534,6 +3555,17 @@ function ligarTopoGestao(P) {
     if (k) { k.status = data.status || k.status; if (data.status === 'assinado' && !k.assinado_em) k.assinado_em = new Date().toISOString(); }
     aviso(data.status === 'assinado' ? 'Contrato assinado.' : data.status === 'recusado' ? 'O cliente recusou a assinatura.' : 'Ainda aguardando a assinatura.');
     if (r) depois(r);
+  });
+  // data prevista do pagamento: quem tem a Gestão anota quando o cliente avisa; o Matheus confirma quando o dinheiro cai
+  P.querySelectorAll('[data-lib-prev]').forEach(b => b.onclick = async () => {
+    const r = achaR(b.dataset.libPrev); if (!r || !(ADMIN || pode('gestao'))) return;
+    const inp = P.querySelector(`[data-lib-prevd="${b.dataset.libPrev}"]`), v = inp ? inp.value : '';
+    if (!v) { aviso('Escolha a data prevista do pagamento.'); return; }
+    const fech = { ...(r.fech || {}), pagamento_previsto: v, previsto_por: D.meuId, previsto_em: new Date().toISOString() };
+    b.disabled = true;
+    const { error } = await sb.from('atendimentos').update({ fech }).eq('id', r.id);
+    if (error) { b.disabled = false; aviso('Não salvou: ' + error.message); return; }
+    r.fech = fech; aviso('Previsão do pagamento salva: ' + dataBR(v) + '.'); redesenharTopo(r);
   });
   P.querySelectorAll('[data-lib-pag]').forEach(b => b.onclick = async () => {
     const r = achaR(b.dataset.libPag); if (!r || !souMatheus()) return;
