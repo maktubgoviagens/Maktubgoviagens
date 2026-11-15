@@ -6,8 +6,8 @@
 export const VOO = ['Passagens', 'Maktub Corporativo'];
 const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 export const HOTEL = 'Hotelaria';
-const ehVoo = (x) => VOO.includes(x.produto);
-const ehHotel = (x) => x.produto === HOTEL;
+export const ehVoo = (x) => VOO.includes(x.produto);
+export const ehHotel = (x) => x.produto === HOTEL;
 // produto do app -> "Serviço" da planilha
 export function servicoPlanilha(x) {
   if (ehVoo(x)) return x.pago_em === 'pagante' ? 'Passagens (Consolidadora)' : 'Passagens (Milhas)';
@@ -23,7 +23,7 @@ export const custoMilhas = (x) => r2((+x.milhas || 0) * (+x.milheiro || 0) / 100
 export const ehCliente = (x) => !!x && ehVoo(x) && x.pago_em === 'cliente_gestao';
 // card que só tem emissão com milhas do cliente: fica em Fechou, mas fora da conversão e do valor fechado
 export const soMilhasCliente = (r) => { const IT = (r && r.itens) || []; return IT.length > 0 && IT.every(ehCliente); };
-const usaMilhas = (x) => ehVoo(x) && x.pago_em !== 'pagante' && x.pago_em !== 'cliente_gestao';
+export const usaMilhas = (x) => ehVoo(x) && x.pago_em !== 'pagante' && x.pago_em !== 'cliente_gestao';
 export const custoDe = (x) => ehCliente(x) ? 0 : usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : (+x.custo || 0);
 export const vendaDe = (x) => ehCliente(x) ? 0 : (+x.venda || 0);
 export const enviado = (x) => !!x.planilha_id;
@@ -35,22 +35,22 @@ export function cpfValido(v) {
   const dv = (n) => { let t = 0; for (let i = 0; i < n; i++) t += +c[i] * (n + 1 - i); const r = (t * 10) % 11; return r === 10 ? 0 : r; };
   return dv(9) === +c[9] && dv(10) === +c[10];
 }
-const fmtCpf = (v) => { const d = soDig(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : v; };
+export const fmtCpf = (v) => { const d = soDig(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : v; };
 // nascimento digitado só com números: a barra entra sozinha (dd/mm/aaaa); também aceita colar 21/02/2002, 21022002 ou 2002-02-21
-const isoBr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
-function mascaraData(v) {
+export const isoBr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+export function mascaraData(v) {
   const t = String(v || '').trim(), iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
   const d = iso ? iso[3] + iso[2] + iso[1] : t.replace(/\D/g, '').slice(0, 8);
   return d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
 }
-function brIso(txt) {
+export function brIso(txt) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(txt || ''); if (!m) return '';
   const [dd, mm, aa] = [+m[1], +m[2], +m[3]], dt = new Date(aa, mm - 1, dd);
   if (aa < 1900 || dt > new Date() || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return '';
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 const nPax = (x) => Math.max(parseInt(x.passageiros, 10) || 0, 0);
-function paxAjustado(x) {
+export function paxAjustado(x) {
   const n = nPax(x); x.pax = Array.isArray(x.pax) ? x.pax : [];
   while (x.pax.length < n) x.pax.push({ nome: '', cpf: '', nasc: '' });
   return x.pax.slice(0, n);
@@ -65,26 +65,80 @@ function pendenciasPax(x) {
   return f;
 }
 
-// o que falta para um serviço poder ir para a planilha
-export function pendenciasItem(x) {
-  if (ehCliente(x)) return pendenciasCliente(x);
+// ---------- o mínimo que trava o lançamento e o que vira conferência (decisão de 14/11/2026) ----------
+// Trava: valor de venda e custo de cada serviço, onde comprou (ou gestor/conta nas milhas), localizador e
+// data e horário de saída de todos os voos. Passageiros, CPF, nascimento, bagagem, print e companhia
+// não travam: a venda sobe e esses itens ficam em "Vendas a conferir". Nada deixa de ser gravado.
+// Cada falta: { k: campo, rot: texto }. O campo diz o que a tela curta do Fechou mostra.
+export function minimoItem(x) {
+  if (ehCliente(x)) return minimoCliente(x);
   const f = [];
-  if (!x.venda) f.push('valor de venda');
-  if (!custoDe(x) && x.produto !== 'Taxa de Planejamento') f.push('custo');
-  if (!x.fornecedor && !usaMilhas(x)) f.push('onde comprou');
+  if (!x.venda) f.push({ k: 'venda', rot: 'valor de venda' });
+  if (!custoDe(x) && x.produto !== 'Taxa de Planejamento') f.push({ k: usaMilhas(x) ? 'milhas' : 'custo', rot: usaMilhas(x) ? 'custo (milhas, milheiro e taxas)' : 'custo' });
+  if (usaMilhas(x)) { if (!String(x.gestor || '').trim() && !String(x.conta || '').trim()) f.push({ k: 'gestor', rot: 'gestor ou conta das milhas' }); }
+  else if (!String(x.fornecedor || '').trim()) f.push({ k: 'fornecedor', rot: 'onde comprou' });
   if (ehVoo(x)) {
-    if (!x.localizador) f.push('localizador');
-    if (!x.passageiros) f.push('passageiros');
-    else f.push(...pendenciasPax(x));
-    if (x.bagagem == null || x.bagagem === '') f.push('bagagem despachada');
-    if (!x.print) f.push('print da tarifa');
-    if (!x.cia_emissora) f.push('companhia');
+    if (!String(x.localizador || '').trim()) f.push({ k: 'localizador', rot: 'localizador' });
     // data e horário de saída de cada voo: é deles que saem o aviso de check-in e o envio do bilhete
-    f.push(...pendenciasHorarios(x));
+    pendenciasHorarios(x).forEach(t => f.push({ k: 'voos', rot: t }));
   }
-  if (!x.emitido) f.push('marcar como emitido');
   return f;
 }
+// o que falta para um serviço poder ir para a planilha (só o mínimo)
+export const pendenciasItem = (x) => minimoItem(x).map(p => p.rot);
+// conferência de cada serviço já lançado: não trava, só aparece em "Vendas a conferir"
+export function conferirItem(x) {
+  if (x.cancelado_em) return [];
+  if (ehCliente(x)) return conferirCliente(x);
+  const f = [];
+  if (ehVoo(x)) {
+    if (!x.passageiros) f.push({ k: 'passageiros', rot: 'quantidade de passageiros' });
+    else pendenciasPax(x).forEach(t => f.push({ k: 'pax', rot: t }));
+    if (x.bagagem == null || x.bagagem === '') f.push({ k: 'bagagem', rot: 'bagagem despachada' });
+    if (!x.print) f.push({ k: 'print', rot: 'print da tarifa' });
+    if (!String(x.cia_emissora || '').trim()) f.push({ k: 'cia_emissora', rot: 'companhia' });
+  } else if (ehHotel(x) && !x.carta) f.push({ k: 'carta', rot: 'carta de boas-vindas ao hotel' });
+  return f;
+}
+const rotServico = (x) => ehCliente(x) ? 'Milhas do cliente' : x.produto;
+// faltas do mínimo da venda inteira: pagamento (i = -1) e cada serviço ainda não lançado
+export function faltasMinimo(r) {
+  const F = r.fech || {}, IT = r.itens || [], f = [];
+  // pagamento e comprovante só quando há venda da Maktub a lançar (emissão com milhas do cliente não é venda)
+  const vendas = IT.filter(x => !ehCliente(x) && !enviado(x) && !x.cancelado_em);
+  if (vendas.length) {
+    if (!F.forma) f.push({ i: -1, k: 'forma', rot: 'forma de pagamento' });
+    // sem as parcelas não dá para medir o custo da maquininha
+    if (F.forma === 'cartao' && !+F.parcelas) f.push({ i: -1, k: 'parcelas', rot: 'em quantas vezes no cartão' });
+    if (F.forma === 'pix_cartao') {
+      if (!+F.pix_valor) f.push({ i: -1, k: 'pix_valor', rot: 'valor recebido no Pix' });
+      if (!+F.cartao_liq) f.push({ i: -1, k: 'cartao_liq', rot: 'valor recebido no cartão' });
+      if (!+F.parcelas) f.push({ i: -1, k: 'parcelas', rot: 'em quantas vezes no cartão' });
+    }
+    if (!F.comprovante) f.push({ i: -1, k: 'comprovante', rot: 'comprovante de pagamento' });
+  }
+  IT.forEach((x, i) => {
+    if (x.cancelado_em || (ehCliente(x) ? x.gestao_em : enviado(x))) return;
+    minimoItem(x).forEach(p => f.push({ i, ...p }));
+  });
+  return f;
+}
+// a mesma lista em texto, agrupada por serviço (para os avisos do card e do funil)
+const emTexto = (r, L) => {
+  const IT = r.itens || [], txt = [], por = new Map();
+  L.forEach(p => { if (p.i < 0) { txt.push(p.rot); return; } if (!por.has(p.i)) por.set(p.i, []); por.get(p.i).push(p.rot); });
+  por.forEach((rots, i) => txt.push(`${rotServico(IT[i])}: ${rots.join(', ')}`));
+  return txt;
+};
+export const pendenciasMinimo = (r) => emTexto(r, faltasMinimo(r));
+// conferência da venda lançada: comprovante conferido pelo financeiro e os itens que não travaram
+export function faltasConferencia(r) {
+  const F = r.fech || {}, IT = r.itens || [], f = [];
+  if (F.comprovante && !F.conferido && IT.some(x => !ehCliente(x) && !x.cancelado_em)) f.push({ i: -1, k: 'comprovante', rot: 'comprovante conferido com o extrato' });
+  IT.forEach((x, i) => conferirItem(x).forEach(p => f.push({ i, ...p })));
+  return f;
+}
+export const pendenciasConferencia = (r) => emTexto(r, faltasConferencia(r));
 // voos da emissão (ida, volta, cada trecho do multitrecho) com a data e o horário de saída que o check-in vai usar.
 // O horário vem da cotação quando bate a rota; o digitado no fechamento vale mais (ida, volta e cada trecho do meio).
 function voosDaEmissao(x) {
@@ -99,6 +153,20 @@ function voosDaEmissao(x) {
   if (ls.length > 1 && tipo !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
   return ls;
 }
+// voos da emissão para a tela curta do Fechou: data e horário de saída de cada um, com o jeito certo de gravar
+// (ida e volta: campos da ida e da volta; trechos separados: cada trecho; multitrecho escrito: a linha do trecho)
+export function voosEditaveis(x) {
+  const ls = voosDaEmissao(x), tipo = x.tipo_trecho || 'iv', porTrecho = !!(x.ct_on && Array.isArray(x.ct) && x.ct.length), multi = tipo === 'multi' && !porTrecho;
+  const nome = (k) => ls.length === 1 ? 'Ida' : tipo === 'iv' && ls.length === 2 ? (k ? 'Volta' : 'Ida') : `Voo ${k + 1}`;
+  const ult = ls.length - 1;
+  return ls.map((l, k) => ({ rot: nome(k) + (l.o && l.d ? ` (${l.o} → ${l.d})` : ''), data: l.data, hora: l.hora,
+    setData: (v) => {
+      if (porTrecho) { x.ct[k].data = v; return; }
+      if (multi) { const L = String(x.trechos || '').split('\n'), cheias = L.map((t, j) => t.trim() ? j : -1).filter(j => j >= 0), j = cheias[k] ?? L.length; L[j] = String(L[j] || '').replace(/\s+\d{1,2}\/\d{1,2}(\/\d{2,4})?/, '') + (v ? ' ' + v.split('-').reverse().join('/') : ''); x.trechos = L.join('\n'); if (k === 0) x.data_ida = v || null; if (k === ult) x.data_volta = v || null; return; }
+      if (k === 0) x.data_ida = v || null; else x.data_volta = v || null;
+    },
+    setHora: (v) => { x.hrs = Array.isArray(x.hrs) ? x.hrs : []; x.hrs[k] = v; if (k === 0) x.hora_ida = v; else if (k === ult) x.hora_volta = v; } }));
+}
 export function pendenciasHorarios(x) {
   const ls = voosDaEmissao(x), tipo = x.tipo_trecho || 'iv', f = [];
   if (!ls.length) return ['data da ida', 'horário de saída da ida'];
@@ -106,26 +174,8 @@ export function pendenciasHorarios(x) {
   ls.forEach((l, k) => { if (!l.data) f.push('data ' + nome(k)); if (!l.hora) f.push('horário de saída ' + nome(k)); });
   return f;
 }
-export function pendenciasFechamento(r) {
-  const F = r.fech || {}, IT = r.itens || [];
-  const f = [];
-  // pagamento e comprovante só quando há venda da Maktub a enviar (emissão com milhas do cliente não é venda)
-  const vendas = IT.filter(x => !ehCliente(x) && !enviado(x));
-  if (vendas.length) {
-    if (!F.forma) f.push('forma de pagamento');
-    // sem as parcelas não dá para medir o custo da maquininha
-    if (F.forma === 'cartao' && !+F.parcelas) f.push('em quantas vezes no cartão');
-    if (F.forma === 'pix_cartao') {
-      if (!+F.pix_valor) f.push('valor recebido no Pix');
-      if (!+F.cartao_liq) f.push('valor recebido no cartão');
-      if (!+F.parcelas) f.push('em quantas vezes no cartão');
-    }
-    if (!F.comprovante) f.push('comprovante de pagamento');
-  }
-  vendas.forEach(x => { const p = pendenciasItem(x); if (p.length) f.push(`${x.produto}: ${p.join(', ')}`); });
-  IT.filter(x => ehCliente(x) && !x.gestao_em && !x.cancelado_em).forEach(x => { const p = pendenciasCliente(x); if (p.length) f.push(`Milhas do cliente: ${p.join(', ')}`); });
-  return f;
-}
+// o que trava o Fechou (só o mínimo); o nome fica por causa dos avisos do card e do funil
+export const pendenciasFechamento = (r) => pendenciasMinimo(r);
 // card concluído: cada venda na planilha (com comprovante) e cada emissão com milhas do cliente lançada na Gestão (ou cancelada)
 export const concluida = (r) => {
   const IT = (r && r.itens) || [];
@@ -133,31 +183,43 @@ export const concluida = (r) => {
     && (IT.every(ehCliente) || !!(r.fech || {}).comprovante);
 };
 // o que falta lançar ao tocar no botão do Fechou: vendas para a planilha e emissões com milhas do cliente para a Gestão
+// estado da conferência da venda lançada (gravado no card: aparece em "Vendas a conferir" e no alerta dos sócios)
+export function estadoConferencia(r, quem) {
+  const pend = pendenciasConferencia(r), agora = new Date().toISOString();
+  return pend.length ? { conferencia_status: 'a_conferir', conferencia_pend: pend, conferida_por: null, conferida_em: null }
+    : { conferencia_status: 'conferida', conferencia_pend: [], conferida_por: quem || null, conferida_em: agora };
+}
 export const aEnviar = (IT) => ({ vendas: (IT || []).filter(x => !ehCliente(x) && !enviado(x)), cliente: (IT || []).filter(x => ehCliente(x) && !x.gestao_em && !x.cancelado_em) });
 
 // ---------- emissão com as milhas do cliente da Gestão ----------
 const ok3 = (t) => /^[A-Za-z]{3}$/.test(String(t || '').trim());
 export const voosCliente = (x) => (Array.isArray(x.voos) ? x.voos : []);
-export function pendenciasCliente(x) {
+// emissão com milhas do cliente: travam só programa, milhas usadas, localizador e voos completos
+function minimoCliente(x) {
   const f = [];
-  if (!String(x.programa || '').trim()) f.push('programa');
-  if (!(+x.milhas > 0)) f.push('milhas usadas');
-  if (!x.data_emissao) f.push('data da emissão');
-  if (!x.cia_emissora) f.push('companhia');
-  if (!x.localizador) f.push('localizador');
+  if (!String(x.programa || '').trim()) f.push({ k: 'programa', rot: 'programa' });
+  if (!(+x.milhas > 0)) f.push({ k: 'milhas', rot: 'milhas usadas' });
+  if (!String(x.localizador || '').trim()) f.push({ k: 'localizador', rot: 'localizador' });
   const V = voosCliente(x);
-  if (!V.length) f.push('voos');
+  if (!V.length) f.push({ k: 'voos', rot: 'voos' });
   // datas e horários obrigatórios em todos os voos: é deles que sai o aviso de check-in
-  V.forEach((v, k) => { const fv = [!ok3(v.o) && 'origem', !ok3(v.d) && 'destino', !v.data && 'data', !v.hora && 'horário']; if (fv.some(Boolean)) f.push(`voo ${k + 1}: ${fv.filter(Boolean).join(', ')}`); });
-  if (!x.passageiros) f.push('passageiros');
-  else f.push(...pendenciasPax(x));
-  if (!(+x.pagante > 0) && !(+x.rex > 0)) f.push('valor pagante');
-  if (x.taxas_quem === 'maktub' && !(+x.taxas > 0)) f.push('taxas pagas pela Maktub');
-  if (x.taxas_quem === 'maktub' && !x.taxas_pago_em) f.push('data em que a Maktub pagou as taxas');
-  if (!x.print) f.push('print da emissão');
-  if (!x.emitido) f.push('marcar como emitido');
+  V.forEach((v, k) => { const fv = [!ok3(v.o) && 'origem', !ok3(v.d) && 'destino', !v.data && 'data', !v.hora && 'horário']; if (fv.some(Boolean)) f.push({ k: 'voos', rot: `voo ${k + 1}: ${fv.filter(Boolean).join(', ')}` }); });
   return f;
 }
+// o resto da emissão com milhas do cliente vira conferência
+function conferirCliente(x) {
+  const f = [];
+  if (!x.data_emissao) f.push({ k: 'data_emissao', rot: 'data da emissão' });
+  if (!String(x.cia_emissora || '').trim()) f.push({ k: 'cia_emissora', rot: 'companhia' });
+  if (!x.passageiros) f.push({ k: 'passageiros', rot: 'quantidade de passageiros' });
+  else pendenciasPax(x).forEach(t => f.push({ k: 'pax', rot: t }));
+  if (!(+x.pagante > 0) && !(+x.rex > 0)) f.push({ k: 'pagante', rot: 'valor pagante' });
+  if (x.taxas_quem === 'maktub' && !(+x.taxas > 0)) f.push({ k: 'taxas', rot: 'taxas pagas pela Maktub' });
+  if (x.taxas_quem === 'maktub' && !x.taxas_pago_em) f.push({ k: 'taxas_pago_em', rot: 'data em que a Maktub pagou as taxas' });
+  if (!x.print) f.push({ k: 'print', rot: 'print da emissão' });
+  return f;
+}
+export const pendenciasCliente = (x) => minimoCliente(x).map(p => p.rot);
 const ddmm = (iso) => iso ? String(iso).slice(0, 10).split('-').reverse().slice(0, 2).join('/') : '';
 const primeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 const juntarE = (L) => L.length > 1 ? L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1] : (L[0] || '');
@@ -239,7 +301,7 @@ function htmlItem(X, x, i, ctx) {
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
       ${htmlPax(X, x, i, trava, ctx)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
-      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa (obrigatório)'}</span></button>${!x.print && !trava ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
+      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa'}</span></button>${!x.print && !trava ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
       <div class="sub" style="margin:-4px 0 8px">Confira no print se a tarifa inclui a mala despachada. Às vezes o bilhete não mostra.</div>`;
   } else if (ehHotel(x)) {
     det += `${inp(X, 'nome', i, 'Hotel', x.nome)}${dupla(inp(X, 'data_ida', i, 'Check-in', x.data_ida ?? ctx.ida, 'd'), inp(X, 'data_volta', i, 'Check-out', x.data_volta ?? ctx.volta, 'd'))}
@@ -297,7 +359,7 @@ function htmlCliente(X, x, i, ctx) {
     <div class="sub" style="margin:6px 0 0">Quem pagou as taxas</div>${seg('taxas_quem', i, [['cliente', 'Cliente, no cartão dele'], ['maktub', 'Maktub, cliente reembolsa']], x.taxas_quem || 'cliente')}
     ${x.taxas_quem === 'maktub' ? `${dupla(inp(X, 'taxas_pago_em', i, 'Data em que a Maktub pagou', x.taxas_pago_em, 'd', dis), '<div></div>')}
       <div class="sub" style="margin:-2px 0 6px">Custo ${X.brl2(+x.taxas || 0)} e reembolso ${X.brl2(+x.taxas || 0)}: lucro zero. Fica em A receber até o reembolso ser marcado como recebido e, no Caixa, aparece como movimento neutro. Fora de vendas, metas, comissão, DRE e planilha.</div>` : ''}
-    <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da emissão anexado (tocar para ver)' : 'Anexar print da emissão (obrigatório)'}</span></button>${!x.print && !canc ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !canc ? `<button type="button" data-printtroca="${i}" style="font-size:13px;text-decoration:underline">trocar</button>` : ''}</div>
+    <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da emissão anexado (tocar para ver)' : 'Anexar print da emissão'}</span></button>${!x.print && !canc ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !canc ? `<button type="button" data-printtroca="${i}" style="font-size:13px;text-decoration:underline">trocar</button>` : ''}</div>
     ${chk(X, 'emitido', i, 'Emitido (bilhete gerado)', x.emitido, canc)}
     ${!lanc && !canc && ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : ''}`;
   const base = `<div class="lin" style="margin:4px 0"><span>Milhas do cliente da Gestão</span><b>${+x.milhas ? milFmt(x.milhas) + ' ' + X.esc(x.programa || 'milhas') : 'a preencher'}</b></div>${estado}`;
@@ -687,39 +749,57 @@ export function editorFechamento(X, el, F, ctx) {
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const sobrenome = (n) => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? p[p.length - 1] : ''; };
 
-// manda os serviços emitidos para a fila da planilha. Devolve os itens atualizados.
-export async function enviarParaPlanilha(X, r, IT, F) {
-  // passageiros primeiro: o CPF digitado no fechamento já vale para a nota (cliente novo não fica sem CPF)
-  await salvarPassageiros(X, IT.filter(x => !enviado(x)));
+// CPF da nota: o da ficha do comprador; sem ele, o do passageiro que é o comprador
+const nrmNomeP = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+function cpfNF(X, r, IT) {
   const p = r.pessoa_id ? (X.D.pessoas || []).find(x => x.id === r.pessoa_id) : null;
-  const nrm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-  const paxComprador = IT.flatMap(x => (x.pax || [])).find(q => q && cpfValido(q.cpf) && (nrm(q.nome) === nrm(r.cliente) || (p && q.pessoa_id === p.id)));
+  const paxComprador = IT.flatMap(x => (x.pax || [])).find(q => q && cpfValido(q.cpf) && (nrmNomeP(q.nome) === nrmNomeP(r.cliente) || (p && q.pessoa_id === p.id)));
   const doc0 = p ? (X.D.docs || []).find(d => d.pessoa_id === p.id) : null;
   const doc = doc0 && doc0.cpf ? doc0 : paxComprador ? { cpf: paxComprador.cpf } : doc0;
-  const vendedor = X.nomeTime(r.assumido_por || r.responsavel_id) || '';
-  const hoje = new Date(); const dataNeg = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+  return doc && doc.cpf ? (d => d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : doc.cpf)(String(doc.cpf).replace(/\D/g, '')) : '';
+}
+// Observações da linha: card, passageiros, custo por trecho, horários, bagagem, onde comprou e pagamento
+export function observacoesDe(r, x, F) {
+  return [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
+    // bagagem só quando informada (deixou de travar: sem ela, a linha não diz nada sobre mala)
+    ehVoo(x) && x.bagagem != null && x.bagagem !== '' ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
+    F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · ');
+}
+const ciaDe = (x) => ehVoo(x) ? (x.cia_voo && x.cia_voo !== x.cia_emissora ? `${x.cia_emissora} (voa ${x.cia_voo})` : (x.cia_emissora || '')) : (x.fornecedor || '');
+// linha da planilha de um serviço (sem o ID sistema e sem a data da negociação)
+function dadosLinha(X, r, IT, x, F) {
+  const milhas = usaMilhas(x), p = r.pessoa_id ? (X.D.pessoas || []).find(y => y.id === r.pessoa_id) : null;
+  return {
+    // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
+    'Gestor': (milhas && x.gestor) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
+    'Email ou Produto': ehVoo(x) ? '' : (x.nome || x.produto), 'Cidade': x.destino || '',
+    'Cia': ciaDe(x), 'Sobrenome': sobrenome(r.cliente), 'CPF (NF)': cpfNF(X, r, IT),
+    'Origem': x.origem || '', 'Destino': x.destino || '', 'Comprador': r.cliente || '', 'Passageiros': +x.passageiros || 1,
+    'Contato': r.contato && !/@/.test(r.contato) ? r.contato : (p && p.celular) || '', 'Indicação': '',
+    'Localizador': String(x.localizador || '').toUpperCase(),
+    'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
+    'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
+    'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
+    'Observações': observacoesDe(r, x, F),
+    'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : F.forma === 'pix_cartao' ? 'Pix + Cartão' : '',
+    'Quantas vezes': (F.forma === 'cartao' || F.forma === 'pix_cartao') && F.parcelas ? +F.parcelas : '',
+    'Serviço': servicoPlanilha(x), 'Vendedor': X.nomeTime(r.assumido_por || r.responsavel_id) || ''
+  };
+}
+const NUMEROS = ['Milhas', 'Milheiro', 'Taxas', 'Valor a receber'];
+// colunas que a conferência pode corrigir numa linha que já foi para a planilha
+const CORRIGE = ['Gestor', 'Conta', 'Cia', 'CPF (NF)', 'Passageiros', 'Localizador', 'Origem', 'Destino', 'Data do Voo (Ida)', 'Data do Voo (Volta)', 'Observações', ...NUMEROS];
+const retrato = (d) => Object.fromEntries(CORRIGE.map(k => [k, d[k]]));
+// manda os serviços para a fila da planilha. opts.dataNeg: dia do Fechou (ou do lançamento, quando o mês do Fechou já fechou)
+export async function enviarParaPlanilha(X, r, IT, F, opts = {}) {
+  // passageiros primeiro: o CPF digitado no fechamento já vale para a nota (cliente novo não fica sem CPF)
+  await salvarPassageiros(X, IT.filter(x => !enviado(x)));
+  const dataNeg = opts.dataNeg || hojeIso();
   // emissão com milhas do cliente da Gestão não é venda: nunca vai para a planilha
-  const novos = IT.filter(x => !enviado(x) && !ehCliente(x));
+  const novos = IT.filter(x => !enviado(x) && !ehCliente(x) && !x.cancelado_em);
   const linhas = novos.map(x => {
-    const id = uuid(), milhas = usaMilhas(x);
-    return { id, atendimento_id: r.id, item: IT.indexOf(x), dados: {
-      // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
-      'Gestor': (milhas && x.gestor) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
-      'Email ou Produto': ehVoo(x) ? '' : (x.nome || x.produto), 'Cidade': x.destino || '',
-      'Cia': ehVoo(x) ? (x.cia_voo && x.cia_voo !== x.cia_emissora ? `${x.cia_emissora} (voa ${x.cia_voo})` : (x.cia_emissora || '')) : (x.fornecedor || ''),
-      'Sobrenome': sobrenome(r.cliente), 'CPF (NF)': doc && doc.cpf ? (d => d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : doc.cpf)(String(doc.cpf).replace(/\D/g, '')) : '',
-      'Origem': x.origem || '', 'Destino': x.destino || '', 'Comprador': r.cliente || '', 'Passageiros': +x.passageiros || 1,
-      'Contato': r.contato && !/@/.test(r.contato) ? r.contato : (p && p.celular) || '', 'Indicação': '',
-      'Localizador': String(x.localizador || '').toUpperCase(), 'Data da negociação': dataNeg,
-      'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
-      'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
-      'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
-'Observações': [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '', ehVoo(x) ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
-        F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · '),
-      'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : F.forma === 'pix_cartao' ? 'Pix + Cartão' : '',
-      'Quantas vezes': (F.forma === 'cartao' || F.forma === 'pix_cartao') && F.parcelas ? +F.parcelas : '',
-      'Serviço': servicoPlanilha(x), 'Vendedor': vendedor, 'ID sistema': id
-    } };
+    const id = uuid(), d = dadosLinha(X, r, IT, x, F);
+    return { id, atendimento_id: r.id, item: IT.indexOf(x), dados: { ...d, 'Data da negociação': dataNeg, 'ID sistema': id } };
   });
   if (!linhas.length) return { ok: true, n: 0 };
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
@@ -727,7 +807,44 @@ export async function enviarParaPlanilha(X, r, IT, F) {
   await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
   await salvarVoos(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
   const agora = new Date().toISOString();
-  linhas.forEach(l => { IT[l.item].planilha_id = l.id; IT[l.item].enviado_em = agora; });
+  // o retrato do que foi enviado é a base para saber, na conferência, o que mudou
+  linhas.forEach(l => { const x = IT[l.item]; x.planilha_id = l.id; x.enviado_em = agora; x.plan_data = dataNeg; x.plan_dados = retrato(l.dados); });
+  return { ok: true, n: linhas.length };
+}
+// retrato das colunas que a conferência pode corrigir (tirado quando a conferência abre)
+export const retratoLinha = (X, r, IT, x, F) => retrato(dadosLinha(X, r, IT, x, F));
+// conferência: só o que foi mexido nesta conferência vai para a mesma linha da planilha (pelo ID sistema).
+// A planilha manda nos dados: o que alguém corrigiu direto nela não é sobrescrito. opts.antes = retratoLinha de quando abriu.
+// Valor ou custo de uma venda de mês fechado não mudam a linha antiga: entra uma linha de ajuste no mês atual
+// com a diferença (mesma regra do cancelamento B2B). opts.fechado('AAAA-MM') diz se o mês da venda está fechado.
+export async function atualizarNaPlanilha(X, r, IT, F, x, opts = {}) {
+  if (!enviado(x) || ehCliente(x) || x.cancelado_em || !opts.antes) return { ok: true, n: 0 };
+  const novo = retratoLinha(X, r, IT, x, F), antes = opts.antes;
+  const igual = (a, b) => typeof a === 'number' || typeof b === 'number' ? r2(a) === r2(b) : String(a ?? '') === String(b ?? '');
+  const mudou = CORRIGE.filter(k => !igual(novo[k], antes[k]));
+  if (!mudou.length) return { ok: true, n: 0 };
+  // mês da venda: o da linha que voltou da planilha; sem ela, o do envio
+  const e = (X.D.emissoes || []).find(o => String(o.id) === String(x.planilha_id));
+  const mes = String((e && e.data_negociacao) || x.plan_data || x.enviado_em || '').slice(0, 7);
+  const fechado = !!(opts.fechado && mes && opts.fechado(mes));
+  const textos = mudou.filter(k => !NUMEROS.includes(k)), nums = mudou.filter(k => NUMEROS.includes(k));
+  const linhas = [], atual = {};
+  [...textos, ...(fechado ? [] : nums)].forEach(k => { atual[k] = novo[k]; });
+  // pedido de atualização: mesmo caminho do cancelamento B2B (linha sem card), testado na planilha em 15/11/2026
+  if (Object.keys(atual).length) linhas.push({ id: uuid(), atendimento_id: null, item: 0, dados: { _acao: 'atualizar', _alvo: x.planilha_id, ...atual } });
+  if (fechado && nums.length) {
+    // ajuste no mês atual: só a diferença de venda e de custo (a diferença de custo vai em Taxas, como no B2B)
+    const custoDe_ = (d) => r2((+d['Milhas'] || 0) * (+d['Milheiro'] || 0) / 1000 + (+d['Taxas'] || 0));
+    const id = uuid(), d = dadosLinha(X, r, IT, x, F), quando = hojeIso().split('-').reverse().join('/');
+    linhas.push({ id, atendimento_id: r.id, item: IT.indexOf(x), dados: { ...d, 'Milhas': 0, 'Milheiro': 0, 'Taxas': r2(custoDe_(novo) - custoDe_(antes)),
+      'Valor a receber': r2((+novo['Valor a receber'] || 0) - (+antes['Valor a receber'] || 0)), 'Pago': true,
+      'Observações': `AJUSTE em ${quando} da venda de ${mes.split('-').reverse().join('/')} (${numCard(r) || 'card'}): diferença de valor e custo corrigidos na conferência.`,
+      'Data da negociação': hojeIso(), 'ID sistema': id } });
+  }
+  const { error } = await X.sb.from('fila_planilha').insert(linhas);
+  if (error) return { ok: false, erro: error.message };
+  x.plan_dados = { ...(x.plan_dados || {}), ...novo };
+  if (fechado && nums.length) (x.ajustes = Array.isArray(x.ajustes) ? x.ajustes : []).push({ id: linhas[linhas.length - 1].id, em: new Date().toISOString() });
   return { ok: true, n: linhas.length };
 }
 
