@@ -1312,14 +1312,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 import * as OPM from '/admin/app/op-milhas.js?v=7';
 import * as MKT from '/admin/app/marketing.js?v=28';
 import * as CART from '/admin/app/carteira.js?v=4';
-import * as CARTOES from '/admin/app/cartoes.js?v=31';
+import * as CARTOES from '/admin/app/cartoes.js?v=32';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
-import * as CRM from '/admin/app/crm.js?v=26';
+import * as CRM from '/admin/app/crm.js?v=27';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
-import * as COT from '/admin/app/cotador.js?v=60';
+import * as COT from '/admin/app/cotador.js?v=61';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=35';
 import * as FCH from '/admin/app/fechou.js?v=1';
@@ -1330,6 +1330,7 @@ import * as CX from '/admin/app/caixa.js?v=7';
 import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
+import * as DG from '/admin/app/diagnostico.js?v=1';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1993,7 +1994,7 @@ async function carregar(silencioso, manterTela) {
   // tudo em paralelo (antes eram ~15 buscas uma depois da outra, o que deixava a abertura lenta)
   const nada = Promise.resolve({ data: [], error: null, count: 0 });
   const G = pode('gestao'), LE = pode('leads'), CRMok = podeAba('crm'), k0 = mesKey(new Date());
-  const [comum, pc, ar, tt, cl, ci, mp, vt, q, gx, px, av, pv, ag, , , , , nt, ae] = await Promise.all([
+  const [comum, pc, ar, tt, cl, ci, mp, vt, q, gx, px, av, pv, ag, , , , , nt, ae, dgs] = await Promise.all([
     Promise.all([
       sb.from('emissoes').select('*').gte('data_negociacao', desde).order('data_negociacao', { ascending: false }).limit(5000),
       sb.from('configuracoes').select('*').eq('id', 1).maybeSingle(),
@@ -2058,9 +2059,12 @@ async function carregar(silencioso, manterTela) {
     // anotações dos cards (97-ajustes-comercial.sql); sem a tabela, o card volta ao texto único de antes
     podeAba('reunioes') || pode('gestao') ? sb.from('atendimento_anotacoes').select('*').order('criado_em', { ascending: false }).limit(20000) : null,
     // parabéns já enviados (97-ajustes-comercial.sql): encerram o lembrete de aniversário do ano
-    CRMok ? sb.from('aniversarios_envios').select('pessoa_id,ano').limit(50000) : null
+    CRMok ? sb.from('aniversarios_envios').select('pessoa_id,ano').limit(50000) : null,
+    // diagnóstico dos cards (101-diagnostico-card.sql); sem a tabela, o bloco avisa que falta o SQL
+    podeAba('reunioes') || pode('gestao') ? sb.from('atendimento_diagnosticos').select('*').limit(10000) : null
   ]);
   D.anivEnv = ae && !ae.error ? (ae.data || []) : [];
+  D.diags = dgs ? (dgs.error ? null : Object.fromEntries((dgs.data || []).map(x => [String(x.atendimento_id), x]))) : {};
   D.notas = nt ? (nt.error ? null : (nt.data || [])) : [];
   D.reunioes = comum[6].data || []; D.reErro = comum[6].error || null;
   D.renovT = comum[7] && !comum[7].error ? (comum[7].data || []) : [];
@@ -2132,6 +2136,8 @@ function ctxIND() {
 }
 function ctxCRM() {
   return { D, $, esc, sb, aviso, sairOk, limparTec, brlC, brl2, campo, zapLink, ZAP, pode, nomeTime, ADMIN, confirmarFolha,
+    diagLinha: (r) => { const dx = diagDe(r); if (!dx) return ''; const L = DG.campos(tipoDiag(r), D.cfg), pg = DG.progresso(L, dx.respostas); return pg.n ? { txt: `Diagnóstico ${pg.n}/${pg.total}`, resumo: DG.textoCopiar(tipoDiag(r), L, dx.respostas, '').replace(/\*/g, '').split('\n').filter(Boolean).slice(1).join('\n') } : ''; },
+    copiarDiag: (id) => { const r = (D.reunioes || []).find(x => String(x.id) === String(id)); if (r) copiarDiag(r); },
     novaCotacao: (pre) => abrirAtendimento('nova', pre), abrirAtendimento, abrirReuniao, irPagar: podeAba('pagar') ? () => ir('pagar') : null,
     abrirFicha: (id) => abrirFicha(id), recarregar: () => carregar(true), irOrigens: () => ir('origens'), IND,
     fornecedores: podeAba('fornecedores') ? { doCliente: FORN.doCliente, lista: FORN.lista, TIPOS: FORN.TIPOS, avaliar: (pre) => ir('fornecedores', () => FORN.avaliar(pre)), abrir: (id) => ir('fornecedores', () => FORN.abrir(id)) } : null };
@@ -3320,6 +3326,7 @@ function eventosCard(r) {
   const tipoReu = (a) => /diagn/i.test(a.titulo || '') ? 'Diagnóstico' : /proposta/i.test(a.titulo || '') ? 'Reunião de proposta' : '';
   reunioesDe(r.id).forEach(a => { const tp = tipoReu(a); if (a.created_at) ev.push([a.created_at, tp ? tp + ' marcado na agenda' : 'Reunião agendada', 'para ' + dhCurta(a.data) + (a.titulo && !tp ? ' · ' + a.titulo : '')]); if (a.status === 'Realizada') ev.push([a.data, tp ? tp + ' realizado' : 'Reunião realizada', a.resumo ? String(a.resumo).slice(0, 140) + (String(a.resumo).length > 140 ? '…' : '') : (a.titulo && !tp ? a.titulo : '')]); });
   cotsDe(r.id).forEach(c => (Array.isArray(c.hist) ? c.hist : []).forEach(h => { if (h && h.em) ev.push([h.em, 'Cotação enviada ao cliente', c.titulo || '']); }));
+  { const dx = diagDe(r); if (dx && dx.atualizado_em) { const pg = DG.progresso(DG.campos(tipoDiag(r), D.cfg), dx.respostas); ev.push([dx.atualizado_em, 'Diagnóstico atualizado', [`${pg.n}/${pg.total} preenchidas`, dx.atualizado_por ? 'por ' + (nomeTime(dx.atualizado_por) || '') : ''].filter(Boolean).join(' · ')]); } }
   if (r.etapa_desde && etapaDe(r) !== 'Novo lead' && r.resultado === 'Em andamento' && !M[etapaDe(r)]) ev.push([r.etapa_desde, 'Entrou em ' + etapaDe(r), '']);
   return ev;
 }
@@ -3361,17 +3368,95 @@ function htmlGestaoSdr(r) {
   return `<div class="grupo">Quem conduz</div>
       <div class="duas-col"><label class="fl"><span>SDR (qualifica e agenda)</span><select name="sdr_id">${opT(r.sdr_id || (r.id ? r.assumido_por : D.meuId))}</select></label><label class="fl"><span>Closer (diagnóstico e proposta)</span><select name="closer_id">${opT(r.closer_id)}</select></label></div>
       ${selG('q_prioridade', 'Prioridade', [['', 'Sem prioridade'], ...PRIO_G.map(([v, l]) => [v, v + ': ' + l])], q.prioridade || '')}
-      <details class="gsec gsec-q" ${aberto ? 'open' : ''}><summary><span>Qualificação do SDR${q.gasto || q.granola ? '' : ' · <b style="color:var(--alerta)">pendente</b>'}<small>Perguntas, resumo do Granola e respostas</small></span></summary>
-      <div class="sub" style="margin:8px 0 4px">1. Mande as perguntas ao lead. 2. Faça a ligação com o Granola gravando. 3. Cole o resumo do Granola e confira os campos. 4. Passe para o closer: etapa Diagnóstico agendado, com o closer e a data.</div>
+      <details class="gsec gsec-q" ${aberto ? 'open' : ''}><summary><span>Diagnóstico<small id="dgResG">Perguntas da ligação, resumo do Granola e respostas</small></span></summary>
+      <div class="sub" style="margin:8px 0 4px">1. Mande as perguntas ao lead. 2. Faça a ligação com o Granola gravando. 3. Cole o resumo do Granola e preencha o diagnóstico (a IA pode sugerir). 4. Passe para o closer: etapa Diagnóstico agendado, com o closer e a data.</div>
       ${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zap" target="_blank" rel="noopener" style="display:block;text-align:center;margin:6px 0 10px" href="${esc(zapLink(r.contato, r.cliente, textoPerguntasSdr(r)))}">Mandar as perguntas pelo WhatsApp</a>` : `<div class="sub">Sem WhatsApp no card: copie as perguntas: ${esc(PERGUNTAS_SDR.join(' '))}</div>`}
       <label class="fl"><span>Resumo da ligação do SDR (cole do Granola)</span><textarea name="q_granola" rows="5" placeholder="Cole aqui o resumo que o Granola gerou da ligação.">${esc(q.granola || '')}</textarea></label>
-      ${campo('q_gasto', 'Gasto médio no cartão por mês (R$)', pre('gasto', so.gasto_mensal), 'text', 'inputmode="decimal"')}
-      ${campo('q_cartoes', 'Bancos e cartões que usa', pre('cartoes'), 'text')}
-      ${campo('q_programas', 'Programas e saldos aproximados', pre('programas', so.programas), 'text', 'placeholder="Ex.: Smiles 80 mil, Livelo 30 mil"')}
-      ${campo('q_viagens', 'Viagens por ano e destinos', pre('viagens', so.viagens_ano), 'text')}
-      ${campo('q_objetivo', 'Objetivo ou viagem dos sonhos', pre('objetivo', so.objetivo), 'text')}
-      ${campo('q_decisor', 'Quem decide a contratação', pre('decisor'), 'text', 'placeholder="Ex.: ele mesmo, junto com a esposa"')}
-      <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal; sem o resumo, preencha gasto mensal, bancos e cartões, objetivo e quem decide.</div></details>`;
+      ${r.id ? '<div id="reDiag" data-livre></div>' : '<div class="sub">Salve o card para preencher o diagnóstico.</div>'}
+      <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal nos cartões; sem o resumo, preencha gasto mensal, bancos e cartões, viagens planejadas ou maior dor, e quem decide.</div></details>`;
+}
+/* ---------- aba Diagnóstico do card (diagnostico.js, 101-diagnostico-card.sql) ----------
+   Viagem: aberto e em destaque quando o valor estimado ou o orçamento prévio chega ao limite, a margem prevista passa do limite
+   ou o destino é na Europa (limites em Comissões e regras). Nos demais cards de viagem, recolhido: abre quem quiser, sem cobrança.
+   Gestão de Milhas: sempre. Grava sozinho numa tabela própria, fora do "Revisar e salvar" do card. */
+const margemPrevista = (r) => (r.itens || []).filter(x => !x.cancelado_em).reduce((t, x) => t + VENDA.vendaDe(x) - VENDA.custoDe(x), 0);
+const diagDe = (r) => (D.diags || {})[String(r.id)] || null;
+const tipoDiag = (r) => ehGestao(r) ? 'gestao' : 'viagem';
+// respostas em vigor: as gravadas; na Gestão, sem nada gravado ainda, as da qualificação antiga e do formulário do site
+const respDiag = (r) => { const x = diagDe(r); return x ? { ...(x.respostas || {}) } : ehGestao(r) ? DG.deQualificacao(r.qualificacao, solDoCard(r)) : {}; };
+// a qualificação que a proposta com IA, a calculadora e a ficha leem: a do card com o que o diagnóstico já tem
+function qualDe(r) {
+  const q = { ...((r && r.qualificacao) || {}) }; if (!r || !ehGestao(r) || !diagDe(r)) return q;
+  const L = DG.campos('gestao', D.cfg), d = DG.paraQualificacao(L, respDiag(r));
+  Object.entries(d).forEach(([k, v]) => { if (v) q[k] = v; });
+  q.diagnostico = L.map(c => [c.t, DG.texto(c, respDiag(r)[c.k])]).filter(x => x[1]).map(x => x[0] + ': ' + x[1]).join('\n');
+  return q;
+}
+function motivoDiag(r, resp) {
+  if (ehGestao(r)) return '';
+  return DG.motivoDestaque({ valor: r.valor_estimado, margem: margemPrevista(r), destino: [r.trecho, resp.destino, ...(resp.opcoes_destinos || []).map(x => x && x.nome)].filter(Boolean).join(' · '), resp }, DG.limites(D.cfg));
+}
+// resumos do Granola que a IA pode ler: reuniões do card (e, na Gestão, a ligação do SDR)
+function granolaDe(r, f) {
+  const L = reunioesDe(r.id).map(a => a.resumo).filter(Boolean);
+  const sdr = (f && f.elements.q_granola ? f.elements.q_granola.value : ((r.qualificacao || {}).granola || '')).trim();
+  return [sdr, ...L].filter(Boolean).join('\n\n');
+}
+async function gravarDiag(r, resp, extra = {}) {
+  const tipo = tipoDiag(r), ant = diagDe(r);
+  const { data, error } = await sb.from('atendimento_diagnosticos').upsert({ atendimento_id: r.id, modelo: tipo, respostas: resp, aberto_manual: !!((ant && ant.aberto_manual) || extra.aberto_manual) }, { onConflict: 'atendimento_id' }).select().single();
+  if (error) return { erro: limparTec(error.message) };
+  (D.diags = D.diags || {})[String(r.id)] = data; return { em: data.atualizado_em };
+}
+function copiarDiag(r) {
+  const L = DG.campos(tipoDiag(r), D.cfg), t = DG.textoCopiar(tipoDiag(r), L, respDiag(r), r.cliente);
+  const ok = () => aviso('Diagnóstico copiado. Cole no WhatsApp.');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => prompt('Copie o diagnóstico:', t)); else prompt('Copie o diagnóstico:', t);
+}
+function montarDiag(P, r, G, f) {
+  const box = P.querySelector('#reDiag'); if (!box) return;
+  if (D.diags === null) { box.innerHTML = '<div class="sub">O diagnóstico ainda não está ativo: falta rodar o 101-diagnostico-card.sql no Supabase.</div>'; return; }
+  DG.estilos(); DG.prepararEuropa().then(() => { if (box.isConnected && !G) atualizaTopo(); });
+  const tipo = tipoDiag(r), L = DG.campos(tipo, D.cfg); let resp = respDiag(r);
+  const cb = box.closest('.cb'), cbB = cb && cb.querySelector('.cb-ed'), cbS = cb && cb.querySelector('.cb-h small');
+  const emUso = () => G || !!motivoDiag(r, resp) || !!(diagDe(r) && diagDe(r).aberto_manual) || DG.progresso(L, resp).n > 0;
+  const desenha = () => {
+    const mot = motivoDiag(r, resp), granola = granolaDe(r, f);
+    box.innerHTML = `<div class="dg">
+      <div class="dg-topo"><span class="dg-salvo" data-dg-salvo>${diagDe(r) ? 'Salvo' : ''}</span></div>
+      ${mot ? `<div class="dg-motivo">Em destaque: ${esc(mot)}.</div>` : !G ? '<div class="dg-motivo" style="color:var(--tinta-3)">Viagem sem os critérios de destaque: use só se quiser.</div>' : ''}
+      <div class="dg-acoes"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button>${granola ? '<button type="button" class="sec" data-dgia>Sugerir pelo Granola</button>' : ''}</div>
+      <div class="dg-lista">${L.map((c, i) => DG.htmlCampo(c, resp[c.k], i)).join('')}</div>
+      <div class="dg-acoes" style="margin-top:8px"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button></div></div>`;
+    const H = DG.ligar({ el: box.querySelector('.dg-lista'), L, resp, status: box.querySelector('[data-dg-salvo]'), salvar: (x) => gravarDiag(r, x), aoMudar: (x) => { resp = x; atualizaTopo(); } });
+    f._diag = { L, resp: () => H.resp(), salvarJa: H.salvarJa };
+    box.querySelectorAll('[data-dgcopia]').forEach(b => b.onclick = async () => { await H.salvarJa(); copiarDiag(r); });
+    const ia = box.querySelector('[data-dgia]');
+    if (ia) ia.onclick = async () => {
+      ia.disabled = true; ia.textContent = 'Lendo o resumo...';
+      const s = await DG.sugerir(sb, tipo, L, granolaDe(r, f));
+      ia.disabled = false; ia.textContent = 'Sugerir pelo Granola';
+      if (s.erro) { aviso(s.erro); return; }
+      const esc0 = await DG.folhaSugestoes(L, H.resp(), s.sugestoes); if (!esc0 || !Object.keys(esc0).length) return;
+      await H.aplicar(esc0); aviso('Sugestões aplicadas. Confira no diagnóstico.');
+    };
+  };
+  // topo do bloco (progresso e destaque) e o resumo na linha do card, sem redesenhar as perguntas
+  const atualizaTopo = () => {
+    const pg = DG.progresso(L, resp), uso = emUso(), mot = motivoDiag(r, resp);
+    if (cbS) cbS.textContent = uso ? `${pg.n}/${pg.total} preenchidas${mot ? ' · em destaque' : ''}` : 'Viagem simples: use só se quiser';
+    if (cb) { cb.classList.toggle('dg-dest', !!mot); if (mot && !cb.dataset.dgAuto) { cb.dataset.dgAuto = '1'; abreBloco(); } }
+    const rs = P.querySelector('#dgResG'); if (rs) rs.textContent = `${pg.n}/${pg.total} preenchidas`;
+  };
+  const abreBloco = () => { if (!cb || cb.classList.contains('aberto')) return; cb.classList.add('aberto'); if (cbB) { cbB.dataset.rot = cbB.dataset.rot || 'Abrir'; cbB.textContent = 'Fechar'; } };
+  if (cbB) { cbB.textContent = emUso() ? 'Abrir' : 'Abrir diagnóstico'; cbB.dataset.rot = cbB.textContent;
+    // abrir à mão um diagnóstico que não estava em uso: fica marcado como em uso (sem cobrança e sem contar como pendência)
+    cbB.addEventListener('click', () => { if (!emUso() && cb.classList.contains('aberto')) gravarDiag(r, resp, { aberto_manual: true }).then(atualizaTopo); }); }
+  desenha(); atualizaTopo();
+  if (cb && (G || motivoDiag(r, resp))) abreBloco();
+  // Gestão: o diagnóstico fica numa seção própria do card, ao lado de "Contato e ficha" (antes ficava dentro da etapa)
+  if (G) { const d = box.closest('details.gsec-q'), ref = [...f.querySelectorAll('details.gsec')].find(x => x !== d && /Contato e ficha/.test((x.querySelector('summary') || {}).textContent || ''));
+    if (d && ref && ref.parentNode) { ref.before(d); d.style.order = ref.style.order || ''; } }
 }
 const PASSOS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Follow-up', 'Fechou', 'Onboarding', 'Ativo e renovação'];
 const NF_G = 6; // posição de "Fechou" na trilha
@@ -3579,13 +3664,13 @@ async function metodoGestao() {
   return D.gmetodo;
 }
 async function gerarPropostaIA(r) {
-  const q = r.qualificacao || {}, M = (r.marcos || {})['Reunião de proposta'] || {}, dg = agDiag(r);
+  const q = qualDe(r), M = (r.marcos || {})['Reunião de proposta'] || {}, dg = agDiag(r);
   const metodo = await metodoGestao();
   let exemplos = [];
   const h = await sb.from('gestao_propostas_ia').select('atendimento_id,proposta').order('criado_em', { ascending: false }).limit(40);
   if (!h.error) { const vistos = new Set(); exemplos = (h.data || []).filter(x => { const c = D.reunioes.find(y => String(y.id) === String(x.atendimento_id)); if (!c || c.resultado !== 'Fechou' || vistos.has(x.atendimento_id) || String(x.atendimento_id) === String(r.id)) return false; vistos.add(x.atendimento_id); return true; }).slice(0, 2).map(x => x.proposta); }
   const { data, error } = await sb.functions.invoke('proposta-gestao', { body: {
-    cliente: r.cliente, qualificacao: { gasto: q.gasto, cartoes: q.cartoes, programas: q.programas, viagens: q.viagens, objetivo: q.objetivo, decisor: q.decisor },
+    cliente: r.cliente, qualificacao: { gasto: q.gasto, cartoes: q.cartoes, programas: q.programas, viagens: q.viagens, objetivo: q.objetivo, decisor: q.decisor, diagnostico: q.diagnostico || '' },
     granola_sdr: q.granola || '', granola_diagnostico: (dg && dg.resumo) || '', pauta: M.pauta || '', valor: r.valor_estimado || '', condicao: M.cond || '', metodo: metodo || '', exemplos } });
   if (error || !data || data.erro) {
     let msg = (data && data.erro) || (error && error.message) || 'sem resposta';
@@ -4883,6 +4968,7 @@ function telaFormReuniao(P) {
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
       ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
         + (CB ? cbFecha + cbAbre('viagem', 'Viagem', cbRes.viagem) : '') + `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`
+        + (CB ? cbFecha + cbAbre('diag', 'Diagnóstico', '', 'Abrir') + '<div id="reDiag" data-livre></div>' : '')
         + (CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas, 'Abrir') : '<div class="grupo">Anotações</div>') + htmlNotas(r, nova)
         + (CB ? cbFecha + cbAbre('acomp', 'Valores e próximo passo', cbRes.acomp, 'Abrir') + htmlAcompLeitura(r, base) : '<div class="grupo">Valores e próximo passo</div>') + blAnd
         + (CB ? cbFecha + cbAbre('resp', 'Responsável', cbRes.resp, ADMIN || GER() ? 'Trocar' : 'Abrir') + `<div class="sub" style="margin:0 0 8px">${esc(r.responsavel_id ? nomeTime(r.responsavel_id) || 'Outra pessoa' : 'Sem responsável')}${r.responsavel_id ? '' : ': o card fica com quem assumir.'}</div>${ADMIN || GER() ? `<label class="fl"><span>Trocar responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}` : '')}
@@ -4911,7 +4997,7 @@ function telaFormReuniao(P) {
     ${CB || GB ? '<div class="ac-barra" id="cbBarra" hidden><small id="cbConta"></small><button type="button" class="ac-prim" id="cbRevisar">Revisar e salvar</button></div>' : ''}`;
   if (CB || GB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
-  if (CB) { const ref = $('salvarRe'); ['cliente', 'viagem', 'atend', 'cots', 'notas', 'etapa', 'acomp', 'resp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
+  if (CB) { const ref = $('salvarRe'); ['cliente', 'viagem', 'diag', 'atend', 'cots', 'notas', 'etapa', 'acomp', 'resp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
   const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
@@ -4951,13 +5037,14 @@ function telaFormReuniao(P) {
   f.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => abrirReuniao(b.dataset.ag));
   // histórico de alterações do card: só os sócios
   if (!nova && ADMIN) { P.insertAdjacentHTML('beforeend', '<div id="histAlt"></div>'); historico('atendimentos', base.id); }
+  if (!nova && (CB || G)) montarDiag(P, base, G, f);
   if (CB || GB) ligarCardLeitura(P, f, r, base);
   if (!nova) ligarNotas(P, base, () => { const s = P.querySelector('.cb[data-cb="notas"] .cb-h small'); if (s) { const n = ultimaNota(base); s.textContent = n ? n.slice(0, 70) + (n.length > 70 ? '…' : '') : 'Sem anotações'; } });
   if (CB) { const b = P.querySelector('[data-cbed="reun"]'); if (b) b.addEventListener('click', () => { reunAberta = true; f._reunVis(); }); }
   if (GB) ligarGestaoLeitura(P);
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
-  if ($('montarCot')) $('montarCot').onclick = () => ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: base.trecho || '', ida: base.data_viagem || '', volta: base.data_volta || '' }));
+  if ($('montarCot')) $('montarCot').onclick = async () => { if (f._diag) await f._diag.salvarJa(); const dc = DG.paraCotacao(respDiag(base)); ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: dc.destino || base.trecho || '', ida: dc.ida || base.data_viagem || '', volta: dc.volta || base.data_volta || '', origem: dc.origem, pessoas: dc.pessoas, bagagem: dc.bagagem })); };
   if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
   const resumoCli = () => {
     const p = (D.pessoas || []).find(x => x.id === f.elements.pessoa_id.value);
@@ -5266,12 +5353,12 @@ function telaFormReuniao(P) {
     if (nova && r.solicitacao_id) row.solicitacao_id = r.solicitacao_id;
     if (g('pessoa_id')) row.pessoa_id = g('pessoa_id');
     if (G) {
-      const q = { gasto: g('q_gasto'), cartoes: g('q_cartoes'), programas: g('q_programas'), viagens: g('q_viagens'), objetivo: g('q_objetivo'), decisor: g('q_decisor'), granola: g('q_granola'), prioridade: g('q_prioridade') };
+      const q = { ...(base.qualificacao || {}), ...(f._diag ? DG.paraQualificacao(f._diag.L, f._diag.resp()) : {}), granola: g('q_granola'), prioridade: g('q_prioridade') };
       row.qualificacao = q; row.sdr_id = g('sdr_id') || null; row.closer_id = g('closer_id') || null;
       const etN = g('etapa'), mudou = nova || etN !== etapaDe(base), iG = ETAPAS_G.indexOf(etN);
-      if (mudou && (iG >= 2 || etN === 'Fechou')) {
-        const falta = (q.granola ? [['gasto', 'gasto mensal']] : [['gasto', 'gasto mensal'], ['cartoes', 'bancos e cartões'], ['objetivo', 'objetivo'], ['decisor', 'quem decide']]).filter(([k]) => !q[k]).map(x => x[1]);
-        if (falta.length) { $('msgRe').textContent = 'Antes de passar para o closer, o SDR precisa preencher: ' + falta.join(', ') + (q.granola ? '.' : ' (ou colar o resumo do Granola).'); const d = f.querySelector('details.gsec-q'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
+      if (mudou && f._diag && (iG >= 2 || etN === 'Fechou')) {
+        const falta = (q.granola ? [['gasto', 'gasto mensal']] : [['gasto', 'gasto mensal'], ['cartoes', 'bancos e cartões'], ['objetivo', 'viagens planejadas ou maior dor'], ['decisor', 'quem decide']]).filter(([k]) => !q[k]).map(x => x[1]);
+        if (falta.length) { $('msgRe').textContent = 'Antes de passar para o closer, preencha no Diagnóstico: ' + falta.join(', ') + (q.granola ? '.' : ' (ou cole o resumo do Granola).'); const d = f.querySelector('details.gsec-q'); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
       }
       if (etN === 'Diagnóstico agendado' && mudou) {
         if (!g('mg_diag')) { $('msgRe').textContent = 'Informe a data e a hora do diagnóstico.'; return; }
@@ -6577,8 +6664,15 @@ function telaEquipe(P) {
       <div class="duas-col" style="margin-top:8px">${campo('pix_desconto', 'Desconto no Pix (%)', D.cfg && D.cfg.pix_desconto != null ? D.cfg.pix_desconto : 5, 'number', 'step="0.1"')}${campo('parcelas_sem_juros', 'Cartão sem juros em até', D.cfg && D.cfg.parcelas_sem_juros ? D.cfg.parcelas_sem_juros : 4, 'number', 'min="1" max="12"')}</div>
       <div class="sub">Na cotação rápida, o vendedor digita o mínimo que a Maktub quer receber. O cartão sai em até essas vezes sem juros e o Pix com esse desconto.</div>
       <button class="zap" type="submit" style="margin-top:8px">Salvar taxas</button>
-    </form>`;
+    </form>
+    ${DG.htmlAdmin(D.cfg)}`;
   $('voltar').onclick = () => voltarA('mais');
+  // diagnóstico do card: limites do destaque e modelos de perguntas (configuracoes.diagnostico, 101-diagnostico-card.sql)
+  if ($('fDiagCfg')) DG.ligarAdmin($('fDiagCfg'), async (dg) => {
+    const { error } = await sb.from('configuracoes').update({ diagnostico: dg, atualizado_em: new Date().toISOString() }).eq('id', 1);
+    if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
+    D.cfg = { ...(D.cfg || {}), diagnostico: dg }; SUJO = false; PREENCHIDO = false; aviso('Diagnóstico salvo. Vale para todos os cards.');
+  });
   P.querySelectorAll('[data-salvar]').forEach(b => b.onclick = async () => {
     const c = b.closest('[data-u]'), u = b.dataset.salvar;
     const { error } = await sb.rpc('equipe_atualizar', { p_user: u, p_papel: c.querySelector('[name=papel]').value, p_pct: Number(c.querySelector('[name=pct]').value || 0), p_ativo: c.querySelector('[name=ativo]').checked });
@@ -8431,13 +8525,17 @@ function dadosDiag(c) {
   const cards = (D.reunioes || []).filter(r => ehGestao(r) && (pfs.includes(r.pessoa_id) || (clienteGestaoDe(r) || {}).id === c.id));
   const r = cards.find(x => x.resultado === 'Fechou') || cards[0];
   if (!r) return {};
-  const q = r.qualificacao || {}, so = solDoCard(r) || {};
-  return { gasto: q.gasto || so.gasto_mensal || '', pix: so.movimentacao_pix || '', programas: q.programas || so.programas || '', viagens: q.viagens || so.viagens_ano || '' };
+  const q = qualDe(r), so = solDoCard(r) || {};
+  const base = { gasto: q.gasto || so.gasto_mensal || '', pix: so.movimentacao_pix || '', programas: q.programas || so.programas || '', viagens: q.viagens || so.viagens_ano || '' };
+  if (!diagDe(r)) return base;
+  // diagnóstico da Gestão: bancos, segmento, cartões, programas, companhia e aeroporto seguem para a ficha sem redigitar
+  const fi = DG.paraFicha(DG.campos('gestao', D.cfg), respDiag(r));
+  return { ...base, ...Object.fromEntries(Object.entries(fi).filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length))) };
 }
 // calculadora de cartões (aba Gestão): avulsa, da ficha do cliente ou do card do lead
 function abrirCalc(modo, id) { ir('calccartoes', () => CALC.abrir(modo, id)); }
 // gasto mensal do lead em número: o da qualificação do SDR ou o do formulário de diagnóstico
-function gastoDoLead(r) { const q = (r && r.qualificacao) || {}, so = solDoCard(r) || {}; return CARTOES.numeroSolto(q.gasto) || CARTOES.numeroSolto(so.gasto_mensal) || null; }
+function gastoDoLead(r) { const q = qualDe(r), so = solDoCard(r) || {}; return CARTOES.numeroSolto(q.gasto) || CARTOES.numeroSolto(so.gasto_mensal) || null; }
 // cards de lead da Gestão ligados ao cliente (o mesmo critério do dadosDiag): as simulações feitas no lead aparecem na ficha
 function cardsDoCliente(cid) { const pfs = (D.pessoas || []).filter(p => p.cliente_id === cid).map(p => p.id); return (D.reunioes || []).filter(r => ehGestao(r) && (pfs.includes(r.pessoa_id) || (clienteGestaoDe(r) || {}).id === cid)).map(r => r.id); }
 const simulacoesCtx = () => ({ listar: (cid) => CALC.listarSimulacoes({ sb, cardsDoCliente }, { cliente: cid }), resumo: CALC.resumoSimulacao, rodape: (x) => CALC.rodapeSimulacao(x, { nomeTime }) });

@@ -18,6 +18,12 @@ const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d
   const vs = d.voos || (d.opcoes && d.opcoes[0] && d.opcoes[0].voos) || [];
   if (vs[0] && PRE.ida && 'data' in vs[0] && !vs[0].data) vs[0].data = PRE.ida;
   if (vs[1] && PRE.volta && 'data' in vs[1] && !vs[1].data) vs[1].data = PRE.volta;
+  // do diagnóstico do card: origem (ida sai dela, volta chega nela), passageiros e bagagem
+  if (PRE.origem) { const o = PRE.origem; if (vs[0] && 'origem' in vs[0] && !vs[0].origem) vs[0].origem = o; if (vs[1] && 'destino' in vs[1] && !vs[1].destino) vs[1].destino = o;
+    if (vs[0] && 'ocod' in vs[0] && !vs[0].ocod && /^[A-Za-z]{3}$/.test(o)) vs[0].ocod = o.toUpperCase(); if (vs[1] && 'dcod' in vs[1] && !vs[1].dcod && /^[A-Za-z]{3}$/.test(o)) vs[1].dcod = o.toUpperCase(); }
+  if (PRE.pessoas && +PRE.pessoas > 0) d.pessoas = String(PRE.pessoas);
+  const bag = PRE.bagagem, bagT = bag === '0' ? 'Sem bagagem despachada' : bag ? `${bag} ${bag === '1' ? 'bagagem despachada' : 'bagagens despachadas'} por passageiro` : '';
+  if (bagT && d.modelo === 'go') (d.opcoes || []).forEach(o => { if (!o.bagagem) o.bagagem = bagT; });
   return d; };
 const ZAP = '5521976275225', ZAP_TXT = '(21) 97627-5225', EMAIL = 'contato@maktubgo.com.br';
 // "quero a opção X" no link: grava a escolha no banco (função cotacao_escolher) e a equipe recebe o aviso.

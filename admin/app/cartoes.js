@@ -1128,10 +1128,23 @@ function desenharBancos(ctx) {
       <div class="sub" style="font-size:13px">Só a equipe vê estes dados. O cliente não vê gerente, investimento nem observação.</div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="zap" type="button" id="cbSalvar" style="flex:2">Salvar banco</button><button class="sec" type="button" id="cbCanc" style="flex:1">Cancelar</button></div></div>`;
   };
-  box.innerHTML = (bancos.length ? bancos.map(linha).join('') : '<div class="vazio">Nenhum banco lançado. Os bancos e o segmento dizem que cartões o cliente consegue aprovar hoje e o que falta para subir.</div>')
+  // bancos do diagnóstico da Gestão ainda não lançados: um toque traz, depois de confirmar
+  const doDiag = ((ctx.diag || {}).bancos || []).filter(d => d.banco && !bancos.some(b => b.banco.toLowerCase() === String(d.banco).trim().toLowerCase()));
+  box.innerHTML = (doDiag.length && !ed ? `<div class="config" style="margin:0 0 10px">No diagnóstico: ${esc(doDiag.map(d => d.banco + (d.segmento ? ' (' + d.segmento + ')' : '')).join('; '))}<button class="sec" type="button" id="cbDoDiag" style="width:100%;margin-top:8px">Trazer do diagnóstico</button></div>` : '')
+    + (bancos.length ? bancos.map(linha).join('') : '<div class="vazio">Nenhum banco lançado. Os bancos e o segmento dizem que cartões o cliente consegue aprovar hoje e o que falta para subir.</div>')
     + (ed ? formB(ed) : '<button class="sec" id="cbNovo" style="width:100%;margin-top:8px">+ Adicionar banco</button>');
   const redesenhar = () => { desenharBancos(ctx); desenharFalta(ctx); desenharSimulacao(ctx); };
   if (box.querySelector('#cbNovo')) box.querySelector('#cbNovo').onclick = () => { CB_ED = 'novo'; redesenhar(); };
+  if (box.querySelector('#cbDoDiag')) box.querySelector('#cbDoDiag').onclick = async () => {
+    const acha = (d) => { const nb = String(d.banco).trim().toLowerCase(), ns = String(d.segmento || '').trim().toLowerCase(), b = nomesBancos.find(x => x.toLowerCase() === nb || x.toLowerCase().includes(nb) || nb.includes(x.toLowerCase()));
+      const sg = b && ns ? segs.find(x => x.banco === b && (x.segmento.toLowerCase() === ns || x.segmento.toLowerCase().includes(ns) || ns.includes(x.segmento.toLowerCase()))) : null;
+      return { banco: b || String(d.banco).trim(), segmento_id: sg ? sg.id : null, segmento_txt: sg ? null : (String(d.segmento || '').trim() || null) }; };
+    const L = doDiag.map(acha);
+    if (!await pergunta('Lançar estes bancos na ficha?\n\n' + L.map(x => '· ' + x.banco + ' · ' + ((segs.find(g => g.id === x.segmento_id) || {}).segmento || x.segmento_txt || 'segmento não informado')).join('\n') + '\n\nConfira o segmento depois, em editar.', { sim: 'Lançar' })) return;
+    const r = await X.sb.from('cliente_bancos').insert(L.map(x => ({ ...x, cliente_id: ctx.c.id, atualizado_em: new Date().toISOString(), atualizado_por: X.D.meuId || null }))).select();
+    if (r.error) { X.aviso('Não lançou: ' + X.limparTec(r.error.message)); return; }
+    ctx.bancos.push(...(r.data || [])); X.aviso('Bancos lançados. Confira o segmento de cada um.'); redesenhar();
+  };
   box.querySelectorAll('[data-cbe]').forEach(b => b.onclick = () => { CB_ED = b.dataset.cbe; redesenhar(); });
   box.querySelectorAll('[data-cbx]').forEach(b => b.onclick = async () => {
     if (!await pergunta('Excluir este banco do cliente?', { sim: 'Excluir', perigo: true })) return;
@@ -1172,10 +1185,10 @@ function desenharPerfil(ctx) {
   const vazioP = !ctx.perfil;
   box.innerHTML = `${vazioP && (diag.gasto || diag.programas || diag.viagens) ? '<div class="sub" style="font-size:13px;margin-top:0">Ainda não salvo. Abaixo, o que o cliente informou no diagnóstico e na qualificação: confira e complete.</div>' : ''}
     <form id="fPerfil">
-      <div class="duas-col">${campo('pf_aero', 'Aeroporto de saída', p.aeroporto_saida || '', 'text', 'maxlength="40" data-aero="cod" autocomplete="off" placeholder="Digite a cidade"')}${campo('pf_cia', 'Companhia preferida', p.companhia_preferida || '', 'text', 'placeholder="LATAM, GOL, Azul..."')}</div>
-      ${campo('pf_prog', 'Programa de pontos preferido', p.programa_preferido || '', 'text', 'placeholder="Livelo, Esfera, Smiles, LATAM Pass..."')}${dica(diag.programas)}
+      <div class="duas-col">${campo('pf_aero', 'Aeroporto de saída', p.aeroporto_saida || (vazioP ? diag.aeroporto || '' : ''), 'text', 'maxlength="40" data-aero="cod" autocomplete="off" placeholder="Digite a cidade"')}${campo('pf_cia', 'Companhia preferida', p.companhia_preferida || (vazioP ? diag.companhia || '' : ''), 'text', 'placeholder="LATAM, GOL, Azul..."')}</div>${diag.aeroportoTxt && !diag.aeroporto ? dica('aeroporto ' + diag.aeroportoTxt) : ''}
+      ${campo('pf_prog', 'Programa de pontos preferido', p.programa_preferido || '', 'text', 'placeholder="Livelo, Esfera, Smiles, LATAM Pass..."')}${dica(diag.programas)}${dica(diag.cartoes ? 'cartões: ' + diag.cartoes : '')}${dica(diag.salaVip ? 'sala VIP: ' + diag.salaVip : '')}
       <div class="duas-col">${campo('pf_vnac', 'Viagens nacionais por ano', p.viagens_nacionais_ano ?? '', 'number')}${campo('pf_vint', 'Viagens internacionais por ano', p.viagens_internacionais_ano ?? '', 'number')}</div>${dica(diag.viagens)}
-      <div class="duas-col">${campo('pf_pessoas', 'Pessoas que viajam junto (com o cliente)', p.pessoas_viagem ?? '', 'number')}<label class="fl"><span>Quer viajar de executiva</span><select name="pf_exec">${[['', 'Não informado'], ['true', 'Sim'], ['false', 'Não']].map(([k, l]) => `<option value="${k}"${String(p.quer_executiva ?? '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="duas-col">${campo('pf_pessoas', 'Pessoas que viajam junto (com o cliente)', p.pessoas_viagem ?? '', 'number')}<label class="fl"><span>Quer viajar de executiva</span><select name="pf_exec">${[['', 'Não informado'], ['true', 'Sim'], ['false', 'Não']].map(([k, l]) => `<option value="${k}"${String(p.quer_executiva ?? (vazioP && diag.executiva ? 'true' : '')) === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
       <div class="duas-col">${campo('pf_psala', 'Pessoas que usam sala VIP junto (além do cliente)', p.pessoas_sala ?? '', 'number')}${campo('pf_padic', 'Dessas, quantas podem ter cartão adicional', p.pessoas_adicionais ?? '', 'number')}</div>
       ${campo('pf_aeros', 'Outros aeroportos que usa', (p.aeroportos_frequentes || []).join(', '), 'text', 'placeholder="Ex.: GIG, SDU, CGH"')}
       <div class="sub" style="font-size:13px;margin-top:6px"><b>Prioridades do cliente</b>, em ordem. A simulação ordena os caminhos por elas.</div>
