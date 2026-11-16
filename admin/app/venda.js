@@ -143,14 +143,17 @@ export const pendenciasConferencia = (r) => emTexto(r, faltasConferencia(r));
 // O horário vem da cotação quando bate a rota; o digitado no fechamento vale mais (ida, volta e cada trecho do meio).
 function voosDaEmissao(x) {
   const tipo = x.tipo_trecho || 'iv', ct = Array.isArray(x.ct) ? x.ct : [], porTrecho = !!(x.ct_on && ct.length);
-  let ls = (porTrecho ? ct : linhasPadrao(x, { tipoPadrao: tipo })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '' }));
+  let ls = (porTrecho ? ct : linhasPadrao(x, { tipoPadrao: tipo })).map(l => ({ o: up3(l.o), d: up3(l.d), data: l.data || '', hora: l.hora || '', chegada: l.chegada || '' }));
   // só ida: a volta que sobrou de antes (campo escondido) não é voo
   if (tipo === 'ida' && !porTrecho) ls = ls.slice(0, 1);
-  ls.forEach(l => { if (!l.hora) { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c && c.hora) l.hora = c.hora; } });
-  const hrs = Array.isArray(x.hrs) ? x.hrs : [];
-  ls.forEach((l, k) => { if (hrs[k]) l.hora = hrs[k]; });
+  ls.forEach(l => { const c = ct.find(q => up3(q.o) === l.o && up3(q.d) === l.d && (!q.data || !l.data || q.data === l.data)); if (c) { if (!l.hora && c.hora) l.hora = c.hora; if (!l.chegada && c.chegada) l.chegada = c.chegada; } });
+  const hrs = Array.isArray(x.hrs) ? x.hrs : [], chs = Array.isArray(x.chs) ? x.chs : [];
+  ls.forEach((l, k) => { if (hrs[k]) l.hora = hrs[k]; if (chs[k]) l.chegada = chs[k]; });
   if (ls.length && x.hora_ida) ls[0].hora = x.hora_ida;
   if (ls.length > 1 && tipo !== 'ida' && x.hora_volta) ls[ls.length - 1].hora = x.hora_volta;
+  // horário de chegada (vem da cotação ou do print da emissão): só informativo, não trava nada
+  if (ls.length && x.chegada_ida) ls[0].chegada = x.chegada_ida;
+  if (ls.length > 1 && tipo !== 'ida' && x.chegada_volta) ls[ls.length - 1].chegada = x.chegada_volta;
   return ls;
 }
 // voos da emissão para a tela curta do Fechou: data e horário de saída de cada um, com o jeito certo de gravar
@@ -285,11 +288,15 @@ function htmlItem(X, x, i, ctx) {
   if (!ctx.detalhes) return base + (ref ? `<div class="sub" style="margin:-2px 0 4px">${ref}</div>` : '');
   let det = ref ? `<div class="sub" style="margin:0 0 6px">${ref}</div>` : '';
   if (ehVoo(x)) {
+    // print da emissão (bilhete, e-mail da companhia, tela do programa): a IA preenche o que ainda estiver vazio
+    det += `<div class="botoes4" style="margin:2px 0 4px"><button type="button" class="sec" data-lercola="${i}">Colar print da emissão</button><label class="sec" style="display:block;text-align:center;cursor:pointer;padding:10px">Escolher da galeria<input type="file" accept="image/*" multiple data-lerarq="${i}" style="display:none"></label></div>
+      <div class="sub" style="margin:0 0 8px">${x.lido_em ? 'Preenchido pelo print. Confira cada campo.' + (x.lido_obs ? ' ' + X.esc(x.lido_obs) : '') : 'O print da emissão preenche localizador, companhia, datas, saída e chegada de cada voo e passageiros' + (usaMilhas(x) ? ', milhas e taxas' : '') + '. Só o que estiver vazio.'}</div>`;
     det += `<div class="sub" style="margin:6px 0 0">Trecho</div>${seg('tipo_trecho', i, [['iv', 'Ida e volta'], ['ida', 'Só ida'], ['multi', 'Multitrecho']], x.tipo_trecho || ctx.tipoPadrao)}
       ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'))}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
       ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
       ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
+      ${(m => dupla(inp(X, 'chegada_ida', i, m ? 'Chegada do 1º trecho' : 'Chegada da ida', x.chegada_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'chegada_volta', i, m ? 'Chegada do último trecho' : 'Chegada da volta', x.chegada_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? (ls => ls.length > 2 ? `<div class="duas-col">${ls.slice(1, -1).map((l, j) => inp(X, 'hrm', i, `Saída do voo ${j + 2}${l.o && l.d ? ` (${l.o} → ${l.d})` : ''}`, l.hora, 'h', `data-hrm="${i}|${j + 1}"`)).join('')}</div>` : '')(voosDaEmissao(x)) : ''}
       <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo. Data e horário de saída de todos os voos são obrigatórios para fechar.</div>
       <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']].concat(ctx.gestao && ctx.gestao.ativo && !trava ? [['cliente_gestao', 'Milhas do cliente da Gestão']] : []), x.pago_em || 'milhas')}
@@ -384,7 +391,12 @@ function separarTrecho(IT, i, k) {
   const x = IT[i], ls0 = voosDaEmissao(x), l = x.ct.splice(k, 1)[0];
   // o horário de saída de cada voo vai junto: o trecho separado leva o dele e a emissão que ficou recalcula ida e volta
   const hs = ls0.map(v => v.hora || ''); hs.splice(k, 1);
-  const novo = { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', origem: up3(l.o), destino: up3(l.d), data_ida: l.data || null, hora_ida: (ls0[k] && ls0[k].hora) || l.hora || '', passageiros: +l.pax || null, pago_em: 'milhas' };
+  const novo = { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', origem: up3(l.o), destino: up3(l.d), data_ida: l.data || null, hora_ida: (ls0[k] && ls0[k].hora) || l.hora || '', passageiros: +l.pax || +x.passageiros || null, pago_em: 'milhas',
+    ...(ls0[k] && ls0[k].chegada ? { chegada_ida: ls0[k].chegada } : {}),
+    // os passageiros costumam ser os mesmos: vêm junto (dá para corrigir)
+    ...(Array.isArray(x.pax) && x.pax.length ? { pax: JSON.parse(JSON.stringify(x.pax)) } : {}),
+    // emissão já lançada: a nova guarda de onde veio, qual voo era e a venda de antes (a soma das duas tem que continuar igual)
+    ...(enviado(x) ? { separada_de: { id: x.planilha_id, n: k + 1, venda: r2(vendaDe(x)) } } : {}) };
   x.hrs = hs.slice(); x.hora_ida = hs[0] || ''; x.hora_volta = hs.length > 1 ? hs[hs.length - 1] : '';
   // a emissão que ficou: rota e datas pelos trechos que sobraram
   const r = x.ct; if (r.length === 1) { x.tipo_trecho = 'ida'; x.origem = up3(r[0].o); x.destino = up3(r[0].d); x.data_ida = r[0].data || x.data_ida; x.data_volta = null; x.ct_on = false; }
@@ -443,7 +455,7 @@ function htmlTrechos(X, x, i, trava, ctx) {
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase"></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}"></label></div>
       <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 0.9fr 0.9fr 0.7fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}"></label><label class="fl"><span>Milheiro (R$)</span><input data-ct="${i}|${k}|milheiro" inputmode="decimal" value="${X.esc(l.milheiro ?? '')}" placeholder="${X.esc(x.milheiro ?? '')}"></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}"></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}"></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}"></label></div>
       <div class="sub" style="margin:2px 0 0">${c ? `Este trecho: ${X.brl2(c)}${p > 1 ? ` (${X.brl2(c / p)} por passageiro)` : ''}` : ''}${hs.length ? `<br>Já pago em ${X.esc(l.o)} → ${X.esc(l.d)}: ${hs.map(hh => `${X.brl2(hh.pax)}/pax${hh.milhas ? ` (${hh.milhas.toLocaleString('pt-BR')} milhas)` : ''}${hh.cia ? ' · ' + X.esc(hh.cia) : ''}${hh.data ? ' · ' + dd(hh.data) : ''}`).join(' | ')}` : ''}</div>
-      ${trava || x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button><button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}</div>`; }).join('')}
+      ${x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button>${trava ? '' : `<button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}`}</div>`; }).join('')}
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
 }
 
@@ -471,6 +483,14 @@ function htmlPax(X, x, i, trava, ctx) {
   }).join('')}`;
 }
 
+// voo sem a quantidade de passageiros: vale o maior número dos trechos (os blocos de nome, CPF e nascimento aparecem)
+export function paxPelosTrechos(IT) {
+  (IT || []).forEach(x => {
+    if (!ehVoo(x) || ehCliente(x) || x.cancelado_em || +x.passageiros > 0) return;
+    const n = Math.max(0, ...(Array.isArray(x.ct) ? x.ct : []).map(l => parseInt(l.pax, 10) || 0));
+    if (n) x.passageiros = n;
+  });
+}
 // editor dos serviços: devolve funções para ler o estado
 export function editorItens(X, el, IT, ctx, aoMudar) {
   // totais só da parte vendida: a emissão com milhas do cliente não é venda
@@ -489,6 +509,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
   });
   const desenha = () => {
     if (ctx.detalhes) padroes();
+    paxPelosTrechos(IT);
     el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><datalist id="dlServV">${(X.servicos ? X.servicos() : []).map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto === 'Viagem completa / pacote' ? 'Outro' : x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) && !naCotacao(x, ctx) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
     const nrmF = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     el.querySelectorAll('[data-fornnovo]').forEach(b => {
@@ -543,7 +564,14 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     el.querySelectorAll('[data-ctliga]').forEach(e => e.onchange = () => { const x = IT[+e.dataset.ctliga]; x.ct_on = e.checked; if (e.checked && !(x.ct || []).length) x.ct = null; desenha(); });
     el.querySelectorAll('[data-ctmais]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.ctmais], u = x.ct[x.ct.length - 1] || {}; x.ct.push({ o: u.d || '', d: '', data: '', pax: u.pax || '' }); desenha(); });
     const avisaMudou = () => el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.querySelectorAll('[data-ctsep]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.ctsep.split('|'); separarTrecho(IT, +i, +k); desenha(); avisaMudou(); X.aviso('Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.'); });
+    el.querySelectorAll('[data-ctsep]').forEach(b => b.onclick = () => {
+      const [i, k] = b.dataset.ctsep.split('|'), ja = enviado(IT[+i]);
+      separarTrecho(IT, +i, +k);
+      // emissão já lançada: a venda passa a ser digitada por serviço (o card avisa se a soma não fechar)
+      if (ja && ctx.aoSeparar) ctx.aoSeparar();
+      desenha(); avisaMudou();
+      X.aviso(ja ? 'Trecho virou outra emissão. Corrija custo e venda da que ficou, preencha os da nova e salve: a nova vai para a planilha e a que ficou é corrigida.' : 'Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.');
+    });
     el.querySelectorAll('[data-outraem]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.outraem]; IT.splice(+b.dataset.outraem + 1, 0, { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', pago_em: 'milhas' }); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = async () => { const [i, k] = b.dataset.cttira.split('|'), l = IT[+i].ct[+k] || {}; if ((l.o || l.d || l.milhas || l.custo) && !await pergunta('Tirar este trecho?\n\nO que foi preenchido nele será apagado.', { sim: 'Tirar', perigo: true })) return; IT[+i].ct.splice(+k, 1); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
@@ -767,6 +795,8 @@ function cpfNF(X, r, IT) {
 // Observações da linha: card, passageiros, custo por trecho, horários, bagagem, onde comprou e pagamento
 export function observacoesDe(r, x, F) {
   return [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
+    // chegada só quando houver (vem da cotação ou do print da emissão)
+    ehVoo(x) && (x.chegada_ida || x.chegada_volta) ? 'Chegada: ' + [x.chegada_ida ? 'ida ' + x.chegada_ida : '', x.tipo_trecho !== 'ida' && x.chegada_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.chegada_volta : ''].filter(Boolean).join(', ') : '',
     // bagagem só quando informada (deixou de travar: sem ela, a linha não diz nada sobre mala)
     ehVoo(x) && x.bagagem != null && x.bagagem !== '' ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
     F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · ');
@@ -796,6 +826,36 @@ const NUMEROS = ['Milhas', 'Milheiro', 'Taxas', 'Valor a receber'];
 // colunas que a conferência pode corrigir numa linha que já foi para a planilha
 const CORRIGE = ['Gestor', 'Conta', 'Cia', 'CPF (NF)', 'Passageiros', 'Localizador', 'Origem', 'Destino', 'Data do Voo (Ida)', 'Data do Voo (Volta)', 'Observações', ...NUMEROS];
 const retrato = (d) => Object.fromEntries(CORRIGE.map(k => [k, d[k]]));
+// emissão já lançada que foi separada: a venda das emissões tem que continuar somando o que era antes
+const rs = (v) => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+export function conferirSeparacao(IT) {
+  const total = new Map();
+  (IT || []).forEach(x => { const s = x.separada_de; if (s && !enviado(x) && !x.cancelado_em && !total.has(s.id)) total.set(s.id, +s.venda || 0); });
+  for (const [id, t] of total) {
+    const L = IT.filter(y => !y.cancelado_em && (String(y.planilha_id) === String(id) || (y.separada_de && String(y.separada_de.id) === String(id) && !enviado(y))));
+    if (L.some(y => !(+y.venda > 0))) return `Divida a venda entre as emissões separadas: a soma precisa dar ${rs(t)}. Em "Valor de venda", escolha "Por serviço" e digite a venda de cada uma.`;
+    const soma = r2(L.reduce((a, y) => a + vendaDe(y), 0));
+    if (Math.abs(soma - t) > 0.009) return `A venda das emissões separadas precisa somar ${rs(t)} (está em ${rs(soma)}). Ajuste a venda de cada uma.`;
+  }
+  return '';
+}
+// o voo que saiu de uma emissão já lançada passa para a emissão nova (com o check-in que já tinha), e os voos
+// que ficaram são renumerados. Nada é apagado: o mesmo registro muda de emissão.
+async function moverVooSeparado(X, x, novoId) {
+  const s = x.separada_de; if (!s || !s.id || !s.n) return;
+  try {
+    const T = (X.D.trechos || {})[String(s.id)] || [];
+    const { error } = await X.sb.from('voos_emissao').update({ emissao_id: String(novoId), n: 1 }).eq('emissao_id', String(s.id)).eq('n', s.n);
+    if (error) return;
+    const resto = T.filter(t => t.n > s.n).sort((a, b) => a.n - b.n);
+    for (const t of resto) await X.sb.from('voos_emissao').update({ n: t.n - 1 }).eq('emissao_id', String(s.id)).eq('n', t.n);
+    if (X.D.trechos) {
+      const mov = T.find(t => t.n === s.n);
+      X.D.trechos[String(s.id)] = T.filter(t => t.n !== s.n).map(t => t.n > s.n ? { ...t, n: t.n - 1 } : t);
+      if (mov) X.D.trechos[String(novoId)] = [{ ...mov, emissao_id: String(novoId), n: 1 }];
+    }
+  } catch (_) { /* o check-in da emissão nova é gravado logo depois de qualquer jeito */ }
+}
 // manda os serviços para a fila da planilha. opts.dataNeg: dia do Fechou (ou do lançamento, quando o mês do Fechou já fechou)
 export async function enviarParaPlanilha(X, r, IT, F, opts = {}) {
   // passageiros primeiro: o CPF digitado no fechamento já vale para a nota (cliente novo não fica sem CPF)
@@ -810,8 +870,12 @@ export async function enviarParaPlanilha(X, r, IT, F, opts = {}) {
   if (!linhas.length) return { ok: true, n: 0 };
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
-  await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
-  await salvarVoos(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })));
+  // emissão separada de outra já lançada: o voo dela muda de emissão antes de gravar os voos novos
+  for (const l of linhas) await moverVooSeparado(X, IT[l.item], l.id);
+  // e a emissão de onde ela saiu tem os horários e voos regravados (sem o voo que saiu)
+  const origens = [...new Set(linhas.map(l => (IT[l.item].separada_de || {}).id).filter(Boolean))].map(id => IT.find(y => String(y.planilha_id) === String(id))).filter(Boolean);
+  await salvarHorarios(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })).concat(origens.map(y => ({ id: y.planilha_id, x: y }))));
+  await salvarVoos(X, linhas.map(l => ({ id: l.id, x: IT[l.item] })).concat(origens.map(y => ({ id: y.planilha_id, x: y }))));
   const agora = new Date().toISOString();
   // o retrato do que foi enviado é a base para saber, na conferência, o que mudou
   linhas.forEach(l => { const x = IT[l.item]; x.planilha_id = l.id; x.enviado_em = agora; x.plan_data = dataNeg; x.plan_dados = retrato(l.dados); });
@@ -961,20 +1025,50 @@ function casarPrograma(nome, G) {
   const p = L.find(q => normP(q.programa) === k) || (g && L.find(q => g.some(z => normP(q.programa).includes(z))));
   return p ? p.programa : String(nome || '').trim();
 }
+// emissão vendida pela Maktub (milhas ou pagante): o print da emissão preenche rota, datas, saída e chegada de cada voo
+function aplicarVoosVenda(x, tr, vazio) {
+  const iv = tr.length === 2 && up3(tr[1].destino) === up3(tr[0].origem), tipo = tr.length === 1 ? 'ida' : iv ? 'iv' : 'multi';
+  const ult = tr[tr.length - 1], porTrecho = !!(x.ct_on && Array.isArray(x.ct) && x.ct.length === tr.length);
+  if (vazio(x.origem) && vazio(x.destino)) { x.tipo_trecho = tipo; x.origem = up3(tr[0].origem); x.destino = up3(tipo === 'multi' ? ult.destino : tr[0].destino); }
+  if (vazio(x.data_ida) && tr[0].data) x.data_ida = tr[0].data;
+  if (vazio(x.hora_ida) && tr[0].saida) x.hora_ida = tr[0].saida;
+  if (vazio(x.chegada_ida) && tr[0].chegada) x.chegada_ida = tr[0].chegada;
+  if (tr.length > 1) {
+    if (vazio(x.data_volta) && ult.data) x.data_volta = ult.data;
+    if (vazio(x.hora_volta) && ult.saida) x.hora_volta = ult.saida;
+    if (vazio(x.chegada_volta) && ult.chegada) x.chegada_volta = ult.chegada;
+  }
+  if ((x.tipo_trecho || tipo) === 'multi' && !porTrecho && vazio(x.trechos)) x.trechos = tr.map(v => `${up3(v.origem)}-${up3(v.destino)}${v.data ? ' ' + ddmm(v.data) : ''}`).join('\n');
+  // voos do meio do multitrecho e custo por trecho: cada um com a própria saída e chegada
+  x.hrs = Array.isArray(x.hrs) ? x.hrs : []; x.chs = Array.isArray(x.chs) ? x.chs : [];
+  tr.forEach((v, k) => {
+    if (vazio(x.hrs[k]) && v.saida) x.hrs[k] = v.saida;
+    if (vazio(x.chs[k]) && v.chegada) x.chs[k] = v.chegada;
+    if (porTrecho) { const l = x.ct[k]; if (vazio(l.data) && v.data) l.data = v.data; if (vazio(l.hora) && v.saida) l.hora = v.saida; if (vazio(l.chegada) && v.chegada) l.chegada = v.chegada; }
+  });
+}
 function aplicarLeitura(X, x, d, ctx) {
   // o print só preenche o que ainda está vazio: o que a pessoa já digitou fica
   const vazio = (v) => v === undefined || v === null || String(v).trim() === '';
-  if (d.programa && vazio(x.programa)) x.programa = casarPrograma(d.programa, ctx.gestao);
-  if (+d.milhas > 0 && vazio(x.milhas)) x.milhas = Math.round(+d.milhas);
-  if (d.taxas !== null && d.taxas !== undefined && +d.taxas >= 0 && vazio(x.taxas)) x.taxas = r2(+d.taxas);
+  const cli = ehCliente(x);
+  if (cli && d.programa && vazio(x.programa)) x.programa = casarPrograma(d.programa, ctx.gestao);
+  // milhas e taxas: na milhas do cliente e na venda com milhas (na pagante, o custo é o valor pago ao fornecedor)
+  if (cli || usaMilhas(x)) {
+    if (+d.milhas > 0 && vazio(x.milhas)) x.milhas = Math.round(+d.milhas);
+    if (d.taxas !== null && d.taxas !== undefined && +d.taxas >= 0 && vazio(x.taxas)) x.taxas = r2(+d.taxas);
+  }
   if (d.localizador && vazio(x.localizador)) x.localizador = String(d.localizador).toUpperCase();
   if (d.companhia_emissora && vazio(x.cia_emissora)) x.cia_emissora = d.companhia_emissora;
   if (d.cabine && vazio(x.cabine)) x.cabine = d.cabine;
   const tr = (d.trechos || []).filter(v => v.origem || v.destino);
-  if (tr.length && !(x.voos || []).some(v => v.o || v.d || v.data)) {
-    x.voos = tr.map(v => ({ o: up3(v.origem), d: up3(v.destino), data: v.data || '', hora: v.saida || '' }));
-    const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && !x.cia_voo) x.cia_voo = op;
+  const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && vazio(x.cia_voo)) x.cia_voo = op;
+  if (!cli && tr.length) aplicarVoosVenda(x, tr, vazio);
+  else if (tr.length && !(x.voos || []).some(v => v.o || v.d || v.data)) {
+    x.voos = tr.map(v => ({ o: up3(v.origem), d: up3(v.destino), data: v.data || '', hora: v.saida || '', chegada: v.chegada || '' }));
     cabecalhoCliente(x);
+  } else if (tr.length) {
+    // voos já preenchidos: a chegada entra onde ainda estiver vazia
+    (x.voos || []).forEach((v, k) => { if (tr[k] && vazio(v.chegada) && tr[k].chegada) v.chegada = tr[k].chegada; });
   }
   // passageiros do print, na ordem do print; quem já tem ficha traz CPF e nascimento
   const P = (d.passageiros || []).map(nomePax).filter(n => n.includes(' '));
@@ -1023,7 +1117,7 @@ export async function lerEmissao(X, x, files, ctx, depois) {
   comFoco(depois);
   if (!x.print) await subir(X, 'print', x, depois, files[0]);
   if (X.rascunho) X.rascunho(true);
-  X.aviso('Print lido. Confira os campos e digite o valor pagante.');
+  X.aviso(ehCliente(x) ? 'Print lido. Confira os campos e digite o valor pagante.' : 'Print lido. Confira os campos: só o que estava vazio foi preenchido.');
 }
 // cada voo da emissão vira uma linha em voos_emissao (mesma tabela das vendas): check-in voo a voo e bilhete obrigatório
 export async function salvarVoosCliente(X, x) {
