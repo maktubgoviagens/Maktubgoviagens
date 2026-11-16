@@ -4546,26 +4546,89 @@ function abrirClienteCal(id, aba) {
    Ficam em agenda_reunioes com o tipo 'Evento avulso', mas fora de D.agenda (não contam como reunião em nenhuma tela). */
 const EVT = 'Evento avulso';
 const ehEvento = (x) => !!x && x.tipo === EVT;
-const fimDe = (x) => new Date(new Date(x.data).getTime() + (+x.duracao_min || 60) * 6e4);
+/* ---------- período de evento e reunião (100-agenda-por-periodo.sql): data e hora de início, data e hora de fim, ou dia inteiro ----------
+   Dia inteiro fica gravado ao meio-dia UTC de cada data: cai no mesmo dia em qualquer fuso e não mostra hora.
+   Sem data_fim (registros antigos), o fim é o início mais a duração, como sempre foi. */
+const fimDe = (x) => x.data_fim ? new Date(x.data_fim) : new Date(new Date(x.data).getTime() + (+x.duracao_min || 60) * 6e4);
 const hmD = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+const diaIni = (x) => isoLocal(new Date(x.data));
+// fim exatamente à meia-noite conta no dia anterior (evento até 00:00 não ocupa o dia seguinte)
+const diaFim = (x) => { const f = fimDe(x); return x.dia_inteiro ? isoLocal(f) : isoLocal(new Date(Math.max(+new Date(x.data), f.getTime() - 1))); };
+// intervalo que o evento ocupa no aparelho de quem consulta (dia inteiro: do começo do primeiro dia ao fim do último)
+const intervalo = (x) => x.dia_inteiro ? [new Date(diaIni(x) + 'T00:00:00'), new Date(diaFim(x) + 'T23:59:59')] : [new Date(x.data), fimDe(x)];
+// texto do período, para frases ("está fora de 17/11 a 22/11 (dia inteiro)")
+function quandoTxt(x) {
+  const d1 = diaIni(x), d2 = diaFim(x), h1 = hmD(new Date(x.data)), h2 = hmD(fimDe(x));
+  if (x.dia_inteiro) return d1 === d2 ? `em ${ddmm(d1)} (dia inteiro)` : `de ${ddmm(d1)} a ${ddmm(d2)} (dia inteiro)`;
+  return d1 === d2 ? `em ${ddmm(d1)} das ${h1} às ${h2}` : `de ${ddmm(d1)} ${h1} a ${ddmm(d2)} ${h2}`;
+}
+// texto curto do período, para o calendário e as listas
+function periodoCurto(x) {
+  const d1 = diaIni(x), d2 = diaFim(x), h1 = hmD(new Date(x.data)), h2 = hmD(fimDe(x));
+  if (x.dia_inteiro) return d1 === d2 ? 'dia inteiro' : `dia inteiro · ${ddmm(d1)} a ${ddmm(d2)}`;
+  return d1 === d2 ? `${h1} às ${h2}` : `${ddmm(d1)} ${h1} a ${ddmm(d2)} ${h2}`;
+}
+// os dias do período que caem entre de e ate (um registro aparece em cada dia que ocupa)
+function diasDoPeriodo(x, de, ate) {
+  const L = []; let d = diaIni(x) < de ? de : diaIni(x); const fim = diaFim(x) > ate ? ate : diaFim(x);
+  for (let i = 0; d <= fim && i < 400; i++, d = CAL.somaDias(d, 1)) L.push(d);
+  return L;
+}
+// o mesmo bloco de período em todo formulário de agenda: Dia inteiro, início e fim
+function camposPeriodo(x, o = {}) {
+  const di = !!(x && x.dia_inteiro), ini = x && x.data ? new Date(x.data) : null, fim = x && x.data ? fimDe(x) : null;
+  const d1 = ini ? diaIni(x) : (o.dia || hojeISO()), d2 = ini ? diaFim(x) : d1;
+  const h1 = ini && !di ? hmD(ini) : (o.hi || '08:00'), h2 = fim && !di ? hmD(fim) : (o.hf || '12:00');
+  return `<div class="periodo">
+      <label class="fc" style="margin:4px 0 8px"><input type="checkbox" name="p_dia" ${di ? 'checked' : ''}><span>Dia inteiro</span></label>
+      <div class="duas-col"><label class="fl"><span>Data de início</span><input name="p_di" type="date" required value="${d1}"></label><label class="fl p-hora"${di ? ' hidden' : ''}><span>Hora de início ${o.fuso || ''}</span><input name="p_hi" type="time" value="${h1}"></label></div>
+      <div class="duas-col"><label class="fl"><span>Data de fim</span><input name="p_df" type="date" required value="${d2}"></label><label class="fl p-hora"${di ? ' hidden' : ''}><span>Hora de fim</span><input name="p_hf" type="time" value="${h2}"></label></div>
+    </div>`;
+}
+function ligarPeriodo(f) {
+  const E = f.elements; if (!E.p_dia) return;
+  let fimMexido = E.p_df.value !== E.p_di.value;
+  E.p_dia.onchange = () => f.querySelectorAll('.p-hora').forEach(l => { l.hidden = E.p_dia.checked; });
+  E.p_df.addEventListener('input', () => { fimMexido = true; });
+  const min = (v) => { const [h, m] = String(v || '').split(':').map(Number); return h * 60 + (m || 0); };
+  let dur = E.p_hi.value && E.p_hf.value && E.p_di.value === E.p_df.value ? Math.max(15, min(E.p_hf.value) - min(E.p_hi.value)) : 60, horaMexida = false;
+  E.p_hf.addEventListener('input', () => { horaMexida = true; });
+  E.p_hi.addEventListener('change', () => { if (horaMexida || E.p_di.value !== E.p_df.value || !E.p_hi.value) return; const t = Math.min(min(E.p_hi.value) + dur, 23 * 60 + 59); E.p_hf.value = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); });
+  // a data de fim acompanha a de início até a pessoa mexer nela (e nunca fica antes do início)
+  E.p_di.addEventListener('change', () => { if (!fimMexido || E.p_df.value < E.p_di.value) E.p_df.value = E.p_di.value; });
+}
+// { data, data_fim, dia_inteiro, duracao_min } ou { erro }
+function lerPeriodo(f) {
+  const E = f.elements, d1 = E.p_di.value, d2 = E.p_df.value || d1, dia = E.p_dia.checked;
+  if (!d1) return { erro: 'Informe a data de início.' };
+  if (dia) {
+    if (d2 < d1) return { erro: 'A data de fim precisa ser igual ou depois da de início.' };
+    const dias = Math.round((dia_(d2) - dia_(d1)) / 864e5) + 1;
+    return { data: d1 + 'T12:00:00Z', data_fim: d2 + 'T12:00:00Z', dia_inteiro: true, duracao_min: dias * 1440 };
+  }
+  const a = new Date(`${d1}T${E.p_hi.value || '00:00'}`), b = new Date(`${d2}T${E.p_hf.value || '00:00'}`);
+  if (isNaN(a) || isNaN(b)) return { erro: 'Informe a hora de início e a de fim.' };
+  if (!(b > a)) return { erro: 'O fim precisa ser depois do início.' };
+  return { data: a.toISOString(), data_fim: b.toISOString(), dia_inteiro: false, duracao_min: Math.round((b - a) / 6e4) };
+}
+const dia_ = (iso) => new Date(iso + 'T12:00:00');
 function bloqueioEm(ids, ini, fim, ignorar) {
   ids = [...new Set((ids || []).filter(Boolean))]; if (!ids.length || isNaN(ini) || isNaN(fim)) return null;
-  return (D.eventos || []).find(e => e.status !== 'Cancelada' && e.id !== ignorar && (e.participantes || []).some(p => ids.includes(p)) && new Date(e.data) < fim && fimDe(e) > ini) || null;
+  return (D.eventos || []).find(e => { if (e.status === 'Cancelada' || e.id === ignorar || !(e.participantes || []).some(p => ids.includes(p))) return false; const [a, b] = intervalo(e); return a < fim && b > ini; }) || null;
 }
-const msgBloqueio = (e) => `${primeiroN((e.participantes || [])[0]) || 'Essa pessoa'} está fora das ${hmD(new Date(e.data))} às ${hmD(fimDe(e))}${e.titulo ? ' (' + e.titulo + ')' : ''}. Escolha outro horário.`;
+const msgBloqueio = (e) => `${primeiroN((e.participantes || [])[0]) || 'Essa pessoa'} está fora ${quandoTxt(e)}${e.titulo ? ' (' + e.titulo + ')' : ''}. Escolha outro horário.`;
 // folha do evento: cada pessoa cria o seu; a administração cria e muda o de qualquer pessoa
 function folhaEvento(x) {
   const nova = !x, podeMudar = nova || ADMIN || (x.participantes || []).includes(D.meuId) || x.created_by === D.meuId;
   if (!podeMudar) { aviso('Evento de ' + (primeiroN((x.participantes || [])[0]) || 'outra pessoa') + '. Só a pessoa ou a administração muda.'); return; }
-  const ini = x ? new Date(x.data) : null, fim = x ? fimDe(x) : null, quem = x ? (x.participantes || [])[0] : D.meuId;
+  const quem = x ? (x.participantes || [])[0] : D.meuId;
   const el = document.createElement('div'); el.className = 'folha'; SUJO = true;
   el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">${nova ? 'Novo evento' : 'Evento'}</div>
-    <p class="ac-fl">Bloqueia a agenda: todo o time vê que a pessoa está fora, e o app não deixa marcar reunião de cliente por cima.</p>
+    <p class="ac-fl">Bloqueia a agenda: todo o time vê que a pessoa está fora, e o app não deixa marcar reunião de cliente por cima. Para vários dias, um registro só cobre o período.</p>
     <form id="fEvt" class="form" autocomplete="off">
-      <label class="fl"><span>Título</span><input name="titulo" required maxlength="120" value="${esc(x ? x.titulo || '' : '')}" placeholder="Ex.: evento externo, consulta médica"></label>
+      <label class="fl"><span>Título</span><input name="titulo" required maxlength="120" value="${esc(x ? x.titulo || '' : '')}" placeholder="Ex.: férias, evento externo, consulta médica"></label>
       ${ADMIN ? `<label class="fl"><span>Pessoa</span><select name="pessoa">${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === quem ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}
-      <label class="fl"><span>Data</span><input name="data" type="date" required value="${ini ? isoLocal(ini) : hojeISO()}"></label>
-      <div class="duas-col"><label class="fl"><span>Início</span><input name="ini" type="time" required value="${ini ? hmD(ini) : '08:00'}"></label><label class="fl"><span>Fim</span><input name="fim" type="time" required value="${fim ? hmD(fim) : '12:00'}"></label></div>
+      ${camposPeriodo(x)}
       <div class="sub" id="msgEvt" style="color:var(--alerta)"></div>
       <div class="duas-col" style="margin-top:8px"><button type="button" class="ac-sec" data-a="0">Voltar</button><button type="submit" class="ac-prim" style="margin-top:10px">${nova ? 'Criar evento' : 'Salvar'}</button></div>
       ${nova ? '' : '<button type="button" class="sec" data-a="canc" style="width:100%;margin-top:10px">Cancelar o evento</button>'}
@@ -4573,6 +4636,7 @@ function folhaEvento(x) {
   const fim0 = () => { el.remove(); SUJO = false; };
   el.querySelector('.folha-fundo').onclick = fim0; el.querySelector('[data-a="0"]').onclick = fim0;
   const f = el.querySelector('#fEvt');
+  ligarPeriodo(f);
   const canc = el.querySelector('[data-a="canc"]');
   if (canc) canc.onclick = async () => {
     const { data, error } = await sb.from('agenda_reunioes').update({ status: 'Cancelada' }).eq('id', x.id).select().single();
@@ -4582,14 +4646,13 @@ function folhaEvento(x) {
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
-    const a = new Date(`${g('data')}T${g('ini')}`), b = new Date(`${g('data')}T${g('fim')}`);
-    if (!(b > a)) { el.querySelector('#msgEvt').textContent = 'O fim precisa ser depois do início.'; return; }
-    const row = { titulo: g('titulo'), tipo: EVT, data: a.toISOString(), duracao_min: Math.round((b - a) / 6e4), status: 'Agendada', participantes: [g('pessoa') || quem || D.meuId] };
+    const per = lerPeriodo(f); if (per.erro) { el.querySelector('#msgEvt').textContent = per.erro; return; }
+    const row = { titulo: g('titulo'), tipo: EVT, ...per, status: 'Agendada', participantes: [g('pessoa') || quem || D.meuId] };
     const q = nova ? sb.from('agenda_reunioes').insert(row).select().single() : sb.from('agenda_reunioes').update(row).eq('id', x.id).select().single();
     const { data, error } = await q;
     if (error) { el.querySelector('#msgEvt').textContent = limparTec('Não salvou: ' + error.message); return; }
     if (nova) (D.eventos = D.eventos || []).push(data); else Object.assign(x, data);
-    fim0(); aviso(nova ? 'Evento criado. A agenda fica bloqueada nesse horário.' : 'Evento atualizado.'); tela();
+    fim0(); aviso(nova ? 'Evento criado. A agenda fica bloqueada ' + quandoTxt(data) + '.' : 'Evento atualizado.'); tela();
   };
   document.body.appendChild(el);
 }
@@ -4650,15 +4713,16 @@ function calItens(G, de, ate) {
   });
   // reuniões da agenda (inclui as que chegam pelo Cal.com e o diagnóstico e a proposta marcados no card)
   (D.agenda || []).filter(x => (x.status === 'Agendada' || x.status === 'Realizada') && (G ? reuDaGestao(x) : reuDoComercial(x))).forEach(x => {
-    const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
+    // reunião de mais de um dia (ou de dia inteiro) aparece em cada dia; a hora só no primeiro
+    diasDoPeriodo(x, de, ate).forEach(d => { const prim = d === diaIni(x), longo = x.dia_inteiro || diaIni(x) !== diaFim(x);
     const card = x.atendimento_id ? D.reunioes.find(r => r.id === x.atendimento_id) : null;
     const quem = [x.vendedor_id, ...(x.participantes || [])].filter(Boolean);
     const passou = x.status === 'Realizada' || new Date(x.data) < Date.now() - 3 * 36e5;
     // reunião (inclusive a que o cliente marca pelo Cal.com) em cima de um bloqueio: aparece com aviso
-    const bq = !passou && x.status === 'Agendada' ? bloqueioEm(quem, new Date(x.data), fimDe(x)) : null;
-    E.push({ d, hora: hm(x.data), tipo: 'reu', aid: x.id, criador: x.created_by || null, realizada: x.status === 'Realizada', ...(bq ? { atr: true, atrTxt: 'Conflito: ' + primeiroN((bq.participantes || [])[0]) + ' está fora' } : {}), t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
+    const bq = !passou && x.status === 'Agendada' ? bloqueioEm(quem, ...intervalo(x)) : null;
+    E.push({ d, hora: x.dia_inteiro || !prim ? '' : hm(x.data), tipo: 'reu', aid: x.id, criador: x.created_by || null, realizada: x.status === 'Realizada', ...(bq ? { atr: true, atrTxt: 'Conflito: ' + primeiroN((bq.participantes || [])[0]) + ' está fora' } : {}), t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [longo ? (prim ? '' : 'continua · ') + periodoCurto(x) : '', x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
       abrir: () => podeAba('agenda') ? abrirReuniao(x.id) : card ? abrirAtendimento(card.id) : aviso('Seu acesso não inclui a agenda.') });
-  });
+  }); });
   // pedidos de reunião que o cliente da Gestão fez pelo painel
   (D.ags || []).forEach(a => {
     if ((D.agenda || []).some(x => String(x.agendamento_id) === String(a.id))) return;
@@ -4679,10 +4743,11 @@ function calItens(G, de, ate) {
     if (noPer(m90)) E.push({ d: m90, hora: '', tipo: 'ren90', cont: true, t: 'Começa a renovação: ' + c.nome_completo, s: 'Faltam 90 dias para o vencimento em ' + dataBR(v) + cong, donos: [], abrir: () => abrirClienteCal(c.id) });
   });
   // eventos avulsos: quem está fora e em que horário (todo o time vê)
+  // um registro só cobre o período: aparece em cada dia; dia inteiro não mostra hora
   (D.eventos || []).filter(x => x.status !== 'Cancelada').forEach(x => {
-    const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
     const quem = x.participantes || [];
-    E.push({ d, hora: hm(x.data), tipo: 'evt', criador: x.created_by || null, t: 'Fora: ' + (quem.map(primeiroN).filter(Boolean).join(', ') || 'equipe') + (x.titulo ? ' · ' + x.titulo : ''), s: hm(x.data) + ' às ' + hmD(fimDe(x)), donos: quem, abrir: () => folhaEvento(x) });
+    diasDoPeriodo(x, de, ate).forEach(d => { const prim = d === diaIni(x);
+      E.push({ d, hora: x.dia_inteiro || !prim ? '' : hm(x.data), tipo: 'evt', criador: x.created_by || null, t: 'Fora: ' + (quem.map(primeiroN).filter(Boolean).join(', ') || 'equipe') + (x.titulo ? ' · ' + x.titulo : ''), s: (prim || x.dia_inteiro ? '' : 'continua · ') + periodoCurto(x), donos: quem, abrir: () => folhaEvento(x) }); });
   });
   // aniversários saíram daqui: ficam na aba Aniversários (anivItens), com o lembrete e o "enviado"
   return E;
@@ -8552,7 +8617,7 @@ function htmlReuniaoAgenda(x) {
   const passou = x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5;
   return `<button class="av ${falta || passou ? 'novo' : ''}" data-ag="${x.id}" type="button"><span class="ic">•</span><span>
     <span class="t" style="display:block">${esc(x.titulo)}${x.cliente && !x.titulo.includes(x.cliente) ? ' · ' + esc(x.cliente) : ''}</span>
-    <span class="q" style="display:block">${dataHora(x.data)} · ${esc(x.tipo)}${x.vendedor_id && nomeTime(x.vendedor_id) ? ' · vendedor: ' + esc(nomeTime(x.vendedor_id)) : ''}${(x.participantes || []).filter(u => u !== x.vendedor_id).length ? ' · com ' + esc(x.participantes.filter(u => u !== x.vendedor_id).map(nomeTime).filter(Boolean).join(', ')) : ''}</span>
+    <span class="q" style="display:block">${x.dia_inteiro || diaIni(x) !== diaFim(x) ? esc(periodoCurto(x).replace(/^dia inteiro$/, ddmm(diaIni(x)) + ' · dia inteiro')) : dataHora(x.data)} · ${esc(x.tipo)}${x.vendedor_id && nomeTime(x.vendedor_id) ? ' · vendedor: ' + esc(nomeTime(x.vendedor_id)) : ''}${(x.participantes || []).filter(u => u !== x.vendedor_id).length ? ' · com ' + esc(x.participantes.filter(u => u !== x.vendedor_id).map(nomeTime).filter(Boolean).join(', ')) : ''}</span>
     <span style="display:block;margin-top:4px"><span class="tag ${tag}">${esc(x.status)}</span>${falta ? ' <span class="tag alerta">falta o resumo</span>' : ''}${passou ? ' <span class="tag alerta">como foi?</span>' : ''}${x.ticktick && Object.keys(x.ticktick).length ? ' <span class="tag">no TickTick</span>' : ''}${tagAvaliacao(x)}</span>
     ${x.resumo ? `<span class="d" style="display:block;margin-top:4px">${esc(String(x.resumo).slice(0, 220))}${String(x.resumo).length > 220 ? '...' : ''}</span>` : ''}</span></button>`;
 }
@@ -8978,7 +9043,7 @@ function telaFormAgenda(P) {
       <div class="grupo">Reunião</div>
       ${campo('titulo', 'Assunto', x.titulo, 'text', 'required placeholder="Ex.: diagnóstico das milhas, apresentação da cotação"')}
       <label class="fl"><span>Tipo</span><select name="tipo">${AG_TIPOS.map(t => `<option ${t === x.tipo ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      <div class="duas-col">${campo('data', 'Data e hora ' + fusoRotulo(), dl(x.data), 'datetime-local', 'required')}${campo('duracao_min', 'Duração (min)', x.duracao_min || 60, 'number')}</div>
+      ${camposPeriodo(x.data ? x : null, { hi: '10:00', hf: '11:00', fuso: fusoRotulo() })}
       ${campo('link', 'Link da reunião (Meet, Zoom)', x.link, 'url', 'placeholder="https://"')}
       <div class="grupo">Com quem</div>
       ${pode('gestao') && D.clientes.length ? `<label class="fl"><span>Cliente da Gestão</span><select name="cliente_id"><option value="">-</option>${D.clientes.map(c => `<option value="${c.id}" ${c.id === x.cliente_id ? 'selected' : ''}>${esc(c.nome_completo)}</option>`).join('')}</select></label>` : ''}
@@ -9006,15 +9071,16 @@ function telaFormAgenda(P) {
     if (ev && ev.target && ev.target.name === 'atendimento_id') { const at = D.reunioes.find(r => r.id === ev.target.value); if (at && at.responsavel_id) f.elements.vendedor_id.value = at.responsavel_id; }
     mostrar();
   };
-  mostrar();
+  mostrar(); ligarPeriodo(f);
   $('voltar').onclick = () => voltarSeguro('agenda');
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     const g = (n) => f.elements[n] ? f.elements[n].value.trim() : '';
     const parts = [...f.querySelectorAll('[name=part]:checked')].map(c => c.value);
     if (!parts.length) { $('msgAg').textContent = 'Marque pelo menos um participante da Maktub.'; return; }
-    if (g('status') === 'Agendada') { const ini = new Date(g('data')), bq = bloqueioEm([...parts, g('vendedor_id')], ini, new Date(ini.getTime() + (Number(g('duracao_min')) || 60) * 6e4)); if (bq) { $('msgAg').textContent = msgBloqueio(bq); return; } }
-    const row = { vendedor_id: g('vendedor_id') || null, titulo: g('titulo'), tipo: g('tipo'), data: new Date(g('data')).toISOString(), duracao_min: Number(g('duracao_min') || 60), link: g('link') || null,
+    const per = lerPeriodo(f); if (per.erro) { $('msgAg').textContent = per.erro; return; }
+    if (g('status') === 'Agendada') { const bq = bloqueioEm([...parts, g('vendedor_id')], ...intervalo(per)); if (bq) { $('msgAg').textContent = msgBloqueio(bq); return; } }
+    const row = { vendedor_id: g('vendedor_id') || null, titulo: g('titulo'), tipo: g('tipo'), ...per, link: g('link') || null,
       cliente_id: g('cliente_id') || null, atendimento_id: g('atendimento_id') || null, cliente: g('cliente') || null, participantes: parts,
       status: g('status'), resumo: g('status') === 'Realizada' ? (g('resumo') || null) : (x.resumo || null), publicar_no_painel: !!(f.elements.publicar_no_painel && f.elements.publicar_no_painel.checked && g('cliente_id')) };
     if (nova && x.agendamento_id) row.agendamento_id = x.agendamento_id;
