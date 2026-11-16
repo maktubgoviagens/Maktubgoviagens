@@ -1162,6 +1162,8 @@ a.cal-ok{text-decoration:none;display:inline-flex;align-items:center}
 .td-l.feito .td-ck{background:var(--verde)}
 .td-t{flex:1;min-width:0;font-size:16px;line-height:1.35}.td-t small{display:block;font-size:14px;color:var(--tinta-3,#6b6b63)}
 .td-l.feito .td-t{text-decoration:line-through;opacity:.6}
+.td-l.atr{box-shadow:inset 3px 0 0 var(--alerta)}.td-atr{color:var(--alerta);font-weight:600}
+.td-reu{border-style:dashed;cursor:default}
 .td-q{flex:none;font-size:14px;color:var(--tinta-3,#6b6b63);white-space:nowrap}.td-q.alerta{color:var(--alerta)}
 .td-x,.td-ab{flex:none;background:none;border:0;font-size:22px;color:var(--tinta-3,#6b6b63);padding:4px 6px;cursor:pointer;line-height:1}
 .td-mais{margin-top:8px}
@@ -1818,6 +1820,7 @@ function lerHash() {
   AG_ED = ABA === 'agenda' && h[1] && !h[1].startsWith('?') ? h[1].split('?')[0] : null;
   if (ABA === 'agenda' && (h[1] || location.hash.includes('ticktick='))) AG_VISTA = 'reunioes';
   if (ABA === 'leads') LSUB = ['leads', 'convites', 'talentos'].includes(h[1]) ? h[1] : 'auto';
+  PEND_VER = ABA === 'inicio' && h[1] === 'pend' && h[2] ? h[2] : null;
 }
 const NAV_IC = {
   crm: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5c1.6.9 2.7 2.9 3 5.5"/>',
@@ -1890,7 +1893,7 @@ function ir(aba, extra) {
   if (!podeAba(aba)) aba = 'inicio';
   // subtelas de Caixa, Operação de milhas, Base de cartões e Despesas fixas voltam ao começo ao entrar pelo menu
   if (aba !== antes) { CX.inicio(); OPM.inicio(); CARTOES.inicio(); CALC.inicio(); FX_ED = null; }
-  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; GE_FERR = null; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
+  ABA = aba; CLI = null; EM_ED = null; RE_ED = null; AG_ED = null; PEND_VER = null; AG_VISTA = 'tudo'; FILTRO = 'todos'; GE_FUNIL = false; GE_CICLO = false; GE_FERR = null; FI_ABA = 'resumo'; FI_FORM = null; FI_PRE = null; FI_MES = null;
   if (extra) extra();
   // endereço completo da tela (ficha, venda, card): o voltar do celular volta exatamente para ela
   const sub = aba === 'gestao' && GE_FUNIL ? '/funil' + (RE_ED ? '/' + RE_ED : '') : aba === 'crm' ? CRM.hash() : aba === 'emissoes' && EM_ED ? '/' + EM_ED : aba === 'reunioes' && RE_ED ? '/' + RE_ED : aba === 'agenda' && AG_ED ? '/' + AG_ED : aba === 'clientes' && CLI ? '/' + CLI : aba === 'calccartoes' ? CALC.hash() : '';
@@ -2251,6 +2254,7 @@ function tela() {
   if (ABA === 'empresa') return telaEmpresa(P);
   if (ABA === 'equipe') return telaEquipe(P);
   // Início novo para todos: o antigo do colaborador (telaInicioColab) fica guardado no código, sem uso
+  if (ABA === 'inicio' && PEND_VER) return telaPendencia(P, PEND_VER);
   if (!ADMIN && !GER() && ABA === 'inicio') return telaInicio(P);
   if (ABA === 'leads') return telaLeads(P);
   if (ABA === 'clientes') return CLI ? telaFicha(P, CLI) : telaClientes(P);
@@ -2299,10 +2303,11 @@ function checkins48() {
     href: t.v.milhas_cliente ? (t.v.atendimento_id ? '#reunioes/' + t.v.atendimento_id : '') : (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
   return E.sort((a, b) => (a.d - b.d) || String(a.hora).localeCompare(String(b.hora)));
 }
-// o que o calendário tem hoje para a pessoa (reuniões, eventos, follow-ups, renovações) e os lembretes de aniversário
+// o que o calendário do Comercial tem hoje, do time inteiro (reuniões, eventos, follow-ups, atrasados, renovações), e os lembretes de aniversário.
+// Mesma fonte e mesmo recorte do calendário em "Todo o time": o que um mostra, o outro mostra (dentro do acesso de cada pessoa).
 function coisasDoDia() {
   const h = hojeISO(); let E = [];
-  try { E = calItens(false, h, h).filter(it => !it.donos.length || it.donos.includes(D.meuId)); } catch (_) { E = []; }
+  try { E = calItens(false, h, h); } catch (_) { E = []; }
   E.sort((a, b) => (!!b.atr - !!a.atr) || String(a.hora || '99').localeCompare(String(b.hora || '99')));
   return E.concat(lembretesAniv().map(({ p, falta, ano }) => ({ tipo: 'aniv', hora: '', t: 'Aniversário de ' + p.nome, s: falta === 0 ? 'é hoje' : falta === 1 ? 'amanhã' : 'em ' + falta + ' dias', p, ano, abrir: () => ir('crm', () => CRM.abrir(p.id)) })));
 }
@@ -2315,19 +2320,16 @@ function htmlCoisasDoDia(L) {
 }
 // pendências por tipo: as quatro do Comercial primeiro; as demais (de quem já via) só quando houver
 function pendenciasInicio() {
-  const abV = D.reunioes.filter(r => r.resultado === 'Em andamento' && !ehGestao(r));
-  const incompletos = abV.filter(r => !r.proximo_passo_data || !(r.itens || []).length || (estadoKC(r) || [])[0] === 'Sem cotação');
-  const semDono = D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.assumido_por && etapaDe(r) === 'Novo lead');
   const C = pode('comercial') || ADMIN;
   return [
-    ...(C ? [['Pagamentos pendentes (vendas sem comprovante)', posVenda().filter(r => !(r.fech || {}).comprovante).length, () => ir('reunioes')]] : []),
+    ...(C ? [[PEND.comprovante.t, PEND.comprovante.itens().length, () => abrirPend('comprovante')]] : []),
     ...(ADMIN ? [['Pagamentos de clientes a receber', D.emissoes.filter(aReceberCli).length, () => ir('receber')]] : []),
-    ...(ADMIN || podeAba('emissoes') ? [['Voos sem data ou horário de saída', voosSemHorario().length, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('semHorario'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
-    ...(C ? [['Cards incompletos (sem retorno, sem serviço ou sem cotação)', incompletos.length, () => ir('reunioes')]] : []),
-    ...(C ? [['Cards sem ninguém assumir', semDono.length, () => ir('reunioes')]] : []),
+    ...(ADMIN || podeAba('emissoes') ? [[PEND.voos.t, PEND.voos.itens().length, () => abrirPend('voos')]] : []),
+    ...(C ? [[PEND.incompletos.t, PEND.incompletos.itens().length, () => abrirPend('incompletos')]] : []),
+    ...(C ? [[PEND.semdono.t, PEND.semdono.itens().length, () => abrirPend('semdono')]] : []),
     ['Leads do site esperando alguém assumir', leadsSemDono().filter(l => !cardDoLead(l)).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; })],
     ['Leads assumidos e sem resposta', leadsSemResposta().filter(r => r.responsavel_id).length, () => ir('leads', () => { LSUB = 'leads'; FILTRO = 'novo'; })],
-    ...(C ? [['Vendas fechadas aguardando emissão ou planilha', posVenda().length, () => ir('reunioes')]] : []),
+    ...(C ? [[PEND.posvenda.t, PEND.posvenda.itens().length, () => abrirPend('posvenda')]] : []),
     ...(ADMIN ? [['Salários e contas vencendo', CMP.alertas(ctxCMP()), () => ir('compromissos')]] : []),
     ...(ADMIN ? [['Rendimento do mês passado a lançar', CX.alertaRendimento(), () => ir('caixa')]] : []),
     ...(ADMIN ? [['Fornecedores a pagar', aPagar().length, () => ir('pagar')]] : []),
@@ -2337,7 +2339,7 @@ function pendenciasInicio() {
     ...(ADMIN && !verConferir() ? [['Comprovantes para o financeiro conferir', compParaConferir().length, () => ir('conferir')]] : []),
     ['Reuniões sem resumo', semResumo().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ['Reuniões que passaram sem atualizar', (D.agenda || []).filter(x => x.status === 'Agendada' && new Date(x.data) < Date.now() - 3 * 36e5).length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
-    ...(ADMIN || pode('gestao') ? [['Gestão de Milhas', totalGestao(), () => ir('gestao')]] : []),
+    ...(ADMIN || pode('gestao') ? [[PEND.gestao.t, PEND.gestao.itens().length, () => abrirPend('gestao')]] : []),
     ['Avaliações de atendimento para pedir', avaliacoesParaPedir().length, () => ir('agenda', () => { AG_VISTA = 'reunioes'; })],
     ...(ADMIN ? [['Fichas duplicadas para confirmar', (D.dups || []).length, () => ir('crm', () => CRM.rota(['crm', 'duplicadas']))]] : []),
     ...(ADMIN ? [['Posts do marketing para aprovar', MKT.pend().aprovacao, () => ir('marketing', () => MKT.abrir('painel'))]] : []),
@@ -2345,6 +2347,83 @@ function pendenciasInicio() {
     ...(ADMIN ? [['Avaliações no Google para responder', D.avGoogle ? avgPend().length : undefined, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('avgInicio'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]] : []),
     ['Clientes que voltaram: pedir avaliação no Google', voltaramDeViagem().length, () => { const d = $('iniDetD'); if (d) d.open = true; const el = $('posViagem'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }]
   ].filter(x => x[1] !== undefined);
+}
+/* ---------- Pendências do Início: cada linha abre a lista exata do que ela conta (o número é o tamanho da lista)
+   e cada item abre no ponto de resolver. O endereço #inicio/pend/<tipo> guarda a lista: o voltar do celular volta para ela,
+   já recalculada (o que foi resolvido sai), e a tela nunca se redesenha sozinha enquanto alguém preenche algo. ---------- */
+let PEND_VER = null;
+// venda que precisa de comprovante: a mesma regra de "venda concluída" (emissão só com milhas do cliente não é venda e não tem comprovante)
+const pagPendentes = () => posVenda().filter(r => !(r.fech || {}).comprovante && !VENDA.soMilhasCliente(r));
+// quem consegue abrir a venda (a mesma regra do formulário da emissão)
+const podeAbrirEm = (e) => !!e && (VER_TODAS() || pode('checkin') || VER_LISTA() || (e.vendedor_app || e.vendedor_id) === D.meuId);
+// passagem vendida nos últimos 12 meses sem data de ida nem de volta (só as que têm origem ou destino: linhas de fechamento da planilha ficam de fora)
+function voosSemData() {
+  const lim = isoLocal(new Date(Date.now() - 365 * 864e5));
+  return (D.emissoes || []).filter(e => /^Passage/i.test(e.servico || '') && (e.origem || e.destino) && !e.data_ida && !e.data_volta && !e.voado
+    && String(e.data_negociacao || '') >= lim && !B2B.ehB2B(e) && !B2B.ehCancelada(e, D)).sort((a, b) => String(a.data_negociacao).localeCompare(String(b.data_negociacao)));
+}
+// voos para completar: sem data (qualquer um que abre a venda) e sem horário (só quem faz check-in, que é quem vê o campo do horário)
+function voosPendentes() {
+  const nome = (e, v) => (e && e.comprador) || (v && v.passageiro) || 'Passageiro';
+  const sd = voosSemData().filter(podeAbrirEm).map(e => ({ id: e.id, t: nome(e), s: `${e.origem || '?'} → ${e.destino || '?'} · venda de ${dataBR(String(e.data_negociacao).slice(0, 10))}`, q: 'sem data', alerta: true, abrir: () => abrirVoo(e.id, 'data') }));
+  const hr = ADMIN || pode('checkin') ? voosSemHorario().filter(x => podeAbrirEm(x.em)).map(({ v, em, falta }) => ({ id: v.id, t: nome(em, v) + (v.localizador ? ' · ' + String(v.localizador).toUpperCase() : ''), s: falta.map(f => `${f.de || '?'} → ${f.para || '?'} ${dataCurta(f.d)}`).join(' · '), q: 'sem horário', abrir: () => abrirVoo(v.id, 'hora') })) : [];
+  return sd.concat(hr);
+}
+function abrirVoo(id, o) {
+  ir('emissoes', () => { EM_ED = id; });
+  setTimeout(() => { const f = $('fEm'), e = (o === 'hora' && $('emHorario')) || (f && f.elements.data_ida && f.elements.data_ida.closest('label')) || $('emHorario'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 250);
+}
+// card aberto no ponto certo: o fechamento (com o comprovante em foco) ou o card do começo
+function abrirCardEm(r, foco) { if (foco) { RE_FOCO = foco; abrirAtendimento(r.id, { etapa: 'Fechou' }); } else abrirAtendimento(r.id); }
+// Gestão: o grupo do "Para resolver hoje" onde a ação mora (confirmar reunião, levar pedido ou indicação ao funil, avisar vencimento)
+let GE_FOCO = null;
+function abrirGestaoGrupo(titulo) { ir('gestao', () => { GE_FOCO = titulo; }); }
+const linhaCard = (r, extra) => {
+  const quem = [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].filter(Boolean).map(primeiroN).filter(Boolean);
+  const valor = VER_MARGEM() && (r.valor_fechado || r.valor_estimado) ? brl2(r.valor_fechado || r.valor_estimado) : '';
+  return [VENDA.numCard(r), extra, [...new Set(quem)].join(' e ') || 'sem responsável', valor].filter(Boolean).join(' · ');
+};
+const PEND = {
+  comprovante: { t: 'Pagamentos pendentes (vendas sem comprovante)', dica: 'Toque na venda para anexar o comprovante no fechamento do card.',
+    itens: () => pagPendentes().map(r => ({ id: r.id, t: r.cliente || 'Card sem nome', s: linhaCard(r), q: 'sem comprovante', alerta: true, abrir: () => abrirCardEm(r, 'comprovante') })) },
+  voos: { t: 'Voos sem data ou horário de saída', dica: 'Sem a data ou o horário, o aviso de check-in não chega na hora certa. Toque e complete como está no bilhete.',
+    itens: () => voosPendentes() },
+  incompletos: { t: 'Cards incompletos (sem retorno, sem serviço ou sem cotação)', dica: 'Toque no card e complete o que falta.',
+    itens: () => D.reunioes.filter(r => r.resultado === 'Em andamento' && !ehGestao(r)).map(r => ({ r, f: [!r.proximo_passo_data && 'sem retorno', !(r.itens || []).length && 'sem serviço', (estadoKC(r) || [])[0] === 'Sem cotação' && 'sem cotação'].filter(Boolean) }))
+      .filter(x => x.f.length).map(({ r, f }) => ({ id: r.id, t: r.cliente || 'Card sem nome', s: linhaCard(r, etapaDe(r)), q: f.join(', '), abrir: () => abrirCardEm(r) })) },
+  semdono: { t: 'Cards sem ninguém assumir', dica: 'Toque no card para assumir.',
+    itens: () => D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.assumido_por && etapaDe(r) === 'Novo lead').map(r => ({ id: r.id, t: r.cliente || 'Card sem nome', s: linhaCard(r, ehGestao(r) ? 'Gestão' : 'Viagens'), q: 'desde ' + ddmm(String(r.entrou_em || r.created_at || r.data).slice(0, 10)), abrir: () => abrirCardEm(r) })) },
+  posvenda: { t: 'Vendas fechadas aguardando emissão ou planilha', dica: 'Toque na venda: o fechamento abre com o que falta para lançar.',
+    itens: () => posVenda().map(r => { const f = VENDA.pendenciasMinimo(r); return { id: r.id, t: r.cliente || 'Card sem nome', s: linhaCard(r), q: f.length ? 'falta: ' + f.join('; ') : 'pronta para lançar', alerta: !!f.length, abrir: () => abrirCardEm(r, 'fechou') }; }) },
+  gestao: { t: 'Gestão de Milhas', dica: 'Toque no item para resolver.',
+    itens: () => [
+      ...reunioesAConfirmar().map(a => ({ g: 'Pedidos de reunião dos clientes', id: a.id, t: nomeCli(a.cliente_id), s: ['pediu pelo painel', a.data_preferida ? 'prefere ' + dataBR(String(a.data_preferida).slice(0, 10)) : '', a.periodo].filter(Boolean).join(' · '), q: 'confirmar', abrir: () => abrirGestaoGrupo('Pedidos de reunião dos clientes') })),
+      ...pedidosSite().map(r => ({ g: 'Pedidos de diagnóstico pelo site', id: r.id, t: r.nome || 'Pedido do site', s: [r.gasto_mensal && 'cartões ' + r.gasto_mensal, r.programas].filter(Boolean).join(' · '), q: 'novo', abrir: () => abrirGestaoGrupo('Pedidos de diagnóstico pelo site') })),
+      ...indicacoesNovas().map(r => ({ g: 'Indicações de clientes', id: r.id, t: r.nome || 'Indicação', s: 'indicação de ' + nomeCli(r.cliente_id), q: 'nova', abrir: () => abrirGestaoGrupo('Indicações de clientes') })),
+      ...retornosHoje().filter(ehGestao).map(r => { const d = passoDe(r).data; return { g: 'Leads para retornar hoje', id: r.id, t: r.cliente || 'Lead', s: linhaCard(r, passoDe(r).txt), q: d < hojeISO() ? 'atrasado desde ' + ddmm(d) : 'hoje', alerta: d < hojeISO(), abrir: () => abrirCardEm(r) }; }),
+      ...vencendo().map(({ p, d }) => ({ g: 'Milhas de clientes vencendo', id: p.id, t: nomeCli(p.cliente_id), s: `${num(p.vencimento_quantidade)} ${p.unidade || 'milhas'} · ${p.programa}`, q: 'vence ' + dataCurta(d), alerta: true, abrir: () => abrirGestaoGrupo('Milhas de clientes vencendo em 30 dias') })),
+      ...renovacoes(90).map(c => ({ g: 'Renovações em 90 dias', id: c.id, t: c.nome_completo, s: 'reunião de renovação', q: diasPara(c.gestao_vencimento) < 0 ? 'vencido' : 'vence ' + dataBR(c.gestao_vencimento), alerta: diasPara(c.gestao_vencimento) <= 30, abrir: () => abrirFicha(c.id) })),
+      ...semContrato().map(c => ({ g: 'Clientes sem data de entrada', id: c.id, t: c.nome_completo, s: 'definir a data de entrada na ficha', q: 'definir', alerta: true, abrir: () => abrirFicha(c.id) })),
+      ...saldosDoDia().map(c => ({ g: 'Bases para alimentar', id: c.id, t: c.nome_completo, s: 'base do mês', q: diaHoje() === c.dia_saldos ? 'hoje' : 'atrasada', alerta: diaHoje() !== c.dia_saldos, abrir: () => alimentarBase(c.id) })),
+      ...tarefasParaHoje().map(x => ({ g: 'Tarefas da Gestão para hoje', id: x.id, t: nomeCli(x.cliente_id), s: x.titulo || 'tarefa', q: diasPara(x.prazo) < 0 ? 'atrasada desde ' + dataCurta(dia(x.prazo)) : 'hoje', alerta: diasPara(x.prazo) < 0, abrir: () => abrirFicha(x.cliente_id, 'tarefas') }))
+    ] }
+};
+function abrirPend(k) {
+  if (!PEND[k] || !sairOk()) return;
+  ANTERIOR = ABA; ABA = 'inicio'; PEND_VER = k;
+  history.pushState(null, '', '#inicio/pend/' + k); marcarNav(); tela(); scrollTo(0, 0);
+}
+function telaPendencia(P, k) {
+  const p = PEND[k]; if (!p) { PEND_VER = null; return telaInicio(P); }
+  const L = p.itens(), item = (x, i) => `<button type="button" data-pit="${i}"><span>${esc(x.t)}${x.s ? `<small style="display:block;font-size:14px;color:var(--tinta-3)">${esc(x.s)}</small>` : ''}${x.q ? `<small style="display:block;font-size:14px;color:${x.alerta ? 'var(--alerta)' : 'var(--tinta-2)'}">${esc(x.q)}</small>` : ''}</span><span class="seta">›</span></button>`;
+  const grupos = [...new Set(L.map(x => x.g).filter(Boolean))];
+  P.innerHTML = `<button class="voltar" id="pendVoltar">‹ Início</button>
+    <h1 class="titulo" style="margin-top:6px">${esc(p.t)}</h1>
+    <div class="sub">${L.length ? plural(L.length, 'item', 'itens') + '. ' + esc(p.dica) : 'Nada pendente aqui. Bom trabalho.'}</div>
+    ${grupos.length ? grupos.map(g => `<div class="secao">${esc(g)} <small class="ini4-n">${L.filter(x => x.g === g).length}</small></div><div class="pend">${L.map((x, i) => x.g === g ? item(x, i) : '').join('')}</div>`).join('')
+      : L.length ? `<div class="pend" style="margin-top:14px">${L.map(item).join('')}</div>` : ''}`;
+  $('pendVoltar').onclick = () => voltarSeguro('inicio');
+  P.querySelectorAll('[data-pit]').forEach(b => b.onclick = () => { const x = L[+b.dataset.pit]; if (x) x.abrir(); });
 }
 function telaInicio(P) {
   const hora = new Date().getHours(), CD = coisasDoDia(), CK = checkins48(), PD = pendenciasInicio(), comPend = PD.filter(x => x[1]);
@@ -2358,7 +2437,7 @@ function telaInicio(P) {
       <div class="ini4-b"><div class="secao">Check-ins a fazer <small class="ini4-n">${CK.length ? 'próximas 48 horas' : ''}</small></div>${CK.length ? agrupar(CK) : '<div class="vazio">Nenhum check-in nas próximas 48 horas.</div>'}</div>
       ${verConferir() ? '<div class="ini4-b" id="vcBloco"></div>' : ''}
       <div class="ini4-b"><div class="secao">Pendências</div>${comPend.length ? `<div class="pend">${comPend.map(([t, n]) => `<button data-pi="${PD.findIndex(x => x[0] === t)}"><span>${esc(t)}</span><span><b class="tem">${n}</b><span class="seta">›</span></span></button>`).join('')}</div>` : '<div class="vazio">Tudo em dia.</div>'}
-        ${resolver.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:10px"><summary><span>Resolver por aqui<small>Voos sem horário e avaliações</small></span></summary>${resolver}</details>` : ''}</div>
+        ${resolver.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:10px"><summary><span>Resolver por aqui<small>Voos sem data ou horário e avaliações</small></span></summary>${resolver}</details>` : ''}</div>
     </div>`;
   P.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => PD[b.dataset.pi][2]());
   blocoConferir();
@@ -2714,10 +2793,10 @@ function telaFormEmissao(P) {
         ${l('Onde comprou', esc(x.fornecedor || ''))}
         ${VENDA.HOTEL === x.produto ? l('Carta de boas-vindas', x.carta ? 'Enviada' : '<b style="color:var(--alerta)">Pendente</b>') : ''}
         ${x.print ? `<button type="button" class="sec" data-vprint="${esc(x.print)}" style="width:100%;margin-top:8px">Ver print da tarifa</button>` : ''}</section>`; })()}
-    ${!nova && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) && ((D.trechos || {})[String(e.id)] || []).length ? `<section class="bloco" style="margin-top:12px"><h2>Voos e horários</h2><div class="sub" style="margin-top:-4px">Horário local de saída, como está no bilhete. O aviso de check-in chega 24 h antes de cada voo.</div>
+    ${!nova && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) && ((D.trechos || {})[String(e.id)] || []).length ? `<section class="bloco" id="emHorario" style="margin-top:12px"><h2>Voos e horários</h2><div class="sub" style="margin-top:-4px">Horário local de saída, como está no bilhete. O aviso de check-in chega 24 h antes de cada voo.</div>
       ${D.trechos[String(e.id)].slice().sort((a, b) => a.n - b.n).map(r => `<div class="duas-col" style="align-items:end"><div class="sub" style="margin:0 0 10px"><b>Voo ${r.n}</b> · ${esc([r.origem, r.destino].filter(Boolean).join(' → '))} · ${dataCurta(dia(r.data))}${r.checkin ? ' · check-in feito' : ''}</div><label class="fl"><span>Saída</span><input type="time" data-hrv="${r.n}" value="${esc(String(r.hora || '').slice(0, 5))}"></label></div>`).join('')}
       <button type="button" class="sec grande" id="hrSalvarV" style="width:100%;margin-top:6px">Salvar horários</button></section>`
-    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega às 7h do dia anterior.</div>
+    : !nova && D.horas !== null && (e.data_ida || e.data_volta) && !B2B.ehB2B(e) && (pode('checkin') || ADMIN) ? (h => `<section class="bloco" id="emHorario" style="margin-top:12px"><h2>Horário do voo</h2><div class="sub" style="margin-top:-4px">Use o horário local do aeroporto de saída, como está no bilhete. O app converte para Brasília e o aviso de check-in chega 24 h antes do voo. Sem horário, chega às 7h do dia anterior.</div>
       <div class="duas-col">${e.data_ida ? `<label class="fl"><span>Saída da ida (${dataCurta(dia(e.data_ida))})</span><input type="time" id="hrIda" value="${esc(String(h.hora_ida || '').slice(0, 5))}"></label>` : '<div></div>'}${e.data_volta ? `<label class="fl"><span>Saída da volta (${dataCurta(dia(e.data_volta))})</span><input type="time" id="hrVolta" value="${esc(String(h.hora_volta || '').slice(0, 5))}"></label>` : '<div></div>'}</div>
       <button type="button" class="sec grande" id="hrSalvar" style="width:100%;margin-top:6px">Salvar horário</button></section>`)((D.horas || {})[String(e.id)] || {}) : ''}
     ${!nova && !ADMIN && GER() ? `<section class="bloco" style="margin-top:12px"><h2>Valores</h2><div class="lin"><span>Venda</span><span>${brl2(e.valor_receber)}</span></div><div class="lin"><span>Custo</span><span>${brl2(e.custo)}</span></div><div class="lin forte"><span>Lucro bruto</span><span>${brl2(e.lucro_bruto)}</span></div>${e.vendedor_id === D.meuId ? `<div class="lin"><span>Sua comissão</span><span>${brl2(e.comissao)}</span></div>` : ''}</section>` : ''}
@@ -3695,7 +3774,7 @@ async function fiTrajetoria(el, c) {
 const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar', 'Fora do orçamento agora'], 'Fechou com outro': ['Comprou direto no site da companhia', 'Fechou com outra agência', 'Usou milhas próprias'],
   'Desistiu ou adiou a viagem': ['Adiou a viagem', 'Mudou o destino', 'Motivo pessoal'], 'Parou de responder': ['Não respondeu depois da cotação', 'Sumiu no follow-up'],
   'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
-let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens';
+let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens', RE_FOCO = null;
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
 const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Follow-up'];
 const FUP_PRAZOS = [['3 dias', 3], ['7 dias', 7], ['15 dias', 15], ['1 mês', 30], ['3 meses', 90], ['6 meses', 180]];
@@ -3769,35 +3848,42 @@ async function tarefasDia() {
   TD_AVULSAS = q.error ? (TD_AVULSAS || []) : q.data || [];
   if (!TD_NOVA) desenharTarefasDia();
 }
+// sai do mesmo calendário do Início: follow-ups (com os atrasados) e reuniões em que a pessoa é dona (responsável, quem assumiu, SDR, closer,
+// participante) ou que ela criou; mais as tarefas da Gestão dela e as tarefas avulsas
 function itensTarefasDia() {
-  const hoje = hojeISO(), eu = D.meuId, L = [];
-  D.reunioes.filter(r => r.resultado === 'Em andamento' && !r.arquivado_em && [r.responsavel_id, r.closer_id, r.sdr_id].includes(eu)).forEach(r => {
-    const p = passoDe(r); if (!p.data || p.data > hoje) return;
-    L.push({ k: 'r' + r.id, tipo: 'card', r, t: `${r.cliente || 'Cliente'} · ${String(p.txt || p.rot || 'retorno').replace(/^./, c => c.toLowerCase())}`, data: p.data });
+  const hoje = hojeISO(), eu = D.meuId, L = [], dono = (it) => (it.donos || []).includes(eu), meu = (it) => dono(it) || it.criador === eu;
+  let C = []; try { C = calItens(false, hoje, hoje); } catch (_) { C = []; }
+  C.filter(it => (it.tipo === 'rv' || it.tipo === 'rg') && it.r && meu(it)).forEach(it => {
+    L.push({ k: 'r' + it.rid, tipo: 'card', r: it.r, dono: dono(it), t: `${it.t} · ${String(it.passo || 'retorno').replace(/^./, c => c.toLowerCase())}`, data: it.d0 || it.d });
+  });
+  C.filter(it => it.tipo === 'reu' && it.aid && !it.realizada && meu(it)).forEach(it => {
+    L.push({ k: 'm' + it.aid, tipo: 'reu', it, dono: dono(it), t: it.t, hora: it.hora, data: it.d, conflito: it.atr ? it.atrTxt : '' });
   });
   (D.gtar || []).filter(t => !t.feito && t.prazo && String(t.prazo).slice(0, 10) <= hoje && t.responsavel === eu).forEach(t => {
-    L.push({ k: 'g' + t.id, tipo: 'gestao', g: t, t: `${nomeCli(t.cliente_id)} · ${String(t.titulo || 'tarefa').replace(/^./, c => c.toLowerCase())}`, data: String(t.prazo).slice(0, 10) });
+    L.push({ k: 'g' + t.id, tipo: 'gestao', g: t, dono: true, t: `${nomeCli(t.cliente_id)} · ${String(t.titulo || 'tarefa').replace(/^./, c => c.toLowerCase())}`, data: String(t.prazo).slice(0, 10) });
   });
-  (TD_AVULSAS || []).filter(a => a.feito_em || String(a.data) <= hoje).forEach(a => L.push({ k: 'a' + a.id, tipo: 'avulsa', a, t: a.titulo, data: String(a.data), feito: !!a.feito_em }));
-  return L.sort((x, y) => (!!x.feito - !!y.feito) || x.data.localeCompare(y.data));
+  (TD_AVULSAS || []).filter(a => a.feito_em || String(a.data) <= hoje).forEach(a => L.push({ k: 'a' + a.id, tipo: 'avulsa', a, dono: true, t: a.titulo, data: String(a.data), feito: !!a.feito_em }));
+  // feitas no fim; atrasadas (data mais antiga) no topo; depois pela hora
+  return L.sort((x, y) => (!!x.feito - !!y.feito) || x.data.localeCompare(y.data) || String(x.hora || '99').localeCompare(String(y.hora || '99')));
 }
 function desenharTarefasDia() {
   const el = $('tdBloco'); if (!el) return;
-  const L = itensTarefasDia(), hoje = hojeISO(), falta = L.filter(x => !x.feito).length;
-  const quando = (x) => { if (x.feito) return 'feita'; const d = Math.round((dia(hoje) - dia(x.data)) / 864e5); return d <= 0 ? 'hoje' : d === 1 ? 'desde ontem' : `atrasada ${d} dias`; };
-  el.innerHTML = `<div class="secao">Minhas tarefas de hoje${L.length ? ` <span class="td-n">${falta ? falta + (falta === 1 ? ' para fazer' : ' para fazer') : 'tudo feito'}</span>` : ''}</div>
-    <div class="ac-lista td-lista">${L.map(x => `<div class="td-l ${x.feito ? 'feito' : ''}" data-td="${esc(x.k)}">
-      <button type="button" class="td-ck" aria-label="${x.feito ? 'Desmarcar' : 'Marcar como feita'}">${x.feito ? '✓' : ''}</button>
-      <span class="td-t">${esc(x.t)}<small>${x.tipo === 'card' ? 'card' : x.tipo === 'gestao' ? 'tarefa da Gestão' : 'tarefa sua'}</small></span>
-      <span class="td-q ${!x.feito && x.data < hoje ? 'alerta' : ''}">${quando(x)}</span>
-      ${x.tipo === 'avulsa' ? `<button type="button" class="td-x" data-tdx="${x.a.id}" aria-label="Tirar da lista">×</button>` : x.tipo === 'card' ? '<button type="button" class="td-ab" aria-label="Abrir o card">›</button>' : ''}</div>`).join('') || '<div class="vazio">Nada para hoje. Bom trabalho.</div>'}</div>
+  const L = itensTarefasDia(), hoje = hojeISO(), falta = L.filter(x => !x.feito).length, atrasadas = L.filter(x => !x.feito && x.data < hoje).length;
+  const quando = (x) => { if (x.feito) return 'feita'; if (x.tipo === 'reu') return x.hora || 'hoje'; const d = Math.round((dia(hoje) - dia(x.data)) / 864e5); return d <= 0 ? 'hoje' : d === 1 ? 'desde ontem' : `atrasada ${d} dias`; };
+  const rot = (x) => x.tipo === 'card' ? (x.dono ? 'card' : 'card que você criou') : x.tipo === 'reu' ? (x.conflito || (x.dono ? 'reunião' : 'reunião que você marcou')) : x.tipo === 'gestao' ? 'tarefa da Gestão' : 'tarefa sua';
+  el.innerHTML = `<div class="secao">Minhas tarefas de hoje${L.length ? ` <span class="td-n">${falta ? falta + ' para fazer' + (atrasadas ? ` · <b class="td-atr">${atrasadas} ${atrasadas === 1 ? 'atrasada' : 'atrasadas'}</b>` : '') : 'tudo feito'}</span>` : ''}</div>
+    <div class="ac-lista td-lista">${L.map(x => `<div class="td-l ${x.feito ? 'feito' : ''} ${!x.feito && x.data < hoje ? 'atr' : ''}" data-td="${esc(x.k)}">
+      ${x.tipo === 'reu' ? '<span class="td-ck td-reu" aria-hidden="true"></span>' : `<button type="button" class="td-ck" aria-label="${x.feito ? 'Desmarcar' : 'Marcar como feita'}">${x.feito ? '✓' : ''}</button>`}
+      <span class="td-t">${esc(x.t)}<small>${esc(rot(x))}</small></span>
+      <span class="td-q ${!x.feito && (x.data < hoje || x.conflito) ? 'alerta' : ''}">${quando(x)}</span>
+      ${x.tipo === 'avulsa' ? `<button type="button" class="td-x" data-tdx="${x.a.id}" aria-label="Tirar da lista">×</button>` : x.tipo === 'card' || x.tipo === 'reu' ? `<button type="button" class="td-ab" aria-label="${x.tipo === 'reu' ? 'Abrir a reunião' : 'Abrir o card'}">›</button>` : ''}</div>`).join('') || '<div class="vazio">Nada para hoje. Bom trabalho.</div>'}</div>
     ${TD_NOVA ? `<form class="td-nova" id="tdForm" autocomplete="off"><input name="titulo" placeholder="O que precisa fazer?" required maxlength="200"><input name="data" type="date" value="${hoje}"><button type="submit" class="ac-prim">Adicionar</button><button type="button" class="ac-sec" id="tdCanc">Cancelar</button></form>`
       : '<button type="button" class="ac-sec td-mais" id="tdMais">+ Tarefa</button>'}`;
   const achar = (k) => L.find(x => x.k === k);
   el.querySelectorAll('.td-l').forEach(row => {
     const x = achar(row.dataset.td); if (!x) return;
-    row.querySelector('.td-ck').onclick = () => marcarTarefaDia(x);
-    const ab = row.querySelector('.td-ab'); if (ab) ab.onclick = () => abrirAtendimento(x.r.id);
+    const ck = row.querySelector('button.td-ck'); if (ck) ck.onclick = () => marcarTarefaDia(x);
+    const ab = row.querySelector('.td-ab'); if (ab) ab.onclick = () => x.tipo === 'reu' ? x.it.abrir() : abrirAtendimento(x.r.id);
   });
   el.querySelectorAll('[data-tdx]').forEach(b => b.onclick = async () => {
     const a = (TD_AVULSAS || []).find(y => String(y.id) === b.dataset.tdx); if (!a) return;
@@ -3815,23 +3901,6 @@ function desenharTarefasDia() {
     aviso(data > hoje ? `Tarefa guardada para ${dataBR(data)}.` : 'Tarefa adicionada.'); desenharTarefasDia();
   };
 }
-// folha do "feito" num retorno de card: o card nunca fica sem próximo passo
-function folhaProximoPasso(r) {
-  return new Promise((ok) => {
-    const el = document.createElement('div'); el.className = 'folha';
-    el.innerHTML = `<div class="folha-fundo"></div><div class="folha-caixa"><div class="ac-ftit">Feito. Qual o próximo passo?</div>
-      <p class="ac-fl">${esc(r.cliente || 'Cliente')} · ${esc(passoDe(r).rot || 'retorno')}</p>
-      <label class="fl"><span>Anotação do próximo passo (opcional)</span><input id="tdNota" maxlength="200" placeholder="Ex.: vai decidir com a família"></label>
-      <div class="td-dias">${[[1, 'Amanhã'], [3, 'Em 3 dias'], [7, 'Em 1 semana']].map(([n, t]) => `<button type="button" class="ac-sec" data-n="${n}">${t}</button>`).join('')}</div>
-      <button type="button" class="ac-sec" data-r="abrir">Abrir o card</button><button type="button" class="ac-sec" data-r="0">Voltar</button></div>`;
-    const fim = (v) => { el.remove(); ok(v); };
-    el.querySelector('.folha-fundo').onclick = () => fim(null);
-    el.querySelector('[data-r="0"]').onclick = () => fim(null);
-    el.querySelector('[data-r="abrir"]').onclick = () => fim('abrir');
-    el.querySelectorAll('[data-n]').forEach(b => b.onclick = () => fim({ data: maisDias(+b.dataset.n), nota: el.querySelector('#tdNota').value.trim() }));
-    document.body.appendChild(el);
-  });
-}
 async function marcarTarefaDia(x) {
   if (x.tipo === 'avulsa') {
     const feito_em = x.feito ? null : new Date().toISOString();
@@ -3840,13 +3909,8 @@ async function marcarTarefaDia(x) {
     x.a.feito_em = feito_em; desenharTarefasDia(); return;
   }
   if (x.tipo === 'gestao') { if (await gtMarcar(x.g.id, true)) { aviso('Tarefa da Gestão feita.'); desenharTarefasDia(); } return; }
-  const v = await folhaProximoPasso(x.r); if (!v) return;
-  if (v === 'abrir') { abrirAtendimento(x.r.id); return; }
-  const tipo = x.r.proximo_passo_tipo || passoDe(x.r).tipo || null;
-  const row = { proximo_passo_data: v.data, ...(tipo ? { proximo_passo_tipo: tipo } : {}), ...(v.nota ? { proximo_passo: tipo ? textoPasso(tipo, v.nota) : v.nota } : {}) };
-  const { data, error } = await sb.from('atendimentos').update(row).eq('id', x.r.id).select().single();
-  if (error) { aviso('Não salvou: ' + limparTec(error.message)); return; }
-  Object.assign(x.r, data); aviso(`Feito. Próximo passo de ${x.r.cliente || 'cliente'} em ${dataBR(v.data)}.`); desenharTarefasDia();
+  // retorno de card: o mesmo "Feito" do calendário e de Coisas do dia (próximo retorno ou encerrar, observação nas anotações)
+  acoesCard(x.r.id, { feito: true });
 }
 const mesLocal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 function reunioesDoPeriodo(k, modo) { return D.reunioes.filter(r => modo === 'ano' ? mesLocal(r.data).slice(0, 4) === k.slice(0, 4) : mesLocal(r.data) === k); }
@@ -4582,7 +4646,7 @@ function calItens(G, de, ate) {
     if (PASSO_REUNIAO.includes(pe.tipo) && reunioesDe(r.id).some(a => a.status === 'Agendada' && isoLocal(new Date(a.data)) === d0)) return;
     const donos = [r.responsavel_id, r.assumido_por, r.sdr_id, r.closer_id].filter(Boolean);
     const quem = [...new Set(donos)].map(primeiroN).filter(Boolean).join(' e ');
-    E.push({ d, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', rid: r.id, t: r.cliente || 'Card sem nome', s: [pe.txt || 'Sem passo definido', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
+    E.push({ d, d0, hora: '', tipo: ehGestao(r) ? 'rg' : 'rv', rid: r.id, r, criador: r.created_by || null, passo: pe.txt || pe.rot || '', t: r.cliente || 'Card sem nome', s: [pe.txt || 'Sem passo definido', etapaDe(r), quem ? 'com ' + quem : 'sem responsável'].join(' · '), atr, atrTxt: 'Atrasado desde ' + ddmm(d0), donos, abrir: () => abrirAtendimento(r.id) });
   });
   // reuniões da agenda (inclui as que chegam pelo Cal.com e o diagnóstico e a proposta marcados no card)
   (D.agenda || []).filter(x => (x.status === 'Agendada' || x.status === 'Realizada') && (G ? reuDaGestao(x) : reuDoComercial(x))).forEach(x => {
@@ -4592,7 +4656,7 @@ function calItens(G, de, ate) {
     const passou = x.status === 'Realizada' || new Date(x.data) < Date.now() - 3 * 36e5;
     // reunião (inclusive a que o cliente marca pelo Cal.com) em cima de um bloqueio: aparece com aviso
     const bq = !passou && x.status === 'Agendada' ? bloqueioEm(quem, new Date(x.data), fimDe(x)) : null;
-    E.push({ d, hora: hm(x.data), tipo: 'reu', ...(bq ? { atr: true, atrTxt: 'Conflito: ' + primeiroN((bq.participantes || [])[0]) + ' está fora' } : {}), t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
+    E.push({ d, hora: hm(x.data), tipo: 'reu', aid: x.id, criador: x.created_by || null, realizada: x.status === 'Realizada', ...(bq ? { atr: true, atrTxt: 'Conflito: ' + primeiroN((bq.participantes || [])[0]) + ' está fora' } : {}), t: (x.titulo || 'Reunião') + (x.cliente && !String(x.titulo || '').includes(x.cliente) ? ': ' + x.cliente : card && card.cliente && !String(x.titulo || '').includes(card.cliente) ? ': ' + card.cliente : ''), s: [x.status === 'Realizada' ? 'Realizada' : passou ? 'Já passou: registre como foi' : x.tipo, [...new Set(quem)].map(primeiroN).filter(Boolean).join(', ')].filter(Boolean).join(' · '), passado: passou, donos: quem,
       abrir: () => podeAba('agenda') ? abrirReuniao(x.id) : card ? abrirAtendimento(card.id) : aviso('Seu acesso não inclui a agenda.') });
   });
   // pedidos de reunião que o cliente da Gestão fez pelo painel
@@ -4618,7 +4682,7 @@ function calItens(G, de, ate) {
   (D.eventos || []).filter(x => x.status !== 'Cancelada').forEach(x => {
     const d = isoLocal(new Date(x.data)); if (!noPer(d)) return;
     const quem = x.participantes || [];
-    E.push({ d, hora: hm(x.data), tipo: 'evt', t: 'Fora: ' + (quem.map(primeiroN).filter(Boolean).join(', ') || 'equipe') + (x.titulo ? ' · ' + x.titulo : ''), s: hm(x.data) + ' às ' + hmD(fimDe(x)), donos: quem, abrir: () => folhaEvento(x) });
+    E.push({ d, hora: hm(x.data), tipo: 'evt', criador: x.created_by || null, t: 'Fora: ' + (quem.map(primeiroN).filter(Boolean).join(', ') || 'equipe') + (x.titulo ? ' · ' + x.titulo : ''), s: hm(x.data) + ' às ' + hmD(fimDe(x)), donos: quem, abrir: () => folhaEvento(x) });
   });
   // aniversários saíram daqui: ficam na aba Aniversários (anivItens), com o lembrete e o "enviado"
   return E;
@@ -5057,7 +5121,12 @@ function telaFormReuniao(P) {
   }
   mostrar(); f._reunVis(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
-  if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) setTimeout(() => { const e = $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+  // no card em leitura, o bloco da etapa abre antes; vindo das Pendências do comprovante, para direto no botão de anexar
+  const foco = RE_FOCO; RE_FOCO = null;
+  if (f.elements.etapa.value === 'Fechou' && RE_PRE_FECHOU && $('blFechou')) {
+    const cbE = $('blFechou').closest('.cb'); if (cbE && !cbE.classList.contains('aberto')) { cbE.classList.add('aberto'); const b = cbE.querySelector('.cb-ed'); if (b) { b.dataset.rot = b.dataset.rot || b.textContent; b.textContent = 'Fechar'; } }
+    setTimeout(() => { const e = (foco === 'comprovante' && $('fComp')) || $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: foco === 'comprovante' ? 'center' : 'start' }); }, 300);
+  }
   // frases do "não fechou": mudam com o motivo, um toque escolhe
   if ($('frasesPerda') && f.elements.motivo_perda) {
     const desenhaFrases = () => { const L = RE_FRASES[f.elements.motivo_perda.value] || [], atual = f.elements.motivo_frase.value;
@@ -6613,11 +6682,11 @@ function voosSemHorario() {
 }
 function blocoSemHorario() {
   if (!(ADMIN || podeAba('emissoes'))) return '';
-  const L = voosSemHorario(); if (!L.length) return '';
-  const linha = ({ v, em, falta }) => `<button type="button" class="lin" data-semhr="${esc(v.id)}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--linha);padding:8px 0;cursor:pointer;font:inherit;color:inherit"><span>${esc((em && em.comprador) || v.passageiro || 'Passageiro')}${v.localizador ? ' · ' + esc(String(v.localizador).toUpperCase()) : ''}<small style="display:block;color:var(--tinta-3)">${falta.map(f => `${esc(f.de || '?')} → ${esc(f.para || '?')} ${dataCurta(f.d)}`).join(' · ')}</small></span><span class="seta">›</span></button>`;
-  return `<div class="secao" id="semHorario">Voos sem horário de saída</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin:0 0 6px">Vendas sem o horário do voo: o aviso de check-in só chega às 7h do dia anterior. Toque e complete o horário como está no bilhete.</div>${L.slice(0, 8).map(linha).join('')}${L.length > 8 ? `<details><summary class="sub" style="cursor:pointer;margin-top:6px">Mais ${L.length - 8}</summary>${L.slice(8).map(linha).join('')}</details>` : ''}</section>`;
+  const L = voosPendentes(); if (!L.length) return '';
+  const linha = (x, i) => `<button type="button" class="lin" data-semhr="${i}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--linha);padding:8px 0;cursor:pointer;font:inherit;color:inherit"><span>${esc(x.t)}<small style="display:block;color:var(--tinta-3)">${esc(x.s)} · ${esc(x.q)}</small></span><span class="seta">›</span></button>`;
+  return `<div class="secao" id="semHorario">Voos sem data ou horário de saída</div><section class="bloco" style="margin-top:0"><div class="sub" style="margin:0 0 6px">Sem a data ou o horário do voo, o aviso de check-in não chega na hora certa. Toque e complete como está no bilhete.</div>${L.slice(0, 8).map(linha).join('')}${L.length > 8 ? `<details><summary class="sub" style="cursor:pointer;margin-top:6px">Mais ${L.length - 8}</summary>${L.slice(8).map((x, i) => linha(x, i + 8)).join('')}</details>` : ''}</section>`;
 }
-function ligarSemHorario(P) { P.querySelectorAll('[data-semhr]').forEach(b => b.onclick = () => ir('emissoes', () => { EM_ED = b.dataset.semhr; })); }
+function ligarSemHorario(P) { const L = voosPendentes(); P.querySelectorAll('[data-semhr]').forEach(b => b.onclick = () => { const x = L[+b.dataset.semhr]; if (x) x.abrir(); }); }
 
 /* ---------- leads ---------- */
 // talentos não têm status: o "novo" é o que este aparelho ainda não abriu
@@ -7061,6 +7130,9 @@ function telaGestao(P) {
     </div>
     ${ADMIN ? `<details class="gsec" id="geMetodo"><summary><span>Método de venda da Gestão<small>O texto que a IA segue em toda proposta, e o histórico do que fechou</small></span></summary><label class="fl"><span>Método de venda</span><textarea id="gmTexto" rows="12" placeholder="Carregando..."></textarea></label><button class="zap" type="button" id="gmSalvar" style="width:100%;margin-top:8px">Salvar o método</button><div class="secao">Propostas geradas</div><div id="gmHist" class="sub">Carregando...</div></details>` : ''}`;
   ligarGestao(P);
+  // veio de uma pendência do Início: abre o grupo certo do "Para resolver hoje" e vai até ele
+  if (GE_FOCO) { const t = GE_FOCO; GE_FOCO = null; const g = [...P.querySelectorAll('.gres')].find(d => (d.querySelector('summary span') || {}).textContent === t);
+    if (g) { if ($('geRes')) $('geRes').open = true; g.open = true; setTimeout(() => g.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120); } }
   autoLiberar().then(n => { if (n && ABA === 'gestao' && !RE_ED && !GE_FUNIL) tela(); });
 }
 function ligarGestao(P) {
