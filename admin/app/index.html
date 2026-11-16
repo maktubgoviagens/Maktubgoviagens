@@ -1331,6 +1331,7 @@ import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
 import * as DG from '/admin/app/diagnostico.js?v=1';
+import * as PER from '/admin/app/periodo.js?v=1';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
 const RPC_GRAVA = /salvar|definir|atualizar|marcar|assumir|iniciar|renovar|juntar|separar|desconectar/;
@@ -1453,6 +1454,8 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
 // ---------- busca geral, botão + e sair ----------
 // campos de aeroporto em todo o app: digite a cidade e escolha; o código entra sozinho
 ligarBuscaAero(document);
+// datas de ida e volta (e todo par de início e fim): um calendário só, ida no 1º toque e volta no 2º
+PER.ligar(document);
 const fechaFolhas = () => { $('folhaMais').hidden = true; $('folhaBusca').hidden = true; };
 document.addEventListener('click', (e) => { if (e.target.closest('[data-fecha]')) fechaFolhas(); if (e.target.closest('[data-sair]')) $('sair').click(); });
 function acoesNovo() {
