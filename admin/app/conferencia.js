@@ -38,6 +38,8 @@ export function folha(X, r0) {
   const r = r0, IT = JSON.parse(JSON.stringify(r.itens || [])), F = JSON.parse(JSON.stringify(r.fech || {}));
   // como cada linha está na planilha (retrato guardado no serviço): só o que for mexido vai para a planilha
   V.garantirRetrato(X, r, IT, F);
+  // quantidade de passageiros vazia: vem dos trechos (a mudança vai para a planilha ao salvar)
+  V.paxPelosTrechos(IT);
   // o que aparece é decidido ao abrir (o que estava em aberto); o check de cada item muda enquanto a pessoa corrige
   const f0 = V.faltasConferencia({ itens: IT, fech: F });
   const comp = f0.some(p => p.i < 0);

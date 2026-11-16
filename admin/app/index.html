@@ -1317,11 +1317,11 @@ import * as CRM from '/admin/app/crm.js?v=26';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
-import * as COT from '/admin/app/cotador.js?v=59';
+import * as COT from '/admin/app/cotador.js?v=60';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=34';
+import * as VENDA from '/admin/app/venda.js?v=35';
 import * as FCH from '/admin/app/fechou.js?v=1';
-import * as CONF from '/admin/app/conferencia.js?v=2';
+import * as CONF from '/admin/app/conferencia.js?v=3';
 import * as ATV from '/admin/app/atividades.js?v=3';
 import * as CMP from '/admin/app/compromissos.js?v=22';
 import * as CX from '/admin/app/caixa.js?v=7';
@@ -4226,6 +4226,7 @@ async function prepararFechou(r, IT) {
       if (z.valor && L.length > 1 && !L.some(x => +x.venda)) { let resto = z.valor; L.forEach((x, k) => { const v = k === L.length - 1 ? Math.round(resto * 100) / 100 : Math.round(z.valor / L.length * 100) / 100; resto -= v; x.venda = v; }); }
     }
   }
+  VENDA.paxPelosTrechos(IT);
   IT.forEach(x => {
     if (x.data_ida == null && r.data_viagem) x.data_ida = r.data_viagem;
     if (x.data_volta == null && r.data_volta && x.tipo_trecho !== 'ida' && (VENDA.ehVoo(x) || VENDA.ehHotel(x))) x.data_volta = r.data_volta;
@@ -4256,7 +4257,8 @@ async function lancarVenda(r, IT, F, extra = {}) {
   const soCli = IT.filter(x => !x.cancelado_em).every(VENDA.ehCliente), tot = IT.reduce((a, x) => a + VENDA.vendaDe(x), 0);
   const est = VENDA.estadoConferencia({ itens: IT, fech: F }, D.meuId);
   const up = await sb.from('atendimentos').update({ itens: IT, fech: F, resultado: 'Fechou', etapa: 'Fechou', fechado_em: fechadoEm,
-    valor_fechado: soCli ? null : (extra.valor_fechado || tot || null), proximo_passo: null, proximo_passo_tipo: null, proximo_passo_data: null,
+    // valor fechado = soma das vendas dos serviços (o campo do card pode ter ficado com o valor antigo da cotação)
+    valor_fechado: soCli ? null : (Math.round(tot * 100) / 100 || extra.valor_fechado || null), proximo_passo: null, proximo_passo_tipo: null, proximo_passo_data: null,
     ...est, conferencia_desde: r.conferencia_desde || new Date().toISOString() }).eq('id', r.id).select().single();
   if (up.error) {
     // o card não salvou: as linhas que acabaram de entrar na fila saem (ainda não foram para a planilha)
@@ -4859,6 +4861,8 @@ function telaFormReuniao(P) {
       if (XV.rascunho) XV.rascunho(true);
       await depoisMilhasCliente([r.cliente_id]); aviso('Atualizado na Gestão.' + (r.avisoVoos ? ' ' + r.avisoVoos : ''));
     };
+    // emissão já lançada separada em duas: a venda passa a ser digitada por serviço (a soma é conferida ao salvar)
+    ctxI.aoSeparar = () => { F.venda_modo = 'servico'; if (f._desenhaModo) f._desenhaModo(); };
     ctxI.cancelarCliente = async (x) => {
       const r = await VENDA.cancelarCliente(XV, x);
       if (!r.ok) { aviso('Não cancelou: ' + r.erro); return; }
@@ -4922,6 +4926,7 @@ function telaFormReuniao(P) {
       el.querySelectorAll('[data-vm]').forEach(b => b.onclick = () => { F.venda_modo = b.dataset.vm; if (F.venda_modo === 'total') ratear(); EDIT.desenha(); somaVenda(); desenhaModo(); });
     };
     desenhaModo();
+    f._desenhaModo = desenhaModo;
     if (f.elements.valor_fechado) f.elements.valor_fechado.addEventListener('input', () => { if (IV().length === 1 || (modoV() === 'total' && IV().length > 1)) { ratear(); EDIT.desenha(); if (FECH) FECH.desenha(); } });
     $('reItens').addEventListener('input', () => somaVenda());
     // o rateio do valor integral só vale no Fechou; na cotação cada serviço tem a sua venda (e a tela não redesenha à toa)
@@ -5045,7 +5050,11 @@ function telaFormReuniao(P) {
     if (!G) { row.fech = f._fech(); if (f.elements.cotacao_inicio) row.cotacao_inicio = g('cotacao_inicio') || null; }
     // Fechou da venda do Comercial: só vira Fechou com o mínimo completo. Faltando algo, abre a tela curta só com o que falta;
     // completo, o card é salvo e a venda vai sozinha para a planilha, as metas e o app (lancarVenda, logo depois de salvar).
-    const lancar = !G && !!IT && IT.length > 0 && res === 'Fechou' && (base.resultado !== 'Fechou' || f._lancar) && !VENDA.concluida({ ...base, resultado: 'Fechou', itens: IT, fech: row.fech });
+    // emissão já lançada separada em duas: a venda das duas tem que continuar somando o que era antes
+    if (!G && IT) { const sep = VENDA.conferirSeparacao(IT); if (sep) { $('msgRe').textContent = sep; const e = $('vendaModo') || $('reItens'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } }
+    // venda já lançada com uma emissão nova (separada de outra ou acrescentada): a nova vai para a planilha ao salvar
+    const parcial = !G && !!IT && base.resultado === 'Fechou' && IT.some(VENDA.enviado) && IT.some(x => !x.cancelado_em && !VENDA.ehCliente(x) && !VENDA.enviado(x));
+    const lancar = !G && !!IT && IT.length > 0 && res === 'Fechou' && (base.resultado !== 'Fechou' || f._lancar || parcial) && !VENDA.concluida({ ...base, resultado: 'Fechou', itens: IT, fech: row.fech });
     f._lancar = false;
     if (lancar && VENDA.faltasMinimo({ itens: IT, fech: row.fech }).length) {
       const ok = await FCH.folhaFechar(ctxFechar(), { card: { ...base, cliente: g('cliente') }, IT, F: row.fech, cot: f._cot ? f._cot() : null });
