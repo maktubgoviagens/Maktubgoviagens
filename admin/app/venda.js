@@ -299,9 +299,9 @@ function htmlItem(X, x, i, ctx) {
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, x.ct_on ? 'Milhas (soma)' : 'Milhas', x.milhas, 'n', x.ct_on ? 'readonly' : '')}${inp(X, 'milheiro', i, x.ct_on ? 'Milheiro (média)' : 'Milheiro (R$)', x.milheiro, 'n', x.ct_on && (x.ct || []).some(l => l.milheiro != null && l.milheiro !== '') ? 'readonly' : '')}${inp(X, 'taxas', i, x.ct_on ? 'Taxas (soma)' : 'Taxas (R$)', x.taxas, 'n', x.ct_on ? 'readonly' : '')}</div>` : ''}
       ${htmlTrechos(X, x, i, trava, ctx)}
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
-      ${htmlPax(X, x, i, trava, ctx)}
+      ${htmlPax(X, x, i, false, ctx)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
-      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa'}</span></button>${!x.print && !trava ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print && !trava ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
+      <div class="emchk" style="margin:4px 0 8px"><button type="button" data-print="${i}" class="${x.print ? 'ok' : ''}"><span class="cx">${x.print ? '✓' : '+'}</span><span>${x.print ? 'Print da tarifa anexado (tocar para ver)' : 'Anexar print da tarifa'}</span></button>${!x.print ? `<button type="button" data-printcola="${i}"><span class="cx">⎘</span><span>Colar print</span></button>` : ''}${x.print ? `<button type="button" data-printtroca="${i}" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>` : ''}</div>
       <div class="sub" style="margin:-4px 0 8px">Confira no print se a tarifa inclui a mala despachada. Às vezes o bilhete não mostra.</div>`;
   } else if (ehHotel(x)) {
     det += `${inp(X, 'nome', i, 'Hotel', x.nome)}${dupla(inp(X, 'data_ida', i, 'Check-in', x.data_ida ?? ctx.ida, 'd'), inp(X, 'data_volta', i, 'Check-out', x.data_volta ?? ctx.volta, 'd'))}
@@ -313,10 +313,16 @@ function htmlItem(X, x, i, ctx) {
   det += campoForn(X, x, i, usaMilhas(x) ? 'Fornecedor (se comprou milhas de alguém)' : 'Onde comprou (fornecedor)');
   det += chk(X, 'emitido', i, ehVoo(x) ? 'Emitido (bilhete gerado)' : 'Comprado / reservado', x.emitido, trava);
   const pend = pendenciasItem(x);
-  det += trava ? `<div class="sub" style="color:var(--verde)">Enviado para a planilha${x.enviado_em ? ' em ' + new Date(x.enviado_em).toLocaleDateString('pt-BR') : ''}.</div>` : ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : '';
+  det += trava ? `<div class="sub" style="color:var(--verde)">Enviado para a planilha${x.enviado_em ? ' em ' + new Date(x.enviado_em).toLocaleDateString('pt-BR') : ''}. Correção feita aqui vai para a mesma linha da planilha ao salvar, em até 5 minutos.</div>${htmlCorrecoes(X, x)}` : ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : '';
   return base + `<details ${ctx.fechou && !trava ? 'open' : ''} style="margin-top:4px"><summary style="cursor:pointer;font-size:13px;color:var(--verde);font-weight:600;padding:6px 0">Detalhes ${ehVoo(x) ? 'do voo' : ehHotel(x) ? 'do hotel' : 'do serviço'}${trava ? ' · na planilha' : x.emitido ? ' · emitido' : ''}</summary>${det}</details>`;
 }
 
+// correções feitas depois do lançamento: quem, quando e o que foi para a planilha
+const ROT_COL = { 'Valor a receber': 'valor', 'Taxas': 'custo', 'Milhas': 'milhas', 'Milheiro': 'milheiro', 'CPF (NF)': 'CPF da nota', 'Cia': 'companhia', 'Passageiros': 'passageiros', 'Observações': 'observações', 'Localizador': 'localizador', 'Origem': 'origem', 'Destino': 'destino', 'Data do Voo (Ida)': 'data da ida', 'Data do Voo (Volta)': 'data da volta', 'Gestor': 'gestor', 'Conta': 'conta' };
+function htmlCorrecoes(X, x) {
+  const C = Array.isArray(x.correcoes) ? x.correcoes : []; if (!C.length) return '';
+  return `<div class="sub" style="margin:4px 0 6px">${C.slice(-5).reverse().map(c => `Corrigido em ${new Date(c.em).toLocaleDateString('pt-BR')}${c.por && X.nomeTime && X.nomeTime(c.por) ? ' por ' + X.esc(X.nomeTime(c.por)) : ''}: ${X.esc((c.campos || []).map(k => ROT_COL[k] || k).join(', '))}${c.ajuste ? ' (ajuste no mês atual)' : ''}.`).join('<br>')}</div>`;
+}
 // emissão com as milhas do cliente da Gestão: o print preenche quase tudo; a equipe confere e digita o valor pagante (e a REX)
 const normP = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const milFmt = (n) => Math.round(+n || 0).toLocaleString('pt-BR');
@@ -434,8 +440,8 @@ function htmlTrechos(X, x, i, trava, ctx) {
   return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" checked ${trava ? 'disabled' : ''}><span>Separar o custo por trecho</span></label>
     ${x.ct.map((l, k) => { const hs = histTrecho(X, up3(l.o), up3(l.d), x), c = custoLinha(x, l), p = +l.pax || 1;
       return `<div style="border-left:3px solid var(--linha);padding-left:8px;margin:6px 0">
-      <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase" ${trava ? 'disabled' : ''}></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}" ${trava ? 'disabled' : ''}></label></div>
-      <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 0.9fr 0.9fr 0.7fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Milheiro (R$)</span><input data-ct="${i}|${k}|milheiro" inputmode="decimal" value="${X.esc(l.milheiro ?? '')}" placeholder="${X.esc(x.milheiro ?? '')}" ${trava ? 'disabled' : ''}></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}" ${trava ? 'disabled' : ''}></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}" ${trava ? 'disabled' : ''}></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}" ${trava ? 'disabled' : ''}></label></div>
+      <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase"></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}"></label></div>
+      <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 0.9fr 0.9fr 0.7fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}"></label><label class="fl"><span>Milheiro (R$)</span><input data-ct="${i}|${k}|milheiro" inputmode="decimal" value="${X.esc(l.milheiro ?? '')}" placeholder="${X.esc(x.milheiro ?? '')}"></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}"></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}"></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}"></label></div>
       <div class="sub" style="margin:2px 0 0">${c ? `Este trecho: ${X.brl2(c)}${p > 1 ? ` (${X.brl2(c / p)} por passageiro)` : ''}` : ''}${hs.length ? `<br>Já pago em ${X.esc(l.o)} → ${X.esc(l.d)}: ${hs.map(hh => `${X.brl2(hh.pax)}/pax${hh.milhas ? ` (${hh.milhas.toLocaleString('pt-BR')} milhas)` : ''}${hh.cia ? ' · ' + X.esc(hh.cia) : ''}${hh.data ? ' · ' + dd(hh.data) : ''}`).join(' | ')}` : ''}</div>
       ${trava || x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button><button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}</div>`; }).join('')}
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
@@ -811,15 +817,26 @@ export async function enviarParaPlanilha(X, r, IT, F, opts = {}) {
   linhas.forEach(l => { const x = IT[l.item]; x.planilha_id = l.id; x.enviado_em = agora; x.plan_data = dataNeg; x.plan_dados = retrato(l.dados); });
   return { ok: true, n: linhas.length };
 }
-// retrato das colunas que a conferência pode corrigir (tirado quando a conferência abre)
+// retrato das colunas que podem ser corrigidas numa linha já enviada
 export const retratoLinha = (X, r, IT, x, F) => retrato(dadosLinha(X, r, IT, x, F));
+// venda lançada antes do retrato existir: a base é o card como está agora (só o que mudar depois vai para a planilha)
+export function garantirRetrato(X, r, IT, F) {
+  IT.forEach(x => { if (enviado(x) && !ehCliente(x) && !x.cancelado_em && !x.plan_dados) x.plan_dados = retratoLinha(X, r, IT, x, F); });
+}
+// corrige na planilha tudo o que mudou nos serviços já enviados (card salvo ou conferência)
+export async function corrigirNaPlanilha(X, r, IT, F, opts = {}) {
+  let n = 0;
+  for (const x of IT) { const z = await atualizarNaPlanilha(X, r, IT, F, x, opts); if (!z.ok) return { ok: false, erro: z.erro, n }; n += z.n; }
+  return { ok: true, n };
+}
 // conferência: só o que foi mexido nesta conferência vai para a mesma linha da planilha (pelo ID sistema).
 // A planilha manda nos dados: o que alguém corrigiu direto nela não é sobrescrito. opts.antes = retratoLinha de quando abriu.
 // Valor ou custo de uma venda de mês fechado não mudam a linha antiga: entra uma linha de ajuste no mês atual
 // com a diferença (mesma regra do cancelamento B2B). opts.fechado('AAAA-MM') diz se o mês da venda está fechado.
 export async function atualizarNaPlanilha(X, r, IT, F, x, opts = {}) {
-  if (!enviado(x) || ehCliente(x) || x.cancelado_em || !opts.antes) return { ok: true, n: 0 };
-  const novo = retratoLinha(X, r, IT, x, F), antes = opts.antes;
+  const antes = opts.antes || x.plan_dados;
+  if (!enviado(x) || ehCliente(x) || x.cancelado_em || !antes) return { ok: true, n: 0 };
+  const novo = retratoLinha(X, r, IT, x, F);
   const igual = (a, b) => typeof a === 'number' || typeof b === 'number' ? r2(a) === r2(b) : String(a ?? '') === String(b ?? '');
   const mudou = CORRIGE.filter(k => !igual(novo[k], antes[k]));
   if (!mudou.length) return { ok: true, n: 0 };
@@ -844,6 +861,7 @@ export async function atualizarNaPlanilha(X, r, IT, F, x, opts = {}) {
   const { error } = await X.sb.from('fila_planilha').insert(linhas);
   if (error) return { ok: false, erro: error.message };
   x.plan_dados = { ...(x.plan_dados || {}), ...novo };
+  (x.correcoes = Array.isArray(x.correcoes) ? x.correcoes : []).push({ em: new Date().toISOString(), por: X.meuId || null, campos: mudou, ...(fechado && nums.length ? { ajuste: true } : {}) });
   if (fechado && nums.length) (x.ajustes = Array.isArray(x.ajustes) ? x.ajustes : []).push({ id: linhas[linhas.length - 1].id, em: new Date().toISOString() });
   return { ok: true, n: linhas.length };
 }
