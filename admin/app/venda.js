@@ -794,7 +794,7 @@ function cpfNF(X, r, IT) {
 }
 // Observações da linha: card, passageiros, custo por trecho, horários, bagagem, onde comprou e pagamento
 export function observacoesDe(r, x, F) {
-  return [numCard(r), ehVoo(x) && (x.pax || []).length ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).length ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
+  return [numCard(r), ehVoo(x) && paxAjustado(x).some(p => p.nome) ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).some(l => custoLinha(x, l) > 0) ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
     // chegada só quando houver (vem da cotação ou do print da emissão)
     ehVoo(x) && (x.chegada_ida || x.chegada_volta) ? 'Chegada: ' + [x.chegada_ida ? 'ida ' + x.chegada_ida : '', x.tipo_trecho !== 'ida' && x.chegada_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.chegada_volta : ''].filter(Boolean).join(', ') : '',
     // bagagem só quando informada (deixou de travar: sem ela, a linha não diz nada sobre mala)
@@ -804,7 +804,7 @@ export function observacoesDe(r, x, F) {
 const ciaDe = (x) => ehVoo(x) ? (x.cia_voo && x.cia_voo !== x.cia_emissora ? `${x.cia_emissora} (voa ${x.cia_voo})` : (x.cia_emissora || '')) : (x.fornecedor || '');
 // linha da planilha de um serviço (sem o ID sistema e sem a data da negociação)
 function dadosLinha(X, r, IT, x, F) {
-  const milhas = usaMilhas(x), p = r.pessoa_id ? (X.D.pessoas || []).find(y => y.id === r.pessoa_id) : null;
+  const milhas = usaMilhas(x), milhasInf = milhas && !!(+x.milhas || +x.taxas), p = r.pessoa_id ? (X.D.pessoas || []).find(y => y.id === r.pessoa_id) : null;
   return {
     // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
     'Gestor': (milhas && x.gestor) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
@@ -813,7 +813,9 @@ function dadosLinha(X, r, IT, x, F) {
     'Origem': x.origem || '', 'Destino': x.destino || '', 'Comprador': r.cliente || '', 'Passageiros': +x.passageiros || 1,
     'Contato': r.contato && !/@/.test(r.contato) ? r.contato : (p && p.celular) || '', 'Indicação': '',
     'Localizador': String(x.localizador || '').toUpperCase(),
-    'Milhas': milhas ? (+x.milhas || 0) : 0, 'Milheiro': milhas ? (+x.milheiro || 0) : 0, 'Taxas': milhas ? (+x.taxas || 0) : r2(custoDe(x)),
+    // emissão com milhas sem milhas e taxas informadas (custo digitado em reais, por exemplo o custo do dia da cotação):
+    // o custo vai inteiro em Taxas, senão a planilha lê custo zero e o lucro fica igual à venda
+    'Milhas': milhasInf ? (+x.milhas || 0) : 0, 'Milheiro': milhasInf ? (+x.milheiro || 0) : 0, 'Taxas': milhasInf ? (+x.taxas || 0) : r2(custoDe(x)),
     'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
     'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
     'Observações': observacoesDe(r, x, F),
