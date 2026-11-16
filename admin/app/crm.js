@@ -185,13 +185,19 @@ function linhaTempo(D, X, p) {
 
 // atendimentos do cliente (cards do Comercial e da Gestão): só a viagem e a etapa, sem datas; tocar abre o card.
 // Substitui a linha do tempo na ficha. Leads, reuniões e avaliações continuam nas telas de cada assunto.
+// diagnóstico preenchido no card (viagem ou Gestão): o time lê aqui, na ficha única, e copia para o WhatsApp
+function diagCard(X, r) {
+  const d = X.diagLinha && X.diagLinha(r); if (!d) return '';
+  return `<details style="margin:0 0 8px;border-left:3px solid var(--dourado,#A88B4A);padding:2px 0 2px 10px"><summary class="sub" style="cursor:pointer;margin:0">${X.esc(d.txt)}</summary>
+    <div style="white-space:pre-line;font-size:16px;margin:6px 0">${X.esc(d.resumo)}</div><button type="button" class="sec" data-dgcp="${X.esc(r.id)}" style="width:100%">Copiar diagnóstico</button></details>`;
+}
 function atendimentosHtml(D, X, p) {
   const { esc } = X;
   const L = (D.reunioes || []).filter(r => r.pessoa_id === p.id && !r.arquivado_em)
     .sort((a, b) => ((a.resultado === 'Em andamento') === (b.resultado === 'Em andamento') ? String(b.data || '').localeCompare(String(a.data || '')) : a.resultado === 'Em andamento' ? -1 : 1));
   if (!L.length) return '';
   const tag = (r) => r.resultado === 'Em andamento' ? ['', r.etapa || 'Em andamento'] : r.resultado === 'Fechou' ? ['ok', 'Fechou'] : r.resultado === 'Não fechou' ? ['alerta', 'Não fechou'] : ['', r.resultado || ''];
-  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || String(r.produto || '').replace('Viagem completa / pacote', 'Outro') || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>`; }).join('')}</section>`;
+  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || String(r.produto || '').replace('Viagem completa / pacote', 'Outro') || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>${diagCard(X, r)}`; }).join('')}</section>`;
 }
 
 // ficha no celular: o que se usa sempre fica aberto; o resto abre ao tocar
@@ -322,6 +328,7 @@ function telaFicha(P, X) {
   if ($('fichaAbas')) $('fichaAbas').onclick = (ev) => { const b = ev.target.closest('[data-fa]'); if (b && b.dataset.fa === 'gestao') X.abrirFicha(p.cliente_id); };
   P.querySelectorAll('[data-p]').forEach(b => b.onclick = () => ir(X, 'ficha', b.dataset.p));
   P.querySelectorAll('[data-at]').forEach(b => b.onclick = () => X.abrirAtendimento(b.dataset.at));
+  P.querySelectorAll('[data-dgcp]').forEach(b => b.onclick = () => X.copiarDiag && X.copiarDiag(b.dataset.dgcp));
   P.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => X.abrirReuniao(b.dataset.ag));
   P.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { location.hash = '#emissoes/' + b.dataset.em; });
   let tipo = 'familia';
