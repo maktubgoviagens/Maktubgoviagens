@@ -2033,7 +2033,7 @@ async function carregar(silencioso, manterTela) {
       sb.from('extrato_milhas').select('cliente_id,created_at').gte('created_at', mesMais(k0, -5) + '-01').order('created_at', { ascending: false }).limit(5000),
       sb.from('reunioes').select('cliente_id,data_reuniao').gte('data_reuniao', mesMais(k0, -5) + '-01'),
       sb.from('gestao_tarefas').select('*').limit(5000),
-      sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em').order('criado_em', { ascending: false }).limit(3000),
+      sb.from('contratos').select('id,cliente_id,status,assinado_em,enviado_em,criado_em,valor_total,forma_pagamento,parcelas').order('criado_em', { ascending: false }).limit(3000),
       sb.from('gestao_ciclos').select('cliente_id,inicio,vencimento').limit(5000),
       sb.from('extrato_milhas').select('cliente_id,data,quantidade,programa').eq('tipo', 'expiracao').is('arquivado_em', null).limit(5000),
       sb.from('gestao_conferencias').select('cliente_id,feita_em,feita_por').gte('feita_em', mesMais(k0, -5) + '-01').limit(5000)
@@ -2095,6 +2095,7 @@ async function carregar(silencioso, manterTela) {
   if (ag) { D.avGoogle = ag.error ? null : (ag.data || []); D.avGoogleErro = ag.error ? ag.error.message : ''; }
   $('pagina').classList.remove('carregando');
   D.atual = new Date();
+  if (gx && ADMIN) autoLancarGestao();
   if (!manterTela) tela(); else calAvisarNovo();
 }
 
@@ -3360,6 +3361,66 @@ async function autoLiberar() {
   let n = 0; for (const r of L) { LIB_AUTO.add(r.id); if (await iniciarOnboarding(r, true)) n++; }
   return n;
 }
+/* ---------- venda da Gestão na planilha B2C (decisão de 16/11/2026) ----------
+   Entra com o card em Fechou e o contrato assinado, com o valor líquido do card e custo zero (conta nas metas).
+   A comissão fica zerada pela regra do banco para o Serviço "Gestão de Milhas". Só cards fechados a partir de novembro/2026.
+   O ID sistema é o próprio id do card: enviar de novo dá chave duplicada na fila, então nunca duplica. */
+const GESTAO_PLAN_DESDE = '2026-11-01';
+const ctrAssinadoDe = (r) => contratosDe(clienteGestaoDe(r)).find(k => k.status === 'assinado') || null;
+const gestaoParaPlanilha = (r) => ehGestao(r) && r.resultado === 'Fechou' && !r.arquivado_em && !((r.fech || {}).planilha_id)
+  && r.fechado_em && isoLocal(new Date(r.fechado_em)) >= GESTAO_PLAN_DESDE && +r.valor_fechado > 0 && !!ctrAssinadoDe(r);
+const GESTAO_PLAN_IDA = new Set();
+async function lancarGestao(r, silencioso) {
+  if (!gestaoParaPlanilha(r) || GESTAO_PLAN_IDA.has(r.id)) return false;
+  GESTAO_PLAN_IDA.add(r.id);
+  const k = ctrAssinadoDe(r), p = r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null;
+  const diaF = isoLocal(new Date(r.fechado_em)), dataNeg = mesFechado(diaF.slice(0, 7)) ? hojeISO() : diaF;
+  const partes = String(r.cliente || '').trim().split(/\s+/);
+  const forma = k.forma_pagamento === 'cartao' ? 'Cartão de crédito' : k.forma_pagamento === 'pix' ? 'Pix' : k.forma_pagamento === 'pix_cartao' ? 'Pix + Cartão' : '';
+  const vt = +k.valor_total || 0, n = +k.parcelas || 0;
+  const obs = [r.numero ? '#' + String(r.numero).padStart(3, '0') : '', vt ? `Contrato de R$ ${vt.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${forma ? (n > 1 ? ` em ${n}x` : '') + (k.forma_pagamento === 'pix' ? ' no Pix' : ' no cartão') : ''}` : ''].filter(Boolean).join(' · ');
+  const dados = {
+    'Gestor': 'Maktub', 'Conta': '', 'Email ou Produto': 'Gestão de Milhas', 'Cidade': '', 'Cia': '',
+    'Sobrenome': partes.length > 1 ? partes[partes.length - 1] : '', 'CPF (NF)': '', 'Origem': '', 'Destino': '',
+    'Comprador': r.cliente || '', 'Passageiros': 1, 'Contato': r.contato && !/@/.test(r.contato) ? r.contato : (p && p.celular) || '', 'Indicação': '',
+    'Localizador': '', 'Data da negociação': dataNeg, 'Milhas': 0, 'Milheiro': 0, 'Taxas': 0,
+    'Valor a receber': Math.round(+r.valor_fechado * 100) / 100, 'Pago': !!r.pagamento_ok_em,
+    'Data do Voo (Ida)': '', 'Data do Voo (Volta)': '', 'Observações': obs,
+    'Forma de pagamento': forma, 'Quantas vezes': forma && forma !== 'Pix' && n ? n : '',
+    'Serviço': 'Gestão de Milhas', 'Vendedor': nomeTime(r.closer_id || r.assumido_por || r.responsavel_id) || '', 'ID sistema': r.id
+  };
+  const { error } = await sb.from('fila_planilha').insert({ id: r.id, atendimento_id: r.id, item: 0, dados });
+  // chave duplicada: a linha já está na fila (outra pessoa enviou antes); só falta marcar no card
+  if (error && !/duplicate|23505/i.test(error.message + ' ' + (error.code || ''))) { GESTAO_PLAN_IDA.delete(r.id); if (!silencioso) aviso('A venda da Gestão não foi para a planilha: ' + error.message); return false; }
+  const fech = { ...(r.fech || {}), planilha_id: r.id, plan_enviado_em: new Date().toISOString(), plan_data_neg: dataNeg, plan_dados: { 'Valor a receber': dados['Valor a receber'], 'Pago': dados['Pago'] } };
+  const u = await sb.from('atendimentos').update({ fech }).eq('id', r.id);
+  if (!u.error) r.fech = fech;
+  if (!silencioso) aviso('Venda da Gestão lançada na planilha. Entra nas metas em até 10 minutos.');
+  return true;
+}
+// depois de lançada: pagamento confirmado (Matheus) ou valor fechado corrigido no card vão para a mesma linha.
+// Valor de mês já fechado na comissão não muda sozinho (avisa para um administrador ajustar).
+async function gestaoCorrigirNaPlanilha(r) {
+  const f = r.fech || {}; if (!f.planilha_id) return;
+  const antes = f.plan_dados || {}, d = {};
+  const pago = !!r.pagamento_ok_em; if (antes['Pago'] !== pago) d['Pago'] = pago;
+  const v = Math.round(+r.valor_fechado * 100) / 100;
+  if (v > 0 && antes['Valor a receber'] !== undefined && antes['Valor a receber'] !== v) {
+    const mes = String(f.plan_data_neg || isoLocal(new Date(r.fechado_em))).slice(0, 7);
+    if (mesFechado(mes)) aviso('O valor da Gestão mudou, mas o mês da venda já foi fechado na comissão. Peça a um administrador para ajustar na planilha.');
+    else d['Valor a receber'] = v;
+  }
+  if (!Object.keys(d).length) return;
+  const { error } = await sb.from('fila_planilha').insert({ id: crypto.randomUUID(), atendimento_id: null, item: 0, dados: { _acao: 'atualizar', _alvo: f.planilha_id, ...d } });
+  if (error) { aviso('A correção da Gestão não chegou à planilha: ' + error.message); return; }
+  const fech = { ...f, plan_dados: { ...antes, ...d } };
+  const u = await sb.from('atendimentos').update({ fech }).eq('id', r.id); if (!u.error) r.fech = fech;
+}
+async function autoLancarGestao() {
+  if (!ADMIN) return 0;
+  let n = 0; for (const r of (D.reunioes || []).filter(gestaoParaPlanilha)) if (await lancarGestao(r, true)) n++;
+  return n;
+}
 function redesenharTopo(r) {
   const el = $('gTopo'); if (!el) return;
   el.outerHTML = htmlTopoGestao(r); ligarTopoGestao($('pagina'));
@@ -3554,6 +3615,7 @@ function ligarTopoGestao(P) {
     const k = (D.ctrs || []).find(x => String(x.id) === b.dataset.libCtrst);
     if (k) { k.status = data.status || k.status; if (data.status === 'assinado' && !k.assinado_em) k.assinado_em = new Date().toISOString(); }
     aviso(data.status === 'assinado' ? 'Contrato assinado.' : data.status === 'recusado' ? 'O cliente recusou a assinatura.' : 'Ainda aguardando a assinatura.');
+    if (r && data.status === 'assinado') await lancarGestao(r);
     if (r) depois(r);
   });
   // data prevista do pagamento: quem tem a Gestão anota quando o cliente avisa; o Matheus confirma quando o dinheiro cai
@@ -3573,7 +3635,7 @@ function ligarTopoGestao(P) {
     b.disabled = true;
     const { error } = await sb.from('atendimentos').update(upd).eq('id', r.id);
     if (error) { b.disabled = false; aviso(/pagamento_ok/.test(error.message) ? tec(GT_SQL_OB) : 'Não salvou: ' + error.message); return; }
-    Object.assign(r, upd); aviso(sim ? 'Pagamento confirmado.' : 'Confirmação desfeita.'); depois(r);
+    Object.assign(r, upd); aviso(sim ? 'Pagamento confirmado.' : 'Confirmação desfeita.'); gestaoCorrigirNaPlanilha(r); depois(r);
   });
   P.querySelectorAll('[data-lib-ini]').forEach(b => b.onclick = async () => { const r = achaR(b.dataset.libIni); if (!r) return; b.disabled = true; LIB_AUTO.add(r.id); if (await iniciarOnboarding(r)) redesenharTopo(r); else b.disabled = false; });
   P.querySelectorAll('[data-lib-pular]').forEach(b => b.onclick = async () => {
@@ -5133,6 +5195,8 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    // card da Gestão em Fechou: com o contrato assinado, a venda vai para a planilha (ou a linha já lançada é corrigida)
+    if (G && data.resultado === 'Fechou') { if ((data.fech || {}).planilha_id) await gestaoCorrigirNaPlanilha(data); else await lancarGestao(data); }
     let lancada = '';
     if (lancar) {
       const z = await lancarVenda(data, IT, row.fech, { valor_fechado: row.valor_fechado });
