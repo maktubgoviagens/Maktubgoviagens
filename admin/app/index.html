@@ -1319,7 +1319,7 @@ import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=60';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=35';
+import * as VENDA from '/admin/app/venda.js?v=36';
 import * as FCH from '/admin/app/fechou.js?v=1';
 import * as CONF from '/admin/app/conferencia.js?v=3';
 import * as ATV from '/admin/app/atividades.js?v=3';
@@ -5195,6 +5195,17 @@ function telaFormReuniao(P) {
     $('salvarRe').disabled = false;
     if (error) { $('msgRe').textContent = limparTec('Não salvou: ' + error.message); return; }
     const i = D.reunioes.findIndex(x => x.id === data.id); if (i >= 0) D.reunioes[i] = data; else D.reunioes.unshift(data);
+    // "O cliente ainda não pagou tudo" ligado ou desligado: as emissões já lançadas viram "a receber" (ou voltam a pagas) no app.
+    // Sem isso, a sincronização devolveria o "Pago" do app para a planilha. O saldo é registrado em Contas a receber.
+    if (!G && row.fech && !!(base.fech || {}).falta_on !== !!row.fech.falta_on) {
+      const ids = (IT || []).filter(x => x.planilha_id && !x.cancelado_em).map(x => String(x.planilha_id));
+      const pago = !row.fech.falta_on;
+      if (ids.length) {
+        const u = await sb.from('emissoes').update({ pago }).in('id', ids);
+        if (u.error) falhas.push('O card foi salvo, mas a venda não ficou como ' + (pago ? 'paga' : 'a receber') + ' no app: ' + u.error.message);
+        else (D.emissoes || []).forEach(e => { if (ids.includes(String(e.id))) e.pago = pago; });
+      }
+    }
     // card da Gestão em Fechou: com o contrato assinado, a venda vai para a planilha (ou a linha já lançada é corrigida)
     if (G && data.resultado === 'Fechou') { if ((data.fech || {}).planilha_id) await gestaoCorrigirNaPlanilha(data); else await lancarGestao(data); }
     let lancada = '';
@@ -5901,6 +5912,15 @@ async function registrarReceb(e, v) {
     const { error } = await sb.from('emissoes').update({ pago: true }).eq('id', e.id);
     if (error) { aviso('O recebimento foi salvo, mas a venda não ficou paga: ' + errCt(error)); return true; }
     e.pago = true; aviso('Venda quitada. O "Pago" vai para a planilha em até 5 minutos.');
+    // card com "O cliente ainda não pagou tudo": com todas as emissões dele pagas, o card mostra que foi quitado
+    const r = (D.reunioes || []).find(c => (c.itens || []).some(x => String(x.planilha_id) === String(e.id)));
+    if (r && (r.fech || {}).falta_on && !r.fech.falta_quitado_em) {
+      const ids = r.itens.filter(x => x.planilha_id && !x.cancelado_em).map(x => String(x.planilha_id));
+      if (ids.every(id => { const o = D.emissoes.find(y => String(y.id) === id); return o && o.pago; })) {
+        const fech = { ...r.fech, falta_quitado_em: new Date().toISOString() };
+        const u = await sb.from('atendimentos').update({ fech }).eq('id', r.id); if (!u.error) r.fech = fech;
+      }
+    }
   } else aviso(`Recebimento salvo. Falta ${brl2(faltaDe(e))}.`);
   return true;
 }

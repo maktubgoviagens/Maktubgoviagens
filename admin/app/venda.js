@@ -283,7 +283,7 @@ function htmlItem(X, x, i, ctx) {
   if (naCotacao(x, ctx)) return htmlItemCotacao(X, x, i, ctx);
   const trava = enviado(x);
   somarTrechos(x);
-  const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
+  const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) && (x.milhas || x.taxas) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
   const ref = [x.trecho && ehVoo(x) ? 'Trecho cotado: ' + X.esc(x.trecho) : '', x.custo_dia != null && x.custo_dia !== '' && X.verMargem !== false ? 'Custo do dia na cotação: ' + X.brl2(+x.custo_dia) : ''].filter(Boolean).join(' · ');
   if (!ctx.detalhes) return base + (ref ? `<div class="sub" style="margin:-2px 0 4px">${ref}</div>` : '');
   let det = ref ? `<div class="sub" style="margin:0 0 6px">${ref}</div>` : '';
@@ -444,18 +444,18 @@ function histTrecho(X, o, d, atual) {
 }
 function htmlTrechos(X, x, i, trava, ctx) {
   const milhas = usaMilhas(x);
-  if (!x.ct_on) return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" ${trava ? 'disabled' : ''}><span>Separar o custo por trecho</span></label>`;
+  if (!x.ct_on) return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}"><span>Separar o custo por trecho</span></label>`;
   // todos os trechos da viagem entram de uma vez; se ainda não tem custo digitado e a viagem mudou (ex.: virou ida e volta), refaz
   const pad = linhasPadrao(x, ctx), semCusto = (x.ct || []).every(l => !+l.milhas && !+l.taxas && !+l.custo);
   if (!Array.isArray(x.ct) || !x.ct.length || (semCusto && pad.length > x.ct.length)) x.ct = pad;
   const dd = (v) => v ? v.split('-').reverse().slice(0, 2).join('/') : '';
-  return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" checked ${trava ? 'disabled' : ''}><span>Separar o custo por trecho</span></label>
+  return `<label class="fc" style="margin:6px 0"><input type="checkbox" data-ctliga="${i}" checked><span>Separar o custo por trecho</span></label>
     ${x.ct.map((l, k) => { const hs = histTrecho(X, up3(l.o), up3(l.d), x), c = custoLinha(x, l), p = +l.pax || 1;
       return `<div style="border-left:3px solid var(--linha);padding-left:8px;margin:6px 0">
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1.3fr">${['o', 'd'].map(f => `<label class="fl"><span>${f === 'o' ? 'De' : 'Para'}</span><input data-ct="${i}|${k}|${f}" value="${X.esc(l[f] || '')}" maxlength="3" style="text-transform:uppercase"></label>`).join('')}<label class="fl"><span>Data</span><input type="date" data-ct="${i}|${k}|data" value="${X.esc(l.data || '')}"></label></div>
       <div class="duas-col" style="grid-template-columns:${milhas ? '1fr 0.9fr 0.9fr 0.7fr' : '1fr 0.8fr'}">${milhas ? `<label class="fl"><span>Milhas</span><input data-ct="${i}|${k}|milhas" inputmode="decimal" value="${X.esc(l.milhas ?? '')}"></label><label class="fl"><span>Milheiro (R$)</span><input data-ct="${i}|${k}|milheiro" inputmode="decimal" value="${X.esc(l.milheiro ?? '')}" placeholder="${X.esc(x.milheiro ?? '')}"></label><label class="fl"><span>Taxas (R$)</span><input data-ct="${i}|${k}|taxas" inputmode="decimal" value="${X.esc(l.taxas ?? '')}"></label>` : `<label class="fl"><span>Custo do trecho (R$)</span><input data-ct="${i}|${k}|custo" inputmode="decimal" value="${X.esc(l.custo ?? '')}"></label>`}<label class="fl"><span>Passageiros</span><input data-ct="${i}|${k}|pax" inputmode="numeric" value="${X.esc(l.pax ?? '')}"></label></div>
       <div class="sub" style="margin:2px 0 0">${c ? `Este trecho: ${X.brl2(c)}${p > 1 ? ` (${X.brl2(c / p)} por passageiro)` : ''}` : ''}${hs.length ? `<br>Já pago em ${X.esc(l.o)} → ${X.esc(l.d)}: ${hs.map(hh => `${X.brl2(hh.pax)}/pax${hh.milhas ? ` (${hh.milhas.toLocaleString('pt-BR')} milhas)` : ''}${hh.cia ? ' · ' + X.esc(hh.cia) : ''}${hh.data ? ' · ' + dd(hh.data) : ''}`).join(' | ')}` : ''}</div>
-      ${x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:12px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button>${trava ? '' : `<button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}`}</div>`; }).join('')}
+      ${x.ct.length < 2 ? '' : `<button type="button" data-ctsep="${i}|${k}" style="background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:14px;padding:0;margin-right:12px">emitido à parte: virar outra emissão</button>${trava ? '' : `<button type="button" data-cttira="${i}|${k}" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar trecho</button>`}`}</div>`; }).join('')}
     ${trava ? '' : `<button type="button" class="sec" data-ctmais="${i}" style="width:100%;margin:2px 0 8px">+ Trecho</button>`}`;
 }
 
@@ -705,6 +705,10 @@ export function editorFechamento(X, el, F, ctx) {
     const b = l && tx < 100 ? Math.round(l / (1 - tx / 100) * 100) / 100 : 0;
     return { n, tx, l, p, b, perda: b ? Math.round((b - l) * 100) / 100 : 0 };
   };
+  // pagamento parcial: a venda vai como "a receber" e o saldo é controlado em Contas a receber
+  const htmlFalta = () => `<label class="fc" style="margin:10px 0 4px;padding-top:8px;border-top:1px solid var(--linha)"><input type="checkbox" id="fFalta" ${F.falta_on ? 'checked' : ''}><span>O cliente ainda não pagou tudo</span></label>
+      ${F.falta_on ? `<div class="sub" style="margin:0 0 6px">${F.falta_quitado_em ? 'Quitado em Contas a receber.' : 'Ao salvar, a venda fica como a receber: a planilha passa para Pago "não" e a venda aparece em Contas a receber (no Início, em "Pagamentos de clientes a receber"). Lá você registra o que já entrou e, depois, o restante. Quando completar, a venda fica paga sozinha.'}</div>` : ''}`;
+  const ligarFalta = () => { const ch = el.querySelector('#fFalta'); if (ch) ch.onchange = () => { F.falta_on = ch.checked; if (!ch.checked) F.falta_quitado_em = null; desenha(); }; };
   const desenha = () => {
     const t = ctx.total();
     const cartao = F.forma === 'cartao', misto = F.forma === 'pix_cartao', lq = liq(), C = combo();
@@ -723,6 +727,7 @@ export function editorFechamento(X, el, F, ctx) {
       <div class="emchk" style="margin:10px 0 4px;border-top:1px solid var(--linha)"><button type="button" id="fComp" class="${F.comprovante ? 'ok' : ''}"><span class="cx">${F.comprovante ? '✓' : '+'}</span><span>${F.comprovante ? 'Comprovante anexado (tocar para ver)' : 'Anexar comprovante de pagamento'}</span></button>${F.comprovante ? '<button type="button" id="fCompT" style="font-size:12px;text-decoration:underline;color:var(--tinta-2)">trocar</button>' : '<button type="button" id="fCompC"><span class="cx">⎘</span><span>Colar print</span></button>'}</div>
       <div class="sub" style="margin-top:0">${F.comprovante ? (F.conferido ? `Conferido pelo financeiro${F.conferido_por ? ' (' + X.esc(X.nomeTime(F.conferido_por) || '') + ')' : ''}.` : 'Aparece no Início dos administradores para conferir.') : 'Com o comprovante, a venda vai como paga para a planilha.'}</div>
       ${F.comprovante && X.ADMIN ? `<label class="fc" style="margin:6px 0"><input type="checkbox" id="fConf" ${F.conferido ? 'checked' : ''}><span>Conferido pelo financeiro</span></label>` : ''}
+      ${htmlFalta()}
     </div>`;
     // troca de forma ou de parcelas: o total do cartão vem da cotação e a venda passa sozinha para o líquido (ou para o Pix)
     const ajusta = () => {
@@ -775,6 +780,7 @@ export function editorFechamento(X, el, F, ctx) {
     F._proxAnexo = () => F.comprovante ? null : { tipo: 'comprovante', alvo: F, depois: desenha };
     const ct = el.querySelector('#fCompT'); if (ct) ct.onclick = () => anexar(X, 'comprovante', F, () => { F.conferido = false; desenha(); });
     const cf = el.querySelector('#fConf'); if (cf) cf.onchange = () => { F.conferido = cf.checked; F.conferido_por = cf.checked ? X.meuId : null; F.conferido_em = cf.checked ? new Date().toISOString() : null; desenha(); };
+    ligarFalta();
   };
   desenha();
   return { desenha };
@@ -792,6 +798,10 @@ function cpfNF(X, r, IT) {
   const doc = doc0 && doc0.cpf ? doc0 : paxComprador ? { cpf: paxComprador.cpf } : doc0;
   return doc && doc.cpf ? (d => d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : doc.cpf)(String(doc.cpf).replace(/\D/g, '')) : '';
 }
+// pagamento parcial (17/11/2026): a venda volta para "a receber". O saldo e cada valor que entra ficam em Contas a receber
+// (recebimentos_cliente), que quita a venda sozinha quando completa. O card só marca que o cliente ainda não pagou tudo.
+export const faltaAberta = (F) => !!(F && F.falta_on && !F.falta_quitado_em);
+const textoFalta = (F) => faltaAberta(F) ? 'Cliente ainda não pagou tudo: o saldo está em Contas a receber' : '';
 // Observações da linha: card, passageiros, custo por trecho, horários, bagagem, onde comprou e pagamento
 export function observacoesDe(r, x, F) {
   return [numCard(r), ehVoo(x) && paxAjustado(x).some(p => p.nome) ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).some(l => custoLinha(x, l) > 0) ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
@@ -799,7 +809,7 @@ export function observacoesDe(r, x, F) {
     ehVoo(x) && (x.chegada_ida || x.chegada_volta) ? 'Chegada: ' + [x.chegada_ida ? 'ida ' + x.chegada_ida : '', x.tipo_trecho !== 'ida' && x.chegada_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.chegada_volta : ''].filter(Boolean).join(', ') : '',
     // bagagem só quando informada (deixou de travar: sem ela, a linha não diz nada sobre mala)
     ehVoo(x) && x.bagagem != null && x.bagagem !== '' ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
-    F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · ');
+    F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : '', textoFalta(F)].filter(Boolean).join(' · ');
 }
 const ciaDe = (x) => ehVoo(x) ? (x.cia_voo && x.cia_voo !== x.cia_emissora ? `${x.cia_emissora} (voa ${x.cia_voo})` : (x.cia_emissora || '')) : (x.fornecedor || '');
 // linha da planilha de um serviço (sem o ID sistema e sem a data da negociação)
@@ -816,7 +826,7 @@ function dadosLinha(X, r, IT, x, F) {
     // emissão com milhas sem milhas e taxas informadas (custo digitado em reais, por exemplo o custo do dia da cotação):
     // o custo vai inteiro em Taxas, senão a planilha lê custo zero e o lucro fica igual à venda
     'Milhas': milhasInf ? (+x.milhas || 0) : 0, 'Milheiro': milhasInf ? (+x.milheiro || 0) : 0, 'Taxas': milhasInf ? (+x.taxas || 0) : r2(custoDe(x)),
-    'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante,
+    'Valor a receber': r2(x.venda), 'Pago': !!F.comprovante && !faltaAberta(F),
     'Data do Voo (Ida)': x.data_ida || '', 'Data do Voo (Volta)': x.tipo_trecho === 'ida' ? '' : (x.data_volta || ''),
     'Observações': observacoesDe(r, x, F),
     'Forma de pagamento': F.forma === 'cartao' ? 'Cartão de crédito' : F.forma === 'pix' ? 'Pix' : F.forma === 'pix_cartao' ? 'Pix + Cartão' : '',
@@ -826,7 +836,7 @@ function dadosLinha(X, r, IT, x, F) {
 }
 const NUMEROS = ['Milhas', 'Milheiro', 'Taxas', 'Valor a receber'];
 // colunas que a conferência pode corrigir numa linha que já foi para a planilha
-const CORRIGE = ['Gestor', 'Conta', 'Cia', 'CPF (NF)', 'Passageiros', 'Localizador', 'Origem', 'Destino', 'Data do Voo (Ida)', 'Data do Voo (Volta)', 'Observações', ...NUMEROS];
+const CORRIGE = ['Gestor', 'Conta', 'Cia', 'CPF (NF)', 'Passageiros', 'Localizador', 'Origem', 'Destino', 'Data do Voo (Ida)', 'Data do Voo (Volta)', 'Observações', 'Pago', ...NUMEROS];
 const retrato = (d) => Object.fromEntries(CORRIGE.map(k => [k, d[k]]));
 // emissão já lançada que foi separada: a venda das emissões tem que continuar somando o que era antes
 const rs = (v) => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -900,8 +910,10 @@ export async function corrigirNaPlanilha(X, r, IT, F, opts = {}) {
 // Valor ou custo de uma venda de mês fechado não mudam a linha antiga: entra uma linha de ajuste no mês atual
 // com a diferença (mesma regra do cancelamento B2B). opts.fechado('AAAA-MM') diz se o mês da venda está fechado.
 export async function atualizarNaPlanilha(X, r, IT, F, x, opts = {}) {
-  const antes = opts.antes || x.plan_dados;
+  let antes = opts.antes || x.plan_dados;
   if (!enviado(x) || ehCliente(x) || x.cancelado_em || !antes) return { ok: true, n: 0 };
+  // retrato de antes do "Falta receber": a linha foi lançada como paga (o lançamento exige o comprovante)
+  if (!('Pago' in antes)) antes = { ...antes, 'Pago': true };
   const novo = retratoLinha(X, r, IT, x, F);
   const igual = (a, b) => typeof a === 'number' || typeof b === 'number' ? r2(a) === r2(b) : String(a ?? '') === String(b ?? '');
   const mudou = CORRIGE.filter(k => !igual(novo[k], antes[k]));
