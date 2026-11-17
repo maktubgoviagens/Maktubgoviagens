@@ -1,9 +1,0 @@
-Bibliotecas de movimento, servidas pelo próprio site (sem depender de CDN).
-Carregadas só no computador, depois que a página termina de carregar, por /assets/movimento/movimento.js.
-
-gsap.min.js           GSAP 3.15.1           licença: https://gsap.com/standard-license (uso gratuito)
-ScrollTrigger.min.js  GSAP ScrollTrigger 3.15.1  mesma licença
-lenis.min.js          Lenis 1.3.27          licença MIT (https://github.com/darkroomengineering/lenis)
-
-Copiados sem alteração dos pacotes npm "gsap@3.15.1" (pasta dist) e "lenis@1.3.27" (pasta dist).
-Única mudança: retirada a linha final que apontava para o arquivo .map, que não é publicado.

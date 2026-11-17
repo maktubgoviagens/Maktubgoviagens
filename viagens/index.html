@@ -623,6 +623,8 @@ footer a:hover{color:var(--creme)}
  .g-selo .estrelas i{animation:f3estrela .45s ease both}
  .g-selo .estrelas i:nth-child(1){animation-delay:.5s}.g-selo .estrelas i:nth-child(2){animation-delay:.62s}.g-selo .estrelas i:nth-child(3){animation-delay:.74s}.g-selo .estrelas i:nth-child(4){animation-delay:.86s}.g-selo .estrelas i:nth-child(5){animation-delay:.98s}
  @keyframes f3estrela{from{opacity:.18}to{opacity:1}}
+ .titulo-entra{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+ .titulo-entra:not(.na-tela){opacity:0;transform:translateY(14px)}
 }
 /* histórias: quem viajou em destaque, depoimento junto da história e zoom lento na foto (celular) */
 .caso-quem,.depo-junto{display:none}
@@ -708,7 +710,6 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(25,56,38
 .mk-links a{white-space:nowrap;font-size:13px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
 .mk-links a:hover{color:#193826}
 .mk-links a.mk-ouro{color:#715E32}
-.mk-num{margin-right:8px;color:#715E32}
 .mk-links a.mk-cta{border:1px solid rgba(168,139,74,0.45);padding:9px 20px;color:#193826;font-weight:500;transition:background .25s,border-color .25s}
 .mk-links a.mk-cta:hover{background:rgba(168,139,74,0.1);border-color:#A88B4A}
 .mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
@@ -769,13 +770,6 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
-<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
-<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
-<!-- o essencial do movimento vai embutido (igual ao que está em movimento.css), para nada piscar; o resto do CSS chega sem segurar a primeira pintura -->
-<style id="mov-critico">@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root){animation:mov-vt-sai .26s cubic-bezier(0.16,1,0.3,1) both}::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(0.16,1,0.3,1) both}#navbar{view-transition-name:mk-topo}::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}}@keyframes mov-vt-sai{to{opacity:0}}@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}html.mov .reveal:not(.is-visible){opacity:0}html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}@media (min-width:1101px){html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}html.mov [data-hero-foto]:not(.is-visible){clip-path:inset(0 0 100% 0)}}.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none!important}</style>
-<link rel="preload" as="style" href="/assets/movimento/movimento.css" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/movimento/movimento.css"></noscript>
-<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -791,10 +785,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </span>
     </a>
     <ul class="mk-links" id="menu" aria-label="Principal">
-      <li><a href="/gestao-de-milhas/" class="mk-ouro"><span class="mk-num" aria-hidden="true">01</span>Gestão de Milhas</a></li>
-      <li><a href="/viagens/"><span class="mk-num" aria-hidden="true">02</span>Viagens</a></li>
-      <li><a href="/quem-somos/"><span class="mk-num" aria-hidden="true">03</span>Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/"><span class="mk-num" aria-hidden="true">04</span>Como funciona</a></li>
+      <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
+      <li><a href="/viagens/">Viagens</a></li>
+      <li><a href="/quem-somos/">Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -806,7 +800,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== APRESENTAÇÃO ===================== -->
 <section class="secao primeira" id="inicio" aria-labelledby="t-inicio">
   <div class="wrap inicio-grid">
-   <div class="inicio-texto entra-topo" data-hero-texto>
+   <div class="inicio-texto entra-topo">
     <span class="olho">Viagens sob medida</span>
     <a class="g-selo g-claro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
     <h1 id="t-inicio">Viagens sob medida,<em>pensadas para você.</em></h1>
@@ -816,7 +810,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     </div>
     <p class="hero-nota">É cliente da Gestão de Milhas Maktub Go? Veja as condições em <a href="#contratacao">Como contratar</a>.</p>
    </div>
-   <figure class="inicio-foto" data-hero-foto>
+   <figure class="inicio-foto">
     <picture><source media="(max-width: 1000px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><img src="/ativos/caso-maju-adriano-machu-picchu.webp" alt="Maju e Adriano, clientes da Maktub Go, em Machu Picchu, com uma lhama ao fundo" width="960" height="1200" style="object-position:center 30%" fetchpriority="high"></picture>
     <figcaption>Maju e Adriano em Machu Picchu, viagem planejada pela Maktub Go.</figcaption>
    </figure>
@@ -843,7 +837,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
 <section class="secao secao-creme" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">01 · </span>Experiências de viagens sob medida</span>
+    <span class="olho">Experiências de viagens sob medida</span>
     <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
     <p class="intro">Clientes da nossa alfaiataria de viagens, com as fotos e as palavras deles.</p>
  
@@ -948,18 +942,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
   </div>
 </section>
  
-<!-- Faixa corrida com os nomes das 8 etapas (os mesmos da lista logo abaixo). Só visual: o leitor de tela lê a lista. -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-trilho">
-    <div class="marquee-grupo"><span class="marquee-item">Rota</span><span class="marquee-ponto"></span><span class="marquee-item">Voos</span><span class="marquee-ponto"></span><span class="marquee-item">Hotelaria</span><span class="marquee-ponto"></span><span class="marquee-item">Transporte no destino</span><span class="marquee-ponto"></span><span class="marquee-item">Deslocamentos entre destinos</span><span class="marquee-ponto"></span><span class="marquee-item">Ingressos</span><span class="marquee-ponto"></span><span class="marquee-item">Seguro viagem</span><span class="marquee-ponto"></span><span class="marquee-item">Roteiro</span><span class="marquee-ponto"></span></div>
-    <div class="marquee-grupo"><span class="marquee-item">Rota</span><span class="marquee-ponto"></span><span class="marquee-item">Voos</span><span class="marquee-ponto"></span><span class="marquee-item">Hotelaria</span><span class="marquee-ponto"></span><span class="marquee-item">Transporte no destino</span><span class="marquee-ponto"></span><span class="marquee-item">Deslocamentos entre destinos</span><span class="marquee-ponto"></span><span class="marquee-item">Ingressos</span><span class="marquee-ponto"></span><span class="marquee-item">Seguro viagem</span><span class="marquee-ponto"></span><span class="marquee-item">Roteiro</span><span class="marquee-ponto"></span></div>
-  </div>
-</div>
-
 <!-- ===================== COMO FUNCIONA ===================== -->
 <section class="secao" id="como-funciona" aria-labelledby="t-como">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">02 · </span>Como a viagem é organizada</span>
+    <span class="olho">Como a viagem é organizada</span>
     <h2 id="t-como">A viagem é montada<em>na ordem certa.</em></h2>
     <p class="intro">São 8 etapas. Cada uma é um serviço próprio e pode ser contratada sozinha.</p>
  
@@ -982,7 +968,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
   <div class="wrap duas">
     <div class="figura figura-retrato" data-foto="/ativos/destino-santarem.webp" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
     <div>
-      <span class="olho"><span class="olho-num" aria-hidden="true">03 · </span>A gente vai antes</span>
+      <span class="olho">A gente vai antes</span>
       <h2 id="t-vividos">Não indicamos<em>por catálogo.</em></h2>
       <p class="intro">Sempre que possível, alguém da equipe vive o destino antes de ele entrar no roteiro de alguém: o passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
       <p style="margin-top:var(--e2)">O Matheus, um dos nossos sócios, caindo da prancha em Santarém. Ele foi para isso: ver com o próprio corpo o que vale a pena antes de colocar no roteiro de alguém.</p>
@@ -1017,7 +1003,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== COMO CONTRATAR ===================== -->
 <section class="secao secao-verde" id="contratacao" aria-labelledby="t-contratacao">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">04 · </span>Como contratar</span>
+    <span class="olho">Como contratar</span>
     <h2 id="t-contratacao">Do primeiro oi<em>até a sua volta.</em></h2>
     <p class="intro">Sem letra miúda e sem surpresa no meio do caminho.</p>
  
@@ -1056,7 +1042,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== SERVIÇOS E CONTATO ===================== -->
 <section class="secao" id="servicos" aria-labelledby="t-fecho">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">05 · </span>Fale com a Maktub</span>
+    <span class="olho">Fale com a Maktub</span>
     <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
     <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
  
@@ -1091,8 +1077,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </li>
     </ul>
  
-    <div class="acoes acoes-fecho">
-      <a class="cta-redondo" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+    <div class="acoes">
+      <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
       <a class="btn" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
     </div>
   </div>
@@ -1164,7 +1150,11 @@ menu.addEventListener('click', function(e){
 addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
-/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
+/* borda do cabeçalho ao rolar */
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 24);
+},{passive:true});
 </script>
 <script>
 /* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
@@ -1236,6 +1226,15 @@ addEventListener('keydown', function(e){
     document.querySelectorAll('[data-mk-total]').forEach(function(e){ e.textContent = d.total; });
   }
   try{ fetch('/ativos/avaliacoes.json', {cache:'no-cache'}).then(function(r){ return r.ok ? r.json() : null; }).then(aplica).catch(function(){}); }catch(e){}
+})();
+</script>
+<script>
+/* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
+   Quem pede menos movimento no aparelho não recebe nada disso. */
+(function(){
+  if(!('IntersectionObserver' in window) || !window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('na-tela'); io.unobserve(e.target); } }); }, { rootMargin:'0px 0px 20% 0px' });
+  document.querySelectorAll('main section h2').forEach(function(h){ if(h.closest('.reveal')) return; h.classList.add('titulo-entra'); io.observe(h); });
 })();
 </script>
 <script>
