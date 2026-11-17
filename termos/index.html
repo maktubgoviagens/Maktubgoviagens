@@ -140,6 +140,9 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): nesta página só o cabeçalho, a barra de leitura e a transição entre páginas. O conteúdo fica parado. -->
+<link rel="stylesheet" href="/assets/movimento/movimento.css">
+<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
 <header class="mk-topo" id="navbar">
@@ -255,7 +258,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
   function fecha(){menu.dataset.aberto='false';btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Abrir menu');}
   btn.addEventListener('click',function(){var a=menu.dataset.aberto!=='true';menu.dataset.aberto=a;btn.setAttribute('aria-expanded',a);btn.setAttribute('aria-label',a?'Fechar menu':'Abrir menu');});
   menu.addEventListener('click',function(e){if(e.target.tagName==='A')fecha();});
-  addEventListener('scroll',function(){cab.classList.toggle('rolou',scrollY>20);},{passive:true});
+  /* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 })();
 </script>
 </body>

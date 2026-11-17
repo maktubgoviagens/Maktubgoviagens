@@ -1,0 +1,133 @@
+/* ============================================================
+   MOVIMENTO MAKTUB GO
+   Transições e animações das páginas públicas, feitas a partir da referência
+   de movimento (mesmas curvas, tempos e técnicas), com a identidade da Maktub Go.
+   Como aplicar em uma seção nova está no começo de /assets/movimento/movimento.js.
+
+   Regras da casa:
+   - o que espera animação depende da classe "mov" no <html>. Sem JavaScript,
+     ou se o script falhar (a classe sai em 3s), tudo aparece pronto;
+   - quem pede menos movimento no aparelho (prefers-reduced-motion) vê tudo parado;
+   - só se anima transform, opacity, clip-path e, pontualmente, filter;
+   - o botão de diagnóstico nunca espera animação.
+   ============================================================ */
+
+:root{
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-cortina:cubic-bezier(0.76,0,0.24,1);
+  --raio:16px;
+  --mov-ouro:#A88B4A;
+}
+
+/* ---------- 1. Transição entre páginas (CSS nativo) ---------- */
+@media (prefers-reduced-motion:no-preference){
+  @view-transition{navigation:auto}
+  ::view-transition-group(root){animation-duration:.52s}
+  ::view-transition-old(root){animation:none}
+  ::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(.22,1,.36,1) both}
+}
+@keyframes mov-vt-entra{0%{opacity:0;transform:translateY(14px) scale(1.006)}to{opacity:1;transform:none}}
+
+/* âncoras caem abaixo do cabeçalho fixo */
+main [id]{scroll-margin-top:76px}
+
+/* ---------- 2. Rolagem suave (Lenis) ---------- */
+html.lenis,html.lenis body{height:auto}
+html.lenis{scroll-behavior:auto !important}
+.lenis:not(.lenis-autoToggle).lenis-stopped{overflow:clip}
+.lenis.lenis-smooth iframe{pointer-events:none}
+
+/* ---------- 3. Cabeçalho e barra de leitura ---------- */
+#navbar{transition:transform .55s var(--ease-out),box-shadow .3s}
+#navbar.mov-escondido{transform:translateY(-110%)}
+.mov-progresso{position:fixed;top:0;left:0;right:0;height:2px;z-index:1001;background:var(--mov-ouro);transform:scaleX(0);transform-origin:left;pointer-events:none}
+
+/* ---------- 4. Revelação ao rolar ---------- */
+html.mov .reveal{opacity:0;transform:translateY(36px);transition:opacity .85s,transform .85s var(--ease-out);transition-delay:var(--d,0s)}
+html.mov .reveal.is-visible{opacity:1;transform:none}
+.reveal.d1{--d:.05s}.reveal.d2{--d:.15s}.reveal.d3{--d:.25s}.reveal.d4{--d:.35s}.reveal.d5{--d:.45s}.reveal.d6{--d:.55s}
+
+/* títulos palavra por palavra */
+.word{display:inline-block;overflow:visible;vertical-align:top;padding:0 .035em .16em;margin:0 -.035em -.16em}
+.word>span{display:inline-block}
+html.mov .split-reveal .word>span{opacity:0;filter:blur(10px);transform:translateY(105%);transition:.9s var(--ease-out);transition-delay:calc(var(--i) * 32ms)}
+html.mov .split-reveal.is-visible .word>span{opacity:1;filter:blur(0);transform:translateY(0)}
+html.mov .split-reveal.is-settled .word>span{filter:none;transition:none}
+html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}
+
+/* título do topo */
+html.mov .mov-titulo .word>span{filter:blur(12px);opacity:0;transform:translateY(90%)}
+html.mov .mov-titulo.is-visible .word>span{filter:blur(0);opacity:1;transform:translateY(0);transition:1.05s var(--ease-out);transition-delay:calc(.15s + var(--i) * 45ms)}
+html.mov .mov-titulo.is-settled .word>span{filter:none;transition:none}
+@media (min-width:1101px){html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}}
+.entra-topo>.mov-titulo{animation:none}
+/* o botão do topo nunca espera animação */
+.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none !important}
+
+/* cortina (na referência, só a faixa de foto larga usa) */
+html.mov .image-reveal{clip-path:inset(0 0 100% 0);transition:clip-path 1.25s var(--ease-cortina)}
+html.mov .image-reveal.is-visible{clip-path:inset(0 0 0 0)}
+
+/* ---------- 5. Fotos: cantos, tom quente e movimento dentro da moldura ---------- */
+.figura,.caso-foto,.membro-foto{border-radius:var(--raio);overflow:hidden;isolation:isolate}
+.inicio-foto picture{display:block;overflow:hidden;border-radius:var(--raio)}
+.caso{border-radius:var(--raio);overflow:hidden}
+.caso .figura-caso{border-radius:0}
+/* a camada que se move fica dentro da moldura */
+.mov-camada{position:absolute;inset:0;background:inherit;border-radius:inherit;pointer-events:none;will-change:transform}
+/* tom quente leve, como na referência */
+.figura,.caso-foto,.membro-foto,.inicio-foto img{filter:saturate(.8) sepia(.1) brightness(1.02)}
+.figura-caso::after,.caso-foto::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:var(--mov-ouro);mix-blend-mode:soft-light;opacity:.3;transition:opacity .6s ease}
+.figura-caso>.mov-camada,.figura-caso>.camada,.caso-foto>.mov-camada{transition:scale .8s var(--ease-out),opacity 1.2s ease}
+@media (hover:hover){
+  .caso:hover .figura-caso>.mov-camada,.caso:hover .figura-caso>.camada,.caso-bloco:hover .caso-foto>.mov-camada{scale:1.045}
+  .caso:hover .figura-caso::after{opacity:.2}
+}
+
+/* ---------- 6. Etapas: linhas verticais que crescem ---------- */
+.jornada>.passo{border-top:0;border-left:1px solid rgba(168,139,74,.35);padding:2px 22px 8px;position:relative}
+.jornada>.passo.passo-seguro{border-left:2px solid var(--mov-ouro)}
+.jornada>.passo::after{content:"";position:absolute;left:-2px;top:0;width:3px;height:34%;background:var(--mov-ouro)}
+html.mov .jornada>.passo::after{height:0;transition:height 1.2s .25s var(--ease-out)}
+html.mov .jornada>.passo.is-visible::after{height:34%}
+
+/* a lista que desliza de lado não cria rolagem lateral */
+.prateleira{overflow-x:clip}
+
+/* ---------- 7. Faixa corrida ---------- */
+.marquee{height:104px;display:flex;align-items:center;overflow:hidden;border-block:1px solid rgba(25,56,38,.18);background:#F7F3EA}
+.marquee-trilho{width:max-content;display:flex;flex:none;align-items:center;animation:mov-marquee 36s linear infinite;will-change:transform}
+.marquee-grupo{display:flex;flex:none;align-items:center;padding-left:clamp(22px,2.5vw,42px)}
+.marquee-item{display:inline-flex;flex:none;align-items:center;white-space:nowrap;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:clamp(18px,1.45vw,22px);font-weight:400;line-height:1;letter-spacing:.035em;text-transform:uppercase;color:#193826}
+.marquee-item::after{content:"";width:5px;height:5px;flex:none;margin-inline:clamp(34px,4vw,72px);border:1px solid var(--mov-ouro);border-radius:50%}
+@keyframes mov-marquee{to{transform:translate3d(-50%,0,0)}}
+@media (max-width:760px){.marquee{height:78px}.marquee-grupo{padding-left:18px}.marquee-item{font-size:16px;letter-spacing:.045em}.marquee-item::after{width:4px;height:4px;margin-inline:26px}}
+@media (prefers-reduced-motion:reduce){.marquee{overflow-x:auto}.marquee-trilho{animation:none}}
+
+/* ---------- 8. CTA redondo ---------- */
+.cta-redondo{flex:0 0 auto;width:clamp(164px,13vw,202px);height:clamp(164px,13vw,202px);border-radius:50%;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;padding:24px;background:#B49755;color:#193826;text-decoration:none;text-transform:uppercase;font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:500;line-height:1.35;letter-spacing:.035em;transition:transform .45s var(--ease-out)}
+.cta-redondo svg{width:27px;height:27px}
+.cta-redondo:hover{transform:rotate(-8deg) scale(1.04)}
+.cta-redondo:focus-visible{outline:2px solid #193826;outline-offset:5px}
+.acoes-fecho{align-items:center;gap:22px 30px}
+
+/* ---------- 9. Microinterações ---------- */
+.link-texto{background-image:linear-gradient(var(--mov-ouro),var(--mov-ouro));background-repeat:no-repeat;background-origin:border-box;background-position:0 100%;background-size:0 1px;transition:border-color .3s ease,background-size 1s var(--ease-out)}
+.link-texto:hover,.link-texto:focus-visible{background-size:100% 1px}
+@media (hover:hover) and (min-width:1241px) and (prefers-reduced-motion:no-preference){
+  @supports (content:"a" / ""){
+    .mov-rola{display:inline-block;overflow:clip;vertical-align:baseline}
+    .mov-rola>span{display:inline-block;position:relative;transition:transform .42s var(--ease-out)}
+    .mov-rola>span::after{content:attr(data-t) / "";position:absolute;left:0;top:100%}
+    a:hover>.mov-rola>span,a:focus-visible>.mov-rola>span{transform:translateY(-100%)}
+  }
+}
+
+/* ---------- 10. Menos movimento e impressão ---------- */
+@media (prefers-reduced-motion:reduce){
+  #navbar.mov-escondido{transform:none}
+}
+@media print{
+  html.mov .reveal,html.mov .image-reveal,html.mov main h1,html.mov main h2,html.mov .word>span{opacity:1 !important;transform:none !important;clip-path:none !important;filter:none !important}
+  .mov-progresso,.marquee{display:none}
+}

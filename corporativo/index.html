@@ -339,6 +339,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
+<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
+<link rel="stylesheet" href="/assets/movimento/movimento.css">
+<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -684,10 +688,7 @@ form.addEventListener('submit', async function(e){
   window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto), '_blank');
 });
  
-const cab = document.querySelector('header');
-addEventListener('scroll', function(){
-  cab.classList.toggle('rolou', scrollY > 30);
-}, {passive:true});
+/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 </script>
 <script>
 (function(){
