@@ -680,6 +680,8 @@ footer a:hover{color:var(--creme)}
  .g-selo .estrelas i{animation:f3estrela .45s ease both}
  .g-selo .estrelas i:nth-child(1){animation-delay:.5s}.g-selo .estrelas i:nth-child(2){animation-delay:.62s}.g-selo .estrelas i:nth-child(3){animation-delay:.74s}.g-selo .estrelas i:nth-child(4){animation-delay:.86s}.g-selo .estrelas i:nth-child(5){animation-delay:.98s}
  @keyframes f3estrela{from{opacity:.18}to{opacity:1}}
+ .titulo-entra{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+ .titulo-entra:not(.na-tela){opacity:0;transform:translateY(14px)}
 }
 /* exceção única à escala de fontes: título da home no computador em 80px */
 @media (min-width:1001px){.hero h1{font-size:80px}}
@@ -723,7 +725,6 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(25,56,38
 .mk-links a{white-space:nowrap;font-size:13px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
 .mk-links a:hover{color:#193826}
 .mk-links a.mk-ouro{color:#715E32}
-.mk-num{margin-right:8px;color:#715E32}
 .mk-links a.mk-cta{border:1px solid rgba(168,139,74,0.45);padding:9px 20px;color:#193826;font-weight:500;transition:background .25s,border-color .25s}
 .mk-links a.mk-cta:hover{background:rgba(168,139,74,0.1);border-color:#A88B4A}
 .mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
@@ -853,13 +854,6 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
-<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
-<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
-<!-- o essencial do movimento vai embutido (igual ao que está em movimento.css), para nada piscar; o resto do CSS chega sem segurar a primeira pintura -->
-<style id="mov-critico">@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root){animation:mov-vt-sai .26s cubic-bezier(0.16,1,0.3,1) both}::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(0.16,1,0.3,1) both}#navbar{view-transition-name:mk-topo}::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}}@keyframes mov-vt-sai{to{opacity:0}}@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}html.mov .reveal:not(.is-visible){opacity:0}html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}@media (min-width:1101px){html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}html.mov [data-hero-foto]:not(.is-visible){clip-path:inset(0 0 100% 0)}}.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none!important}</style>
-<link rel="preload" as="style" href="/assets/movimento/movimento.css" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/movimento/movimento.css"></noscript>
-<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -875,10 +869,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </span>
     </a>
     <ul class="mk-links" id="menu" aria-label="Principal">
-      <li><a href="/gestao-de-milhas/" class="mk-ouro"><span class="mk-num" aria-hidden="true">01</span>Gestão de Milhas</a></li>
-      <li><a href="/viagens/"><span class="mk-num" aria-hidden="true">02</span>Viagens</a></li>
-      <li><a href="/quem-somos/"><span class="mk-num" aria-hidden="true">03</span>Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/"><span class="mk-num" aria-hidden="true">04</span>Como funciona</a></li>
+      <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
+      <li><a href="/viagens/">Viagens</a></li>
+      <li><a href="/quem-somos/">Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/">Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -891,7 +885,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="hero" aria-labelledby="t-hero">
   <div class="hero-fundo" aria-hidden="true"></div>
   <div class="wrap">
-    <div class="hero-texto entra-topo" data-hero-texto>
+    <div class="hero-texto entra-topo">
       <span class="olho">Gestão de Milhas Maktub Go</span>
       <a class="g-selo g-claro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
       <h1 id="t-hero">Seus pontos viram viagens.<em>A gente cuida do caminho.</em></h1>
@@ -902,7 +896,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       <p class="hero-gratis">Diagnóstico gratuito por chamada</p>
       <p class="hero-publico">Ideal para quem movimenta a partir de R$ 20 mil por mês, somando cartões e Pix.</p>
     </div>
-    <figure class="hero-foto" data-hero-foto>
+    <figure class="hero-foto">
       <img src="/ativos/janela-aviao.webp" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" fetchpriority="high">
     </figure>
     <script>/* a foto do topo já está na tela: libera o gtag.js e o Clarity */ (function(){var i=document.querySelector('.hero-foto img');function foto(){if(i.complete)setTimeout(mkTopoPronto,0);else{i.addEventListener('load',function(){requestAnimationFrame(function(){setTimeout(mkTopoPronto,0);});});i.addEventListener('error',mkTopoPronto);}}try{var po=new PerformanceObserver(function(l){if(l.getEntriesByName('first-contentful-paint').length){po.disconnect();foto();}});po.observe({type:'paint',buffered:true});}catch(e){addEventListener('load',mkTopoPronto);}})();</script>
@@ -912,7 +906,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== O QUE CUIDAMOS ===================== -->
 <section class="secao" id="cuidados" aria-labelledby="t-cuidados">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">01 · </span>O que cuidamos por você</span>
+    <span class="olho">O que cuidamos por você</span>
     <h2 id="t-cuidados">Seus pontos,<em>acompanhados de perto.</em></h2>
     <p class="intro">Pontos e milhas têm prazo, regra e momento certo. Gerenciamos tudo isso para você, e nada é feito sem o seu ok.</p>
     <div class="cuidados-grid">
@@ -954,7 +948,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== COMO FUNCIONA ===================== -->
 <section class="secao secao-verde" id="como-funciona" aria-labelledby="t-resumo">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">02 · </span>Como funciona</span>
+    <span class="olho">Como funciona</span>
     <h2 id="t-resumo">Simples para você,<em>do começo ao fim.</em></h2>
     <ol class="jornada quatro etapas-gestao">
       <li class="passo"><h3>Diagnóstico gratuito</h3><p>Uma chamada para conhecer sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta nessa mesma conversa.</p></li>
@@ -970,7 +964,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="secao secao-creme" id="painel" aria-labelledby="t-painel">
   <div class="wrap milhas">
     <div>
-      <span class="olho"><span class="olho-num" aria-hidden="true">03 · </span>Seu painel de gestão</span>
+      <span class="olho">Seu painel de gestão</span>
       <h2 id="t-painel">Sua carteira inteira,<em>em um só lugar.</em></h2>
       <p class="intro">Cada cliente tem um painel privado, atualizado pela nossa equipe. Você abre quando quiser e vê como estão os seus pontos, sem precisar conferir aplicativo por aplicativo.</p>
       <p class="acesso-cliente">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
@@ -1002,7 +996,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== POR QUE CONFIAR ===================== -->
 <section class="secao" id="confianca" aria-labelledby="t-confianca">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">04 · </span>Por que confiar na Maktub</span>
+    <span class="olho">Por que confiar na Maktub</span>
     <h2 id="t-confianca">Uma empresa inteira<em>cuidando da sua carteira.</em></h2>
     <p class="intro">Você não depende de uma pessoa só. A Maktub Go tem equipe, processo, contrato e registro no Ministério do Turismo.</p>
 
@@ -1065,7 +1059,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== BENEFÍCIOS NA HORA DE VIAJAR ===================== -->
 <section class="secao secao-verde" id="beneficios" aria-labelledby="t-beneficios">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">05 · </span>Benefícios na hora de viajar</span>
+    <span class="olho">Benefícios na hora de viajar</span>
     <h2 id="t-beneficios">Na hora de viajar,<em>a gente está junto.</em></h2>
     <p class="intro">A gestão cuida dos seus pontos. Quando eles viram viagem, você conta com o atendimento de concierge da Maktub Go, a alfaiataria de viagens que deu origem à empresa.</p>
     <div class="beneficios">
@@ -1141,7 +1135,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
      para a página /viagens/. Para esconder um caso, acrescente class="so-rascunho" no article. -->
 <section class="secao" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho"><span class="olho-num" aria-hidden="true">06 · </span>Quem já viajou com a gente</span>
+    <span class="olho">Quem já viajou com a gente</span>
     <h2 id="t-viagens">Famílias reais,<em>viagens de verdade.</em></h2>
     <p class="intro">Antes da gestão de milhas, a Maktub Go nasceu como alfaiataria de viagens. Estas são algumas das famílias que confiaram a viagem inteira à nossa equipe.</p>
 
@@ -1204,7 +1198,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="secao secao-verde" id="diagnostico" aria-labelledby="t-diagnostico">
   <div class="wrap contato">
     <div>
-      <span class="olho"><span class="olho-num" aria-hidden="true">07 · </span>Seu diagnóstico</span>
+      <span class="olho">Seu diagnóstico</span>
       <h2 id="t-diagnostico">Vamos conversar<em>sobre os seus pontos.</em></h2>
       <p class="intro">O diagnóstico é gratuito e feito em uma chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta ali mesmo.</p>
       <ol class="diag-passos">
@@ -1351,7 +1345,11 @@ addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
  
-/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
+/* borda do cabeçalho ao rolar */
+const cab = document.querySelector('header');
+addEventListener('scroll', function(){
+  cab.classList.toggle('rolou', scrollY > 24);
+},{passive:true});
 </script>
 <script>
 /* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
@@ -1429,5 +1427,14 @@ addEventListener('keydown', function(e){
 [data-fundo="/ativos/caso-paula-neve.webp"]{background-image:url('/ativos/caso-paula-neve.webp')}
 </style></noscript>
 <script src="/diagnostico/formulario.js" defer></script>
+<script>
+/* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
+   Quem pede menos movimento no aparelho não recebe nada disso. */
+(function(){
+  if(!('IntersectionObserver' in window) || !window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('na-tela'); io.unobserve(e.target); } }); }, { rootMargin:'0px 0px 20% 0px' });
+  document.querySelectorAll('main section h2').forEach(function(h){ if(h.closest('.reveal')) return; h.classList.add('titulo-entra'); io.observe(h); });
+})();
+</script>
 </body>
 </html>
