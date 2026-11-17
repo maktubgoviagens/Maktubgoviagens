@@ -45,12 +45,23 @@ html.lenis{scroll-behavior:auto !important}
 /* ---------- 4. Revelação ao rolar ---------- */
 html.mov .reveal{opacity:0;transform:translateY(36px);transition:opacity .85s,transform .85s var(--ease-out);transition-delay:var(--d,0s)}
 html.mov .reveal.is-visible{opacity:1;transform:none}
+/* etapas do processo sobem mais; números crescem ao entrar */
+html.mov .reveal.mov-sobe{transform:translateY(70px);transition-duration:1.05s}
+html.mov .reveal.mov-num{transform:translateY(35px) scale(.86);transition-duration:1.05s}
+/* quem volta pelo alto da tela (rolando para cima) entra descendo */
+html.mov .reveal.mov-de-cima{transform:translateY(-36px)}
+html.mov .reveal.mov-sobe.mov-de-cima{transform:translateY(-70px)}
+html.mov .reveal.mov-num.mov-de-cima{transform:translateY(-35px) scale(.86)}
+html.mov .reveal.is-visible.mov-sobe,html.mov .reveal.is-visible.mov-num,html.mov .reveal.is-visible.mov-de-cima{transform:none}
+/* usado só por um instante, para trocar o lado de partida sem animar a troca */
+html.mov .mov-sem-transicao,html.mov .mov-sem-transicao .word>span{transition:none !important}
 .reveal.d1{--d:.05s}.reveal.d2{--d:.15s}.reveal.d3{--d:.25s}.reveal.d4{--d:.35s}.reveal.d5{--d:.45s}.reveal.d6{--d:.55s}
 
 /* títulos palavra por palavra */
 .word{display:inline-block;overflow:visible;vertical-align:top;padding:0 .035em .16em;margin:0 -.035em -.16em}
 .word>span{display:inline-block}
 html.mov .split-reveal .word>span{opacity:0;filter:blur(10px);transform:translateY(105%);transition:.9s var(--ease-out);transition-delay:calc(var(--i) * 32ms)}
+html.mov .split-reveal.mov-de-cima .word>span{transform:translateY(-105%)}
 html.mov .split-reveal.is-visible .word>span{opacity:1;filter:blur(0);transform:translateY(0)}
 html.mov .split-reveal.is-settled .word>span{filter:none;transition:none}
 html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}
@@ -88,8 +99,8 @@ html.mov .image-reveal.is-visible{clip-path:inset(0 0 0 0)}
 .jornada>.passo{border-top:0;border-left:1px solid rgba(168,139,74,.35);padding:2px 22px 8px;position:relative}
 .jornada>.passo.passo-seguro{border-left:2px solid var(--mov-ouro)}
 .jornada>.passo::after{content:"";position:absolute;left:-2px;top:0;width:3px;height:34%;background:var(--mov-ouro)}
-html.mov .jornada>.passo::after{height:0;transition:height 1.2s .25s var(--ease-out)}
-html.mov .jornada>.passo.is-visible::after{height:34%}
+html.mov .jornada>.passo.reveal::after{height:0;transition:height 1.2s .25s var(--ease-out)}
+html.mov .jornada>.passo.reveal.is-visible::after{height:34%}
 
 /* a lista que desliza de lado não cria rolagem lateral */
 .prateleira{overflow-x:clip}
