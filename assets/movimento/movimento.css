@@ -1,0 +1,204 @@
+/* ============================================================
+   MOVIMENTO MAKTUB GO
+   Transições e animações das páginas públicas.
+   Como aplicar em uma seção nova, sem escrever código, está explicado
+   no começo de /assets/movimento/movimento.js.
+
+   Regras da casa:
+   - tudo que fica escondido esperando animação depende da classe "mov" no <html>.
+     Sem JavaScript, ou se o script falhar, a classe não existe (ou sai em 3s) e tudo aparece;
+   - quem pede menos movimento no aparelho (prefers-reduced-motion) vê tudo pronto e parado;
+   - só se anima transform, opacity, clip-path e, pontualmente, filter;
+   - o botão de diagnóstico nunca espera animação.
+
+   Uma cópia pequena das regras que precisam valer antes da primeira pintura
+   (transição entre páginas, títulos esperando o script, botão do topo sem animação)
+   vai embutida no <head> de cada página, no bloco <style id="mov-critico">.
+   Se mudar uma dessas regras aqui, mude lá também.
+   ============================================================ */
+
+:root{
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --ease-cortina:cubic-bezier(0.76,0,0.24,1);
+  --dur-1:.52s;
+  --dur-2:.85s;
+  --dur-3:1.25s;
+  --mov-ouro:#A88B4A;
+}
+
+/* ---------- 1. Transição entre páginas (CSS nativo, sem JavaScript) ---------- */
+@media (prefers-reduced-motion:no-preference){
+  @view-transition{navigation:auto}
+  ::view-transition-old(root){animation:mov-vt-sai .26s var(--ease-out) both}
+  ::view-transition-new(root){animation:mov-vt-entra var(--dur-1) var(--ease-out) both}
+  /* o topo fica parado na troca de página */
+  #navbar{view-transition-name:mk-topo}
+  ::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}
+}
+@keyframes mov-vt-sai{to{opacity:0}}
+@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}
+
+/* âncoras caem abaixo do cabeçalho fixo (68px + respiro) */
+main [id]{scroll-margin-top:76px}
+
+/* ---------- 2. Rolagem suave (Lenis, só no computador) ---------- */
+html.lenis,html.lenis body{height:auto}
+html.lenis{scroll-behavior:auto !important}
+.lenis.lenis-stopped{overflow:clip}
+.lenis.lenis-smooth iframe{pointer-events:none}
+
+/* ---------- 3. Cabeçalho que some ao descer e volta ao subir ---------- */
+#navbar{transition:transform .5s var(--ease-out),box-shadow .3s}
+#navbar.mov-escondido{transform:translateY(-100%)}
+
+/* barra dourada de progresso de leitura */
+.mov-progresso{position:fixed;top:0;left:0;right:0;height:2px;z-index:1001;background:var(--mov-ouro);transform:scaleX(0);transform-origin:0 50%;pointer-events:none}
+@supports (animation-timeline:scroll()){
+  .mov-progresso{animation:mov-progresso linear both;animation-timeline:scroll(root)}
+}
+@keyframes mov-progresso{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* ---------- 4. Revelação ao rolar: .reveal ---------- */
+html.mov .reveal{
+  opacity:0;transform:translateY(36px);
+  transition:opacity var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out);
+  transition-delay:var(--d,0s);
+}
+html.mov .reveal.is-visible{opacity:1;transform:none}
+/* números entram crescendo de leve */
+html.mov .reveal.mov-num{transform:translateY(35px) scale(.86)}
+html.mov .reveal.mov-num.is-visible{transform:none}
+/* atrasos por classe, para itens lado a lado */
+.reveal.d1{--d:.05s}.reveal.d2{--d:.15s}.reveal.d3{--d:.25s}.reveal.d4{--d:.35s}.reveal.d5{--d:.45s}.reveal.d6{--d:.55s}
+
+/* ---------- 5. Títulos palavra por palavra ---------- */
+.mov-palavra{display:inline-block;vertical-align:baseline}
+.mov-palavra>span{display:inline-block}
+.mov-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* H2 (e o que tiver .split-reveal): cada palavra sobe de dentro de uma máscara */
+/* overflow:clip recorta sem mudar a linha de base do texto (overflow:hidden mudaria a altura do título) */
+html.mov .split-reveal .mov-palavra{overflow:clip;padding:0 .08em .16em;margin:0 -.08em -.16em}
+html.mov .split-reveal .mov-palavra>span{
+  transform:translateY(105%);opacity:0;filter:blur(6px);
+  transition:transform .95s var(--ease-out),opacity .7s var(--ease-out),filter .95s var(--ease-out);
+  transition-delay:calc(var(--i,0) * 32ms + var(--d,0s));
+}
+html.mov .split-reveal.is-visible .mov-palavra>span{transform:none;opacity:1;filter:blur(0)}
+html.mov .split-reveal.is-settled .mov-palavra>span{filter:none;transition:none}
+/* enquanto o script não quebra o título, ele espera escondido (sem piscar) */
+html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}
+
+/* H1 do topo: palavras entram com desfoque logo na abertura (só no computador;
+   no celular o título aparece com a entrada leve de sempre, para não atrasar a primeira tela) */
+@media (min-width:1101px){
+  html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}
+}
+.entra-topo>.mov-titulo{animation:none}
+html.mov .mov-titulo .mov-palavra>span{
+  opacity:0;filter:blur(10px);transform:translateY(.32em);
+  transition:opacity 1.05s var(--ease-out),filter 1.05s var(--ease-out),transform 1.05s var(--ease-out);
+  transition-delay:calc(.15s + var(--i,0) * 45ms);
+}
+html.mov .mov-titulo.is-visible .mov-palavra>span{opacity:1;filter:blur(0);transform:none}
+html.mov .mov-titulo.is-settled .mov-palavra>span{filter:none;transition:none}
+
+/* o botão do topo nunca espera animação */
+.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none !important}
+
+/* ---------- 6. Fotos em cortina: .image-reveal ---------- */
+html.mov .image-reveal{
+  clip-path:inset(0 0 100% 0);
+  transition:clip-path var(--dur-3) var(--ease-cortina);
+  transition-delay:var(--d,0s);
+}
+html.mov .image-reveal.is-visible{clip-path:inset(0)}
+/* foto do topo no computador espera a cortina, sem piscar antes */
+@media (min-width:1101px){
+  html.mov [data-hero-foto]:not(.is-visible){clip-path:inset(0 0 100% 0)}
+}
+
+/* ---------- 7. Parallax dentro da moldura (só no computador, via GSAP) ---------- */
+.mov-parallax{overflow:hidden}
+.mov-camada{position:absolute;inset:0;background:inherit;pointer-events:none;will-change:transform}
+
+/* ---------- 8. Linha dourada que cresce nas etapas ---------- */
+html.mov .mov-linha{position:relative}
+html.mov .mov-linha::after{
+  content:"";position:absolute;left:0;right:0;height:1px;background:var(--mov-ouro);
+  transform:scaleX(0);transform-origin:0 50%;pointer-events:none;
+  transition:transform 1.2s var(--ease-out);transition-delay:var(--d,0s);
+}
+html.mov .mov-linha.linha-topo::after{top:-1px}
+html.mov .mov-linha.linha-base::after{bottom:-1px}
+html.mov .mov-linha.is-visible::after{transform:scaleX(1)}
+
+/* ---------- 9. Faixa corrida (marquee) ---------- */
+.marquee{overflow:hidden;background:#193826;border-block:1px solid rgba(168,139,74,.22);padding-block:26px}
+.marquee-trilho{display:flex;width:max-content;animation:mov-marquee 36s linear infinite}
+.marquee-grupo{display:flex;align-items:center;flex-shrink:0}
+.marquee-item{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:300;font-size:36px;line-height:1.1;color:var(--mov-ouro);padding-inline:30px;white-space:nowrap}
+.marquee-ponto{width:6px;height:6px;border-radius:50%;background:var(--mov-ouro);flex-shrink:0;opacity:.7}
+.marquee:hover .marquee-trilho{animation-play-state:paused}
+@keyframes mov-marquee{to{transform:translate3d(-50%,0,0)}}
+@media (max-width:760px){.marquee{padding-block:18px}.marquee-item{font-size:28px;padding-inline:22px}}
+@media (prefers-reduced-motion:reduce){
+  .marquee{overflow-x:auto}
+  .marquee-trilho{animation:none}
+}
+
+/* ---------- 10. CTA redondo ---------- */
+.cta-redondo{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  width:184px;height:184px;padding:26px;border-radius:50%;
+  background:#B49755;color:#193826;text-decoration:none;text-align:center;
+  font-family:'Jost','Helvetica Neue',-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:500;
+  letter-spacing:.17em;text-transform:uppercase;line-height:1.5;
+  transition:transform .6s var(--ease-out);
+}
+.cta-redondo svg{width:22px;height:22px;transition:transform .45s var(--ease-out)}
+.cta-redondo:hover{transform:scale(1.04)}
+.cta-redondo:hover svg{transform:translate(3px,-3px)}
+.cta-redondo:focus-visible{outline:2px solid #193826;outline-offset:5px}
+
+/* ---------- 11. Microinterações ---------- */
+/* links de texto: a linha dourada cresce da esquerda no hover */
+.link-texto{
+  background-image:linear-gradient(var(--mov-ouro),var(--mov-ouro));background-repeat:no-repeat;
+  background-origin:border-box;background-position:0 100%;background-size:0 1px;
+  transition:border-color .3s ease,background-size .9s var(--ease-out);
+}
+.link-texto:hover,.link-texto:focus-visible{background-size:100% 1px}
+
+/* menu do computador: o texto "rola" para cima no hover */
+@media (hover:hover) and (min-width:1241px) and (prefers-reduced-motion:no-preference){
+  @supports (content:"a" / ""){
+    .mov-rola{display:inline-block;overflow:clip;vertical-align:baseline}
+    .mov-rola>span{display:inline-block;position:relative;transition:transform .5s var(--ease-out)}
+    .mov-rola>span::after{content:attr(data-t) / "";position:absolute;left:0;top:100%}
+    a:hover>.mov-rola>span,a:focus-visible>.mov-rola>span{transform:translateY(-100%)}
+  }
+}
+
+/* fotos dos casos: tom quente que sai no hover, com zoom lento (só no computador) */
+@media (hover:hover) and (min-width:1101px) and (prefers-reduced-motion:no-preference){
+  .casos .figura-caso,html.mov .casos .figura-caso.image-reveal{filter:saturate(.85) sepia(.1);transition:filter .9s var(--ease-out),clip-path var(--dur-3) var(--ease-cortina);transition-delay:0s,var(--d,0s)}
+  .casos .figura-caso::after{content:"";position:absolute;inset:0;z-index:2;background:var(--mov-ouro);mix-blend-mode:soft-light;opacity:.18;pointer-events:none;transition:opacity .9s var(--ease-out)}
+  .casos .figura-caso>.mov-camada,.casos .figura-caso>.camada{transition:scale 1.4s var(--ease-out),opacity .9s ease}
+  .casos .caso:hover .figura-caso{filter:none}
+  .casos .caso:hover .figura-caso::after{opacity:0}
+  .casos .caso:hover .figura-caso>.mov-camada,.casos .caso:hover .figura-caso>.camada{scale:1.04}
+}
+
+/* ---------- 12. Menos movimento e impressão: tudo pronto ---------- */
+@media (prefers-reduced-motion:reduce){
+  #navbar{transition:box-shadow .3s}
+  #navbar.mov-escondido{transform:none}
+}
+@media print{
+  html.mov .reveal,html.mov .image-reveal,html.mov main h1,html.mov main h2,
+  html.mov .split-reveal .mov-palavra>span,html.mov .mov-titulo .mov-palavra>span{opacity:1 !important;transform:none !important;clip-path:none !important;filter:none !important}
+  .mov-progresso,.marquee{display:none}
+}
+picture.mov-parallax{display:block}
+.acoes-fecho{align-items:center;gap:22px 30px}
