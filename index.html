@@ -41,7 +41,7 @@
 <meta name="twitter:card" content="summary_large_image">
 
 <!-- foto do topo (LCP): pedida antes de tudo, para aparecer junto com o texto -->
-<link rel="preload" as="image" href="/ativos/janela-aviao.webp" fetchpriority="high">
+<link rel="preload" as="image" href="/ativos/janela-aviao.jpg" imagesrcset="/ativos/janela-aviao.webp 908w, /ativos/janela-aviao.jpg 1200w" imagesizes="100vw" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -680,8 +680,6 @@ footer a:hover{color:var(--creme)}
  .g-selo .estrelas i{animation:f3estrela .45s ease both}
  .g-selo .estrelas i:nth-child(1){animation-delay:.5s}.g-selo .estrelas i:nth-child(2){animation-delay:.62s}.g-selo .estrelas i:nth-child(3){animation-delay:.74s}.g-selo .estrelas i:nth-child(4){animation-delay:.86s}.g-selo .estrelas i:nth-child(5){animation-delay:.98s}
  @keyframes f3estrela{from{opacity:.18}to{opacity:1}}
- .titulo-entra{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
- .titulo-entra:not(.na-tela){opacity:0;transform:translateY(14px)}
 }
 /* exceção única à escala de fontes: título da home no computador em 80px */
 @media (min-width:1001px){.hero h1{font-size:80px}}
@@ -854,6 +852,57 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
+<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
+<link rel="stylesheet" href="/assets/movimento/movimento.css">
+<script src="/assets/movimento/movimento.js" defer></script>
+<style id="mk-topo-tela-css">
+/* ===================== TOPO EM TELA CHEIA =====================
+   A foto ocupa a tela com cantos arredondados e o título por cima.
+   No computador (1101px ou mais), com movimento ligado, a foto fica presa ao rolar,
+   encolhe para o centro e as duas fotos laterais entram. Sem script ou com menos
+   movimento no aparelho, o topo fica parado, do mesmo jeito. */
+.topo-palco{position:relative}
+.topo-tela{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;padding:132px clamp(26px,6vw,48px) 40px;color:#F7F3EA;overflow:hidden}
+.topo-midia{position:absolute;z-index:0;inset:76px 10px 0;margin:0;overflow:hidden;border-radius:16px;background:#193826;transform-origin:center}
+.topo-midia img{width:100%;height:100%;object-fit:cover;filter:saturate(.85) sepia(.08) brightness(1.02);transform:scale(1.06)}
+.topo-sombra{position:absolute;inset:0;background:linear-gradient(to top,rgba(25,56,38,.96) 0%,rgba(25,56,38,.86) 52%,rgba(25,56,38,.5) 78%,rgba(25,56,38,.12) 100%)}
+@media (min-width:1101px){.topo-sombra{background:linear-gradient(to top,rgba(25,56,38,.94) 0%,rgba(25,56,38,.72) 40%,rgba(25,56,38,.3) 68%,rgba(25,56,38,.06) 90%),linear-gradient(to right,rgba(25,56,38,.42) 0%,rgba(25,56,38,0) 62%)}}
+.topo-lateral{display:none}
+.topo-conteudo{position:relative;z-index:3}
+.topo-tela .olho{color:#B49755;margin-bottom:12px}
+.topo-tela .g-selo{margin:0 0 14px}
+.topo-tela h1{font-size:clamp(36px,9.4vw,48px);line-height:1.04;color:#F7F3EA;margin:0 0 18px}
+.topo-tela h1 em{font-style:italic;display:block;color:#A88B4A}
+.topo-texto{font-family:var(--serif);font-size:18px;line-height:1.5;color:rgba(247,243,234,.92);max-width:34em}
+.topo-tela .acoes{margin-top:22px;align-items:center}
+.topo-tela p.hero-gratis{margin-top:14px;font-family:var(--sans);font-size:16px;font-weight:400;line-height:1.5;color:#F7F3EA}
+.topo-tela p.hero-publico{margin-top:8px;font-family:var(--sans);font-size:16px;line-height:1.55;color:rgba(247,243,234,.82);max-width:46ch}
+.topo-pe{display:none}
+@media (max-width:560px){.topo-tela .btn{width:100%}}
+@media (min-width:1101px){
+  .topo-tela{display:block;height:calc(100svh - 22px);min-height:640px;padding:0}
+  .topo-midia{inset:88px 12px 0}
+  .topo-conteudo{position:absolute;left:clamp(42px,4.1vw,78px);right:clamp(42px,4.1vw,78px);bottom:91px;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,440px);gap:clamp(22px,3vw,56px);align-items:end}
+  .topo-tela h1{font-size:80px;line-height:.98;margin:0}
+  .topo-texto{font-size:22px}
+  .topo-pe{position:absolute;z-index:3;left:clamp(42px,4.1vw,78px);right:clamp(42px,4.1vw,78px);bottom:24px;padding-top:16px;border-top:1px solid rgba(247,243,234,.55);display:flex;justify-content:space-between;align-items:center;font-size:13px;letter-spacing:.15em;text-transform:uppercase;color:rgba(247,243,234,.86)}
+  .topo-pe i{display:block;width:24px;height:1px;background:#F7F3EA;transform-origin:left}
+  .topo-lateral{display:none;position:absolute;z-index:1;top:30.5vh;width:17.5vw;height:43.5vh;overflow:hidden;border-radius:16px;background:#EBE0C4;opacity:0;transform:translate(var(--entrada,0)) scaleX(.06) scaleY(.8)}
+  .topo-lateral--esq{--entrada:-4vw;left:5vw;transform-origin:left center}
+  .topo-lateral--dir{--entrada:4vw;right:5vw;transform-origin:right center}
+  .topo-lateral img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);filter:saturate(.8) sepia(.1)}
+  .topo-lateral--dir img{object-position:36% center}
+}
+@media (min-width:1101px) and (prefers-reduced-motion:no-preference){
+  .topo-pe i{animation:topo-dica 1.7s ease-in-out infinite}
+  html.mov:not(.mov-sem-gsap) .topo-lateral{display:block}
+  html.mov:not(.mov-sem-gsap) .topo-palco{height:260svh}
+  html.mov:not(.mov-sem-gsap) .topo-tela{position:sticky;top:0}
+  html.mov:not(.mov-sem-gsap) .topo-palco+section{position:relative;z-index:4;margin-top:-22svh;padding-top:60px;background:var(--creme)}
+}
+@keyframes topo-dica{50%{transform:scaleX(.3);opacity:.45}}
+</style>
 </head>
 <body>
  
@@ -881,32 +930,42 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
  
 <main id="conteudo">
 
-<!-- ===================== HERO ===================== -->
-<section class="hero" aria-labelledby="t-hero">
-  <div class="hero-fundo" aria-hidden="true"></div>
-  <div class="wrap">
-    <div class="hero-texto entra-topo">
+<!-- ===================== TOPO =====================
+     Foto em tela cheia com o título por cima. No computador, ao rolar, a foto fica presa,
+     encolhe para o centro e entram duas fotos laterais (movimento em /assets/movimento/).
+     As fotos laterais são de clientes da alfaiataria de viagens, só como imagem, sem legenda. -->
+<div class="topo-palco">
+<section class="topo-tela" aria-labelledby="t-hero">
+  <div class="topo-lateral topo-lateral--esq" aria-hidden="true"><img src="/ativos/caso-gramado.webp" alt="" width="551" height="689" loading="lazy" decoding="async"></div>
+  <div class="topo-lateral topo-lateral--dir" aria-hidden="true"><img src="/ativos/caso-paula-neve.jpg" alt="" width="1280" height="591" loading="lazy" decoding="async"></div>
+  <figure class="topo-midia">
+    <img src="/ativos/janela-aviao.jpg" srcset="/ativos/janela-aviao.webp 908w, /ativos/janela-aviao.jpg 1200w" sizes="100vw" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" fetchpriority="high">
+    <span class="topo-sombra" aria-hidden="true"></span>
+  </figure>
+  <div class="topo-conteudo">
+    <div class="topo-titulo entra-topo">
       <span class="olho">Gestão de Milhas Maktub Go</span>
-      <a class="g-selo g-claro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
+      <a class="g-selo g-escuro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
       <h1 id="t-hero">Seus pontos viram viagens.<em>A gente cuida do caminho.</em></h1>
-      <p>Uma equipe cuida dos seus pontos e milhas o ano inteiro. Você ganha tempo, mantém tudo organizado e viaja com mais tranquilidade.</p>
+    </div>
+    <div class="topo-lado entra-topo">
+      <p class="topo-texto">Uma equipe cuida dos seus pontos e milhas o ano inteiro. Você ganha tempo, mantém tudo organizado e viaja com mais tranquilidade.</p>
       <div class="acoes">
-        <a class="btn btn-cheio" href="/diagnostico/" data-diagnostico="home_hero">Quero meu diagnóstico</a>
+        <a class="btn btn-ouro" href="/diagnostico/" data-diagnostico="home_hero">Quero meu diagnóstico</a>
       </div>
       <p class="hero-gratis">Diagnóstico gratuito por chamada</p>
       <p class="hero-publico">Ideal para quem movimenta a partir de R$ 20 mil por mês, somando cartões e Pix.</p>
     </div>
-    <figure class="hero-foto">
-      <img src="/ativos/janela-aviao.webp" alt="Vista da janela do avião sobre as nuvens" width="1200" height="865" fetchpriority="high">
-    </figure>
-    <script>/* a foto do topo já está na tela: libera o gtag.js e o Clarity */ (function(){var i=document.querySelector('.hero-foto img');function foto(){if(i.complete)setTimeout(mkTopoPronto,0);else{i.addEventListener('load',function(){requestAnimationFrame(function(){setTimeout(mkTopoPronto,0);});});i.addEventListener('error',mkTopoPronto);}}try{var po=new PerformanceObserver(function(l){if(l.getEntriesByName('first-contentful-paint').length){po.disconnect();foto();}});po.observe({type:'paint',buffered:true});}catch(e){addEventListener('load',mkTopoPronto);}})();</script>
   </div>
+  <div class="topo-pe" aria-hidden="true"><span>Maktub Go · Alfaiataria de Viagens</span><i></i></div>
+  <script>/* a foto do topo já está na tela: libera o gtag.js e o Clarity */ (function(){var i=document.querySelector('.topo-midia img');function foto(){if(i.complete)setTimeout(mkTopoPronto,0);else{i.addEventListener('load',function(){requestAnimationFrame(function(){setTimeout(mkTopoPronto,0);});});i.addEventListener('error',mkTopoPronto);}}try{var po=new PerformanceObserver(function(l){if(l.getEntriesByName('first-contentful-paint').length){po.disconnect();foto();}});po.observe({type:'paint',buffered:true});}catch(e){addEventListener('load',mkTopoPronto);}})();</script>
 </section>
+</div>
 
 <!-- ===================== O QUE CUIDAMOS ===================== -->
 <section class="secao" id="cuidados" aria-labelledby="t-cuidados">
   <div class="wrap">
-    <span class="olho">O que cuidamos por você</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">01 · </span>O que cuidamos por você</span>
     <h2 id="t-cuidados">Seus pontos,<em>acompanhados de perto.</em></h2>
     <p class="intro">Pontos e milhas têm prazo, regra e momento certo. Gerenciamos tudo isso para você, e nada é feito sem o seu ok.</p>
     <div class="cuidados-grid">
@@ -948,7 +1007,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== COMO FUNCIONA ===================== -->
 <section class="secao secao-verde" id="como-funciona" aria-labelledby="t-resumo">
   <div class="wrap">
-    <span class="olho">Como funciona</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">02 · </span>Como funciona</span>
     <h2 id="t-resumo">Simples para você,<em>do começo ao fim.</em></h2>
     <ol class="jornada quatro etapas-gestao">
       <li class="passo"><h3>Diagnóstico gratuito</h3><p>Uma chamada para conhecer sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta nessa mesma conversa.</p></li>
@@ -964,7 +1023,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="secao secao-creme" id="painel" aria-labelledby="t-painel">
   <div class="wrap milhas">
     <div>
-      <span class="olho">Seu painel de gestão</span>
+      <span class="olho"><span class="olho-num" aria-hidden="true">03 · </span>Seu painel de gestão</span>
       <h2 id="t-painel">Sua carteira inteira,<em>em um só lugar.</em></h2>
       <p class="intro">Cada cliente tem um painel privado, atualizado pela nossa equipe. Você abre quando quiser e vê como estão os seus pontos, sem precisar conferir aplicativo por aplicativo.</p>
       <p class="acesso-cliente">Já é cliente? <a href="/acesso/">Acesse seu painel</a></p>
@@ -996,7 +1055,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== POR QUE CONFIAR ===================== -->
 <section class="secao" id="confianca" aria-labelledby="t-confianca">
   <div class="wrap">
-    <span class="olho">Por que confiar na Maktub</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">04 · </span>Por que confiar na Maktub</span>
     <h2 id="t-confianca">Uma empresa inteira<em>cuidando da sua carteira.</em></h2>
     <p class="intro">Você não depende de uma pessoa só. A Maktub Go tem equipe, processo, contrato e registro no Ministério do Turismo.</p>
 
@@ -1059,7 +1118,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== BENEFÍCIOS NA HORA DE VIAJAR ===================== -->
 <section class="secao secao-verde" id="beneficios" aria-labelledby="t-beneficios">
   <div class="wrap">
-    <span class="olho">Benefícios na hora de viajar</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">05 · </span>Benefícios na hora de viajar</span>
     <h2 id="t-beneficios">Na hora de viajar,<em>a gente está junto.</em></h2>
     <p class="intro">A gestão cuida dos seus pontos. Quando eles viram viagem, você conta com o atendimento de concierge da Maktub Go, a alfaiataria de viagens que deu origem à empresa.</p>
     <div class="beneficios">
@@ -1135,7 +1194,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
      para a página /viagens/. Para esconder um caso, acrescente class="so-rascunho" no article. -->
 <section class="secao" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho">Quem já viajou com a gente</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">06 · </span>Quem já viajou com a gente</span>
     <h2 id="t-viagens">Famílias reais,<em>viagens de verdade.</em></h2>
     <p class="intro">Antes da gestão de milhas, a Maktub Go nasceu como alfaiataria de viagens. Estas são algumas das famílias que confiaram a viagem inteira à nossa equipe.</p>
 
@@ -1198,7 +1257,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <section class="secao secao-verde" id="diagnostico" aria-labelledby="t-diagnostico">
   <div class="wrap contato">
     <div>
-      <span class="olho">Seu diagnóstico</span>
+      <span class="olho"><span class="olho-num" aria-hidden="true">07 · </span>Seu diagnóstico</span>
       <h2 id="t-diagnostico">Vamos conversar<em>sobre os seus pontos.</em></h2>
       <p class="intro">O diagnóstico é gratuito e feito em uma chamada. Nela, conhecemos sua rotina, seus gastos e seus planos de viagem. Se a gestão fizer sentido para você, apresentamos a proposta ali mesmo.</p>
       <ol class="diag-passos">
@@ -1345,11 +1404,7 @@ addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
  
-/* borda do cabeçalho ao rolar */
-const cab = document.querySelector('header');
-addEventListener('scroll', function(){
-  cab.classList.toggle('rolou', scrollY > 24);
-},{passive:true});
+/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 </script>
 <script>
 /* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
@@ -1427,14 +1482,5 @@ addEventListener('scroll', function(){
 [data-fundo="/ativos/caso-paula-neve.webp"]{background-image:url('/ativos/caso-paula-neve.webp')}
 </style></noscript>
 <script src="/diagnostico/formulario.js" defer></script>
-<script>
-/* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
-   Quem pede menos movimento no aparelho não recebe nada disso. */
-(function(){
-  if(!('IntersectionObserver' in window) || !window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
-  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('na-tela'); io.unobserve(e.target); } }); }, { rootMargin:'0px 0px 20% 0px' });
-  document.querySelectorAll('main section h2').forEach(function(h){ if(h.closest('.reveal')) return; h.classList.add('titulo-entra'); io.observe(h); });
-})();
-</script>
 </body>
 </html>
