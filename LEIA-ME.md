@@ -18,7 +18,7 @@ Maktubgoviagens-main/
 │   ├── logo-fundo-verde.jpg        ← Logo original com fundo verde
 │   └── logo-fundo-branco.jpg       ← Logo original com fundo branco
 ├── gestao-de-milhas/               ← NOVA PASTA
-│   └── index.html                  ← Landing page do serviço Concierge
+│   └── index.html                  ← Landing page da Gestão de Milhas Maktub Go
 ├── acesso/                         ← NOVA PASTA
 │   └── index.html                  ← Tela de login
 ├── painel/                         ← NOVA PASTA
@@ -33,7 +33,7 @@ Maktubgoviagens-main/
 
 ## URLs que serão criadas após o upload
 
-- `https://maktubgo.com.br/gestao-de-milhas/` — Landing page pública do serviço Concierge
+- `https://maktubgo.com.br/gestao-de-milhas/` — Landing page pública da Gestão de Milhas Maktub Go
 - `https://maktubgo.com.br/acesso/` — Tela de login privada do cliente
 - `https://maktubgo.com.br/painel/` — Painel do cliente (Ricardo Almeida — perfil exemplo)
 
@@ -45,7 +45,7 @@ Maktubgoviagens-main/
 2. Clique em **"Add file"** → **"Upload files"**
 3. Arraste as **quatro pastas** (`ativos`, `gestao-de-milhas`, `acesso`, `painel`) para a área de upload
    - Se já existe uma pasta `ativos/` no repositório, o GitHub vai mesclar automaticamente os arquivos novos com os existentes
-4. Em "Commit changes", escreva: `Adiciona área de Gestão de Milhas Concierge`
+4. Em "Commit changes", escreva: `Adiciona área de Gestão de Milhas Maktub Go`
 5. Clique em **"Commit changes"**
 6. Aguarde 1-2 minutos. O GitHub Pages publicará automaticamente em `maktubgo.com.br`
 
@@ -56,7 +56,7 @@ git clone https://github.com/seu-usuario/Maktubgoviagens-main.git
 cd Maktubgoviagens-main
 # copiar as 4 pastas para dentro
 git add ativos/ gestao-de-milhas/ acesso/ painel/
-git commit -m "Adiciona área de Gestão de Milhas Concierge"
+git commit -m "Adiciona área de Gestão de Milhas Maktub Go"
 git push
 ```
 
@@ -88,7 +88,7 @@ E no card "Gestão de Milhas" da seção de serviços, transforme em link para a
 
 Para que o painel funcione com **clientes reais e dados dinâmicos**, será necessário um próximo passo de desenvolvimento usando Supabase + autenticação. Esse passo deve ser feito quando você tiver:
 
-1. Modelo comercial definido (preço da gestão concierge)
+1. Modelo comercial definido (investimento da Gestão de Milhas Maktub Go)
 2. Validação do conceito com 1-2 clientes próximos
 3. Definição de quem cuidará da manutenção técnica
 
