@@ -123,6 +123,12 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): nesta página só o cabeçalho, a barra de leitura e a transição entre páginas. O conteúdo fica parado. -->
+<!-- a transição entre páginas vai embutida (igual ao que está em movimento.css); o resto do CSS chega sem segurar a primeira pintura -->
+<style id="mov-critico">@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root){animation:mov-vt-sai .26s cubic-bezier(0.16,1,0.3,1) both}::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(0.16,1,0.3,1) both}#navbar{view-transition-name:mk-topo}::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}}@keyframes mov-vt-sai{to{opacity:0}}@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}</style>
+<link rel="preload" as="style" href="/assets/movimento/movimento.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/movimento/movimento.css"></noscript>
+<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -274,11 +280,7 @@ addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
  
-/* borda do cabeçalho ao rolar */
-const cab = document.querySelector('header');
-addEventListener('scroll', function(){
-  cab.classList.toggle('rolou', scrollY > 24);
-},{passive:true});
+/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 </script>
 <script src="/diagnostico/formulario.js" defer></script>
 </body>

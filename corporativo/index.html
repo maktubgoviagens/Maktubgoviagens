@@ -339,6 +339,13 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
+<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
+<!-- o essencial do movimento vai embutido (igual ao que está em movimento.css), para nada piscar; o resto do CSS chega sem segurar a primeira pintura -->
+<style id="mov-critico">@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root){animation:mov-vt-sai .26s cubic-bezier(0.16,1,0.3,1) both}::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(0.16,1,0.3,1) both}#navbar{view-transition-name:mk-topo}::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}}@keyframes mov-vt-sai{to{opacity:0}}@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}html.mov .reveal:not(.is-visible){opacity:0}html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}@media (min-width:1101px){html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}html.mov [data-hero-foto]:not(.is-visible){clip-path:inset(0 0 100% 0)}}.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none!important}</style>
+<link rel="preload" as="style" href="/assets/movimento/movimento.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/movimento/movimento.css"></noscript>
+<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -684,10 +691,7 @@ form.addEventListener('submit', async function(e){
   window.open('https://wa.me/5521976275225?text=' + encodeURIComponent(texto), '_blank');
 });
  
-const cab = document.querySelector('header');
-addEventListener('scroll', function(){
-  cab.classList.toggle('rolou', scrollY > 30);
-}, {passive:true});
+/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 </script>
 <script>
 (function(){

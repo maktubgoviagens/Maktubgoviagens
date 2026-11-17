@@ -623,8 +623,6 @@ footer a:hover{color:var(--creme)}
  .g-selo .estrelas i{animation:f3estrela .45s ease both}
  .g-selo .estrelas i:nth-child(1){animation-delay:.5s}.g-selo .estrelas i:nth-child(2){animation-delay:.62s}.g-selo .estrelas i:nth-child(3){animation-delay:.74s}.g-selo .estrelas i:nth-child(4){animation-delay:.86s}.g-selo .estrelas i:nth-child(5){animation-delay:.98s}
  @keyframes f3estrela{from{opacity:.18}to{opacity:1}}
- .titulo-entra{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
- .titulo-entra:not(.na-tela){opacity:0;transform:translateY(14px)}
 }
 /* histórias: quem viajou em destaque, depoimento junto da história e zoom lento na foto (celular) */
 .caso-quem,.depo-junto{display:none}
@@ -770,6 +768,13 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 
 /* Fase 3: sem sombras, gradientes, anéis, estrelinhas e ícones de cartão */
 </style>
+<!-- MOVIMENTO DO SITE (/assets/movimento/): as animações só ligam com script ativo e sem pedido de movimento reduzido no aparelho. Se o módulo não rodar em 3s, tudo aparece. -->
+<script>(function(d){if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;d.classList.add('mov');setTimeout(function(){if(!window.movPronto)d.classList.remove('mov')},3000)})(document.documentElement);</script>
+<!-- o essencial do movimento vai embutido (igual ao que está em movimento.css), para nada piscar; o resto do CSS chega sem segurar a primeira pintura -->
+<style id="mov-critico">@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root){animation:mov-vt-sai .26s cubic-bezier(0.16,1,0.3,1) both}::view-transition-new(root){animation:mov-vt-entra .52s cubic-bezier(0.16,1,0.3,1) both}#navbar{view-transition-name:mk-topo}::view-transition-group(mk-topo),::view-transition-old(mk-topo),::view-transition-new(mk-topo){animation:none}}@keyframes mov-vt-sai{to{opacity:0}}@keyframes mov-vt-entra{from{opacity:0;transform:translateY(14px) scale(1.006)}}html.mov .reveal:not(.is-visible){opacity:0}html.mov main h2:not(.oculto):not(.mov-sem):not(.split-reveal){opacity:0}@media (min-width:1101px){html.mov main h1:not(.mov-sem):not(.mov-titulo){opacity:0}html.mov [data-hero-foto]:not(.is-visible){clip-path:inset(0 0 100% 0)}}.entra-topo>.acoes,.entra-topo>.venda-ctas{animation:none!important}</style>
+<link rel="preload" as="style" href="/assets/movimento/movimento.css" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/movimento/movimento.css"></noscript>
+<script src="/assets/movimento/movimento.js" defer></script>
 </head>
 <body>
  
@@ -800,7 +805,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== APRESENTAÇÃO ===================== -->
 <section class="secao primeira" id="inicio" aria-labelledby="t-inicio">
   <div class="wrap inicio-grid">
-   <div class="inicio-texto entra-topo">
+   <div class="inicio-texto entra-topo" data-hero-texto>
     <span class="olho">Viagens sob medida</span>
     <a class="g-selo g-claro" href="https://www.google.com/maps/search/?api=1&amp;query=Maktub%20Go&amp;query_place_id=ChIJcaB2xH6bpgARi1lVGHCD_rA" target="_blank" rel="noopener"><span class="estrelas" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span><span><strong data-mk-nota>5,0</strong> no Google · <span data-mk-total>40</span> avaliações</span> <span class="g-ver">Ver</span></a>
     <h1 id="t-inicio">Viagens sob medida,<em>pensadas para você.</em></h1>
@@ -810,7 +815,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
     </div>
     <p class="hero-nota">É cliente da Gestão de Milhas Maktub Go? Veja as condições em <a href="#contratacao">Como contratar</a>.</p>
    </div>
-   <figure class="inicio-foto">
+   <figure class="inicio-foto" data-hero-foto>
     <picture><source media="(max-width: 1000px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><img src="/ativos/caso-maju-adriano-machu-picchu.webp" alt="Maju e Adriano, clientes da Maktub Go, em Machu Picchu, com uma lhama ao fundo" width="960" height="1200" style="object-position:center 30%" fetchpriority="high"></picture>
     <figcaption>Maju e Adriano em Machu Picchu, viagem planejada pela Maktub Go.</figcaption>
    </figure>
@@ -942,6 +947,14 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
   </div>
 </section>
  
+<!-- Faixa corrida com os nomes das 8 etapas (os mesmos da lista logo abaixo). Só visual: o leitor de tela lê a lista. -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-trilho">
+    <div class="marquee-grupo"><span class="marquee-item">Rota</span><span class="marquee-ponto"></span><span class="marquee-item">Voos</span><span class="marquee-ponto"></span><span class="marquee-item">Hotelaria</span><span class="marquee-ponto"></span><span class="marquee-item">Transporte no destino</span><span class="marquee-ponto"></span><span class="marquee-item">Deslocamentos entre destinos</span><span class="marquee-ponto"></span><span class="marquee-item">Ingressos</span><span class="marquee-ponto"></span><span class="marquee-item">Seguro viagem</span><span class="marquee-ponto"></span><span class="marquee-item">Roteiro</span><span class="marquee-ponto"></span></div>
+    <div class="marquee-grupo"><span class="marquee-item">Rota</span><span class="marquee-ponto"></span><span class="marquee-item">Voos</span><span class="marquee-ponto"></span><span class="marquee-item">Hotelaria</span><span class="marquee-ponto"></span><span class="marquee-item">Transporte no destino</span><span class="marquee-ponto"></span><span class="marquee-item">Deslocamentos entre destinos</span><span class="marquee-ponto"></span><span class="marquee-item">Ingressos</span><span class="marquee-ponto"></span><span class="marquee-item">Seguro viagem</span><span class="marquee-ponto"></span><span class="marquee-item">Roteiro</span><span class="marquee-ponto"></span></div>
+  </div>
+</div>
+
 <!-- ===================== COMO FUNCIONA ===================== -->
 <section class="secao" id="como-funciona" aria-labelledby="t-como">
   <div class="wrap">
@@ -1077,8 +1090,8 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </li>
     </ul>
  
-    <div class="acoes">
-      <a class="btn btn-cheio" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem</a>
+    <div class="acoes acoes-fecho">
+      <a class="cta-redondo" href="https://wa.me/5521976275225?text=Ol%C3%A1!%20Quero%20planejar%20uma%20viagem%20com%20a%20Maktub%20Go." target="_blank" rel="noopener">Planejar minha viagem<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
       <a class="btn" href="mailto:contato@maktubgo.com.br">contato@maktubgo.com.br</a>
     </div>
   </div>
@@ -1150,11 +1163,7 @@ menu.addEventListener('click', function(e){
 addEventListener('keydown', function(e){
   if(e.key === 'Escape' && menu.dataset.aberto === 'true'){ menu.dataset.aberto = 'false'; btn.setAttribute('aria-expanded','false'); btn.focus(); }
 });
-/* borda do cabeçalho ao rolar */
-const cab = document.querySelector('header');
-addEventListener('scroll', function(){
-  cab.classList.toggle('rolou', scrollY > 24);
-},{passive:true});
+/* a borda do cabeçalho ao rolar vem de /assets/movimento/movimento.js */
 </script>
 <script>
 /* galeria: troca automática a cada 6s + setas, pontos e deslizar o dedo */
@@ -1226,15 +1235,6 @@ addEventListener('scroll', function(){
     document.querySelectorAll('[data-mk-total]').forEach(function(e){ e.textContent = d.total; });
   }
   try{ fetch('/ativos/avaliacoes.json', {cache:'no-cache'}).then(function(r){ return r.ok ? r.json() : null; }).then(aplica).catch(function(){}); }catch(e){}
-})();
-</script>
-<script>
-/* títulos de seção aparecem de leve ao rolar; dispara antes de entrarem na tela, para nunca deixar vão em branco.
-   Quem pede menos movimento no aparelho não recebe nada disso. */
-(function(){
-  if(!('IntersectionObserver' in window) || !window.matchMedia || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
-  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('na-tela'); io.unobserve(e.target); } }); }, { rootMargin:'0px 0px 20% 0px' });
-  document.querySelectorAll('main section h2').forEach(function(h){ if(h.closest('.reveal')) return; h.classList.add('titulo-entra'); io.observe(h); });
 })();
 </script>
 <script>
