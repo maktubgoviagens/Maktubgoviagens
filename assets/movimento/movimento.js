@@ -104,13 +104,14 @@
 
   /* menu do computador: texto que rola no hover (só efeito visual) */
   cada('.mk-links a:not(.mk-cta), .nav-links a:not(.nav-cta)', function(a){
-    if(a.children.length || !a.textContent.trim()) return;
-    var t = a.textContent.trim();
+    /* só o nome rola; o número do menu (.mk-num) fica parado */
+    var no = Array.prototype.filter.call(a.childNodes, function(n){ return n.nodeType === 3 && n.textContent.trim(); })[0];
+    if(!no) return;
+    var t = no.textContent.trim();
     var fora = document.createElement('span'); fora.className = 'mov-rola';
     var dentro = document.createElement('span'); dentro.textContent = t; dentro.setAttribute('data-t', t);
     fora.appendChild(dentro);
-    a.textContent = '';
-    a.appendChild(fora);
+    a.replaceChild(fora, no);
   });
 
   if(!MOV) return;

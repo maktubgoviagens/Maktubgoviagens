@@ -708,6 +708,7 @@ header.mk-topo.rolou,header.mk-topo.scrolled{box-shadow:0 2px 24px rgba(25,56,38
 .mk-links a{white-space:nowrap;font-size:13px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#3d3d3d;transition:color .25s}
 .mk-links a:hover{color:#193826}
 .mk-links a.mk-ouro{color:#715E32}
+.mk-num{margin-right:8px;color:#715E32}
 .mk-links a.mk-cta{border:1px solid rgba(168,139,74,0.45);padding:9px 20px;color:#193826;font-weight:500;transition:background .25s,border-color .25s}
 .mk-links a.mk-cta:hover{background:rgba(168,139,74,0.1);border-color:#A88B4A}
 .mk-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
@@ -790,10 +791,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </span>
     </a>
     <ul class="mk-links" id="menu" aria-label="Principal">
-      <li><a href="/gestao-de-milhas/" class="mk-ouro">Gestão de Milhas</a></li>
-      <li><a href="/viagens/">Viagens</a></li>
-      <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como funciona</a></li>
+      <li><a href="/gestao-de-milhas/" class="mk-ouro"><span class="mk-num" aria-hidden="true">01</span>Gestão de Milhas</a></li>
+      <li><a href="/viagens/"><span class="mk-num" aria-hidden="true">02</span>Viagens</a></li>
+      <li><a href="/quem-somos/"><span class="mk-num" aria-hidden="true">03</span>Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/"><span class="mk-num" aria-hidden="true">04</span>Como funciona</a></li>
       <li><a href="/acesso/" class="mk-cta">Acesso Cliente</a></li>
     </ul>
     <button class="mk-burger" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
@@ -842,7 +843,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
      Para esconder um caso, basta acrescentar class="so-rascunho" na tag article do caso. -->
 <section class="secao secao-creme" id="viagens" aria-labelledby="t-viagens">
   <div class="wrap">
-    <span class="olho">Experiências de viagens sob medida</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">01 · </span>Experiências de viagens sob medida</span>
     <h2 id="t-viagens">Histórias reais,<em>planejadas por nós.</em></h2>
     <p class="intro">Clientes da nossa alfaiataria de viagens, com as fotos e as palavras deles.</p>
  
@@ -958,7 +959,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== COMO FUNCIONA ===================== -->
 <section class="secao" id="como-funciona" aria-labelledby="t-como">
   <div class="wrap">
-    <span class="olho">Como a viagem é organizada</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">02 · </span>Como a viagem é organizada</span>
     <h2 id="t-como">A viagem é montada<em>na ordem certa.</em></h2>
     <p class="intro">São 8 etapas. Cada uma é um serviço próprio e pode ser contratada sozinha.</p>
  
@@ -981,7 +982,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
   <div class="wrap duas">
     <div class="figura figura-retrato" data-foto="/ativos/destino-santarem.webp" role="img" aria-label="Matheus de stand up paddle em Santarém"></div>
     <div>
-      <span class="olho">A gente vai antes</span>
+      <span class="olho"><span class="olho-num" aria-hidden="true">03 · </span>A gente vai antes</span>
       <h2 id="t-vividos">Não indicamos<em>por catálogo.</em></h2>
       <p class="intro">Sempre que possível, alguém da equipe vive o destino antes de ele entrar no roteiro de alguém: o passeio que vale o dia inteiro, o hotel que compensa a diária, o trecho que cansa mais do que parece. É esse conhecimento que você contrata.</p>
       <p style="margin-top:var(--e2)">O Matheus, um dos nossos sócios, caindo da prancha em Santarém. Ele foi para isso: ver com o próprio corpo o que vale a pena antes de colocar no roteiro de alguém.</p>
@@ -1016,7 +1017,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== COMO CONTRATAR ===================== -->
 <section class="secao secao-verde" id="contratacao" aria-labelledby="t-contratacao">
   <div class="wrap">
-    <span class="olho">Como contratar</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">04 · </span>Como contratar</span>
     <h2 id="t-contratacao">Do primeiro oi<em>até a sua volta.</em></h2>
     <p class="intro">Sem letra miúda e sem surpresa no meio do caminho.</p>
  
@@ -1055,7 +1056,7 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
 <!-- ===================== SERVIÇOS E CONTATO ===================== -->
 <section class="secao" id="servicos" aria-labelledby="t-fecho">
   <div class="wrap">
-    <span class="olho">Fale com a Maktub</span>
+    <span class="olho"><span class="olho-num" aria-hidden="true">05 · </span>Fale com a Maktub</span>
     <h2 id="t-fecho">Então vá.<em>Seu destino espera.</em></h2>
     <p class="intro">Conte para onde você quer ir, ou que ainda não sabe. Você fala direto com uma pessoa do nosso time e, juntos, marcamos a primeira conversa.</p>
  

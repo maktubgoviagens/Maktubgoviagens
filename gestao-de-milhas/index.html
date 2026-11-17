@@ -50,6 +50,7 @@
     .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
     .nav-links a{white-space:nowrap;font-size:13px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--text-mid);transition:color .25s}
     .nav-links a:hover{color:var(--green)}
+    .mk-num{margin-right:8px;color:var(--gold)}
     .nav-cta{border:1px solid var(--border-gold)!important;padding:9px 20px!important;color:var(--green)!important;transition:background .25s,border-color .25s!important;font-weight:500!important}
     .nav-cta:hover{background:var(--gold-muted)!important;border-color:var(--gold)!important}
     .nav-burger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
@@ -850,10 +851,10 @@ footer.mk-rodape{background:#193826;color:rgba(235,224,196,0.78);padding:56px 0 
       </div>
     </a>
     <ul class="nav-links" id="navLinks">
-      <li><a href="/gestao-de-milhas/" style="color:var(--gold)">Gestão de Milhas</a></li>
-      <li><a href="/viagens/">Viagens</a></li>
-      <li><a href="/quem-somos/">Quem Somos</a></li>
-      <li><a href="/como-trabalhamos/">Como funciona</a></li>
+      <li><a href="/gestao-de-milhas/" style="color:var(--gold)"><span class="mk-num" aria-hidden="true">01</span>Gestão de Milhas</a></li>
+      <li><a href="/viagens/"><span class="mk-num" aria-hidden="true">02</span>Viagens</a></li>
+      <li><a href="/quem-somos/"><span class="mk-num" aria-hidden="true">03</span>Quem Somos</a></li>
+      <li><a href="/como-trabalhamos/"><span class="mk-num" aria-hidden="true">04</span>Como funciona</a></li>
       <li><a href="/acesso/" class="nav-cta">Acesso Cliente</a></li>
     </ul>
     <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
