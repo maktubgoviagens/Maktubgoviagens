@@ -134,18 +134,44 @@
     el.classList.add(classe);
   }
 
-  /* ---------------- Observador de entrada na tela (igual à referência) ---------------- */
+  /* ---------------- Observador de entrada na tela ----------------
+     Anima toda vez que o elemento aparece, em qualquer direção: quando sai por
+     completo da tela ele volta ao estado inicial e, ao reaparecer, anima de novo.
+     Quem entra pelo alto da tela (rolando para cima) desce no lugar de subir. */
+  var saida = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting) return;
+      var el = e.target;
+      clearTimeout(el.__movAssenta);
+      el.classList.remove('is-visible', 'is-settled');
+    });
+  /* só reinicia quando o elemento já está bem longe da borda (150px), para o
+     deslocamento de partida não o empurrar de volta para a tela e fazê-lo piscar */
+  }, {threshold:0, rootMargin:'150px 0px 150px 0px'});
   var io = new IntersectionObserver(function(es){
     var k = 0;
     es.forEach(function(e){
       if(!e.isIntersecting) return;
       var el = e.target;
+      if(el.classList.contains('is-visible')) return;
+      var r = e.boundingClientRect, alto = e.rootBounds ? e.rootBounds.height : innerHeight;
+      var deCima = r.top + r.height / 2 < alto / 2;
+      if(el.classList.contains('mov-de-cima') !== deCima){
+        /* troca o lado de partida sem animar a troca, e só depois anima a entrada */
+        el.classList.add('mov-sem-transicao');
+        el.classList.toggle('mov-de-cima', deCima);
+        void el.offsetWidth;
+        el.classList.remove('mov-sem-transicao');
+      }
       if(el.classList.contains('mov-lote') && !/\bd[1-6]\b/.test(el.className)) el.style.setProperty('--d', (k++ * 0.08).toFixed(2) + 's');
       el.classList.add('is-visible');
-      io.unobserve(el);
-      if(el.classList.contains('split-reveal')) setTimeout(function(){ el.classList.add('is-settled'); }, 1800);
+      if(el.classList.contains('split-reveal')){
+        clearTimeout(el.__movAssenta);
+        el.__movAssenta = setTimeout(function(){ el.classList.add('is-settled'); }, 1800);
+      }
     });
   }, {threshold:.13, rootMargin:'0px 0px -5% 0px'});
+  function observa(el){ io.observe(el); saida.observe(el); }
 
   /* título do topo: entra palavra por palavra assim que a página abre (no computador;
      no celular ele aparece com a entrada leve de sempre, para não atrasar a primeira tela) */
@@ -172,10 +198,24 @@
     if(escondido(el) || noTopo(el) || emCarrossel(el) || naTela(el) || el.classList.contains('reveal')) return;
     el.classList.add('reveal');
   });
-  cada('.jornada > .passo', function(el){ if(!escondido(el)) el.classList.add('mov-linha-passo'); });
+  /* cartões vizinhos entram em sequência, subindo */
+  cada(MAPA.lote, function(el){
+    if(escondido(el) || noTopo(el) || emCarrossel(el) || naTela(el) || el.classList.contains('reveal')) return;
+    el.classList.add('reveal', 'mov-lote');
+  });
+  /* etapas do processo: o texto sobe em sequência e a linha dourada cresce */
+  cada('.jornada > .passo', function(el){
+    if(escondido(el) || noTopo(el) || naTela(el)) return;
+    el.classList.add('reveal', 'mov-lote', 'mov-sobe');
+  });
+  /* números entram crescendo */
+  cada('.prova-num', function(el){
+    if(escondido(el) || naTela(el)) return;
+    el.classList.add('reveal', 'mov-lote', 'mov-num');
+  });
 
-  cada('.reveal, .split-reveal, .image-reveal, .mov-linha-passo', function(el){
-    if(!escondido(el)) io.observe(el);
+  cada('.reveal, .split-reveal, .image-reveal', function(el){
+    if(!escondido(el)) observa(el);
   });
 
   /* ---------------- GSAP + ScrollTrigger + Lenis ----------------
@@ -268,12 +308,6 @@
     });
   });
 
-  /* números entram crescendo */
-  var numeros = Array.prototype.filter.call(document.querySelectorAll('.prova-num'), function(el){ return !escondido(el) && !naTela(el); });
-  if(numeros.length) ST.batch(numeros, {start:'top 88%', once:true, onEnter:function(els){
-    gsap.fromTo(els, {y:35, autoAlpha:0, scale:.86}, {y:0, autoAlpha:1, scale:1, duration:1.05, stagger:.11, ease:'power3.out'});
-  }});
-
   /* lista de etapas: cada linha desliza de um lado, alternando */
   cada('.prateleira > .etapa', function(li, i){
     if(escondido(li) || noTopo(li)) return;
@@ -282,29 +316,6 @@
       scrollTrigger:{trigger:li, start:'top 94%', end:'top 58%', scrub:.65}
     });
   });
-
-  /* etapas do processo: o texto sobe em sequência quando a lista entra na tela */
-  cada('.jornada', function(lista){
-    var passos = Array.prototype.filter.call(lista.children, function(p){ return !escondido(p); });
-    if(!passos.length) return;
-    gsap.fromTo(passos, {y:70, autoAlpha:0}, {
-      y:0, autoAlpha:1, stagger:.08, duration:1.05, ease:'power3.out',
-      scrollTrigger:{trigger:lista, start:'top 76%', once:true}
-    });
-  });
-
-  /* cartões: entram em lote, subindo */
-  var lote = [];
-  cada(MAPA.lote, function(el){
-    if(escondido(el) || noTopo(el) || emCarrossel(el) || el.classList.contains('reveal')) return;
-    lote.push(el);
-  });
-  if(lote.length){
-    gsap.set(lote.filter(function(el){ return el.getBoundingClientRect().top > innerHeight; }), {y:48, autoAlpha:0});
-    ST.batch(lote, {start:'top 88%', once:true, onEnter:function(els){
-      gsap.fromTo(els, {y:48, autoAlpha:0}, {y:0, autoAlpha:1, duration:.9, stagger:.08, ease:'power3.out', clearProps:'transform,opacity,visibility'});
-    }});
-  }
 
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ ST.refresh(); });
   ST.refresh();
