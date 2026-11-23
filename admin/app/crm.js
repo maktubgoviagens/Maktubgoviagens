@@ -2,6 +2,8 @@
 // Cada pessoa existe uma vez; leads, atendimentos, reuniões, emissões, carteira da Gestão e
 // indicações ficam pendurados na ficha. O vendedor é de cada venda, não do cliente.
 
+import { textoTrecho } from '/admin/app/venda.js?v=36';
+
 const verValor = (X) => X.ADMIN || (X.pode && X.pode('financeiro'));
 const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 const PAPEIS = { lead: 'Lead', cliente: 'Cliente', gestao: 'Gestão', passageiro: 'Passageiro', parceiro: 'Parceiro', fornecedor: 'Fornecedor' };
@@ -82,7 +84,9 @@ export function resumoPessoa(D, p) {
   const ids = new Set((D.emissoes || []).filter(e => e.pessoa_id === p.id && !fora(e)).map(e => e.id));
   (D.reunioes || []).forEach(r => (r.itens || []).forEach(x => { if (x.planilha_id && (x.pax || []).some(q => q && q.pessoa_id === p.id)) ids.add(x.planilha_id); }));
   const em = (D.emissoes || []).filter(e => ids.has(e.id) && !fora(e));
-  const viagens = em.filter(e => /passag|pacote|corporativo/i.test(String(e.servico_app || e.servico || ''))).length;
+  // ida e volta com fornecedores diferentes: os blocos do mesmo card são uma viagem só
+  const grp = new Map(); (D.reunioes || []).forEach(r => (r.itens || []).forEach(x => { if (x && x.grupo && x.planilha_id) grp.set(String(x.planilha_id), r.id + ':' + x.grupo); }));
+  const viagens = new Set(em.filter(e => /passag|pacote|corporativo/i.test(String(e.servico_app || e.servico || ''))).map(e => grp.get(String(e.id)) || String(e.id))).size;
   const desde = em.map(e => String(e.data_negociacao || '')).filter(Boolean).sort()[0];
   let aniv = '';
   if (p.nascimento) { const d = new Date(p.nascimento + 'T12:00:00'), h = new Date(); let a = h.getFullYear() - d.getFullYear(); if (h.getMonth() < d.getMonth() || (h.getMonth() === d.getMonth() && h.getDate() < d.getDate())) a--; aniv = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} (${a} anos)`; }
@@ -191,13 +195,18 @@ function diagCard(X, r) {
   return `<details style="margin:0 0 8px;border-left:3px solid var(--dourado,#A88B4A);padding:2px 0 2px 10px"><summary class="sub" style="cursor:pointer;margin:0">${X.esc(d.txt)}</summary>
     <div style="white-space:pre-line;font-size:16px;margin:6px 0">${X.esc(d.resumo)}</div><button type="button" class="sec" data-dgcp="${X.esc(r.id)}" style="width:100%">Copiar diagnóstico</button></details>`;
 }
+// card com ida e volta de fornecedores diferentes: uma linha por trecho (IDA 12/11 GRU > MAD | Gol | Soberano | LOC ABC123)
+function trechosCard(X, r) {
+  const B = (r.itens || []).filter(x => x && x.grupo && !x.cancelado_em); if (!B.length) return '';
+  return `<div style="margin:-4px 0 8px;padding-left:10px;border-left:3px solid var(--linha)">${B.map(x => `<div style="font-size:16px">${X.esc(textoTrecho(x))}</div>`).join('')}</div>`;
+}
 function atendimentosHtml(D, X, p) {
   const { esc } = X;
   const L = (D.reunioes || []).filter(r => r.pessoa_id === p.id && !r.arquivado_em)
     .sort((a, b) => ((a.resultado === 'Em andamento') === (b.resultado === 'Em andamento') ? String(b.data || '').localeCompare(String(a.data || '')) : a.resultado === 'Em andamento' ? -1 : 1));
   if (!L.length) return '';
   const tag = (r) => r.resultado === 'Em andamento' ? ['', r.etapa || 'Em andamento'] : r.resultado === 'Fechou' ? ['ok', 'Fechou'] : r.resultado === 'Não fechou' ? ['alerta', 'Não fechou'] : ['', r.resultado || ''];
-  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || String(r.produto || '').replace('Viagem completa / pacote', 'Outro') || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>${diagCard(X, r)}`; }).join('')}</section>`;
+  return `<section class="bloco"><h2>Atendimentos</h2>${L.slice(0, 30).map(r => { const [c, t] = tag(r); return `<button class="lin" data-at="${r.id}" style="width:100%;text-align:left;padding:10px 0;align-items:center"><span style="color:var(--verde);font-weight:500">${esc(r.trecho || String(r.produto || '').replace('Viagem completa / pacote', 'Outro') || r.tipo || 'Atendimento')}</span><span class="tag ${c}" style="flex:none">${esc(t)}</span></button>${trechosCard(X, r)}${diagCard(X, r)}`; }).join('')}</section>`;
 }
 
 // ficha no celular: o que se usa sempre fica aberto; o resto abre ao tocar

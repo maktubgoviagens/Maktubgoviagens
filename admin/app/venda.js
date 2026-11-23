@@ -28,6 +28,72 @@ export const custoDe = (x) => ehCliente(x) ? 0 : usaMilhas(x) && (x.milhas || x.
 export const vendaDe = (x) => ehCliente(x) ? 0 : (+x.venda || 0);
 export const enviado = (x) => !!x.planilha_id;
 
+// ---------- ida e volta com fornecedores diferentes ----------
+// a emissão vira blocos ligados pelo mesmo "grupo" (um por trecho, até 4). Cada bloco é um item do card e uma linha da planilha,
+// com companhia, fornecedor, forma de compra, milhas, custo, localizador e parte do valor próprios. Para metas, o grupo é uma venda só.
+export const PARTES = { ida: 'IDA', volta: 'VOLTA', t1: 'TRECHO 1', t2: 'TRECHO 2', t3: 'TRECHO 3', t4: 'TRECHO 4' };
+const LETRA = { ida: 'A', volta: 'B', t1: 'A', t2: 'B', t3: 'C', t4: 'D' };
+export const emGrupo = (x) => !!(x && x.grupo);
+export const blocosDe = (IT, g) => (IT || []).filter(y => y && y.grupo === g && !y.cancelado_em);
+// forma de compra do bloco: as duas de milhas viram "milhas" e as duas compradas viram "pagante" (mesma regra de custo e de planilha)
+export const COMPRAS = [['maktub', 'Milhas da Maktub', 'milhas'], ['fornecedor', 'Milhas do fornecedor', 'milhas'], ['pronta', 'Passagem pronta', 'pagante'], ['pagante', 'Pagante', 'pagante']];
+export const compraDe = (x) => x.compra || (x.pago_em === 'pagante' ? 'pagante' : x.fornecedor ? 'fornecedor' : 'maktub');
+// quem vendeu o trecho (o que a equipe precisa saber no pós-venda)
+export const fornecedorDe = (x) => { const c = compraDe(x); return c === 'maktub' ? 'Maktub' : (x.fornecedor || (c === 'fornecedor' ? x.gestor : '') || ''); };
+// "IDA 12/11 GRU > MAD | Gol | Soberano | LOC ABC123" (texto puro, para Operação, check-in e ficha do cliente)
+export function cabTrecho(x) {
+  const o = String(x.origem || '').trim().toUpperCase().slice(0, 3), d = String(x.destino || '').trim().toUpperCase().slice(0, 3);
+  return [PARTES[x.parte] || '', ddmm(x.data_ida), o || d ? `${o} > ${d}` : ''].filter(Boolean).join(' ');
+}
+export function textoTrecho(x) {
+  return [cabTrecho(x), x.cia_voo || x.cia_emissora || '', fornecedorDe(x), x.localizador ? 'LOC ' + String(x.localizador).toUpperCase() : ''].filter(Boolean).join(' | ');
+}
+// soma das partes do valor tem que bater com o valor da passagem; devolve o aviso ou ''
+export function conferirGrupos(IT) {
+  const gs = [...new Set((IT || []).filter(y => y.grupo && !y.cancelado_em).map(y => y.grupo))];
+  for (const g of gs) {
+    const B = blocosDe(IT, g), tot = +B[0].grupo_venda || 0, soma = r2(B.reduce((a, y) => a + (+y.venda || 0), 0));
+    if (tot && Math.abs(soma - tot) > 0.01) return `A soma das partes do valor (${soma.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) não bate com o valor da passagem (${tot.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}). Ajuste as partes de ${B.map(y => PARTES[y.parte] || '').join(' e ').toLowerCase()} antes de salvar.`;
+  }
+  return '';
+}
+// divide o valor da passagem entre os blocos pelo custo de cada um; parte digitada à mão fica como está
+export function ratearGrupo(IT, g) {
+  const B = blocosDe(IT, g), tot = +(B[0] || {}).grupo_venda || 0; if (!tot || !B.length) return;
+  const livres = B.filter(y => !y.venda_fixa && !enviado(y)); if (!livres.length) return;
+  const alvo = tot - B.filter(y => !livres.includes(y)).reduce((a, y) => a + (+y.venda || 0), 0);
+  const pesos = livres.map(y => custoDe(y) || 0), sp = pesos.reduce((a, b) => a + b, 0);
+  let resto = alvo; livres.forEach((y, k) => { const v = k === livres.length - 1 ? r2(resto) : r2((sp ? pesos[k] / sp : 1 / livres.length) * alvo); resto -= v; y.venda = v; });
+}
+// liga o interruptor: um bloco por trecho, cada um só ida, com os dados do voo daquele trecho
+export function dividirEmBlocos(IT, i) {
+  const x = IT[i], ls = voosDaEmissao(x).filter(l => l.o || l.d).slice(0, 4);
+  const L = ls.length >= 2 ? ls : [{ o: up3(x.origem), d: up3(x.destino), data: x.data_ida || '', hora: x.hora_ida || '', chegada: x.chegada_ida || '' }, { o: up3(x.destino), d: up3(x.origem), data: x.data_volta || '', hora: x.hora_volta || '', chegada: x.chegada_volta || '' }];
+  const g = 'g' + Math.random().toString(36).slice(2, 8), partes = L.length === 2 ? ['ida', 'volta'] : L.map((_, k) => 't' + (k + 1));
+  const total = r2(vendaDe(x)) || null;
+  const blocos = L.map((l, k) => {
+    const comum = { grupo: g, parte: partes[k], grupo_venda: total, tipo_trecho: 'ida', origem: l.o, destino: l.d, data_ida: l.data || (k === L.length - 1 && L.length === 2 ? x.data_volta || '' : k === 0 ? x.data_ida || '' : ''), hora_ida: l.hora || '', chegada_ida: l.chegada || '', data_volta: null, hora_volta: '', chegada_volta: '', ct_on: false, ct: null, trechos: '', hrs: null, chs: null, compra: compraDe(x), sugere_blocos: false };
+    // o primeiro bloco fica com o que já foi preenchido; os outros começam com companhia, passageiros e bagagem e o resto em branco
+    if (!k) return Object.assign(x, comum);
+    return { produto: x.produto, pago_em: x.pago_em || 'milhas', cia_emissora: x.cia_emissora || '', cia_voo: '', passageiros: x.passageiros ?? null, bagagem: x.bagagem ?? null,
+      ...(Array.isArray(x.pax) && x.pax.length ? { pax: JSON.parse(JSON.stringify(x.pax)) } : {}), custo: null, venda: null, ...comum };
+  });
+  IT.splice(i, 1, ...blocos);
+  ratearGrupo(IT, g);
+}
+// algum bloco além do primeiro já tem dado digitado (para pedir confirmação antes de juntar)
+export const grupoTemDados = (IT, g) => blocosDe(IT, g).slice(1).some(y => y.localizador || +y.milhas || +y.taxas || +y.custo || y.fornecedor || y.print);
+// desliga o interruptor: volta para uma emissão só, com os dados do primeiro trecho
+export function juntarBlocos(IT, g) {
+  const B = blocosDe(IT, g); if (!B.length) return;
+  const x = B[0], u = B[B.length - 1], total = +x.grupo_venda || r2(B.reduce((a, y) => a + (+y.venda || 0), 0)) || null;
+  if (B.length === 2 && up3(u.destino) === up3(x.origem)) Object.assign(x, { tipo_trecho: 'iv', data_volta: u.data_ida || null, hora_volta: u.hora_ida || '', chegada_volta: u.chegada_ida || '' });
+  else if (B.length > 1) Object.assign(x, { tipo_trecho: 'multi', destino: u.destino, trechos: B.map(y => `${up3(y.origem)}-${up3(y.destino)}${y.data_ida ? ' ' + ddmm(y.data_ida) : ''}`).join('\n'), hrs: B.map(y => y.hora_ida || '') });
+  x.venda = total;
+  ['grupo', 'parte', 'grupo_venda', 'venda_fixa', 'compra'].forEach(k => delete x[k]);
+  for (let k = IT.length - 1; k >= 0; k--) if (IT[k] !== x && IT[k].grupo === g) IT.splice(k, 1);
+}
+
 // passageiros do voo: nome, CPF e nascimento de cada um (B2C). A quantidade tem que bater com "Passageiros".
 const soDig = (v) => String(v || '').replace(/\D/g, '');
 export function cpfValido(v) {
@@ -75,7 +141,7 @@ export function minimoItem(x) {
   const f = [];
   if (!x.venda) f.push({ k: 'venda', rot: 'valor de venda' });
   if (!custoDe(x) && x.produto !== 'Taxa de Planejamento') f.push({ k: usaMilhas(x) ? 'milhas' : 'custo', rot: usaMilhas(x) ? 'custo (milhas, milheiro e taxas)' : 'custo' });
-  if (usaMilhas(x)) { if (!String(x.gestor || '').trim() && !String(x.conta || '').trim()) f.push({ k: 'gestor', rot: 'gestor ou conta das milhas' }); }
+  if (usaMilhas(x)) { if (!String(x.gestor || '').trim() && !String(x.conta || '').trim() && !(x.grupo && compraDe(x) === 'fornecedor' && String(x.fornecedor || '').trim())) f.push({ k: 'gestor', rot: 'gestor ou conta das milhas' }); }
   else if (!String(x.fornecedor || '').trim()) f.push({ k: 'fornecedor', rot: 'onde comprou' });
   if (ehVoo(x)) {
     if (!String(x.localizador || '').trim()) f.push({ k: 'localizador', rot: 'localizador' });
@@ -283,7 +349,7 @@ function htmlItem(X, x, i, ctx) {
   if (naCotacao(x, ctx)) return htmlItemCotacao(X, x, i, ctx);
   const trava = enviado(x);
   somarTrechos(x);
-  const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
+  const base = `${dupla(inp(X, 'custo', i, usaMilhas(x) ? 'Custo (calculado)' : x.ct_on ? 'Custo (soma dos trechos)' : x.grupo ? 'Valor pago (R$)' : 'Custo (R$)', usaMilhas(x) && (x.milhas || x.taxas) ? custoMilhas(x) : x.custo, 'n', (usaMilhas(x) && (x.milhas || x.taxas)) || x.ct_on ? 'readonly' : ''), inp(X, 'venda', i, x.grupo ? (ctx.vendaTotal ? 'Parte do valor (pelo custo)' : 'Parte do valor (R$)') : ctx.vendaTotal ? 'Venda (rateada do total)' : 'Venda (R$)', x.venda, 'n', ctx.vendaTotal && !trava ? 'readonly' : ''))}`;
   const ref = [x.trecho && ehVoo(x) ? 'Trecho cotado: ' + X.esc(x.trecho) : '', x.custo_dia != null && x.custo_dia !== '' && X.verMargem !== false ? 'Custo do dia na cotação: ' + X.brl2(+x.custo_dia) : ''].filter(Boolean).join(' · ');
   if (!ctx.detalhes) return base + (ref ? `<div class="sub" style="margin:-2px 0 4px">${ref}</div>` : '');
   let det = ref ? `<div class="sub" style="margin:0 0 6px">${ref}</div>` : '';
@@ -291,20 +357,20 @@ function htmlItem(X, x, i, ctx) {
     // print da emissão (bilhete, e-mail da companhia, tela do programa): a IA preenche o que ainda estiver vazio
     det += `<div class="botoes4" style="margin:2px 0 4px"><button type="button" class="sec" data-lercola="${i}">Colar print da emissão</button><label class="sec" style="display:block;text-align:center;cursor:pointer;padding:10px">Escolher da galeria<input type="file" accept="image/*" multiple data-lerarq="${i}" style="display:none"></label></div>
       <div class="sub" style="margin:0 0 8px">${x.lido_em ? 'Preenchido pelo print. Confira cada campo.' + (x.lido_obs ? ' ' + X.esc(x.lido_obs) : '') : 'O print da emissão preenche localizador, companhia, datas, saída e chegada de cada voo e passageiros' + (usaMilhas(x) ? ', milhas e taxas' : '') + '. Só o que estiver vazio.'}</div>`;
-    det += `<div class="sub" style="margin:6px 0 0">Trecho</div>${seg('tipo_trecho', i, [['iv', 'Ida e volta'], ['ida', 'Só ida'], ['multi', 'Multitrecho']], x.tipo_trecho || ctx.tipoPadrao)}
+    det += `${x.grupo ? '' : `<div class="sub" style="margin:6px 0 0">Trecho</div>${seg('tipo_trecho', i, [['iv', 'Ida e volta'], ['ida', 'Só ida'], ['multi', 'Multitrecho']], x.tipo_trecho || ctx.tipoPadrao)}${htmlInterruptor(X, x, i, trava, ctx)}`}
       ${dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'), inp(X, 'destino', i, 'Destino', x.destino, 's', 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"'))}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? `<label class="fl"><span>Trechos (um por linha)</span><textarea data-it="${i}" data-k="trechos" rows="3" placeholder="GIG-LIS 10/11&#10;LIS-MAD 15/11&#10;MAD-GIG 22/11">${X.esc(x.trechos || '')}</textarea></label>` : ''}
-      ${dupla(inp(X, 'data_ida', i, 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
-      ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
-      ${(m => dupla(inp(X, 'chegada_ida', i, m ? 'Chegada do 1º trecho' : 'Chegada da ida', x.chegada_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'chegada_volta', i, m ? 'Chegada do último trecho' : 'Chegada da volta', x.chegada_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
+      ${dupla(inp(X, 'data_ida', i, x.grupo ? 'Data do voo' : 'Data da ida', x.data_ida ?? ctx.ida, 'd'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'data_volta', i, 'Data da volta', x.data_volta ?? ctx.volta, 'd'))}
+      ${(m => dupla(inp(X, 'hora_ida', i, m ? 'Saída do 1º trecho' : x.grupo ? 'Horário de saída' : 'Horário de saída da ida', x.hora_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'hora_volta', i, m ? 'Saída do último trecho' : 'Horário de saída da volta', x.hora_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
+      ${(m => dupla(inp(X, 'chegada_ida', i, m ? 'Chegada do 1º trecho' : x.grupo ? 'Horário de chegada' : 'Chegada da ida', x.chegada_ida, 'h'), (x.tipo_trecho || ctx.tipoPadrao) === 'ida' ? '<div></div>' : inp(X, 'chegada_volta', i, m ? 'Chegada do último trecho' : 'Chegada da volta', x.chegada_volta, 'h')))((x.tipo_trecho || ctx.tipoPadrao) === 'multi')}
       ${(x.tipo_trecho || ctx.tipoPadrao) === 'multi' ? (ls => ls.length > 2 ? `<div class="duas-col">${ls.slice(1, -1).map((l, j) => inp(X, 'hrm', i, `Saída do voo ${j + 2}${l.o && l.d ? ` (${l.o} → ${l.d})` : ''}`, l.hora, 'h', `data-hrm="${i}|${j + 1}"`)).join('')}</div>` : '')(voosDaEmissao(x)) : ''}
       <div class="sub" style="margin:-2px 0 6px">O horário de saída faz o aviso de check-in chegar 24 h antes do voo. Data e horário de saída de todos os voos são obrigatórios para fechar.</div>
-      <div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']].concat(ctx.gestao && ctx.gestao.ativo && !trava ? [['cliente_gestao', 'Milhas do cliente da Gestão']] : []), x.pago_em || 'milhas')}
+      ${x.grupo ? `<div class="sub" style="margin:6px 0 0">Forma de compra</div><div class="seg-2x2">${seg('compra', i, COMPRAS.map(([v, l]) => [v, l]), compraDe(x))}</div>` : `<div class="sub" style="margin:6px 0 0">Como foi pago</div>${seg('pago_em', i, [['milhas', 'Milhas'], ['pagante', 'Pagante']].concat(ctx.gestao && ctx.gestao.ativo && !trava ? [['cliente_gestao', 'Milhas do cliente da Gestão']] : []), x.pago_em || 'milhas')}`}
       ${dupla(inp(X, 'cia_emissora', i, 'Emitido na cia', x.cia_emissora, 's', 'placeholder="Azul"'), inp(X, 'cia_voo', i, 'Voa de (se for aliança)', x.cia_voo, 's', 'placeholder="Turkish"'))}
       ${x.cia_voo && x.cia_emissora && x.cia_voo.trim().toLowerCase() !== x.cia_emissora.trim().toLowerCase() ? `<div class="config" style="margin:4px 0 8px">Aliança: emitido na ${X.esc(x.cia_emissora)}, voa de ${X.esc(x.cia_voo)}. O check-in e o bilhete são pela ${X.esc(x.cia_voo)}.</div>` : ''}
       ${usaMilhas(x) ? `${dupla(inp(X, 'conta', i, 'Conta usada', x.conta), inp(X, 'gestor', i, 'Gestor da conta', x.gestor))}
       <div class="duas-col" style="grid-template-columns:1fr 1fr 1fr">${inp(X, 'milhas', i, x.ct_on ? 'Milhas (soma)' : 'Milhas', x.milhas, 'n', x.ct_on ? 'readonly' : '')}${inp(X, 'milheiro', i, x.ct_on ? 'Milheiro (média)' : 'Milheiro (R$)', x.milheiro, 'n', x.ct_on && (x.ct || []).some(l => l.milheiro != null && l.milheiro !== '') ? 'readonly' : '')}${inp(X, 'taxas', i, x.ct_on ? 'Taxas (soma)' : 'Taxas (R$)', x.taxas, 'n', x.ct_on ? 'readonly' : '')}</div>` : ''}
-      ${htmlTrechos(X, x, i, trava, ctx)}
+      ${x.grupo ? '' : htmlTrechos(X, x, i, trava, ctx)}
       ${dupla(inp(X, 'localizador', i, 'Localizador', x.localizador, 's', 'style="text-transform:uppercase"'), inp(X, 'passageiros', i, 'Passageiros', x.passageiros ?? ctx.pax, 'n', 'inputmode="numeric"'))}
       ${htmlPax(X, x, i, false, ctx)}
       <div class="sub" style="margin:6px 0 0">Bagagem despachada por passageiro</div>${seg('bagagem', i, [['0', 'Não tem'], ['1', '1 mala'], ['2', '2 malas'], ['3', '3 malas']], x.bagagem)}
@@ -317,7 +383,9 @@ function htmlItem(X, x, i, ctx) {
   } else {
     det += `${dupla(inp(X, 'nome', i, 'Descrição', x.nome, 's', 'placeholder="O que foi comprado"'), inp(X, 'data_ida', i, 'Data', x.data_ida ?? ctx.ida, 'd'))}${inp(X, 'localizador', i, 'Código ou reserva', x.localizador)}`;
   }
-  det += campoForn(X, x, i, usaMilhas(x) ? 'Fornecedor (se comprou milhas de alguém)' : 'Onde comprou (fornecedor)');
+  if (!x.grupo) det += campoForn(X, x, i, usaMilhas(x) ? 'Fornecedor (se comprou milhas de alguém)' : 'Onde comprou (fornecedor)');
+  else if (compraDe(x) !== 'maktub') det += campoForn(X, x, i, compraDe(x) === 'fornecedor' ? 'Fornecedor (de quem comprou as milhas)' : 'Fornecedor (com quem comprou a passagem)');
+  if (x.grupo) det += htmlPagoFornecedor(X, x);
   det += chk(X, 'emitido', i, ehVoo(x) ? 'Emitido (bilhete gerado)' : 'Comprado / reservado', x.emitido, trava);
   const pend = pendenciasItem(x);
   det += trava ? `<div class="sub" style="color:var(--verde)">Enviado para a planilha${x.enviado_em ? ' em ' + new Date(x.enviado_em).toLocaleDateString('pt-BR') : ''}. Correção feita aqui vai para a mesma linha da planilha ao salvar, em até 5 minutos.</div>${htmlCorrecoes(X, x)}` : ctx.fechou && pend.length ? `<div class="sub" style="color:var(--alerta)">Falta: ${pend.join(', ')}.</div>` : '';
@@ -380,7 +448,40 @@ function htmlCliente(X, x, i, ctx) {
 }
 
 // título de cada emissão quando a venda tem mais de uma: rota, companhia e localizador
+// interruptor "Ida e volta com fornecedores diferentes": em voo de ida e volta ou multitrecho que ainda não foi para a planilha
+function htmlInterruptor(X, x, i, trava, ctx) {
+  if (trava || ehCliente(x) || (x.tipo_trecho || ctx.tipoPadrao) === 'ida') return '';
+  return `<label class="fc" style="margin:2px 0 6px"><input type="checkbox" data-blocos="${i}"><span>Ida e volta com fornecedores diferentes</span></label>${x.sugere_blocos ? '<div class="config" style="margin:0 0 8px">A ida e a volta estão em companhias diferentes. Se cada uma foi comprada com um fornecedor, ligue Ida e volta com fornecedores diferentes.</div>' : ''}`;
+}
+// pago ao fornecedor do bloco: só depois que a linha chegou da planilha (é a mesma marcação do Financeiro)
+function htmlPagoFornecedor(X, x) {
+  if (!enviado(x)) return '';
+  const e = (X.D.emissoes || []).find(o => String(o.id) === String(x.planilha_id));
+  if (!e) return '<div class="sub" style="margin:4px 0 6px">Pago fornecedor: disponível quando a linha chegar da planilha.</div>';
+  if (e.pago_fornecedor) return `<div class="sub" style="margin:4px 0 6px;color:var(--verde)">Pago ao fornecedor${e.pago_fornecedor_em ? ' em ' + new Date(e.pago_fornecedor_em).toLocaleDateString('pt-BR') : ''}.</div>`;
+  return X.pagarFornecedores ? `<button type="button" class="sec" data-pagforn="${X.esc(e.id)}" style="width:100%;margin:4px 0 8px">Pago fornecedor${e.fornecedor ? ' (' + X.esc(e.fornecedor) + ')' : ''}</button>` : '';
+}
+// linha de um trecho com o fornecedor tocável (abre a ficha com WhatsApp)
+function linhaTrechoHtml(X, x) {
+  const f = fornecedorDe(x);
+  const partes = [X.esc(cabTrecho(x)), X.esc(x.cia_voo || x.cia_emissora || ''), f ? `<button type="button" data-fornficha="${X.esc(f)}" style="background:none;border:0;padding:0;font:inherit;color:var(--verde);text-decoration:underline;cursor:pointer">${X.esc(f)}</button>` : '', x.localizador ? 'LOC ' + X.esc(String(x.localizador).toUpperCase()) : ''].filter(Boolean);
+  return `<div style="font-size:16px;margin:2px 0">${partes.join(' | ')}</div>`;
+}
+// topo do grupo: interruptor ligado, uma linha por trecho e o valor da passagem dividido entre os blocos
+function htmlCabecalhoGrupo(X, IT, g, ctx) {
+  const B = blocosDe(IT, g), trava = B.some(enviado);
+  if (ctx.vendaTotal) B.forEach(y => { y.grupo_venda = r2(B.reduce((a, z) => a + (+z.venda || 0), 0)) || null; });
+  const tot = +B[0].grupo_venda || 0, soma = r2(B.reduce((a, y) => a + (+y.venda || 0), 0));
+  return `<div style="border:1px solid var(--linha);border-radius:12px;padding:10px 12px;margin:6px 0 8px">
+    <label class="fc" style="margin:0 0 6px"><input type="checkbox" data-blocos-g="${X.esc(g)}" checked ${trava ? 'disabled' : ''}><span>Ida e volta com fornecedores diferentes</span></label>
+    ${B.map(y => linhaTrechoHtml(X, y)).join('')}
+    <div id="fornFicha-${X.esc(g)}"></div>
+    ${ctx.detalhes ? `<label class="fl" style="margin-top:6px"><span>${ctx.vendaTotal ? 'Valor da passagem (rateado do total do card)' : 'Valor de venda da passagem (R$)'}</span><input data-gv="${X.esc(g)}" inputmode="decimal" value="${X.esc(tot || '')}" ${ctx.vendaTotal || trava ? 'readonly' : ''}></label>
+    <div class="sub" style="margin:0" data-gvmsg="${X.esc(g)}">${tot && Math.abs(soma - tot) > 0.01 ? `A soma das partes (${X.brl2(soma)}) não bate com o valor da passagem.` : 'Dividido entre os blocos pelo custo de cada um. Dá para editar a parte de cada bloco.'}</div>` : ''}
+  </div>`;
+}
 function tituloVoo(X, x, IT) {
+  if (x.grupo) return `<span style="font-weight:400;color:var(--tinta-2)"> · ${X.esc(PARTES[x.parte] || '')}${x.origem || x.destino ? ` · ${X.esc(up3(x.origem))} → ${X.esc(up3(x.destino))}` : ''}${x.localizador ? ' · ' + X.esc(String(x.localizador).toUpperCase()) : ''}</span>`;
   const n = IT.filter(ehVoo).length; if (n < 2 && !x.localizador) return '';
   const rota = x.origem || x.destino ? ` · ${X.esc(up3(x.origem))} ${x.tipo_trecho === 'iv' ? '⇄' : '→'} ${X.esc(up3(x.destino))}` : '';
   const tipo = ehCliente(x) ? ' · milhas do cliente' : IT.some(ehCliente) ? ' · vendida pela Maktub' : '';
@@ -492,6 +593,13 @@ export function paxPelosTrechos(IT) {
   });
 }
 // editor dos serviços: devolve funções para ler o estado
+// fornecedores para a busca: os 5 mais usados nas vendas primeiro, depois os outros em ordem alfabética
+function fornOrdenados(X) {
+  const todos = X.fornecedores(), n = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(), cont = new Map();
+  (X.D.emissoes || []).forEach(e => [e.fornecedor, e.conta].forEach(v => { const k = n(v); if (k) cont.set(k, (cont.get(k) || 0) + 1); }));
+  const top = todos.filter(t => cont.get(n(t))).sort((a, b) => cont.get(n(b)) - cont.get(n(a))).slice(0, 5);
+  return [...top, ...todos.filter(t => !top.includes(t))];
+}
 export function editorItens(X, el, IT, ctx, aoMudar) {
   // totais só da parte vendida: a emissão com milhas do cliente não é venda
   const tot = () => ({ v: r2(IT.reduce((a, x) => a + vendaDe(x), 0)), c: r2(IT.reduce((a, x) => a + custoDe(x), 0)) });
@@ -507,10 +615,21 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     if (x.data_ida == null && ctx.ida) x.data_ida = ctx.ida;
     if (x.data_volta == null && ctx.volta && (ehVoo(x) || ehHotel(x)) && x.tipo_trecho !== 'ida') x.data_volta = ctx.volta;
   });
+  // valor de cada bloco atualizado no lugar (sem redesenhar: o teclado não fecha)
+  const mostraGrupo = (g) => {
+    const B = blocosDe(IT, g); B.forEach(y => { const c = el.querySelector(`input[data-it="${IT.indexOf(y)}"][data-k="venda"]`); if (c && c !== document.activeElement) c.value = y.venda ?? ''; });
+    const tot = +(B[0] || {}).grupo_venda || 0, soma = r2(B.reduce((a, y) => a + (+y.venda || 0), 0)), m = el.querySelector(`[data-gvmsg="${g}"]`);
+    if (m) m.textContent = tot && Math.abs(soma - tot) > 0.01 ? `A soma das partes (${X.brl2(soma)}) não bate com o valor da passagem.` : 'Dividido entre os blocos pelo custo de cada um. Dá para editar a parte de cada bloco.';
+  };
+  const mexeuNoGrupo = (x, k) => {
+    if (ctx.vendaTotal) return;
+    if (k === 'venda') { x.venda_fixa = true; ratearGrupo(IT, x.grupo); mostraGrupo(x.grupo); }
+    else if (['milhas', 'milheiro', 'taxas', 'custo'].includes(k)) { ratearGrupo(IT, x.grupo); mostraGrupo(x.grupo); }
+  };
   const desenha = () => {
     if (ctx.detalhes) padroes();
     paxPelosTrechos(IT);
-    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${X.fornecedores().map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><datalist id="dlServV">${(X.servicos ? X.servicos() : []).map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : ''}"><div style="font-weight:600;font-size:13px">${X.esc(x.produto === 'Viagem completa / pacote' ? 'Outro' : x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) && !naCotacao(x, ctx) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
+    el.innerHTML = IT.length ? `<datalist id="dlPaxV">${(X.D.pessoas || []).slice(0, 3000).map(p => `<option value="${X.esc(p.nome)}">`).join('')}</datalist><datalist id="dlFornV">${fornOrdenados(X).map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><datalist id="dlServV">${(X.servicos ? X.servicos() : []).map(n => `<option value="${X.esc(n)}">`).join('')}</datalist><div class="bloco" style="margin:8px 0 4px;padding:10px 12px">${IT.map((x, i) => `<div style="${i && !(x.grupo && IT[i - 1] && IT[i - 1].grupo === x.grupo) ? 'border-top:1px solid var(--linha);padding-top:8px;margin-top:8px' : x.grupo && i && IT[i - 1].grupo === x.grupo ? 'border-top:1px dashed var(--linha);padding-top:8px;margin-top:8px' : ''}">${x.grupo && blocosDe(IT, x.grupo)[0] === x ? htmlCabecalhoGrupo(X, IT, x.grupo, ctx) : ''}<div style="font-weight:600;font-size:13px">${X.esc(x.produto === 'Viagem completa / pacote' ? 'Outro' : x.produto)}${x.nome ? ' · ' + X.esc(x.nome) : ''}${ehVoo(x) ? tituloVoo(X, x, IT) : ''}</div>${htmlItem(X, x, i, ctx)}${ehVoo(x) && !enviado(x) && !naCotacao(x, ctx) && (!x.grupo || blocosDe(IT, x.grupo).slice(-1)[0] === x) ? `<button type="button" class="sec" data-outraem="${i}" style="width:100%;margin:6px 0 2px;font-size:12px">+ Outra emissão (outro localizador, companhia ou forma de pagamento)</button>` : ''}</div>`).join('')}<div id="reTot" style="margin-top:8px"></div></div>` : '<div class="sub">Marque pelo menos um produto.</div>';
     const nrmF = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     el.querySelectorAll('[data-fornnovo]').forEach(b => {
       const inpF = el.querySelector(`input[data-it="${b.dataset.fornnovo}"][data-k="fornecedor"]`); if (!inpF || !X.novoFornecedor) return;
@@ -529,12 +648,14 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
         set(); desenha();
       };
       // milhas, milheiro e taxas: atualiza só o custo calculado, sem redesenhar a tela (não fecha o teclado nem pula a página)
-      else { e.oninput = () => { set(); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { const x = IT[+e.dataset.it]; if (['cia_voo', 'cia_emissora', 'trechos'].includes(e.dataset.k) || (ehCliente(x) && ['programa', 'milhas', 'taxas', 'pagante', 'rex', 'cabine', 'data_emissao', 'taxas_pago_em', 'localizador'].includes(e.dataset.k))) desenha(); }; }
+      else { e.oninput = () => { set(); if (IT[+e.dataset.it].grupo) mexeuNoGrupo(IT[+e.dataset.it], e.dataset.k); resumo(); if (['milhas', 'milheiro', 'taxas'].includes(e.dataset.k)) { const x = IT[+e.dataset.it], c = el.querySelector(`input[data-it="${e.dataset.it}"][data-k="custo"]`); if (c && usaMilhas(x) && (x.milhas || x.taxas)) c.value = custoMilhas(x); } }; e.onchange = () => { const x = IT[+e.dataset.it]; if (['cia_voo', 'cia_emissora', 'trechos'].includes(e.dataset.k) || (ehCliente(x) && ['programa', 'milhas', 'taxas', 'pagante', 'rex', 'cabine', 'data_emissao', 'taxas_pago_em', 'localizador'].includes(e.dataset.k))) desenha(); }; }
     });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => {
       const x = IT[+b.dataset.it], k = b.dataset.k, v = b.dataset.set;
       if (k === 'pago_em' && ehCliente(x) && v !== 'cliente_gestao' && (x.gestao_em || x.cancelado_em)) { X.aviso('Esta emissão já foi lançada na Gestão. Para trocar a forma, cancele a emissão.'); return; }
       x[k] = v; if (k === 'pago_em' && v === 'cliente_gestao') prepararCliente(x, ctx);
+      // forma de compra do bloco: as de milhas usam a regra de milhas; pronta e pagante usam o valor pago
+      if (k === 'compra') { x.pago_em = (COMPRAS.find(c => c[0] === v) || [])[2] || 'milhas'; if (x.grupo && !ctx.vendaTotal) ratearGrupo(IT, x.grupo); }
       if (k === 'taxas_quem' && v === 'maktub' && !x.taxas_pago_em) x.taxas_pago_em = x.data_emissao || hojeIso();
       desenha(); });
     // emissão com milhas do cliente: voos (de, para, data, horário), leitura do print, atualizar e cancelar na Gestão
@@ -572,6 +693,22 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
       desenha(); avisaMudou();
       X.aviso(ja ? 'Trecho virou outra emissão. Corrija custo e venda da que ficou, preencha os da nova e salve: a nova vai para a planilha e a que ficou é corrigida.' : 'Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.');
     });
+    // ida e volta com fornecedores diferentes: liga, desliga, valor da passagem, ficha do fornecedor e pago fornecedor
+    el.querySelectorAll('[data-blocos]').forEach(e => e.onchange = () => { if (!e.checked) return; dividirEmBlocos(IT, +e.dataset.blocos); desenha(); avisaMudou();
+      X.aviso('Cada trecho virou um bloco: preencha companhia, fornecedor, forma de compra, custo e localizador de cada um.'); });
+    el.querySelectorAll('[data-blocos-g]').forEach(e => e.onchange = async () => {
+      if (e.checked) return; const g = e.dataset.blocosG;
+      if (grupoTemDados(IT, g) && !await pergunta('Voltar para um fornecedor só?\n\nFicam os dados do primeiro trecho. O que foi preenchido nos outros blocos será descartado.', { sim: 'Voltar para um bloco', nao: 'Manter separado', perigo: true })) { e.checked = true; return; }
+      juntarBlocos(IT, g); desenha(); avisaMudou(); });
+    el.querySelectorAll('[data-gv]').forEach(e => e.oninput = () => { const g = e.dataset.gv, v = nb(e.value);
+      blocosDe(IT, g).forEach(y => { y.grupo_venda = v; delete y.venda_fixa; }); ratearGrupo(IT, g); mostraGrupo(g); resumo(); });
+    el.querySelectorAll('[data-fornficha]').forEach(b => b.onclick = () => {
+      const nome = b.dataset.fornficha, box = b.closest('div[style*="border-radius:12px"]').querySelector('[id^="fornFicha-"]'); if (!box) return;
+      const p = X.fichaFornecedor ? X.fichaFornecedor(nome) : null, zap = p && p.celular && X.zapLink ? X.zapLink(p.celular, p.nome, `Oi, ${String(p.nome).split(' ')[0]}! Aqui é da Maktub Go.`) : '';
+      box.innerHTML = `<div class="config" style="margin:6px 0">${X.esc(nome)}${p ? '' : ': sem ficha de fornecedor com esse nome.'}<div class="botoes4" style="margin-top:6px">${zap ? `<a class="sec" href="${X.esc(zap)}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px">WhatsApp</a>` : ''}${p && X.abrirFicha ? `<button type="button" class="sec" data-abreficha="${X.esc(p.id)}">Abrir ficha</button>` : ''}</div></div>`;
+      const ab = box.querySelector('[data-abreficha]'); if (ab) ab.onclick = () => X.abrirFicha(ab.dataset.abreficha);
+    });
+    el.querySelectorAll('[data-pagforn]').forEach(b => b.onclick = async () => { b.disabled = true; const r = await X.pagarFornecedores([b.dataset.pagforn]); if (r && r.erro) { b.disabled = false; X.aviso('Não marcou: ' + r.erro); return; } desenha(); });
     el.querySelectorAll('[data-outraem]').forEach(b => b.onclick = () => { const x = IT[+b.dataset.outraem]; IT.splice(+b.dataset.outraem + 1, 0, { produto: x.produto, custo: null, venda: null, tipo_trecho: 'ida', pago_em: 'milhas' }); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-cttira]').forEach(b => b.onclick = async () => { const [i, k] = b.dataset.cttira.split('|'), l = IT[+i].ct[+k] || {}; if ((l.o || l.d || l.milhas || l.custo) && !await pergunta('Tirar este trecho?\n\nO que foi preenchido nele será apagado.', { sim: 'Tirar', perigo: true })) return; IT[+i].ct.splice(+k, 1); desenha(); avisaMudou(); });
     el.querySelectorAll('[data-ct]').forEach(e => {
@@ -794,9 +931,9 @@ function cpfNF(X, r, IT) {
 }
 // Observações da linha: card, passageiros, custo por trecho, horários, bagagem, onde comprou e pagamento
 export function observacoesDe(r, x, F) {
-  return [numCard(r), ehVoo(x) && paxAjustado(x).some(p => p.nome) ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).some(l => custoLinha(x, l) > 0) ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
+  return [numCard(r) && x.grupo ? `${numCard(r)}-${LETRA[x.parte] || ''} · ${PARTES[x.parte] || ''}` : numCard(r), ehVoo(x) && paxAjustado(x).some(p => p.nome) ? 'Passageiros: ' + paxAjustado(x).map(p => p.nome).filter(Boolean).join('; ') : '', ehVoo(x) && x.ct_on && (x.ct || []).some(l => custoLinha(x, l) > 0) ? 'Custo por trecho: ' + x.ct.map(l => `${up3(l.o)}-${up3(l.d)}${l.data ? ' ' + l.data.split('-').reverse().slice(0, 2).join('/') : ''} R$ ${custoLinha(x, l).toFixed(2).replace('.', ',')}${+l.pax > 1 ? ' (' + l.pax + ' pax)' : ''}`).join('; ') : '', ehVoo(x) && x.tipo_trecho === 'multi' && x.trechos ? 'Multitrecho: ' + String(x.trechos).replace(/\n/g, ' | ') : '', ehVoo(x) && x.grupo && x.hora_ida ? 'Horário de saída: ' + x.hora_ida : ehVoo(x) && (x.hora_ida || x.hora_volta) ? 'Horário de saída: ' + [x.hora_ida ? 'ida ' + x.hora_ida : '', x.tipo_trecho !== 'ida' && x.hora_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.hora_volta : ''].filter(Boolean).join(', ') : '',
     // chegada só quando houver (vem da cotação ou do print da emissão)
-    ehVoo(x) && (x.chegada_ida || x.chegada_volta) ? 'Chegada: ' + [x.chegada_ida ? 'ida ' + x.chegada_ida : '', x.tipo_trecho !== 'ida' && x.chegada_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.chegada_volta : ''].filter(Boolean).join(', ') : '',
+    ehVoo(x) && x.grupo && x.chegada_ida ? 'Chegada: ' + x.chegada_ida : ehVoo(x) && (x.chegada_ida || x.chegada_volta) ? 'Chegada: ' + [x.chegada_ida ? 'ida ' + x.chegada_ida : '', x.tipo_trecho !== 'ida' && x.chegada_volta ? (x.tipo_trecho === 'multi' ? 'último trecho ' : 'volta ') + x.chegada_volta : ''].filter(Boolean).join(', ') : '',
     // bagagem só quando informada (deixou de travar: sem ela, a linha não diz nada sobre mala)
     ehVoo(x) && x.bagagem != null && x.bagagem !== '' ? `Bagagem: ${x.bagagem === '0' ? 'sem mala despachada' : x.bagagem + ' mala(s) por passageiro'}` : '', ehVoo(x) && x.pago_em === 'pagante' && x.fornecedor ? 'Comprado em ' + x.fornecedor : '', F.forma === 'cartao' && +F.bruto ? `Cliente pagou ${'R$ ' + (+F.bruto).toFixed(2).replace('.', ',')} no cartão em ${F.parcelas || 1}x (taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%)` : '',
     F.forma === 'pix_cartao' ? (rs => `Pix + Cartão: ${rs(F.pix_valor)} no Pix + ${rs(F.cartao_liq)} recebido do cartão em ${F.parcelas || 1}x (cliente pagou ${rs(F.bruto)} no cartão; taxa da maquininha ${String(+F.taxa_pct || 0).replace('.', ',')}%: ${rs((+F.bruto || 0) - (+F.cartao_liq || 0))})`)(v => 'R$ ' + (+v || 0).toFixed(2).replace('.', ',')) : ''].filter(Boolean).join(' · ');
@@ -807,7 +944,7 @@ function dadosLinha(X, r, IT, x, F) {
   const milhas = usaMilhas(x), milhasInf = milhas && !!(+x.milhas || +x.taxas), p = r.pessoa_id ? (X.D.pessoas || []).find(y => y.id === r.pessoa_id) : null;
   return {
     // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
-    'Gestor': (milhas && x.gestor) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
+    'Gestor': (milhas && (x.gestor || (x.grupo && compraDe(x) === 'fornecedor' ? x.fornecedor : ''))) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
     'Email ou Produto': ehVoo(x) ? '' : (x.nome || x.produto), 'Cidade': x.destino || '',
     'Cia': ciaDe(x), 'Sobrenome': sobrenome(r.cliente), 'CPF (NF)': cpfNF(X, r, IT),
     'Origem': x.origem || '', 'Destino': x.destino || '', 'Comprador': r.cliente || '', 'Passageiros': +x.passageiros || 1,
@@ -1063,7 +1200,9 @@ function aplicarLeitura(X, x, d, ctx) {
   if (d.companhia_emissora && vazio(x.cia_emissora)) x.cia_emissora = d.companhia_emissora;
   if (d.cabine && vazio(x.cabine)) x.cabine = d.cabine;
   const tr = (d.trechos || []).filter(v => v.origem || v.destino);
-  const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && vazio(x.cia_voo)) x.cia_voo = op;
+  const c0 = tr.length > 1 && tr[0].companhia, cU = tr.length > 1 && tr[tr.length - 1].companhia;
+  if (!x.grupo && c0 && cU && normP(c0) !== normP(cU)) x.sugere_blocos = true;
+  else { const op = tr.map(v => v.companhia).find(c => c && normP(c) !== normP(x.cia_emissora)); if (op && vazio(x.cia_voo)) x.cia_voo = op; }
   if (!cli && tr.length) aplicarVoosVenda(x, tr, vazio);
   else if (tr.length && !(x.voos || []).some(v => v.o || v.d || v.data)) {
     x.voos = tr.map(v => ({ o: up3(v.origem), d: up3(v.destino), data: v.data || '', hora: v.saida || '', chegada: v.chegada || '' }));
