@@ -926,6 +926,9 @@ button,select,textarea,input{font-size:16px}
 .seg{border-radius:12px;overflow:hidden}
 .seg button,.gjseg button,.kc .mv button,.obs button,.resq button{text-transform:none;letter-spacing:.01em;font-size:14px}
 .seg button{min-height:44px}
+/* forma de compra do bloco (ida e volta com fornecedores diferentes): quatro opções em duas linhas, cabe no celular */
+.seg-2x2 .seg{display:grid;grid-template-columns:1fr 1fr}
+.seg-2x2 .seg button:nth-child(-n+2){border-bottom:1px solid var(--linha)}
 /* etiquetas e chips redondos, sem caixa alta */
 .tag{text-transform:none;letter-spacing:.01em;font-size:14px;border-radius:999px;padding:2px 10px}
 .chips button{border-radius:999px;font-size:14px;min-height:40px}
@@ -1315,13 +1318,13 @@ import * as CART from '/admin/app/carteira.js?v=4';
 import * as CARTOES from '/admin/app/cartoes.js?v=32';
 import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
-import * as CRM from '/admin/app/crm.js?v=27';
+import * as CRM from '/admin/app/crm.js?v=28';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=61';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=35';
+import * as VENDA from '/admin/app/venda.js?v=36';
 import * as FCH from '/admin/app/fechou.js?v=1';
 import * as CONF from '/admin/app/conferencia.js?v=3';
 import * as ATV from '/admin/app/atividades.js?v=3';
@@ -2185,7 +2188,7 @@ function eventos(todos) {
     if (a.status === 'solicitada') E.push({ cid: a.cliente_id, d: dia(a.data_preferida) || HOJE(), hora: '', ic: 'reuniao', alerta: true, t: `Reunião a confirmar: ${nomeCli(a.cliente_id)}`, s: `Preferência ${a.periodo ? 'pela ' + a.periodo.toLowerCase() : 'sem período'}${a.formato ? ' · ' + a.formato : ''}`, href: adminLink(a.cliente_id, 'agendamentos_reuniao') });
   });
   trechosEm().forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: t.pendente,
-    t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? (t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '') : t.tr === 'volta' ? ' · volta' : ''}`,
+    t: tituloTrecho(t),
     s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
     href: t.v.milhas_cliente ? (t.v.atendimento_id ? '#reunioes/' + t.v.atendimento_id : '') : (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
   D.clientes.filter(c => c.gestao_vencimento && diasPara(c.gestao_vencimento) >= -1 && diasPara(c.gestao_vencimento) <= 120).forEach(c => E.push({ cid: c.id, d: dia(c.gestao_vencimento), hora: '', ic: 'milhas', alerta: diasPara(c.gestao_vencimento) <= 30, t: `Vence o contrato da Gestão: ${c.nome_completo}`, s: 'Reunião de renovação', href: '#clientes/' + c.id }));
@@ -2301,13 +2304,24 @@ function blocoMesInicio(m, mesTxt) {
 /* ---------- Início: checklist, coisas do dia, check-ins (48 h) e pendências por tipo ----------
    O que saiu daqui continua nas telas de cada assunto: metas (Metas do mês), onde está travando (Resultados, funil),
    reuniões e próximos na agenda (Coisas do dia e Agenda), remuneração (Comissão). */
+// voo de um bloco "ida e volta com fornecedores diferentes": a linha diz o trecho e com quem foi comprado
+// (IDA 12/11 GRU > MAD | Gol | Soberano | LOC ABC123); os outros voos continuam como antes
+function blocoDaEmissao(id) {
+  for (const r of D.reunioes || []) { const x = (r.itens || []).find(y => y && y.grupo && String(y.planilha_id) === String(id)); if (x) return x; }
+  return null;
+}
+function tituloTrecho(t) {
+  const b = !t.v.milhas_cliente && blocoDaEmissao(t.id), conexao = t.n && t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '';
+  if (b) return VENDA.textoTrecho({ ...b, origem: t.de || b.origem, destino: t.para || b.destino, cia_voo: '', cia_emissora: t.v.cia || b.cia_voo || b.cia_emissora, localizador: t.v.localizador || b.localizador }) + conexao;
+  return `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? conexao : t.tr === 'volta' ? ' · volta' : ''}`;
+}
 function checkins48() {
   const G48 = (D.voos || []).filter(v => ['confirmado', 'checkin_aberto'].includes(v.status)).filter(v => { const d = dia(v.data_voo); if (v.hora_partida) { const [h, m] = v.hora_partida.split(':'); d.setHours(+h, +m); } const hrs = (d - Date.now()) / 36e5; return hrs >= 0 && hrs <= 48; });
   const E = G48.map(v => ({ cid: v.cliente_id, d: dia(v.data_voo), hora: v.hora_partida ? v.hora_partida.slice(0, 5) : '', ic: 'voo', alerta: true,
     t: `${v.origem_codigo || v.origem_cidade || '?'} → ${v.destino_codigo || v.destino_cidade || '?'}${v.companhia ? ' · ' + v.companhia : ''}${v.numero_voo ? ' ' + v.numero_voo : ''}`,
     s: `${nomeCli(v.cliente_id)}${v.localizador ? ' · loc. ' + v.localizador : ''}`, href: adminLink(v.cliente_id, 'voos') }));
   trechosEm().filter(t => t.em48).forEach(t => E.push({ d: t.d, hora: t.hora || '', ic: 'voo', alerta: true,
-    t: `${t.de || '?'} → ${t.para || '?'}${t.v.cia ? ' · ' + t.v.cia : ''}${t.n ? (t.total > 1 ? ` · voo ${t.n} de ${t.total}` : '') : t.tr === 'volta' ? ' · volta' : ''}`,
+    t: tituloTrecho(t),
     s: `${t.v.passageiro || 'Passageiro'}${t.v.localizador ? ' · loc. ' + t.v.localizador : ''}${t.v.vendedor ? ' · ' + t.v.vendedor : ''}`,
     href: t.v.milhas_cliente ? (t.v.atendimento_id ? '#reunioes/' + t.v.atendimento_id : '') : (ADMIN || D.emissoes.some(x => x.id === t.id)) ? '#emissoes/' + t.id : '', ck: { id: t.id, tr: t.tr, feito: t.feito } }));
   return E.sort((a, b) => (a.d - b.d) || String(a.hora).localeCompare(String(b.hora)));
@@ -4129,7 +4143,10 @@ function htmlReuniao(r) {
 const ctxVenda = () => ({ sb, D, esc, brl2, aviso, limparTec, ADMIN, meuId: D.meuId, zapLink, nomeTime, fornecedores: () => fornecedoresFichas().map(p => p.nome),
   // nomes de hotéis e serviços cadastrados (sugestão do campo Nome do item da cotação)
   servicos: () => (FORN.lista ? FORN.lista() : []).map(x => x.nome).filter(Boolean),
-  novoFornecedor });
+  novoFornecedor,
+  // fornecedor de cada trecho: ficha (com WhatsApp) em outra aba, para o card continuar aberto, e o mesmo Pago fornecedor do Financeiro
+  fichaFornecedor: (nome) => fichaFornecedor(nome), abrirFicha: (id) => window.open(location.pathname + location.search + '#crm/' + id, '_blank'),
+  pagarFornecedores: podeAba('pagar') || pode('financeiro') ? (ids) => pagarFornecedores(ids) : null });
 // fornecedor (onde cotou ou comprou) cadastrado na hora, pela cotação: vira ficha de fornecedor no CRM e fica para as próximas vezes
 async function novoFornecedor(nome) {
   nome = String(nome || '').replace(/\s+/g, ' ').trim(); if (!nome) return false;
@@ -5337,6 +5354,8 @@ function telaFormReuniao(P) {
     // Fechou da venda do Comercial: só vira Fechou com o mínimo completo. Faltando algo, abre a tela curta só com o que falta;
     // completo, o card é salvo e a venda vai sozinha para a planilha, as metas e o app (lancarVenda, logo depois de salvar).
     // emissão já lançada separada em duas: a venda das duas tem que continuar somando o que era antes
+    // ida e volta com fornecedores diferentes: a soma das partes tem que bater com o valor da passagem
+    if (!G && IT) { const gr = VENDA.conferirGrupos(IT); if (gr) { $('msgRe').textContent = gr; const e = $('reItens'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } }
     if (!G && IT) { const sep = VENDA.conferirSeparacao(IT); if (sep) { $('msgRe').textContent = sep; const e = $('vendaModo') || $('reItens'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; } }
     // venda já lançada com uma emissão nova (separada de outra ou acrescentada): a nova vai para a planilha ao salvar
     const parcial = !G && !!IT && base.resultado === 'Fechou' && IT.some(VENDA.enviado) && IT.some(x => !x.cancelado_em && !VENDA.ehCliente(x) && !VENDA.enviado(x));
@@ -6431,6 +6450,12 @@ function telaEmpresa(P) {
 
 // vendas de todas as datas (o app carrega só desde janeiro do ano passado; o painel precisa de "desde o início")
 let PNL_EM = null, PNL_EM_T = 0;
+// quantidade de vendas: os blocos de "ida e volta com fornecedores diferentes" do mesmo card contam uma venda só
+// (mesma regra do metas_progresso). O resto conta uma venda por linha, como sempre.
+function qtdVendas(L) {
+  const G = new Map(); (D.reunioes || []).forEach(r => (r.itens || []).forEach(x => { if (x && x.grupo && x.planilha_id) G.set(String(x.planilha_id), r.id + ':' + x.grupo); }));
+  return new Set((L || []).map(e => G.get(String(e.id)) || String(e.id))).size;
+}
 async function emissoesTodas() {
   if (PNL_EM && Date.now() - PNL_EM_T < 60e3) return PNL_EM;
   const { data, error } = await sb.from('emissoes').select('*').order('data_negociacao', { ascending: false }).limit(20000);
@@ -6508,7 +6533,7 @@ async function painelEmp() {
       <small>líquido <span class="cb-valor">${brlC(ll)}</span></small>
       <button type="button" class="cb-olho" id="empOlho">${cbOlho() ? 'Mostrar valores' : 'Esconder valores'}</button></div>
     <div class="ac-lista" style="margin-top:10px">
-      <div class="ac-pes"><span><b>Vendas</b><small>${vMeta(L.length, meta && meta.qtd, num)}${vs(L.length, LA && LA.length, false).replace('<br>', ' · ')}</small></span><span class="crm-v"><b>${num(L.length)}</b></span></div>
+      <div class="ac-pes"><span><b>Vendas</b><small>${vMeta(qtdVendas(L), meta && meta.qtd, num)}${vs(qtdVendas(L), LA && qtdVendas(LA), false).replace('<br>', ' · ')}</small></span><span class="crm-v"><b>${num(qtdVendas(L))}</b></span></div>
       <div class="ac-pes"><span><b>Clientes ativos da Gestão</b><small>${at === null ? 'só para quem vê a Gestão' : `de ${META_CLIENTES}, meta de ${META_ANO} · +${assinados} ${assinados === 1 ? 'contrato assinado' : 'contratos assinados'} no período`}</small></span><span class="crm-v"><b>${at === null ? '-' : num(at)}</b></span></div>
       <div class="ac-pes"><span><b>Lucro vindo de indicação</b><small>${R ? (ll ? pct(indic(R) / ll * 100) + ' do lucro líquido' : 'no período') + (RA ? vs(indic(R), indic(RA), true).replace('<br>', ' · ') : '') : 'Rode o 75-origem-e-indicacao.sql para ativar'}</small></span><span class="crm-v"><b class="cb-valor">${R ? brlC(indic(R)) : '-'}</b></span></div>
     </div>
@@ -6533,7 +6558,7 @@ async function painelEmp() {
 
 // Vendas: os mesmos blocos que ficavam no topo da Empresa (números, Top 10, fonte de receita e vendedores)
 function abaVendas(L, per) {
-  const fat = soma(L, 'valor_receber'), luc = soma(L, 'lucro_liquido'), tk = L.length ? fat / L.length : 0;
+  const fat = soma(L, 'valor_receber'), luc = soma(L, 'lucro_liquido'), nV = qtdVendas(L), tk = nV ? fat / nV : 0;
   const serv = (e) => e.servico_app || e.servico || 'Outro';
   const pessoaNome = (id) => ((D.pessoas || []).find(p => p.id === id) || {}).nome;
   const grupo = (fn) => { const g = {}; L.forEach(e => { const k = fn(e); if (!k) return; g[k] = g[k] || { n: 0, fat: 0, luc: 0 }; g[k].n++; g[k].fat += Number(e.valor_receber) || 0; g[k].luc += Number(e.lucro_liquido) || 0; }); return Object.entries(g); };
@@ -6546,9 +6571,9 @@ function abaVendas(L, per) {
     return { k, ...x, c, nota: av.length ? av.reduce((t, a) => t + a.nota, 0) / av.length : null, nAv: av.length };
   });
   return `<div class="numeros" style="margin-top:10px">
-      <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${L.length} ${L.length === 1 ? 'venda' : 'vendas'}</div></div>
+      <div class="num destaque"><div class="l">Faturamento</div><div class="v">${brlC(fat)}</div><div class="d">${nV} ${nV === 1 ? 'venda' : 'vendas'}</div></div>
       <div class="num destaque"><div class="l">Lucro líquido das vendas</div><div class="v">${brlC(luc)}</div><div class="d">${fat ? pct(luc / fat * 100) + ' de margem' : '-'}</div></div>
-      <div class="num"><div class="l">Ticket médio</div><div class="v">${L.length ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
+      <div class="num"><div class="l">Ticket médio</div><div class="v">${nV ? brlC(tk) : '-'}</div><div class="d">por venda</div></div>
       <div class="num"><div class="l">Clientes atendidos</div><div class="v">${new Set(L.map(e => e.pessoa_id || e.comprador)).size}</div><div class="d">no período</div></div>
     </div>
     <section class="bloco"><h2 style="display:flex;justify-content:space-between;align-items:center">Top 10 clientes<span class="seg" id="empTop" style="margin:0;width:auto;--seg-pad:12px 12px"><button data-t="fat" class="${EMP_TOP === 'fat' ? 'on' : ''}">Faturamento</button><button data-t="luc" class="${EMP_TOP === 'luc' ? 'on' : ''}">Lucro</button></span></h2>
