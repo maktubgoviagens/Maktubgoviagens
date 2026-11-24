@@ -995,6 +995,13 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .cb-h small{display:block;font-size:14px;color:var(--tinta-3);margin-top:2px}
 .cb-ed{flex:none;background:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--dourado);cursor:pointer}
 .cb-corpo{display:none;padding:0 14px 14px}
+.vh-cab{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:16px;color:var(--verde)}.vh-cab span{font-size:14px;color:var(--tinta-2);letter-spacing:.04em}
+.vh-voo{border-top:1px solid var(--linha);padding:10px 0 4px;margin-top:8px}.vh-tr{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:16px;margin-bottom:8px}
+.vh-et{font-size:14px;border:1px solid var(--alerta);color:var(--alerta);border-radius:999px;padding:2px 10px}
+.vh-hr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.vh-hr .sec{min-height:48px}@media(min-width:760px){.vh-hr{grid-template-columns:220px auto;justify-content:start}}
+.vh-pe{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}.vh-pe small{font-size:14px;color:var(--tinta-3)}
+.vh-abrir{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0}
+.vh-faixa{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;text-align:left;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--alerta);border-radius:12px;background:var(--branco);color:var(--tinta);font:inherit;font-size:16px;cursor:pointer}.vh-faixa b{font-weight:600;color:var(--alerta)}.vh-faixa>span:last-child{white-space:nowrap;color:var(--verde);font-weight:600}
 .vg-pax{display:grid;grid-template-columns:48px 1fr 48px;gap:6px}.vg-pax button{border:1px solid var(--linha);background:var(--branco);border-radius:12px;font-size:22px;color:var(--verde);cursor:pointer;min-height:48px}.vg-pax input{text-align:center}
 .vg-bag{flex-wrap:wrap;margin-top:2px}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
 .vg-tr{display:grid;grid-template-columns:28px 1fr 18px 1fr;gap:6px;align-items:center;margin:0 0 6px}.vg-tr .vg-n{font-size:14px;color:var(--tinta-3)}.vg-tr .vg-seta{text-align:center;color:var(--tinta-3)}
@@ -2466,6 +2473,7 @@ function telaInicio(P) {
   P.innerHTML = `
     <h1 class="titulo">${hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'}${D.eu ? ', <em>' + esc(D.eu) + '</em>' : ''}.</h1>
     <div class="sub">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, c => c.toUpperCase())}</div>
+    ${faixaVoos7()}
     <div class="ini4">
       <div class="ini4-b" id="tdBloco"></div>
       <div class="ini4-b">${htmlCoisasDoDia(CD)}</div>
@@ -2475,6 +2483,7 @@ function telaInicio(P) {
         ${resolver.trim() ? `<details class="gsec" id="iniDetD" style="margin-top:10px"><summary><span>Resolver por aqui<small>Voos sem data ou horário e avaliações</small></span></summary>${resolver}</details>` : ''}</div>
     </div>`;
   P.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => PD[b.dataset.pi][2]());
+  if ($('vhFaixa')) $('vhFaixa').onclick = () => { RE_PARTE = 'voos'; try { localStorage.setItem('maktub_re_parte', 'voos'); } catch (_) {} ir('reunioes'); };
   blocoConferir();
   P.querySelectorAll('[data-cdd]').forEach(b => b.onclick = () => { const it = CD[+b.dataset.cdd]; if (it && it.abrir) it.abrir(); });
   P.querySelectorAll('[data-calok]').forEach(b => b.onclick = (e) => { e.stopPropagation(); acoesCard(b.dataset.calok, { feito: true }); });
@@ -4583,6 +4592,7 @@ function telaReunioes(P) {
   else if (!RE_ED || !pode('gestao')) RE_VISTA = 'viagens'; // sem a chave da Gestão, o Comercial mostra só viagens
   if (RE_ED) return telaFormReuniao(P);
   if (RE_PARTE === 'aniv' && !(podeAba('crm') && D.pessoas)) RE_PARTE = 'funil';
+  if (RE_PARTE === 'voos' && (ABA === 'gestao' || !podeVoosHr())) RE_PARTE = 'funil';
   const titulo = ABA === 'gestao' ? '<button class="voltar" id="voltarG">‹ Gestão</button><h1 class="titulo" style="margin-top:6px">Funil da <em>Gestão</em></h1>' : '<h1 class="titulo">Comercial</h1>';
   if (D.reErro) { P.innerHTML = titulo + tec('<div class="config" style="margin-top:12px">O comercial ainda não foi ativado no Supabase. Rode o 3-reunioes.sql do guia.</div>'); return; }
   const G = RE_VISTA === 'gestao';
@@ -4593,10 +4603,11 @@ function telaReunioes(P) {
   const c = conversao(base);
   const atrasados = abertos.filter(r => r.proximo_passo_data && r.proximo_passo_data <= hojeISO()).length;
   P.innerHTML = `${titulo}
-    <div class="re-cab"><div class="re-abas" id="reParte" role="tablist"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button>${podeAba('crm') && D.pessoas ? `<button data-p="aniv" class="${RE_PARTE === 'aniv' ? 'on' : ''}">Aniversários</button>` : ''}<button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button></div>
+    <div class="re-cab"><div class="re-abas" id="reParte" role="tablist"><button data-p="funil" class="${RE_PARTE === 'funil' ? 'on' : ''}">${G ? 'Kanban' : 'Funil'} · ${abertos.length}</button><button data-p="cal" class="${RE_PARTE === 'cal' ? 'on' : ''}">Calendário</button>${podeAba('crm') && D.pessoas ? `<button data-p="aniv" class="${RE_PARTE === 'aniv' ? 'on' : ''}">Aniversários</button>` : ''}<button data-p="res" class="${RE_PARTE === 'res' ? 'on' : ''}">Resultados</button>${!G && ABA !== 'gestao' && podeVoosHr() ? (L => `<button data-p="voos" class="${RE_PARTE === 'voos' ? 'on' : ''}">Voos sem horário · <b style="${L.some(x => x.falta.some(em7)) ? 'color:var(--alerta);' : ''}font-weight:600">${L.length}</b></button>`)(voosHorarioLista()) : ''}</div>
       <div class="re-cab-d"><select id="rePer" class="re-per" aria-label="Período">${opcoesPeriodo()}</select><button class="zap re-novo" id="novaR">${G ? '+ Atendimento da Gestão' : '+ Novo atendimento'}</button></div></div>
     ${RE_PARTE === 'cal' ? htmlCalendario(ABA === 'gestao') : ''}
     ${RE_PARTE === 'aniv' && podeAba('crm') && D.pessoas ? htmlAniversarios(ABA === 'gestao') : ''}
+    ${RE_PARTE === 'voos' ? htmlVoosHorario() : ''}
     ${RE_PARTE !== 'funil' ? '' : `<div class="secao">Funil · ${abertos.length} em aberto${atrasados ? ` <span style="color:var(--alerta)">${atrasados} para retornar</span>` : ''}</div>
     ${G ? '<div class="kdica">Arraste o card até outra etapa para mover (no celular, segure o card antes de arrastar). Deslize o funil para ver as etapas.</div>' : '<div class="kdica">Arraste o card para mudar de etapa (no celular, segure o card antes de arrastar). Toque no card para abrir.</div>'}
     ${G ? `<div class="chips" id="gePrio">${[['todas', 'Todas', abertos.length], ...PRIO_G.map(([v]) => [v, 'Prioridade ' + v, abertos.filter(r => prioDe(r) === v).length]), ['sem', 'Sem prioridade', abertos.filter(r => !prioDe(r)).length]].map(([v, l, n]) => `<button data-p="${v}" class="${GE_PRIO === v ? 'on' : ''}">${l} ${n}</button>`).join('')}</div>` : ''}
@@ -4616,6 +4627,7 @@ function telaReunioes(P) {
   $('reParte').onclick = (e) => { const b = e.target.closest('button'); if (b) { RE_PARTE = b.dataset.p; try { localStorage.setItem('maktub_re_parte', RE_PARTE); } catch (_) {} telaReunioes(P); } };
   document.body.classList.toggle('cal-largo', RE_PARTE === 'cal');
   if (RE_PARTE === 'cal') ligarCalendario(P, ABA === 'gestao', () => telaReunioes(P));
+  if (RE_PARTE === 'voos') ligarVoosHorario(P, () => telaReunioes(P));
   if (RE_PARTE === 'aniv' && $('calModo')) {
     CAL.ligar(P, CAL_ST.aniv, { itens: CAL_ITENS }, () => telaReunioes(P), (it) => it && it.abrir && it.abrir());
     P.querySelectorAll('[data-anivok]').forEach(b => b.onclick = async (e) => { e.stopPropagation(); const [pid, ano] = b.dataset.anivok.split('|'); if (await marcarAnivEnviado(pid, ano)) telaReunioes(P); });
@@ -6903,8 +6915,10 @@ async function carregarEquipe() {
 }
 async function carregarAgendaEm() {
   const iso = (d) => isoLocal(d);
-  const r = await sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) });
-  D.voosEm = r.data || [];
+  const [r, rf] = await Promise.all([sb.rpc('agenda_voos', { p_de: iso(new Date(+HOJE() - 864e5)), p_ate: iso(new Date(+HOJE() + 120 * 864e5)) }),
+    // voos sem horário (Comercial): todo voo de hoje até 2 anos à frente, venha do card ou da planilha
+    sb.rpc('agenda_voos', { p_de: iso(HOJE()), p_ate: iso(new Date(+HOJE() + 730 * 864e5)) })]);
+  D.voosEm = r.data || []; D.voosFuturos = rf.error ? null : (rf.data || []);
   // voos emitidos com as milhas do cliente da Gestão: não são venda (não estão em emissoes), mas têm check-in e bilhete como os outros
   { const de = iso(new Date(+HOJE() - 864e5)), ate = iso(new Date(+HOJE() + 120 * 864e5));
     const c = await sb.from('voos_milhas_cliente').select('*').is('cancelado_em', null).lte('data_ida', ate).or(`data_volta.gte.${de},data_ida.gte.${de}`).limit(2000);
@@ -6996,18 +7010,74 @@ function trechosEm() {
 }
 const checkinsEm = () => trechosEm().filter(t => t.pendente);
 // voos que ainda vão acontecer e não têm horário de saída (vendas antigas): sem horário, o aviso de check-in só chega às 7h do dia anterior
-function voosSemHorario() {
+function voosSemHorario(lista) {
   const L = [];
-  (D.voosEm || []).forEach(v => {
+  (lista || D.voosEm || []).forEach(v => {
     if (v.milhas_cliente) return;
     const em = (D.emissoes || []).find(x => x.id === v.id); if (B2B.ehB2B(em) || B2B.ehCancelada(em, D)) return;
     const R = ((D.trechos || {})[String(v.id)] || []).slice().sort((a, b) => a.n - b.n), H = (D.horas || {})[String(v.id)] || {};
     const falta = R.length
-      ? R.filter(r => r.data && !r.hora && !r.checkin && difDias(dia(r.data)) >= 0).map(r => ({ d: dia(r.data), de: r.origem, para: r.destino }))
-      : [['ida', v.data_ida, v.origem, v.destino], ['volta', v.data_volta, v.destino, v.origem]].filter(([tr, data]) => data && !v['checkin_' + tr] && !H['hora_' + tr] && difDias(dia(data)) >= 0).map(([, data, de, para]) => ({ d: dia(data), de, para }));
+      ? R.filter(r => r.data && !r.hora && !r.checkin && difDias(dia(r.data)) >= 0).map(r => ({ d: dia(r.data), iso: String(r.data).slice(0, 10), de: r.origem, para: r.destino, n: r.n, rot: R.length > 1 ? 'voo ' + r.n : 'voo' }))
+      : [['ida', v.data_ida, v.origem, v.destino], ['volta', v.data_volta, v.destino, v.origem]].filter(([tr, data]) => data && !v['checkin_' + tr] && !H['hora_' + tr] && difDias(dia(data)) >= 0).map(([tr, data, de, para]) => ({ d: dia(data), iso: String(data).slice(0, 10), de, para, tr, rot: tr }));
     if (falta.length) L.push({ v, em, falta, d: falta[0].d });
   });
   return L.sort((a, b) => a.d - b.d);
+}
+/* ---------- voos sem horário (aba do Comercial): completar a hora de saída ali mesmo ---------- */
+// sócios e quem faz check-in (quem vê o campo do horário na emissão)
+const podeVoosHr = () => ADMIN || pode('checkin');
+// todo voo de hoje em diante sem horário de saída (até 2 anos); sem a busca longa, os próximos 120 dias
+const voosHorarioLista = () => voosSemHorario(D.voosFuturos || D.voosEm).filter(x => ADMIN || (x.em && podeAbrirEm(x.em)));
+const em7 = (f) => difDias(f.d) <= 7;
+const voos7SemHorario = () => voosHorarioLista().filter(x => x.falta.some(em7));
+// grava a hora como a tela da emissão grava: no voo (voos_emissao) ou na ida e volta (voo_horarios), com o fuso do aeroporto de saída
+async function gravarHoraVoo(x, f, hora) {
+  const id = String(x.v.id);
+  if (f.n != null) {
+    const r = ((D.trechos || {})[id] || []).find(t => t.n === f.n) || {};
+    const tz = r.tz || await VENDA.fusoDe(r.origem);
+    const { error } = await sb.from('voos_emissao').update({ hora, tz }).eq('emissao_id', id).eq('n', f.n);
+    if (error) return limparTec(error.message);
+    r.hora = hora; r.tz = tz; return null;
+  }
+  const ant = (D.horas || {})[id] || {}, ida = f.tr === 'ida';
+  const hi = ida ? hora : (ant.hora_ida || null), hv = ida ? (ant.hora_volta || null) : hora;
+  const row = { emissao_id: id, hora_ida: hi, hora_volta: hv, tz_ida: hi ? (ant.tz_ida || await VENDA.fusoDe(x.v.origem)) : null, tz_volta: hv ? (ant.tz_volta || await VENDA.fusoDe(x.v.destino)) : null };
+  const { error } = await sb.from('voo_horarios').upsert(row);
+  if (error) return limparTec(error.message);
+  (D.horas = D.horas || {})[id] = row; return null;
+}
+function htmlVoosHorario() {
+  const L = voosHorarioLista(), n7 = L.filter(x => x.falta.some(em7)).length;
+  const dt = (f) => dataBR(f.iso);
+  const trecho = (f) => `${f.de ? esc(String(f.de).toUpperCase()) : '?'} → ${f.para ? esc(String(f.para).toUpperCase()) : '?'}`;
+  const etiqueta = (f) => f.de && f.para && String(f.de).trim().toUpperCase() === String(f.para).trim().toUpperCase() ? '<span class="vh-et">Conferir trecho</span>' : !f.de || !f.para ? '<span class="vh-et">Trecho sem origem ou destino</span>' : '';
+  return `<div class="secao">Voos sem horário · ${L.length}</div>
+    <div class="sub" style="margin:0 0 8px">${n7 ? `<b style="color:var(--alerta);font-weight:600">${n7 === 1 ? '1 emissão com voo' : n7 + ' emissões com voo'} nos próximos 7 dias.</b> ` : ''}Sem o horário de saída, o aviso de check-in não chega 24 h antes do voo. Complete como está no bilhete, no horário local do aeroporto de saída.</div>
+    ${L.length ? L.map((x, i) => `<section class="bloco vh" style="margin-top:8px">
+      <div class="vh-cab"><b>${esc((x.em && x.em.comprador) || x.v.passageiro || 'Passageiro')}</b>${x.v.localizador ? `<span>${esc(String(x.v.localizador).toUpperCase())}</span>` : ''}</div>
+      ${x.falta.map((f, j) => `<div class="vh-voo"><div class="vh-tr"><span>${trecho(f)} · ${esc(f.rot)} ${dt(f)}${em7(f) ? ' <b style="color:var(--alerta);font-weight:600">em breve</b>' : ''}</span>${etiqueta(f)}</div>
+        <div class="vh-hr"><label class="fl" style="margin:0"><span>Saída</span><input type="time" data-vhh="${i}|${j}"></label><button type="button" class="sec" data-vhs="${i}|${j}">Salvar</button></div></div>`).join('')}
+      <div class="vh-pe">${x.falta.some(f => !f.de || !f.para || String(f.de).trim().toUpperCase() === String(f.para).trim().toUpperCase()) && x.em && x.em.produto && !/@/.test(x.em.produto) ? `<small>Produto na planilha: ${esc(x.em.produto)}</small>` : '<span></span>'}<button type="button" class="vh-abrir" data-vha="${i}">Abrir a emissão ›</button></div>
+    </section>`).join('') : '<div class="vazio">Todos os voos de hoje em diante têm horário de saída.</div>'}`;
+}
+function ligarVoosHorario(P, redesenha) {
+  const L = voosHorarioLista();
+  P.querySelectorAll('[data-vha]').forEach(b => b.onclick = () => { const x = L[+b.dataset.vha]; if (x) abrirVoo(x.v.id, 'hora'); });
+  P.querySelectorAll('[data-vhs]').forEach(b => b.onclick = async () => {
+    const [i, j] = b.dataset.vhs.split('|').map(Number), x = L[i], f = x && x.falta[j], inp = P.querySelector(`[data-vhh="${i}|${j}"]`);
+    if (!f || !inp) return; if (!inp.value) { aviso('Informe o horário de saída.'); inp.focus(); return; }
+    b.disabled = true; b.textContent = 'Salvando...';
+    const erro = await gravarHoraVoo(x, f, inp.value);
+    if (erro) { b.disabled = false; b.textContent = 'Salvar'; aviso('Não salvou: ' + erro); return; }
+    aviso('Horário salvo. O aviso de check-in sai 24 h antes do voo.'); redesenha();
+  });
+}
+// faixa para os sócios na Início: voo dos próximos 7 dias sem horário de saída
+function faixaVoos7() {
+  if (!ADMIN) return '';
+  const n = voos7SemHorario().length; if (!n) return '';
+  return `<button type="button" class="vh-faixa" id="vhFaixa"><span><b>${n === 1 ? '1 voo' : n + ' voos'} dos próximos 7 dias sem horário de saída.</b> Sem ele, o aviso de check-in não chega na hora.</span><span>Completar ›</span></button>`;
 }
 function blocoSemHorario() {
   if (!(ADMIN || podeAba('emissoes'))) return '';
