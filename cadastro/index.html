@@ -29,6 +29,9 @@
     .hint{font-size:13px;color:var(--muted)}
     label{display:block;margin-top:14px}
     label > span{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:500;margin-bottom:6px}
+    .cpfok{margin-top:14px}.cpfok > span{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:500;margin-bottom:6px}
+    .cpfok p{font-size:16px;color:var(--text);background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
+    .cpfok button{background:none;border:0;padding:0;color:var(--green);font:inherit;font-size:16px;text-decoration:underline;cursor:pointer}
     input,select{width:100%;font:inherit;color:var(--text);background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:48px;-webkit-appearance:none;appearance:none}
     input:focus,select:focus{outline:2px solid var(--gold-warm);outline-offset:1px;background:var(--white)}
     .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -154,8 +157,16 @@ document.querySelector('[name="cpf"]').oninput = (e) => fmtCpf(e.target);
 
 // link da Gestão de Milhas: pede só o que o contrato precisa
 let GESTAO = false;
+// CPF que a Maktub já tem: aparece só o final e não é pedido de novo (o cliente pode trocar)
+let CPF_GUARDADO = false;
 function modoGestao(d) {
   GESTAO = true;
+  if (d.tem_cpf && d.cpf_mascara) {
+    CPF_GUARDADO = true;
+    const lb = document.querySelector('[name="cpf"]').closest('label'); lb.hidden = true;
+    lb.insertAdjacentHTML('afterend', `<div class="cpfok" id="cpfOk"><span>CPF</span><p><span>Já cadastrado: ${esc(d.cpf_mascara)}</span><button type="button" id="cpfTrocar">Trocar o CPF</button></p></div>`);
+    $('cpfTrocar').onclick = () => { CPF_GUARDADO = false; lb.hidden = false; $('cpfOk').remove(); lb.querySelector('input').focus(); };
+  }
   document.title = 'Seus dados para o contrato | Maktub Go';
   $('ola').innerHTML = `Olá${d.nome_completo ? ', <em>' + esc(String(d.nome_completo).split(' ')[0]) + '</em>' : ''}`;
   $('intro').textContent = 'Estes são os dados para o contrato da sua Gestão de Milhas. Leva uns 2 minutos e, assim que você enviar, o contrato chega no seu e-mail para assinar.';
@@ -188,7 +199,7 @@ $('f').onsubmit = async (ev) => {
   if (g('cpf') && !cpfOk(g('cpf'))) { $('msg').textContent = 'Confira o CPF: os números não batem.'; f.elements.cpf.focus(); return; }
   if (GESTAO) {
     const obrig = [['cpf', 'o CPF'], ['nascimento', 'a data de nascimento'], ['celular', 'o celular'], ['email', 'o e-mail'], ['rg', 'o RG'], ['rg_orgao_uf', 'o órgão emissor do RG'], ['nacionalidade_c', 'a nacionalidade'], ['estado_civil', 'o estado civil'], ['profissao', 'a profissão'], ['endereco_completo', 'o endereço completo'], ['cep', 'o CEP']];
-    const falta = obrig.find(([k]) => !g(k));
+    const falta = obrig.filter(([k]) => !(k === 'cpf' && CPF_GUARDADO)).find(([k]) => !g(k));
     if (falta) { $('msg').textContent = 'Falta preencher ' + falta[1] + '.'; f.elements[falta[0]].focus(); return; }
     if (soDig(g('cep')).length !== 8) { $('msg').textContent = 'Confira o CEP: são 8 números.'; f.elements.cep.focus(); return; }
     const dadosC = { nome: g('nome'), cpf: g('cpf'), nascimento: g('nascimento'), celular: g('celular'), email: g('email'), rg: g('rg'), rg_orgao_uf: g('rg_orgao_uf'),
