@@ -425,7 +425,11 @@ async function formulario(box, c, pf, modelo, X, el) {
   const prop = (at && at.marcos && at.marcos['Reunião de proposta']) || {};
   const profDiag = [at, ...(X.D.reunioes || []).filter(r => r.pessoa_id === pf.id && r.produto === 'Gestão de Milhas')].filter(Boolean)
     .map(r => String((((X.D.diags || {})[String(r.id)] || {}).respostas || {}).profissao || '').trim()).find(Boolean) || '';
-  const progs = X.programas ? X.programas(c.id) : [];
+  // programas do Anexo I: os da carteira; cliente novo, sem carteira ainda, os do diagnóstico da Gestão ou os do formulário do site
+  const cardsG = [at, ...(X.D.reunioes || []).filter(r => r.pessoa_id === pf.id && r.produto === 'Gestão de Milhas')].filter(Boolean);
+  const progsDiag = () => { for (const r of cardsG) { const L = ((((X.D.diags || {})[String(r.id)] || {}).respostas || {}).programas || []).map(x => String((x && x.programa) || '').trim()).filter(Boolean); if (L.length) return L; }
+    const q = cardsG.map(r => String((r.qualificacao || {}).programas || '').trim()).find(Boolean); return q ? [q] : []; };
+  const progs0 = X.programas ? X.programas(c.id) : [], progs = progs0.length ? progs0 : progsDiag();
   const usados = cnt.error ? null : Number(cnt.data) || 0;
   const sel = (nome, rot, ops, v) => `<label class="fl"><span>${rot}</span><select name="${nome}"><option value="">Selecione</option>${ops.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
   box.innerHTML = `<form class="bloco form" id="fCtr" style="margin-top:12px" autocomplete="off">

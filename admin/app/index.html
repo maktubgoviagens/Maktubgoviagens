@@ -1003,7 +1003,7 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .vh-abrir{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0}
 .vh-faixa{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;text-align:left;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--alerta);border-radius:12px;background:var(--branco);color:var(--tinta);font:inherit;font-size:16px;cursor:pointer}.vh-faixa b{font-weight:600;color:var(--alerta)}.vh-faixa>span:last-child{white-space:nowrap;color:var(--verde);font-weight:600}
 .vg-pax{display:grid;grid-template-columns:48px 1fr 48px;gap:6px}.vg-pax button{border:1px solid var(--linha);background:var(--branco);border-radius:12px;font-size:22px;color:var(--verde);cursor:pointer;min-height:48px}.vg-pax input{text-align:center}
-.vg-bag{flex-wrap:wrap;margin-top:2px}#vgSimples input::placeholder{text-transform:none}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
+.vg-bag{flex-wrap:wrap;margin-top:2px}.glib .lib-conf{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:6px 0;font-size:14px;color:rgba(249,246,241,.85)}.glib .lib-conf b{display:inline;font-size:14px}.glib .lib-conf button{background:none;border:0;color:var(--dourado-claro);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;padding:0}#vgSimples input::placeholder{text-transform:none}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
 .vg-tr{display:grid;grid-template-columns:28px 1fr 18px 1fr;gap:6px;align-items:center;margin:0 0 6px}.vg-tr .vg-n{font-size:14px;color:var(--tinta-3)}.vg-tr .vg-seta{text-align:center;color:var(--tinta-3)}
 .vg-tr .vg-dt{grid-column:2 / 4}.vg-tr .vg-x{grid-column:4;justify-self:end;background:none;border:0;font-size:22px;color:var(--tinta-3);cursor:pointer;padding:4px 10px}
 .vg-tr input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--branco);color:var(--tinta);min-height:48px}
@@ -1336,7 +1336,7 @@ import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
 import * as CRM from '/admin/app/crm.js?v=28';
 import * as CAL from '/admin/app/calendario.js?v=2';
-import * as CTR from '/admin/app/contrato.js?v=6';
+import * as CTR from '/admin/app/contrato.js?v=7';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=62';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
@@ -3576,12 +3576,15 @@ function htmlPagamentoPrevisto(r) {
     ${ADMIN || pode('gestao') ? `<div class="ac gpag-prev"><input type="date" data-lib-prevd="${r.id}" value="${esc(pv)}" aria-label="Data prevista do pagamento"><button type="button" data-lib-prev="${r.id}">Salvar previsão</button></div>` : ''}
     ${souMatheus() ? `<div class="ac"><button type="button" class="p" data-lib-pag="${r.id}" data-v="1">Confirmar pagamento</button></div>` : ''}`;
 }
+// nome com sobrenome (2 palavras ou mais): o cadastro na Gestão e o contrato pedem o nome completo
+const nomeCompleto = (n) => String(n || '').trim().split(/\s+/).filter(Boolean).length >= 2;
+const nomeNorm = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 function htmlLiberacao(r, L) {
   const pf = r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null;
   const I = (ok, n) => `<i class="${ok ? 'ok' : ''}">${ok ? '✓' : n}</i>`;
   const cad = L.ok[0] ? `<small>${esc(L.cli.nome_completo || '')} já está na Gestão.</small><div class="ac"><button type="button" data-gficha="${L.cli.id}">Abrir a base ›</button></div>`
     : !pf ? '<small>Ligue este card a uma ficha do CRM (campo Cliente, mais abaixo) para cadastrar.</small>'
-    : `<small>Cria o login do painel com o e-mail do cliente e liga a ficha do CRM. No primeiro acesso, ele cria a senha pelo "Esqueci a senha" e depois entra com o e-mail, a senha e um código.</small><input type="email" id="libMail" placeholder="${pf.email ? 'E-mail do cliente' : 'E-mail do cliente (a ficha não tem e-mail)'}" value="${esc(pf.email || '')}"><input type="text" id="libNome" placeholder="Nome completo" value="${esc(pf.nome || r.cliente || '')}"><div class="ac"><button type="button" class="p" data-lib-cad="${r.id}">Cadastrar na Gestão</button></div>`;
+    : `<small>Cria o login do painel com o e-mail do cliente e liga a ficha do CRM. No primeiro acesso, ele cria a senha pelo "Esqueci a senha" e depois entra com o e-mail, a senha e um código.</small>${(ok => ok ? `<div class="lib-conf"><span>E-mail: <b>${esc(pf.email)}</b></span><span>Nome: <b>${esc(pf.nome)}</b></span><button type="button" data-lib-corrigir="1">Corrigir</button></div>` : '')(pf.email && nomeCompleto(pf.nome))}<div id="libCampos" ${pf.email && nomeCompleto(pf.nome) ? 'hidden' : ''}><input type="email" id="libMail" placeholder="${pf.email ? 'E-mail do cliente' : 'E-mail do cliente (a ficha não tem e-mail)'}" value="${esc(pf.email || '')}"><input type="text" id="libNome" placeholder="Nome completo" value="${esc(pf.nome || r.cliente || '')}"></div><div class="ac"><button type="button" class="p" data-lib-cad="${r.id}">Cadastrar na Gestão</button></div>`;
   const ctr = L.ok[1] ? `<small>Assinado${L.ctr.assinado_em ? ' em ' + dataBR(String(L.ctr.assinado_em).slice(0, 10)) : ''}.</small>`
     : !L.ok[0] ? '<small>Depois do cadastro: o contrato sai da base do cliente.</small>'
     : L.aberto && L.aberto.status === 'enviado' ? `<small>Enviado${L.aberto.enviado_em ? ' em ' + dataBR(String(L.aberto.enviado_em).slice(0, 10)) : ''}, aguardando a assinatura.</small><div class="ac"><button type="button" class="p" data-lib-ctrst="${L.aberto.id}" data-lib-r="${r.id}">Atualizar status</button><button type="button" data-gficha="${L.cli.id}">Ver contrato ›</button></div>`
@@ -3835,6 +3838,7 @@ function ligarTopoGestao(P) {
   P.querySelectorAll('[data-gficha]').forEach(b => b.onclick = () => abrirFicha(b.dataset.gficha, b.dataset.gfa));
   const achaR = (id) => D.reunioes.find(x => String(x.id) === String(id));
   const depois = async (r) => { if (liberacaoDe(r).feitos === 3 && !r.liberado_em) { LIB_AUTO.add(r.id); await iniciarOnboarding(r); } redesenharTopo(r); };
+  P.querySelectorAll('[data-lib-corrigir]').forEach(b => b.onclick = () => { const c = $('libCampos'); if (c) c.hidden = false; b.closest('.lib-conf').hidden = true; const i = $('libMail'); if (i) i.focus(); });
   P.querySelectorAll('[data-lib-cad]').forEach(b => b.onclick = async () => {
     const r = achaR(b.dataset.libCad); if (!r) return;
     const email = ($('libMail').value || '').trim(), nome = ($('libNome').value || '').trim();
@@ -3848,6 +3852,9 @@ function ligarTopoGestao(P) {
     if (c.data && !D.clientes.some(x => x.id === c.data.id)) D.clientes.push(c.data);
     const pf = (D.pessoas || []).find(x => x.id === r.pessoa_id); if (pf) pf.cliente_id = data.cliente_id;
     if (pf && !pf.email) { pf.email = email; await sb.from('pessoas').update({ email }).eq('id', pf.id); }
+    // nome completo digitado aqui completa o da ficha só quando começa com ele (Ricardo -> Ricardo Alexandre dos Santos); nome diferente não é trocado
+    if (pf && nome.length > String(pf.nome || '').trim().length && nomeNorm(nome).startsWith(nomeNorm(pf.nome)) && nomeNorm(pf.nome)) {
+      const { error: en } = await sb.from('pessoas').update({ nome }).eq('id', pf.id); if (!en) pf.nome = nome; }
     // na mesma hora, o cliente recebe por e-mail o pedido dos dados do contrato e o acesso ao painel
     b.textContent = 'Enviando o e-mail...';
     const em = await sb.functions.invoke('email-enviar', { body: { acao: 'cadastro_gestao', pessoa_id: r.pessoa_id } }).catch(() => ({}));
