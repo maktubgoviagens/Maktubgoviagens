@@ -21,6 +21,15 @@ const comPre = (d) => { if (!PRE) return d; d.reuniao_id = PRE.id; d.destino = d
   // do diagnóstico do card: origem (ida sai dela, volta chega nela), passageiros e bagagem
   if (PRE.origem) { const o = PRE.origem; if (vs[0] && 'origem' in vs[0] && !vs[0].origem) vs[0].origem = o; if (vs[1] && 'destino' in vs[1] && !vs[1].destino) vs[1].destino = o;
     if (vs[0] && 'ocod' in vs[0] && !vs[0].ocod && /^[A-Za-z]{3}$/.test(o)) vs[0].ocod = o.toUpperCase(); if (vs[1] && 'dcod' in vs[1] && !vs[1].dcod && /^[A-Za-z]{3}$/.test(o)) vs[1].dcod = o.toUpperCase(); }
+  // do bloco Viagem do card: destino da ida e origem da volta, e os códigos dos aeroportos
+  { const oc = PRE.origemCod || '', dc = PRE.destinoCod || '', dn = PRE.destino || '';
+    if (vs[0] && 'ocod' in vs[0] && !vs[0].ocod && oc) vs[0].ocod = oc; if (vs[1] && 'dcod' in vs[1] && !vs[1].dcod && oc) vs[1].dcod = oc;
+    if (vs[0] && 'dcod' in vs[0] && !vs[0].dcod && dc) vs[0].dcod = dc; if (vs[1] && 'ocod' in vs[1] && !vs[1].ocod && dc) vs[1].ocod = dc;
+    if (vs[0] && 'destino' in vs[0] && !vs[0].destino && dn) vs[0].destino = dn; if (vs[1] && 'origem' in vs[1] && !vs[1].origem && dn) vs[1].origem = dn; }
+  // cotação rápida, que começa sem voos: um voo por trecho do card (multitrecho) ou ida e volta
+  if (d.modelo === 'rapida' && Array.isArray(d.voos) && !d.voos.length) {
+    const L = (PRE.trechos || []).length ? PRE.trechos.map(t => ({ o: t.o, d: t.d, data: t.data })) : (PRE.origemCod || PRE.destinoCod) ? [{ o: PRE.origemCod, d: PRE.destinoCod, data: PRE.ida }, ...(PRE.volta ? [{ o: PRE.destinoCod, d: PRE.origemCod, data: PRE.volta }] : [])] : [];
+    if (L.length) { d.voos = L.map(t => ({ ...VOO_RAP(), ocod: t.o || '', dcod: t.d || '', data: t.data || '', pax: PRE.pessoas || '' })); rotular(d.voos); } }
   if (PRE.pessoas && +PRE.pessoas > 0) d.pessoas = String(PRE.pessoas);
   const bag = PRE.bagagem, bagT = bag === '0' ? 'Sem bagagem despachada' : bag ? `${bag} ${bag === '1' ? 'bagagem despachada' : 'bagagens despachadas'} por passageiro` : '';
   if (bagT && d.modelo === 'go') (d.opcoes || []).forEach(o => { if (!o.bagagem) o.bagagem = bagT; });

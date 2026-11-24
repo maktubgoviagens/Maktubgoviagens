@@ -995,6 +995,15 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .cb-h small{display:block;font-size:14px;color:var(--tinta-3);margin-top:2px}
 .cb-ed{flex:none;background:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--dourado);cursor:pointer}
 .cb-corpo{display:none;padding:0 14px 14px}
+.vg-pax{display:grid;grid-template-columns:48px 1fr 48px;gap:6px}.vg-pax button{border:1px solid var(--linha);background:var(--branco);border-radius:12px;font-size:22px;color:var(--verde);cursor:pointer;min-height:48px}.vg-pax input{text-align:center}
+.vg-bag{flex-wrap:wrap;margin-top:2px}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
+.vg-tr{display:grid;grid-template-columns:28px 1fr 18px 1fr;gap:6px;align-items:center;margin:0 0 6px}.vg-tr .vg-n{font-size:14px;color:var(--tinta-3)}.vg-tr .vg-seta{text-align:center;color:var(--tinta-3)}
+.vg-tr .vg-dt{grid-column:2 / 4}.vg-tr .vg-x{grid-column:4;justify-self:end;background:none;border:0;font-size:22px;color:var(--tinta-3);cursor:pointer;padding:4px 10px}
+.vg-tr input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--branco);color:var(--tinta);min-height:48px}
+.vg-tr label{position:relative;display:block}
+@media(min-width:760px){.vg-tr{grid-template-columns:28px 1fr 18px 1fr 170px 40px}.vg-tr .vg-dt{grid-column:auto}.vg-tr .vg-x{grid-column:auto}}
+.vg-mais{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0 10px}
+.vg-card{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;margin:0 0 8px}.vg-card button{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:0}
 .cb.aberto .cb-corpo{display:block}
 .cb.aberto{background:#fffdf7}
 .cb-corpo>.grupo:first-child{display:none}
@@ -1322,9 +1331,9 @@ import * as CRM from '/admin/app/crm.js?v=28';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=5';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
-import * as COT from '/admin/app/cotador.js?v=61';
+import * as COT from '/admin/app/cotador.js?v=62';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
-import * as VENDA from '/admin/app/venda.js?v=36';
+import * as VENDA from '/admin/app/venda.js?v=37';
 import * as FCH from '/admin/app/fechou.js?v=1';
 import * as CONF from '/admin/app/conferencia.js?v=3';
 import * as ATV from '/admin/app/atividades.js?v=3';
@@ -1333,7 +1342,8 @@ import * as CX from '/admin/app/caixa.js?v=7';
 import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
-import * as DG from '/admin/app/diagnostico.js?v=1';
+import * as DG from '/admin/app/diagnostico.js?v=2';
+import * as VG from '/admin/app/viagem.js?v=1';
 import * as PER from '/admin/app/periodo.js?v=1';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
@@ -1451,6 +1461,8 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   lerHash();
   marcarNav();
   carregar().then(() => setTimeout(() => recalcularPendentes().catch(() => {}), 3000)).catch(() => {});
+  // lista de aeroportos já carregada quando um card abre: origem e destino aparecem no código IATA
+  VG.preparar();
   if (!ADMIN) setTimeout(faixaPush, 1500);
 })();
 
@@ -3411,7 +3423,7 @@ function qualDe(r) {
 }
 function motivoDiag(r, resp) {
   if (ehGestao(r)) return '';
-  return DG.motivoDestaque({ valor: r.valor_estimado, margem: margemPrevista(r), destino: [r.trecho, resp.destino, ...(resp.opcoes_destinos || []).map(x => x && x.nome)].filter(Boolean).join(' · '), resp }, DG.limites(D.cfg));
+  return DG.motivoDestaque({ valor: r.valor_estimado, margem: margemPrevista(r), destino: [r.trecho, (r.viagem || {}).destino, resp.destino, ...(resp.opcoes_destinos || []).map(x => x && x.nome)].filter(Boolean).join(' · '), resp }, DG.limites(D.cfg));
 }
 // resumos do Granola que a IA pode ler: reuniões do card (e, na Gestão, a ligação do SDR)
 function granolaDe(r, f) {
@@ -3425,8 +3437,11 @@ async function gravarDiag(r, resp, extra = {}) {
   if (error) return { erro: limparTec(error.message) };
   (D.diags = D.diags || {})[String(r.id)] = data; return { em: data.atualizado_em };
 }
-function copiarDiag(r) {
-  const L = DG.campos(tipoDiag(r), D.cfg), t = DG.textoCopiar(tipoDiag(r), L, respDiag(r), r.cliente);
+// perguntas do diagnóstico: no de viagem, sem as que o card já responde (bloco Viagem)
+const camposDiag = (r, v) => { const L = DG.campos(tipoDiag(r), D.cfg); return ehGestao(r) ? L : DG.camposComCard(L, !!VG.datasDe(v || VG.viagemDe(r, respDiag(r))).ida); };
+function copiarDiag(r, v) {
+  const L = camposDiag(r, v), vg = ehGestao(r) ? '' : VG.resumo(v || VG.viagemDe(r, respDiag(r)));
+  const t = DG.textoCopiar(tipoDiag(r), L, respDiag(r), r.cliente).replace('\n\n', vg ? `\n\n*Viagem:* ${vg}\n` : '\n\n');
   const ok = () => aviso('Diagnóstico copiado. Cole no WhatsApp.');
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => prompt('Copie o diagnóstico:', t)); else prompt('Copie o diagnóstico:', t);
 }
@@ -3434,7 +3449,11 @@ function montarDiag(P, r, G, f) {
   const box = P.querySelector('#reDiag'); if (!box) return;
   if (D.diags === null) { box.innerHTML = '<div class="sub">O diagnóstico ainda não está ativo: falta rodar o 101-diagnostico-card.sql no Supabase.</div>'; return; }
   DG.estilos(); DG.prepararEuropa().then(() => { if (box.isConnected && !G) atualizaTopo(); });
-  const tipo = tipoDiag(r), L = DG.campos(tipo, D.cfg); let resp = respDiag(r);
+  const tipo = tipoDiag(r); let resp = respDiag(r);
+  // viagem: o que o card tem (origem, destino, datas, passageiros, bagagem) aparece só para leitura, com o toque para editar no card
+  const vgAgora = () => G ? null : (f._vgAtual ? f._vgAtual() : VG.viagemDe(r, resp));
+  let L = camposDiag(r, vgAgora()), temData = G ? false : !!VG.datasDe(vgAgora()).ida;
+  const htmlDoCard = () => { const v = vgAgora(), t = VG.resumo(v); return `<span><b>Do card:</b> ${esc(t || 'a viagem ainda não tem origem, destino nem datas')}</span><button type="button" data-vgedit>Editar no card ›</button>`; };
   const cb = box.closest('.cb'), cbB = cb && cb.querySelector('.cb-ed'), cbS = cb && cb.querySelector('.cb-h small');
   const emUso = () => G || !!motivoDiag(r, resp) || !!(diagDe(r) && diagDe(r).aberto_manual) || DG.progresso(L, resp).n > 0;
   const desenha = () => {
@@ -3443,11 +3462,13 @@ function montarDiag(P, r, G, f) {
       <div class="dg-topo"><span class="dg-salvo" data-dg-salvo>${diagDe(r) ? 'Salvo' : ''}</span></div>
       ${mot ? `<div class="dg-motivo">Em destaque: ${esc(mot)}.</div>` : !G ? '<div class="dg-motivo" style="color:var(--tinta-3)">Viagem sem os critérios de destaque: use só se quiser.</div>' : ''}
       <div class="dg-acoes"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button>${granola ? '<button type="button" class="sec" data-dgia>Sugerir pelo Granola</button>' : ''}</div>
+      ${G ? '' : `<div class="vg-card config" data-vgres>${htmlDoCard()}</div>`}
       <div class="dg-lista">${L.map((c, i) => DG.htmlCampo(c, resp[c.k], i)).join('')}</div>
       <div class="dg-acoes" style="margin-top:8px"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button></div></div>`;
     const H = DG.ligar({ el: box.querySelector('.dg-lista'), L, resp, status: box.querySelector('[data-dg-salvo]'), salvar: (x) => gravarDiag(r, x), aoMudar: (x) => { resp = x; atualizaTopo(); } });
     f._diag = { L, resp: () => H.resp(), salvarJa: H.salvarJa };
-    box.querySelectorAll('[data-dgcopia]').forEach(b => b.onclick = async () => { await H.salvarJa(); copiarDiag(r); });
+    box.querySelectorAll('[data-dgcopia]').forEach(b => b.onclick = async () => { await H.salvarJa(); copiarDiag(r, vgAgora()); });
+    ligarDoCard();
     const ia = box.querySelector('[data-dgia]');
     if (ia) ia.onclick = async () => {
       ia.disabled = true; ia.textContent = 'Lendo o resumo...';
@@ -3458,6 +3479,10 @@ function montarDiag(P, r, G, f) {
       await H.aplicar(esc0); aviso('Sugestões aplicadas. Confira no diagnóstico.');
     };
   };
+  const ligarDoCard = () => { const b = box.querySelector('[data-vgedit]'); if (b) b.onclick = () => { const cbv = P.querySelector('[data-cb="viagem"]'); if (cbv && !cbv.classList.contains('aberto')) { const e = cbv.querySelector('.cb-ed'); if (e) e.click(); } const alvo = cbv || $('segIV'); if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; };
+  // a viagem mudou no card: atualiza o quadro "Do card"; ganhou ou perdeu a data, mostra ou tira "Data prevista" e "Duração"
+  if (!G) f._vgMudou = () => { const el = box.querySelector('[data-vgres]'); if (el) { el.innerHTML = htmlDoCard(); ligarDoCard(); }
+    const td = !!VG.datasDe(vgAgora()).ida; if (td !== temData) { temData = td; if (f._diag) resp = f._diag.resp(); L = camposDiag(r, vgAgora()); desenha(); atualizaTopo(); } };
   // topo do bloco (progresso e destaque) e o resumo na linha do card, sem redesenhar as perguntas
   const atualizaTopo = () => {
     const pg = DG.progresso(L, resp), uso = emUso(), mot = motivoDiag(r, resp);
@@ -4904,6 +4929,24 @@ function calAvisarNovo() {
   $('calAtual').innerHTML = `<b style="color:var(--verde);font-weight:600">Tem informação nova.</b> <button type="button" class="mini" id="calAtualizar" style="margin-left:4px">Atualizar</button>`;
   $('calAtualizar').onclick = () => tela();
 }
+// bloco Viagem do card do Comercial: o único lugar de origem, destino, tipo, trechos, datas, passageiros e bagagem (viagem.js)
+function htmlViagemCard(r, V) {
+  const t = V.tipo, dt = VG.datasDe(V);
+  // origem e destino sempre no código IATA: digita a cidade, escolhe e fica o código (o nome da cidade aparece embaixo)
+  const aero = 'data-aero="cod" autocomplete="off" maxlength="60" placeholder="Cidade ou código" style="text-transform:uppercase"';
+  return `<div class="grupo">Viagem</div><input type="hidden" name="trecho" value="${esc(r.trecho || '')}">
+    <div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${t === 'iv' ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${t === 'ida' ? 'on' : ''}">Só ida</button><button type="button" data-iv="multi" class="${t === 'multi' ? 'on' : ''}">Multitrecho</button></div>
+    <div id="vgSimples" ${t === 'multi' ? 'hidden' : ''}><div class="vg-2">${campo('vg_origem', 'Origem', VG.iata(V, 'origem'), 'text', aero)}${campo('vg_destino', 'Destino', VG.iata(V, 'destino'), 'text', aero)}</div><div class="sub" id="vgCidades" style="margin:-4px 0 8px"></div></div>
+    <div id="vgMulti" ${t === 'multi' ? '' : 'hidden'}><div class="fl" style="margin-bottom:4px"><span>Trechos</span></div><div id="vgTrechos"></div><button type="button" class="vg-mais" id="vgMais">+ Adicionar trecho</button></div>
+    <div class="duas-col" id="vgDatas" ${t === 'multi' ? 'hidden' : ''}>${campo('data_viagem', 'Data de ida', dt.ida, 'date')}<div id="blVolta" ${t === 'ida' ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', dt.volta, 'date')}</div></div>
+    <div class="sub" id="vgDur" style="margin:-2px 0 8px"></div>
+    <div class="vg-2"><label class="fl"><span>Passageiros</span><div class="vg-pax"><button type="button" data-vgpax="-1" aria-label="Um passageiro a menos">−</button><input name="vg_pax" type="number" min="1" max="99" inputmode="numeric" value="${esc(V.pax || '')}" placeholder="Quantos"><button type="button" data-vgpax="1" aria-label="Um passageiro a mais">+</button></div></label>
+      <div class="fl"><span>Bagagem despachada</span><div class="chips vg-bag" id="vgBag">${VG.BAGAGEM.map(([v, l]) => `<button type="button" data-vgbag="${v}" class="${V.bagagem === v ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
+    <label class="fl" hidden><span>Bagagem despachada</span><input type="hidden" name="vg_bag" value="${esc(V.bagagem || '')}"></label>
+    <label class="fl" hidden><span>Trechos do multitrecho</span><input type="hidden" name="vg_trechos" value="${esc(JSON.stringify(V.trechos || []))}"></label>
+    ${!V.novo && r.trecho && VG.trechoTexto(V) !== r.trecho ? `<div class="sub" style="margin:0 0 8px">Anotado antes no card: ${esc(r.trecho)}. Fica assim até alguém mudar a origem ou o destino.</div>` : ''}
+    <div id="indicDestino"></div>`;
+}
 function telaFormReuniao(P) {
   const nova = RE_ED === 'nova';
   const agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
@@ -4917,6 +4960,8 @@ function telaFormReuniao(P) {
   const RE_PRE_FECHOU = !!(RE_PRE && RE_PRE.etapa === 'Fechou');
   const r = { ...base, ...(RE_PRE || {}) }; RE_PRE = null;
   const G = r.produto === 'Gestão de Milhas';
+  // viagem do card (002-card-viagem.sql): a gravada; no card antigo, a do diagnóstico e o trecho antigo, sem gravar até salvar
+  const V0 = G ? null : VG.viagemDe(r, nova ? {} : respDiag(r));
   // card do Comercial já existente: abre em leitura, com um botão principal e blocos que abrem no "Editar"
   const CB = !nova && !G;
   // card da Gestão já existente: o "Agora" é o resumo e a ação; o formulário vira blocos com Editar
@@ -4930,7 +4975,7 @@ function telaFormReuniao(P) {
     const prods = [...new Set(String(r.produto || '').split(' + ').filter(Boolean).map(rotProd))].join(', ');
     const rt = reunioesDe(base.id).length, nota = ultimaNota(r);
     return { atend: prods || 'Nenhum produto marcado', cliente: r.cliente || '',
-      viagem: [r.trecho || 'Sem trecho', r.data_viagem ? dataCurta(dia(r.data_viagem)) + (r.data_volta ? ' a ' + dataCurta(dia(r.data_volta)) : '') : ''].filter(Boolean).join(' · '),
+      viagem: VG.resumo(V0) || 'Sem origem e destino',
       etapa: etapaDe(r),
       resp: r.responsavel_id ? (nomeTime(r.responsavel_id) || 'Outra pessoa') : 'Sem responsável',
       acomp: r.resultado === 'Em andamento' ? (r.proximo_passo_data ? 'Retorno ' + dataCurta(dia(r.proximo_passo_data)) : 'Sem próximo passo') : 'Valores e responsável',
@@ -4987,7 +5032,7 @@ function telaFormReuniao(P) {
       ${G ? blAnd : ''}
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
       ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
-        + (CB ? cbFecha + cbAbre('viagem', 'Viagem', cbRes.viagem) : '') + `<div class="grupo">Viagem</div>${campo('trecho', 'Trecho ou destino', r.trecho, 'text', 'placeholder="Ex.: Nova York → Miami"')}<div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${nova || !r.data_viagem || r.data_volta ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${!nova && r.data_viagem && !r.data_volta ? 'on' : ''}">Somente ida</button></div><div class="duas-col">${campo('data_viagem', 'Data de ida', r.data_viagem, 'date')}<div id="blVolta" ${!nova && r.data_viagem && !r.data_volta ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', r.data_volta, 'date')}</div></div><div id="indicDestino"></div>`
+        + (CB ? cbFecha + cbAbre('viagem', 'Viagem', cbRes.viagem) : '') + htmlViagemCard(r, V0)
         + (CB ? cbFecha + cbAbre('diag', 'Diagnóstico', '', 'Abrir') + '<div id="reDiag" data-livre></div>' : '')
         + (CB ? cbFecha + cbAbre('notas', 'Anotações', cbRes.notas, 'Abrir') : '<div class="grupo">Anotações</div>') + htmlNotas(r, nova)
         + (CB ? cbFecha + cbAbre('acomp', 'Valores e próximo passo', cbRes.acomp, 'Abrir') + htmlAcompLeitura(r, base) : '<div class="grupo">Valores e próximo passo</div>') + blAnd
@@ -5064,7 +5109,9 @@ function telaFormReuniao(P) {
   if (GB) ligarGestaoLeitura(P);
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
-  if ($('montarCot')) $('montarCot').onclick = async () => { if (f._diag) await f._diag.salvarJa(); const dc = DG.paraCotacao(respDiag(base)); ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: dc.destino || base.trecho || '', ida: dc.ida || base.data_viagem || '', volta: dc.volta || base.data_volta || '', origem: dc.origem, pessoas: dc.pessoas, bagagem: dc.bagagem })); };
+  if ($('montarCot')) $('montarCot').onclick = async () => { if (f._diag) await f._diag.salvarJa(); // a viagem como está no card agora (mesmo antes de salvar); card antigo: o diagnóstico e o trecho antigo
+    const dc = VG.paraCotacao(f._vgAtual ? f._vgAtual() : VG.viagemDe(base, respDiag(base)));
+    ir('cotador', () => COT.preparar({ id: base.id, cliente: base.cliente, destino: dc.destino || base.trecho || '', destinoCod: dc.destinoCod, ida: dc.ida || '', volta: dc.volta || '', origem: dc.origem, origemCod: dc.origemCod, pessoas: dc.pessoas, bagagem: dc.bagagem, trechos: dc.trechos })); };
   if ($('abrirFichaRe')) $('abrirFichaRe').onclick = () => { CRM.abrir(f.elements.pessoa_id.value); ir('crm', () => CRM.abrir(f.elements.pessoa_id.value)); };
   const resumoCli = () => {
     const p = (D.pessoas || []).find(x => x.id === f.elements.pessoa_id.value);
@@ -5112,8 +5159,64 @@ function telaFormReuniao(P) {
     return { ok: true, v };
   };
   if ($('assumirAt')) $('assumirAt').onclick = () => assumirAtendimento(base.id);
-  const atualizarIndic = () => { const el = $('indicDestino'); if (el && f.elements.trecho) el.innerHTML = htmlIndicacoes(f.elements.trecho.value); el && el.querySelectorAll('[data-fornid]').forEach(b => b.onclick = () => ir('fornecedores', () => FORN.abrir(b.dataset.fornid))); };
-  if (f.elements.trecho) { f.elements.trecho.addEventListener('input', atualizarIndic); atualizarIndic(); }
+  const atualizarIndic = () => { const el = $('indicDestino'); if (el && f.elements.trecho) el.innerHTML = htmlIndicacoes(f._vgAtual ? (VG.trechoTexto(f._vgAtual()) || f.elements.trecho.value) : f.elements.trecho.value); el && el.querySelectorAll('[data-fornid]').forEach(b => b.onclick = () => ir('fornecedores', () => FORN.abrir(b.dataset.fornid))); };
+  // ---- viagem do card (viagem.js): origem, destino, tipo, trechos, datas, passageiros e bagagem, digitados só aqui ----
+  // serviços, diagnóstico e cotação leem daqui; o "trecho" do card é montado sozinho, só quando a origem, o destino ou os trechos mudam
+  if ($('segIV')) {
+    VG.preparar();
+    const fe = f.elements, tipoAt = () => ({ so: 'ida', multi: 'multi' }[$('segIV').querySelector('.on').dataset.iv] || 'iv');
+    let TR = (V0.trechos || []).map(t => ({ ...t })), mexeuTrecho = false, vgAnt = null;
+    fe.vg_origem._cod = V0.origem_cod || ''; fe.vg_destino._cod = V0.destino_cod || '';
+    f._vgAtual = () => ({ origem: fe.vg_origem.value, origem_cod: fe.vg_origem._cod || '', destino: fe.vg_destino.value, destino_cod: fe.vg_destino._cod || '', tipo: tipoAt(),
+      trechos: TR, pax: fe.vg_pax.value, bagagem: fe.vg_bag.value, ida: fe.data_viagem.value, volta: fe.data_volta.value });
+    const vgServ = () => VG.paraServicos(f._vgAtual());
+    const desenhaTrechos = () => {
+      if (!TR.length) TR = [{ o: '', d: '', data: '' }, { o: '', d: '', data: '' }];
+      $('vgTrechos').innerHTML = TR.map((t, i) => `<div class="vg-tr"><span class="vg-n">${i + 1}</span><label><input data-vt="o" data-vi="${i}" value="${esc(t.o)}" placeholder="De" maxlength="40" data-aero="cod" autocomplete="off" aria-label="Origem do trecho ${i + 1}"></label><span class="vg-seta">→</span><label><input data-vt="d" data-vi="${i}" value="${esc(t.d)}" placeholder="Para" maxlength="40" data-aero="cod" autocomplete="off" aria-label="Destino do trecho ${i + 1}"></label><input class="vg-dt" type="date" data-vt="data" data-vi="${i}" value="${esc(t.data)}" aria-label="Data do trecho ${i + 1}">${TR.length > 2 ? `<button type="button" class="vg-x" data-vtx="${i}" aria-label="Tirar o trecho ${i + 1}">×</button>` : '<span></span>'}</div>`).join('');
+    };
+    // tudo que depende da viagem: datas do card no multitrecho, duração, trecho montado, indicações, diagnóstico e serviços
+    const sincroniza = () => {
+      const t = tipoAt();
+      $('vgSimples').hidden = t === 'multi'; $('vgMulti').hidden = t !== 'multi'; $('vgDatas').hidden = t === 'multi'; $('blVolta').hidden = t !== 'iv';
+      if (t === 'multi') { const d = VG.datasDe({ tipo: 'multi', trechos: TR }); fe.data_viagem.value = d.ida; fe.data_volta.value = d.volta; }
+      else if (t === 'ida') fe.data_volta.value = '';
+      fe.vg_trechos.value = JSON.stringify(t === 'multi' ? TR.filter(x => x.o || x.d || x.data) : []);
+      const v = f._vgAtual(), d = VG.datasDe(v), n = VG.dias(d.ida, d.volta);
+      $('vgDur').textContent = n != null && n >= 0 ? `${n} ${n === 1 ? 'dia' : 'dias'} de viagem` : '';
+      $('vgCidades').textContent = [['origem', 'Origem'], ['destino', 'Destino']].map(([k, rot]) => { const c = VG.codDe(v[k], v[k + '_cod']); return c ? `${c}: ${VG.cidadeDe(c)}` : String(v[k] || '').trim() ? `${rot} sem código de aeroporto: escolha um da lista` : ''; }).filter(Boolean).join(' · ');
+      if (mexeuTrecho) fe.trecho.value = VG.trechoTexto(v) || '';
+      atualizarIndic();
+      if (f._vgMudou) f._vgMudou(v);
+      // serviços: o que ainda está igual ao que o card tinha acompanha o card; o que o vendedor mudou no serviço fica
+      const novo = vgServ(); if (EDIT && EDIT.seguirCard && vgAnt) EDIT.seguirCard(vgAnt); vgAnt = novo;
+    };
+    f._vgSincroniza = sincroniza;
+    // a sugestão de aeroporto escolhida guarda também o código (o campo mostra a cidade)
+    f.addEventListener('pointerdown', (e) => { const b = e.target.closest('.aero-sug button'); if (!b) return; const i = b.closest('label') && b.closest('label').querySelector('input[data-aero]'); const c = b.querySelector('b'); if (i && c) i._codEscolhido = c.textContent.trim(); }, true);
+    ['vg_origem', 'vg_destino'].forEach(k => fe[k].addEventListener('input', (e) => { const i = e.target; i._cod = i._aeroAplicando && i._codEscolhido ? i._codEscolhido : VG.codDe(i.value); i._codEscolhido = ''; mexeuTrecho = true; }));
+    ['vg_origem', 'vg_destino', 'data_viagem', 'data_volta'].forEach(k => fe[k].addEventListener('change', sincroniza));
+    fe.vg_origem.addEventListener('input', () => { if (fe.vg_origem._aeroAplicando) sincroniza(); }); fe.vg_destino.addEventListener('input', () => { if (fe.vg_destino._aeroAplicando) sincroniza(); });
+    $('vgTrechos').addEventListener('input', (e) => { const i = e.target.closest('[data-vt]'); if (!i) return; const t = TR[+i.dataset.vi]; if (!t) return; t[i.dataset.vt] = i.dataset.vt === 'data' ? i.value : i.value.trim().toUpperCase(); mexeuTrecho = true; if (i.dataset.vt === 'data' || i._aeroAplicando) sincroniza(); });
+    $('vgTrechos').addEventListener('change', sincroniza);
+    $('vgTrechos').addEventListener('click', (e) => { const b = e.target.closest('[data-vtx]'); if (!b) return; TR.splice(+b.dataset.vtx, 1); mexeuTrecho = true; desenhaTrechos(); sincroniza(); });
+    $('vgMais').onclick = () => { const u = TR[TR.length - 1] || {}; TR.push({ o: u.d || '', d: '', data: '' }); desenhaTrechos(); sincroniza(); const ins = $('vgTrechos').querySelectorAll('input[data-vt="d"]'); if (ins.length) ins[ins.length - 1].focus(); };
+    P.querySelectorAll('[data-vgpax]').forEach(b => b.onclick = () => { const n = Math.max(1, Math.min(99, (+fe.vg_pax.value || 0) + +b.dataset.vgpax)); fe.vg_pax.value = n; sincroniza(); });
+    fe.vg_pax.addEventListener('change', sincroniza);
+    $('vgBag').querySelectorAll('[data-vgbag]').forEach(b => b.onclick = () => { const v = fe.vg_bag.value === b.dataset.vgbag ? '' : b.dataset.vgbag; fe.vg_bag.value = v; $('vgBag').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.vgbag === v)); sincroniza(); });
+    $('segIV').querySelectorAll('button').forEach(b => b.onclick = () => {
+      const antes = tipoAt(); $('segIV').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      const t = tipoAt(); if (t === antes) return;
+      // virou multitrecho: os trechos começam pelo que já estava em origem, destino e datas
+      if (t === 'multi' && !TR.some(x => x.o || x.d)) { const o = VG.codDe(fe.vg_origem.value, fe.vg_origem._cod), d = VG.codDe(fe.vg_destino.value, fe.vg_destino._cod);
+        TR = [{ o, d, data: fe.data_viagem.value }, { o: d, d: o, data: antes === 'iv' ? fe.data_volta.value : '' }]; }
+      // saiu do multitrecho: origem e destino vêm do primeiro trecho, se estiverem vazios
+      if (antes === 'multi') { const L = TR.filter(x => x.o || x.d); if (L.length && !fe.vg_origem.value && !fe.vg_destino.value) { fe.vg_origem.value = L[0].o; fe.vg_origem._cod = L[0].o; fe.vg_destino.value = L[0].d; fe.vg_destino._cod = L[0].d; } }
+      mexeuTrecho = true; if (t === 'multi') desenhaTrechos(); sincroniza(); });
+    if (tipoAt() === 'multi') desenhaTrechos();
+    f._vgMexeu = () => mexeuTrecho;
+    f._vgServ = vgServ;
+    atualizarIndic();
+  }
   let EDIT = null, FECH = null;
   const F = JSON.parse(JSON.stringify(r.fech || {}));
   if ($('reProd')) {
@@ -5137,7 +5240,7 @@ function telaFormReuniao(P) {
       // retrato do card assim que termina de desenhar (com os padrões já preenchidos): é a base para saber se mudou
       setTimeout(() => { f._ultRasc = snap(); }, 0);
     }
-    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get cotacao() { return f.elements.etapa.value !== 'Fechou'; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { return $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so' ? 'ida' : 'iv'; }, pax: null };
+    const ctxI = { get cliente() { return f.elements.cliente ? f.elements.cliente.value : ''; }, get pessoaId() { return f.elements.pessoa_id ? f.elements.pessoa_id.value : ''; }, get vendaTotal() { return (F.venda_modo || 'total') === 'total' && IT.filter(x => !VENDA.ehCliente(x)).length > 1; }, get detalhes() { return true; }, get cotacao() { return f.elements.etapa.value !== 'Fechou'; }, get fechou() { return f.elements.etapa.value === 'Fechou'; }, get ida() { return f.elements.data_viagem ? f.elements.data_viagem.value : ''; }, get volta() { return f.elements.data_volta ? f.elements.data_volta.value : ''; }, get tipoPadrao() { const iv = $('segIV') && $('segIV').querySelector('.on').dataset.iv; return iv === 'so' ? 'ida' : iv === 'multi' ? 'multi' : 'iv'; }, get pax() { return f._vgAtual ? (+f.elements.vg_pax.value || null) : null; }, card: () => f._vgServ ? f._vgServ() : null };
     // venda já lançada: guarda como cada serviço está na planilha, para mandar só o que for corrigido aqui
     if (!nova) VENDA.garantirRetrato(XV, base, IT, F);
     EDIT = VENDA.editorItens(XV, $('reItens'), IT, ctxI, (t) => { if (t.v && f.elements.valor_estimado) f.elements.valor_estimado.value = t.v; if (FECH) FECH.desenha(); rotFech(); });
@@ -5286,10 +5389,9 @@ function telaFormReuniao(P) {
   }
   f._fech = () => F;
   if ($('segIV')) {
-    const soIda = () => $('segIV').querySelector('.on').dataset.iv === 'so';
-    $('segIV').querySelectorAll('button').forEach(b => b.onclick = () => { $('segIV').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); $('blVolta').hidden = soIda(); if (soIda()) f.elements.data_volta.value = ''; });
     const minVolta = () => { f.elements.data_volta.min = f.elements.data_viagem.value || ''; if (f.elements.data_volta.value && f.elements.data_viagem.value && f.elements.data_volta.value < f.elements.data_viagem.value) f.elements.data_volta.value = ''; };
     f.elements.data_viagem.addEventListener('change', minVolta); minVolta();
+    if (f._vgSincroniza) f._vgSincroniza();
   }
   mostrar(); f._reunVis(); if (f._prepFechou) f._prepFechou();
   // entrou pelo Fechou: a tela já vai até "Como o cliente fechou"
@@ -5317,8 +5419,9 @@ function telaFormReuniao(P) {
     const falhas = [];
     const n2 = (x) => x === '' ? null : Number(x.replace(',', '.'));
     if (!g('cliente')) { $('msgRe').textContent = 'Informe o cliente.'; return; }
-    const soIda = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so';
-    if ($('segIV') && !soIda && g('data_viagem') && !g('data_volta')) { $('msgRe').textContent = 'Informe a data de volta ou marque Somente ida.'; f.elements.data_volta.focus(); return; }
+    if (f._vgSincroniza) f._vgSincroniza();
+    const soIda = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'so', multiTr = $('segIV') && $('segIV').querySelector('.on').dataset.iv === 'multi';
+    if ($('segIV') && !soIda && !multiTr && g('data_viagem') && !g('data_volta')) { $('msgRe').textContent = 'Informe a data de volta ou marque Somente ida.'; f.elements.data_volta.focus(); return; }
     if (g('data_volta') && g('data_viagem') && g('data_volta') < g('data_viagem')) { $('msgRe').textContent = 'A volta não pode ser antes da ida.'; f.elements.data_volta.focus(); return; }
     const IT = f._itens ? f._itens() : null;
     if (IT && !IT.length) { $('msgRe').textContent = 'Marque pelo menos um produto.'; return; }
@@ -5370,6 +5473,8 @@ function telaFormReuniao(P) {
     // ao virar Fechou, a data do Fechou é gravada sozinha
     if (res === 'Fechou' && base.resultado !== 'Fechou' && !base.fechado_em) row.fechado_em = new Date().toISOString();
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
+    // viagem do card (002-card-viagem.sql): origem, destino, tipo, trechos, passageiros e bagagem
+    if (!G && f._vgAtual) row.viagem = VG.paraGravar(f._vgAtual());
     if (f.elements.responsavel_id) row.responsavel_id = g('responsavel_id') || null; else if (nova && !(ADMIN || GER())) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (nova && r.solicitacao_id) row.solicitacao_id = r.solicitacao_id;

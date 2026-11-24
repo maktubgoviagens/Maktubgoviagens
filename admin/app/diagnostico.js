@@ -68,6 +68,13 @@ const PROGRAMAS = ['Esfera', 'Livelo', 'Azul', 'Smiles', 'Latam'];
 export const TIPOS_NOVOS = [['texto', 'Texto curto'], ['longo', 'Texto longo'], ['simnao', 'Sim ou Não'], ['moeda', 'Valor em reais'], ['data', 'Data']];
 
 const cfgDiag = (cfg) => (cfg && cfg.diagnostico) || {};
+// diagnóstico de viagem: origem, destino, datas, quantidade de passageiros e bagagem são digitados só no card (bloco Viagem).
+// O diagnóstico mostra esses dados do card só para leitura. As respostas antigas continuam guardadas.
+export const DO_CARD = ['origem', 'destino', 'data_pre', 'bagagem'];
+export function camposComCard(L, temData) {
+  return L.filter(c => !DO_CARD.includes(c.k) && !(temData && ['data_prevista', 'duracao'].includes(c.k)))
+    .map(c => c.k === 'pax' ? { ...c, t: 'Quem são e idades', soQuem: true } : c);
+}
 export const limites = (cfg) => ({ ...LIMITES_PADRAO, ...(cfgDiag(cfg).limites || {}) });
 // perguntas do modelo: as do padrão com o que a administração mudou (título, ordem, escondida) e as que ela acrescentou
 export function campos(tipo, cfg, comOcultos) {
@@ -93,7 +100,7 @@ export function preenchido(c, v) {
   if (vazio(v)) return false;
   switch (c.tipo) {
     case 'datas': return !!(v.ida || v.volta);
-    case 'pax': return !!(v.n || String(v.quem || '').trim());
+    case 'pax': return c.soQuem ? !!String(v.quem || '').trim() : !!(v.n || String(v.quem || '').trim());
     case 'destinos': case 'bancos': case 'cartoes': case 'programas': return Array.isArray(v) && v.some(x => Object.values(x || {}).some(y => y !== '' && y != null && y !== false));
     case 'gasto': return ['cartoes', 'pix', 'pix_credito'].some(k => !vazio(v[k]));
     case 'simnao2': case 'par': return !vazio(v.a) || !vazio(v.b);
@@ -116,7 +123,7 @@ export function texto(c, v) {
     case 'moeda': return brl(v);
     case 'data': return dBR(v);
     case 'datas': return v.ida && v.volta ? `${dBR(v.ida)} a ${dBR(v.volta)}` : v.ida ? 'ida ' + dBR(v.ida) : 'volta ' + dBR(v.volta);
-    case 'pax': return [v.n ? v.n + (+v.n === 1 ? ' passageiro' : ' passageiros') : '', String(v.quem || '').trim()].filter(Boolean).join(': ');
+    case 'pax': return c.soQuem ? String(v.quem || '').trim() : [v.n ? v.n + (+v.n === 1 ? ' passageiro' : ' passageiros') : '', String(v.quem || '').trim()].filter(Boolean).join(': ');
     case 'destinos': return v.filter(x => x && x.nome).map(x => x.nome + (x.obrig ? ' (obrigatório)' : '')).join(', ');
     case 'bancos': return v.filter(x => x && x.banco).map(x => x.banco + (x.segmento ? ' (' + x.segmento + ')' : '')).join('; ');
     case 'cartoes': return v.filter(x => x && (x.banco || x.nome)).map(x => [[x.banco, x.nome].filter(Boolean).join(' '), x.limite ? 'limite ' + brl(x.limite) : '', x.anuidade ? 'anuidade ' + x.anuidade : ''].filter(Boolean).join(', ')).join('; ');
@@ -216,7 +223,8 @@ function widget(c, v) {
     case 'moeda': return inp('', v || '', { im: 'decimal', ph: 'R$' });
     case 'data': return inp('', v || '', { tipo: 'date' });
     case 'datas': return `<div class="duas-col"><label class="fl"><span>Ida</span>${inp('ida', (v || {}).ida || '', { tipo: 'date' })}</label><label class="fl"><span>Volta</span>${inp('volta', (v || {}).volta || '', { tipo: 'date' })}</label></div>`;
-    case 'pax': return `<div class="dg-pax"><label class="fl"><span>Quantos</span>${inp('n', (v || {}).n || '', { tipo: 'number', im: 'numeric' })}</label><label class="fl"><span>Quem são e idades</span>${inp('quem', (v || {}).quem || '', { ph: 'Ex.: casal, filhos de 8 e 12' })}</label></div>`;
+    case 'pax': if (c.soQuem) return inp('quem', (v || {}).quem || '', { ph: 'Ex.: casal, filhos de 8 e 12' });
+      return `<div class="dg-pax"><label class="fl"><span>Quantos</span>${inp('n', (v || {}).n || '', { tipo: 'number', im: 'numeric' })}</label><label class="fl"><span>Quem são e idades</span>${inp('quem', (v || {}).quem || '', { ph: 'Ex.: casal, filhos de 8 e 12' })}</label></div>`;
     case 'gasto': return `<div class="dg-3"><label class="fl"><span>Cartões (R$/mês)</span>${inp('cartoes', (v || {}).cartoes || '', { im: 'decimal' })}</label><label class="fl"><span>Pix (R$/mês)</span>${inp('pix', (v || {}).pix || '', { im: 'decimal' })}</label><label class="fl"><span>Do Pix, poderia ir para o crédito (R$/mês)</span>${inp('pix_credito', (v || {}).pix_credito || '', { im: 'decimal' })}</label></div>`;
     case 'simnao2': return (c.L || []).map((l, i) => `<div class="dg-sub">${h(l)}</div>${chips(SN, (v || {})[i ? 'b' : 'a'], i ? 'b' : 'a')}`).join('');
     case 'par': return `<div class="duas-col">${(c.L || []).map((l, i) => `<label class="fl"><span>${h(l)}</span>${inp(i ? 'b' : 'a', (v || {})[i ? 'b' : 'a'] || '', { aero: i && c.aeroB })}</label>`).join('')}</div>`;
