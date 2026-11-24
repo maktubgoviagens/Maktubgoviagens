@@ -421,6 +421,10 @@ async function formulario(box, c, pf, modelo, X, el) {
   ]);
   const doc = dc.data || {}, ext = ex.data || {};
   const at = (X.D.reunioes || []).filter(r => r.pessoa_id === pf.id && r.produto === 'Gestão de Milhas' && Number(r.valor_estimado) > 0).sort((a, b) => (b.resultado === 'Fechou') - (a.resultado === 'Fechou') || String(b.data || '').localeCompare(String(a.data || '')))[0];
+  // proposta da Gestão (Reunião de proposta e Follow-up): forma e parcelas já combinadas; profissão do diagnóstico quando a ficha não tem
+  const prop = (at && at.marcos && at.marcos['Reunião de proposta']) || {};
+  const profDiag = [at, ...(X.D.reunioes || []).filter(r => r.pessoa_id === pf.id && r.produto === 'Gestão de Milhas')].filter(Boolean)
+    .map(r => String((((X.D.diags || {})[String(r.id)] || {}).respostas || {}).profissao || '').trim()).find(Boolean) || '';
   const progs = X.programas ? X.programas(c.id) : [];
   const usados = cnt.error ? null : Number(cnt.data) || 0;
   const sel = (nome, rot, ops, v) => `<label class="fl"><span>${rot}</span><select name="${nome}"><option value="">Selecione</option>${ops.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
@@ -435,15 +439,16 @@ async function formulario(box, c, pf, modelo, X, el) {
     ${campo('cpf', 'CPF', doc.cpf ? fmtCpf(doc.cpf) : '', 'text', 'inputmode="numeric" required')}
     <div class="duas-col">${campo('rg', 'RG', ext.rg, 'text', 'required')}${campo('rg_orgao_uf', 'Órgão emissor/UF', ext.rg_orgao_uf, 'text', 'required placeholder="Ex.: DETRAN/RJ"')}</div>
     <div class="duas-col">${campo('nacionalidade', 'Nacionalidade', ext.nacionalidade || doc.nacionalidade || 'brasileiro(a)', 'text', 'required')}${sel('estado_civil', 'Estado civil', ESTADOS_CIVIS, ext.estado_civil)}</div>
-    ${campo('profissao', 'Profissão', ext.profissao, 'text', 'required')}
+    ${campo('profissao', 'Profissão', ext.profissao || profDiag, 'text', 'required')}
     ${campo('endereco_completo', 'Endereço completo (rua, número, complemento, bairro, cidade/UF)', ext.endereco_completo, 'text', 'required')}
     ${campo('cep', 'CEP', ext.cep ? fmtCep(ext.cep) : '', 'text', 'inputmode="numeric" required')}
     <div class="grupo">Condições</div>
     ${campo('valor_total', 'Investimento total (R$)', at ? at.valor_estimado : '', 'number', 'required')}
     <div class="sub" id="ctrConta" style="margin-top:0"></div>
     <label class="fc"><input type="checkbox" name="cortesia"><span>Cortesia: cliente estratégico, sem investimento. O valor acima entra só como referência.</span></label>
-    <label class="fl"><span>Forma de pagamento</span><select name="forma"><option value="pix">À vista, via Pix</option><option value="cartao">Parcelado no cartão de crédito</option></select></label>
-    <div id="ctrParc" hidden>${campo('parcelas', 'Número de parcelas', '', 'number', 'min="2" max="12"')}</div>
+    <label class="fl"><span>Forma de pagamento</span><select name="forma"><option value="pix">À vista, via Pix</option><option value="cartao" ${prop.forma === 'cartao' ? 'selected' : ''}>Parcelado no cartão de crédito</option></select></label>
+    <div id="ctrParc" ${prop.forma === 'cartao' ? '' : 'hidden'}>${campo('parcelas', 'Número de parcelas', prop.forma === 'cartao' && prop.parcelas ? prop.parcelas : '', 'number', 'min="2" max="12"')}</div>
+    ${prop.forma ? '<div class="sub" style="margin-top:-4px">Forma e parcelas vêm da proposta do card. Dá para mudar.</div>' : ''}
     <label class="fl"><span>Uso de imagem (Cláusula de uso de imagem)</span><select name="uso_imagem" required><option value="">Pergunte ao cliente</option><option value="sim">Autoriza</option><option value="nao">Não autoriza</option></select></label>
     <label class="fl"><span>Programas e nº de fidelidade (Anexo I)</span><textarea name="programas" rows="2" placeholder="Ex.: Smiles 123456, LATAM Pass 987654">${esc(progs.join(', '))}</textarea></label>
     <div class="duas-col">${campo('cidade', 'Cidade da assinatura', lembrar('cidade'), 'text', 'required')}${campo('data', 'Data da assinatura', hojeISO(), 'date', 'required')}</div>
