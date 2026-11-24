@@ -1003,7 +1003,7 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .vh-abrir{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0}
 .vh-faixa{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;text-align:left;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--alerta);border-radius:12px;background:var(--branco);color:var(--tinta);font:inherit;font-size:16px;cursor:pointer}.vh-faixa b{font-weight:600;color:var(--alerta)}.vh-faixa>span:last-child{white-space:nowrap;color:var(--verde);font-weight:600}
 .vg-pax{display:grid;grid-template-columns:48px 1fr 48px;gap:6px}.vg-pax button{border:1px solid var(--linha);background:var(--branco);border-radius:12px;font-size:22px;color:var(--verde);cursor:pointer;min-height:48px}.vg-pax input{text-align:center}
-.vg-bag{flex-wrap:wrap;margin-top:2px}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
+.vg-bag{flex-wrap:wrap;margin-top:2px}#vgSimples input::placeholder{text-transform:none}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
 .vg-tr{display:grid;grid-template-columns:28px 1fr 18px 1fr;gap:6px;align-items:center;margin:0 0 6px}.vg-tr .vg-n{font-size:14px;color:var(--tinta-3)}.vg-tr .vg-seta{text-align:center;color:var(--tinta-3)}
 .vg-tr .vg-dt{grid-column:2 / 4}.vg-tr .vg-x{grid-column:4;justify-self:end;background:none;border:0;font-size:22px;color:var(--tinta-3);cursor:pointer;padding:4px 10px}
 .vg-tr input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--branco);color:var(--tinta);min-height:48px}
@@ -1385,7 +1385,8 @@ document.addEventListener('submit', (e) => {
   if (e.target === ULT_ENVIO && GRAVANDO_FRENTE > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   ULT_ENVIO = e.target;
 }, true);
-const sb = createClient('https://qzrpvavhgtklacsbhlfi.supabase.co', 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE', { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: fetchApp } });
+const SB_URL = 'https://qzrpvavhgtklacsbhlfi.supabase.co', SB_CHAVE = 'sb_publishable_gKIXLgYTXCSZjNjc5Xcd4Q_EqVBdiSE';
+const sb = createClient(SB_URL, SB_CHAVE, { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: fetchApp } });
 CART.usar(sb);
 
 /* ================= utilidades ================= */
@@ -1953,6 +1954,8 @@ async function cotacaoEnviada(id, o = {}) {
     // cotação nova no follow-up (ou reenviada): o retorno renova pelo padrão da cotação enviada (2 dias)
     else if (['Cotação enviada', 'Follow-up'].includes(et)) Object.assign(row, passoPadraoRow(r, 'Cotação enviada'), { proximo_passo: 'Retorno da cotação: nova cotação enviada' });
     if (o.valor > 0) row.valor_estimado = o.valor;
+    // cotação enviada ao cliente também é contato: conta como 1º contato, se ainda não tinha
+    marcarContato(r);
   }
   if (!Object.keys(row).length) return;
   const { data, error } = await sb.from('atendimentos').update(row).eq('id', id).select().single();
@@ -3325,11 +3328,26 @@ const doSite = (r) => !!(r.lead_id || r.solicitacao_id);
 const entradaDe = (r) => r.entrou_em || ((leadDoCard(r) || solDoCard(r) || {}).created_at) || r.created_at || r.data;
 function haTempo(ms) { const m = Math.max(0, ms) / 6e4; if (m < 60) return Math.max(1, Math.round(m)) + ' min'; const h = m / 60; if (h < 48) return Math.round(h) + ' h'; return Math.round(h / 24) + ' dias'; }
 const dhCurta = (ts) => new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+// o que o lead do site escreveu (destino e quantos viajantes) vai para o bloco Viagem do card
+function viagemDoLead(l) {
+  if (!l) return {}; const dest = String(l.destino || '').trim(), m = /(\d{1,2})/.exec(String(l.viajantes || '')), pax = m && +m[1] > 0 ? +m[1] : null;
+  if (!dest && !pax) return {};
+  return { ...(dest ? { trecho: dest } : {}), viagem: { destino: dest, pax, tipo: 'iv' } };
+}
+// produto do card: os serviços que são venda, sem repetir (cancelado e emissão com milhas do cliente ficam de fora); sem nenhum, todos
+function produtoDosServicos(IT) { const u = (L) => [...new Set(L.map(x => x.produto).filter(Boolean))].join(' + '); return u(IT.filter(x => !x.cancelado_em && !VENDA.ehCliente(x))) || u(IT); }
+const servicoComValor = (IT) => (IT || []).some(x => !x.cancelado_em && !VENDA.ehCliente(x) && +x.venda > 0);
+// 1º contato com o cliente (KPI de tempo de resposta): grava só se estiver vazio.
+// Pedido com keepalive: termina mesmo quando o celular pausa o app ao abrir o WhatsApp (antes a gravação se perdia).
 async function marcarContato(r) {
-  if (!r || r.primeiro_contato_em) return;
-  const ts = new Date().toISOString();
-  const { error } = await sb.from('atendimentos').update({ primeiro_contato_em: ts }).eq('id', r.id).is('primeiro_contato_em', null);
-  if (!error) r.primeiro_contato_em = ts;
+  if (!r || !r.id || r.primeiro_contato_em) return;
+  const ts = new Date().toISOString(); r.primeiro_contato_em = ts;
+  try {
+    const { data: { session } } = await sb.auth.getSession(); if (!session) { r.primeiro_contato_em = null; return; }
+    const res = await fetch(`${SB_URL}/rest/v1/atendimentos?id=eq.${encodeURIComponent(r.id)}&primeiro_contato_em=is.null`, { method: 'PATCH', keepalive: true,
+      headers: { apikey: SB_CHAVE, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ primeiro_contato_em: ts }) });
+    if (!res.ok) r.primeiro_contato_em = null;
+  } catch (_) { r.primeiro_contato_em = null; }
 }
 async function salvarInteresses(ld, novo) {
   const { error } = await sb.from('leads').update({ interesses: novo }).eq('id', ld.id);
@@ -3418,7 +3436,7 @@ function htmlGestaoSdr(r) {
       ${selG('q_prioridade', 'Prioridade', [['', 'Sem prioridade'], ...PRIO_G.map(([v, l]) => [v, v + ': ' + l])], q.prioridade || '')}
       <details class="gsec gsec-q" ${aberto ? 'open' : ''}><summary><span>Diagnóstico<small id="dgResG">Perguntas da ligação, resumo do Granola e respostas</small></span></summary>
       <div class="sub" style="margin:8px 0 4px">1. Mande as perguntas ao lead. 2. Faça a ligação com o Granola gravando. 3. Cole o resumo do Granola e preencha o diagnóstico (a IA pode sugerir). 4. Passe para o closer: etapa Diagnóstico agendado, com o closer e a data.</div>
-      ${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zap" target="_blank" rel="noopener" style="display:block;text-align:center;margin:6px 0 10px" href="${esc(zapLink(r.contato, r.cliente, textoPerguntasSdr(r)))}">Mandar as perguntas pelo WhatsApp</a>` : `<div class="sub">Sem WhatsApp no card: copie as perguntas: ${esc(PERGUNTAS_SDR.join(' '))}</div>`}
+      ${zapNum(r.contato) && !/@/.test(r.contato || '') ? `<a class="zap" data-zapsdr="1" target="_blank" rel="noopener" style="display:block;text-align:center;margin:6px 0 10px" href="${esc(zapLink(r.contato, r.cliente, textoPerguntasSdr(r)))}">Mandar as perguntas pelo WhatsApp</a>` : `<div class="sub">Sem WhatsApp no card: copie as perguntas: ${esc(PERGUNTAS_SDR.join(' '))}</div>`}
       <label class="fl"><span>Resumo da ligação do SDR (cole do Granola)</span><textarea name="q_granola" rows="5" placeholder="Cole aqui o resumo que o Granola gerou da ligação.">${esc(q.granola || '')}</textarea></label>
       ${r.id ? '<div id="reDiag" data-livre></div>' : '<div class="sub">Salve o card para preencher o diagnóstico.</div>'}
       <div class="sub">Para passar ao closer: com o resumo do Granola colado, basta o gasto mensal nos cartões; sem o resumo, preencha gasto mensal, bancos e cartões, viagens planejadas ou maior dor, e quem decide.</div></details>`;
@@ -4137,7 +4155,11 @@ function htmlResultadosTopo(G, base) {
   const ab = D.reunioes.filter(r => daVista(r) && r.resultado === 'Em andamento'), atr = ab.filter(r => r.proximo_passo_data && String(r.proximo_passo_data).slice(0, 10) < hojeISO());
   const aberto = `<section class="bloco"><h2>Em aberto</h2>${verV ? `<div class="lin"><span>Valor cotado sem decisão</span><b>${brlC(soma(ab, 'valor_estimado'))}</b></div>` : ''}<div class="lin"><span>Cards em aberto</span><b>${ab.length}</b></div><button type="button" class="lin" id="reAtras" style="width:100%"><span>Follow-ups atrasados</span><b style="color:${atr.length ? 'var(--alerta)' : 'inherit'}">${atr.length} ›</b></button></section>`;
   const conv = `${blocoConv('Conversão por origem', base, r => r.origem)}${G ? '' : blocoConv('Conversão por produto', base, r => Array.isArray(r.itens) && r.itens.length ? r.itens.map(x => x.produto) : r.produto)}${verV ? blocoConv('Conversão por pessoa', base, r => r.responsavel_id, k => nomeTime(k) || 'Não informado') : ''}`;
-  return faixa + curva + funil + conv + tempo + motivos + aberto;
+  // tempo até o 1º contato: mediana entre a entrada do card e o 1º contato (WhatsApp, assumir ou cotação enviada)
+  const ms = base.filter(r => r.primeiro_contato_em && entradaDe(r)).map(r => new Date(r.primeiro_contato_em) - new Date(entradaDe(r))).filter(x => x >= 0).sort((a, b) => a - b);
+  const med = ms.length ? (ms.length % 2 ? ms[(ms.length - 1) / 2] : (ms[ms.length / 2 - 1] + ms[ms.length / 2]) / 2) : null;
+  const contato = `<section class="bloco"><h2>Tempo até o 1º contato</h2>${ms.length >= 3 ? `<div class="ini-num">${haTempo(med)}</div><div class="sub" style="margin-top:2px">mediana da entrada do card ao 1º contato, em ${ms.length} cards do período</div>` : `<div class="vazio">Ainda poucos cards com o 1º contato registrado${ms.length ? ` (${ms.length})` : ''}.</div>`}</section>`;
+  return faixa + curva + funil + conv + tempo + contato + motivos + aberto;
 }
 function blocoConv(titulo, L, chave, rotulo) {
   const grupos = {};
@@ -4336,6 +4358,7 @@ async function assumirAtendimento(id) {
   const { data, error } = await sb.from('atendimentos').update(upd).eq('id', id).select().single();
   if (error) { aviso('Não assumiu: ' + error.message + (/assumido/.test(error.message) ? ' (rode o SQL do processo de cotação)' : '')); return; }
   Object.assign(r, data); aviso(`${r.cliente} é seu. Estude o card e acione o cliente.`);
+  marcarContato(r);
   if (!assumidoNoCardAberto(r, antes, upd)) tela();
 }
 // card aberto com algo digitado: não redesenha (o que foi digitado ficaria para trás). Troca só a linha de quem assumiu,
@@ -4989,6 +5012,8 @@ function telaFormReuniao(P) {
   const G = r.produto === 'Gestão de Milhas';
   // viagem do card (002-card-viagem.sql): a gravada; no card antigo, a do diagnóstico e o trecho antigo, sem gravar até salvar
   const V0 = G ? null : VG.viagemDe(r, nova ? {} : respDiag(r));
+  // card que veio do site sem destino: o que o lead escreveu (destino e viajantes) aparece preenchido; grava ao salvar
+  if (V0 && !V0.novo) { const lv = (viagemDoLead(leadDoCard(r)) || {}).viagem || {}; if (!V0.destino && lv.destino) V0.destino = lv.destino; if (!V0.pax && lv.pax) V0.pax = lv.pax; }
   // card do Comercial já existente: abre em leitura, com um botão principal e blocos que abrem no "Editar"
   const CB = !nova && !G;
   // card da Gestão já existente: o "Agora" é o resumo e a ação; o formulário vira blocos com Editar
@@ -5060,7 +5085,7 @@ function telaFormReuniao(P) {
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
       <div id="blFechou">${G ? (vf => campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado ?? (vf ? vf.v : ''), 'number') + (r.valor_fechado == null && vf ? `<div class="sub" style="margin:-4px 0 8px">Preenchido com o valor ${vf.de}. Dá para mudar.</div>` : ''))(valorFechouGestao(r)) : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend">${r.resultado === 'Fechou' && VENDA.concluida(r) ? 'Venda lançada na planilha.' + (r.conferencia_status === 'a_conferir' ? ' Está em Vendas a conferir.' : r.conferencia_status === 'conferida' ? ` Conferida${r.conferida_por && nomeTime(r.conferida_por) ? ' por ' + esc(nomeTime(r.conferida_por)) : ''}${r.conferida_em ? ' em ' + dataBR(String(r.conferida_em).slice(0, 10)) : ''}.` : '') : 'Ao salvar como Fechou, a venda vai sozinha para a planilha. Se faltar algo do mínimo (valor, custo, pagamento, comprovante, localizador ou horário dos voos), o app mostra só o que falta.'}</div>${!nova && r.resultado === 'Fechou' && !VENDA.concluida(r) ? '<button class="sec grande" type="button" id="reLancar" style="width:100%;margin-top:8px">Fechar venda</button>' : ''}`}</div>
-      <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
+      <div id="blPerdeu"><div class="fl" style="margin-bottom:4px"><span>Motivo principal</span></div><div class="chips" id="motivoChips" style="flex-wrap:wrap">${RE_MOTIVOS.map(o => `<button type="button" data-motivo="${esc(o)}" class="${o === r.motivo_perda ? 'on' : ''}">${esc(o)}</button>`).join('')}</div><label class="fl" hidden><span>Motivo principal</span><input type="hidden" name="motivo_perda" value="${esc(r.motivo_perda || '')}"></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       ${G ? blAnd : ''}
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
       ${G ? '' : (CB ? cbFecha + cbAbre('atend', 'Serviços', cbRes.atend) : '<div class="grupo">Serviços</div>') + `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`
@@ -5149,6 +5174,8 @@ function telaFormReuniao(P) {
   if (!nova) ligarNotas(P, base, () => { const s = P.querySelector('.cb[data-cb="notas"] .cb-h small'); if (s) { const n = ultimaNota(base); s.textContent = n ? n.slice(0, 70) + (n.length > 70 ? '…' : '') : 'Sem anotações'; } });
   if (CB) { const b = P.querySelector('[data-cbed="reun"]'); if (b) b.addEventListener('click', () => { reunAberta = true; f._reunVis(); }); }
   if (GB) ligarGestaoLeitura(P);
+  // perguntas do SDR pelo WhatsApp: conta como 1º contato
+  if (!nova) P.querySelectorAll('[data-zapsdr]').forEach(a => a.addEventListener('click', () => marcarContato(D.reunioes.find(x => x.id === base.id) || base)));
   if ($('calAtd')) $('calAtd').onclick = () => abrirCal({ atendimento_id: base.id, nome: base.cliente, email: /@/.test(base.contato || '') ? base.contato : '', tipo: G ? 'Comercial · Gestão de Milhas' : 'Comercial · Viagens' });
   P.querySelectorAll('[data-cotab]').forEach(b => b.onclick = () => abrirCotacao(b.dataset.cotab));
   if ($('montarCot')) $('montarCot').onclick = async () => { if (f._diag) await f._diag.salvarJa(); // a viagem como está no card agora (mesmo antes de salvar); card antigo: o diagnóstico e o trecho antigo
@@ -5264,6 +5291,8 @@ function telaFormReuniao(P) {
   if ($('reProd')) {
     const base0 = Array.isArray(r.itens) && r.itens.length ? r.itens : String(r.produto || '').split(' + ').filter(Boolean).map(p => ({ produto: p, custo: null, venda: null }));
     const IT = JSON.parse(JSON.stringify(base0));
+    // início da cotação (KPI): só quando um serviço ganha valor agora; card antigo que já tinha valor não recebe a data de hoje
+    f._tinhaValor = servicoComValor(IT) || base.resultado !== 'Em andamento' && !nova;
     // cotações do card: declaradas antes de tudo que as usa (o bloco de pagamento consulta a cotação ao abrir)
     const CD = nova ? [] : cotsDe(base.id); let CDADOS = null, SEL = null, ESC = null;
     const XV = ctxVenda();
@@ -5276,7 +5305,9 @@ function telaFormReuniao(P) {
       // se a gravação falhar, avisa na tela em vez de ficar calado
       const snap = () => { try { return JSON.stringify({ i: f._itens ? f._itens() : null, f: f._fech ? f._fech() : null }); } catch (_) { return null; } };
       f._ultRasc = null;
-      const gravar = async () => { const IT2 = f._itens ? f._itens() : null; if (!IT2 || !f._fech) return; const agora = snap(); if (f._ultRasc !== null && agora === f._ultRasc) return; GRAVA_FUNDO++; const { data, error } = await Promise.resolve(sb.from('atendimentos').update({ itens: IT2, fech: f._fech() }).eq('id', base.id).select().single()).finally(() => { GRAVA_FUNDO--; }); if (error) { if ($('msgRe')) $('msgRe').textContent = 'O rascunho dos serviços não salvou (' + limparTec(error.message) + '). Toque em Salvar antes de sair.'; return; } f._ultRasc = agora; const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = data; const el = $('rascInfo'); if (el) el.textContent = 'Rascunho salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+      const gravar = async () => { const IT2 = f._itens ? f._itens() : null; if (!IT2 || !f._fech) return;
+        // primeiro serviço com valor: o início da cotação (KPI) é gravado junto, se ainda estiver vazio
+        const ini = f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value && !f._tinhaValor && servicoComValor(IT2) ? (f.elements.cotacao_inicio.value = hojeISO()) : null; const agora = snap(); if (f._ultRasc !== null && agora === f._ultRasc) return; GRAVA_FUNDO++; const { data, error } = await Promise.resolve(sb.from('atendimentos').update({ itens: IT2, fech: f._fech(), ...(ini ? { cotacao_inicio: ini } : {}) }).eq('id', base.id).select().single()).finally(() => { GRAVA_FUNDO--; }); if (error) { if ($('msgRe')) $('msgRe').textContent = 'O rascunho dos serviços não salvou (' + limparTec(error.message) + '). Toque em Salvar antes de sair.'; return; } f._ultRasc = agora; const k = D.reunioes.findIndex(x => x.id === base.id); if (k >= 0) D.reunioes[k] = data; const el = $('rascInfo'); if (el) el.textContent = 'Rascunho salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
       XV.rascunho = (ja) => { clearTimeout(tm); tm = setTimeout(gravar, ja ? 0 : 1500); };
       ['input', 'change', 'click'].forEach(ev => f.addEventListener(ev, () => XV.rascunho()));
       // retrato do card assim que termina de desenhar (com os padrões já preenchidos): é a base para saber se mudou
@@ -5444,6 +5475,9 @@ function telaFormReuniao(P) {
     setTimeout(() => { const e = (foco === 'comprovante' && $('fComp')) || $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: foco === 'comprovante' ? 'center' : 'start' }); }, 300);
   }
   // frases do "não fechou": mudam com o motivo, um toque escolhe
+  // motivo de perda com um toque (o mesmo input motivo_perda; a frase rápida reage ao change)
+  if ($('motivoChips')) $('motivoChips').onclick = (ev) => { const b = ev.target.closest('[data-motivo]'); if (!b) return; f.elements.motivo_perda.value = b.dataset.motivo;
+    $('motivoChips').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); f.elements.motivo_perda.dispatchEvent(new Event('change', { bubbles: true })); };
   if ($('frasesPerda') && f.elements.motivo_perda) {
     const desenhaFrases = () => { const L = RE_FRASES[f.elements.motivo_perda.value] || [], atual = f.elements.motivo_frase.value;
       $('frasesPerda').innerHTML = L.map(t => `<button type="button" data-frase="${esc(t)}" class="${t === atual ? 'on' : ''}">${esc(t)}</button>`).join('');
@@ -5469,7 +5503,7 @@ function telaFormReuniao(P) {
     if (IT && !IT.length) { $('msgRe').textContent = 'Marque pelo menos um produto.'; return; }
     const et = g('etapa'), res = FINAIS.includes(et) ? et : 'Em andamento';
     if (res === 'Não fechou') {
-      if (!g('motivo_perda')) { $('msgRe').textContent = 'Escolha o motivo principal.'; f.elements.motivo_perda.focus(); return; }
+      if (!g('motivo_perda')) { $('msgRe').textContent = 'Escolha o motivo principal.'; const c = $('motivoChips'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     }
     if ((g('nr_abordado') || g('nr_data')) && !g('nr_assunto')) { $('msgRe').textContent = 'Informe o assunto da reunião.'; f.elements.nr_assunto.focus(); return; }
     const oriRe = f._origem ? await f._origem() : { ok: true };
@@ -5487,7 +5521,7 @@ function telaFormReuniao(P) {
       if (dt !== antes && dt < hojeISO()) { $('msgRe').textContent = 'A data do retorno não pode ficar no passado.'; f.elements.proximo_passo_data.focus(); return; }
       if (PASSO_MAX_DIAS[tp] && dt > maisDias(PASSO_MAX_DIAS[tp])) { $('msgRe').textContent = `${rotPasso(tp)} vai até ${PASSO_MAX_DIAS[tp]} dias. Escolha uma data até ${ddmm(maisDias(PASSO_MAX_DIAS[tp]))}.`; f.elements.proximo_passo_data.focus(); return; }
     }
-    const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? IT.map(x => x.produto).join(' + ') : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
+    const row = { etapa: et, data: new Date(g('data')).toISOString(), tipo: g('tipo'), produto: IT ? produtoDosServicos(IT) : g('produto'), cliente: g('cliente'), contato: g('contato') || null, origem: g('origem') || null,
       resultado: res, valor_fechado: res === 'Fechou' ? n2(g('valor_fechado')) : null, motivo_perda: res === 'Não fechou' ? (g('motivo_perda') || null) : null,
       motivo_detalhe: res === 'Não fechou' ? ((fr, ob) => (fr && ob.startsWith(fr) ? ob : [fr, ob].filter(Boolean).join('. ')) || null)(g('motivo_frase'), g('motivo_detalhe')) : null,
       valor_estimado: n2(g('valor_estimado')), proximo_passo: res === 'Em andamento' ? (textoPasso(g('proximo_passo_tipo'), g('proximo_passo_nota')) || null) : null,
@@ -5495,7 +5529,9 @@ function telaFormReuniao(P) {
       proximo_passo_data: res === 'Em andamento' ? (g('proximo_passo_data') || null) : null, ...(D.notas === null ? { observacoes: g('observacoes') || null } : {}),
       trecho: g('trecho') || null, data_viagem: g('data_viagem') || null };
     if (IT) { row.itens = IT; if (res === 'Fechou' && row.valor_fechado == null) { const v = IT.reduce((a, x) => a + (+x.venda || 0), 0); if (v) row.valor_fechado = v; } }
-    if (!G) { row.fech = f._fech(); if (f.elements.cotacao_inicio) row.cotacao_inicio = g('cotacao_inicio') || null; }
+    if (!G) { row.fech = f._fech(); if (f.elements.cotacao_inicio) row.cotacao_inicio = g('cotacao_inicio') || null;
+      // serviço com valor de venda é cotação em andamento: o início da cotação (KPI) fica gravado, mesmo indo direto para Fechou
+      if (!row.cotacao_inicio && !f._tinhaValor && servicoComValor(IT)) row.cotacao_inicio = hojeISO(); }
     // Fechou da venda do Comercial: só vira Fechou com o mínimo completo. Faltando algo, abre a tela curta só com o que falta;
     // completo, o card é salvo e a venda vai sozinha para a planilha, as metas e o app (lancarVenda, logo depois de salvar).
     // emissão já lançada separada em duas: a venda das duas tem que continuar somando o que era antes
@@ -7169,7 +7205,7 @@ function listaLeads() {
         <div class="info">${pj ? `<div style="color:var(--verde);font-weight:600">${comp ? 'Já é cliente desde ' + comp.slice(5, 7) + '/' + comp.slice(0, 4) : 'Já tem ficha no CRM'} · <a href="#crm/${pj.id}">ver ficha</a></div>` : ''}${linhas.filter(x => x[1]).map(([k, v]) => `<div><span>${k}:</span> ${esc(v)}</div>`).join('')}<div><span>Origem:</span> ${esc(origemDe(r.origem))}</div></div>
         <div class="lint" data-lint="${r.id}"><span class="l">O que quer${intDe(r).length ? '' : ' · <b>falta marcar</b>'}</span><div class="chips">${lintDe(r).map(k => `<button type="button" data-int="${esc(k)}" class="${intDe(r).includes(k) ? 'on' : ''}" aria-pressed="${intDe(r).includes(k)}">${esc(k)}</button>`).join('')}</div></div>
         ${!r.responsavel_id && r.status === 'novo' ? `<button class="zap grande" data-assumir="${r.id}" style="width:100%;margin-top:12px">Assumir este lead</button>` : ''}
-        <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}${cardDoLead(r) ? `<button class="sec" data-abrir-card="${cardDoLead(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: (pj && pj.nome) || r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: produtoDoLead(r), tipo: 'Reunião de venda', ...(pj ? { pessoa_id: pj.id } : {}) }))}">Abrir atendimento</button>`}</div>
+        <div class="acoes">${r.whatsapp ? `<a class="${r.responsavel_id || r.status !== 'novo' ? 'zap' : 'sec'}" data-zapl="${r.id}" href="${zapLink(r.whatsapp, r.nome)}" target="_blank" rel="noopener">${ZAP} WhatsApp</a>` : ''}${r.email ? `<a class="sec" href="mailto:${esc(r.email)}">E-mail</a>` : ''}${selStatus('leads', r.id, r.status, ST_LEAD)}${cardDoLead(r) ? `<button class="sec" data-abrir-card="${cardDoLead(r).id}">Ver no funil</button>` : `<button class="sec" data-reu="${esc(JSON.stringify({ lead_id: r.id, cliente: (pj && pj.nome) || r.nome || '', contato: r.whatsapp || r.email || '', origem: 'Site', produto: produtoDoLead(r), tipo: 'Reunião de venda', ...(pj ? { pessoa_id: pj.id } : {}), ...viagemDoLead(r) }))}">Abrir atendimento</button>`}</div>
         <details class="obs" ${r.observacoes ? 'open' : ''}><summary>${r.observacoes ? 'Anotações' : 'Adicionar anotação'}</summary><textarea data-id="${r.id}" placeholder="Ex.: quer Europa em maio, pediu retorno depois das 18h">${esc(r.observacoes || '')}</textarea><button data-salvar="${r.id}">Salvar</button><span class="salvo"></span></details>
       </article>`;
     }).join('') : '<div class="vazio">Nenhum lead com esse filtro.</div>';
@@ -7210,6 +7246,7 @@ function listaLeads() {
     const { data, error } = await sb.rpc('lead_assumir', { p_id: id });
     if (error) { if (!silencioso) aviso(/lead_assumir/.test(error.message) ? tec('Rode o 28-leads-assumir.sql no Supabase.') : 'Não assumiu: ' + error.message); return; }
     Object.assign(r, { responsavel_id: data.responsavel_id, assumido_em: data.assumido_em });
+    if (data.responsavel_id === D.meuId) marcarContato(cardDoLead(r));
     if (!silencioso) aviso(data.responsavel_id === D.meuId ? 'Lead é seu. Responda agora para não esfriar.' : 'Já tinha sido assumido por ' + (nomeTime(data.responsavel_id) || 'outra pessoa') + '.');
     listaLeads();
   };
