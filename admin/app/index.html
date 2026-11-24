@@ -1329,7 +1329,7 @@ import * as CALC from '/admin/app/cartoes-calculadora.js?v=5';
 import * as ACV from '/admin/app/acervo.js?v=9';
 import * as CRM from '/admin/app/crm.js?v=28';
 import * as CAL from '/admin/app/calendario.js?v=2';
-import * as CTR from '/admin/app/contrato.js?v=5';
+import * as CTR from '/admin/app/contrato.js?v=6';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
 import * as COT from '/admin/app/cotador.js?v=62';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
@@ -3339,6 +3339,16 @@ const quandoTrilha = (x) => typeof x === 'string' && x.length === 10 ? dia(x).to
 const agProp = (r) => reunioesDe(r.id).filter(a => /proposta/i.test(a.titulo || '') && a.status !== 'Cancelada')[0] || null;
 const agDiag = (r) => reunioesDe(r.id).filter(a => /diagn/i.test(a.titulo || '') && a.status !== 'Cancelada')[0] || null;
 const clienteGestaoDe = (r) => { const pf = r && r.pessoa_id ? (D.pessoas || []).find(x => x.id === r.pessoa_id) : null; return pf && pf.cliente_id ? (D.clientes || []).find(c => c.id === pf.cliente_id) || null : null; };
+// proposta da Gestão: valor, forma e parcelas digitados uma vez (Reunião de proposta, ajustados no Follow-up), em marcos['Reunião de proposta'].
+// Card antigo: a condição em texto livre (cond) continua valendo onde não há forma escolhida.
+function condProposta(m) { m = m || {}; if (!m.forma) return m.cond || ''; return [m.forma === 'cartao' ? (m.parcelas ? `Cartão em ${m.parcelas}x` : 'Cartão') : 'Pix à vista', m.obs || ''].filter(Boolean).join(' · '); }
+// valor fechado da Gestão sugerido: o do contrato do cliente (assinado primeiro); sem contrato, o da proposta
+function valorFechouGestao(r) {
+  const ks = contratosDe(clienteGestaoDe(r)).filter(k => !['cancelado', 'recusado'].includes(k.status)), k = ks.find(x => x.status === 'assinado') || ks[0];
+  if (k && +k.valor_total > 0) return { v: +k.valor_total, de: k.status === 'assinado' ? 'do contrato assinado' : 'do contrato gerado' };
+  if (+r.valor_estimado > 0) return { v: +r.valor_estimado, de: 'da proposta' };
+  return null;
+}
 function eventosCard(r) {
   const t0 = entradaDe(r), ev = [], M = r.marcos || {};
   if (t0) ev.push([t0, doSite(r) ? 'Entrou pelo site' : 'Card aberto', doSite(r) ? '' : (r.origem || '')]);
@@ -3349,7 +3359,7 @@ function eventosCard(r) {
     if (x.gestao_em) ev.push([x.gestao_em, 'Emitido com milhas do cliente', [x.gestao_por ? 'por ' + (nomeTime(x.gestao_por) || '') : '', rot].filter(Boolean).join(' · ')]);
     if (x.cancelado_em) ev.push([x.cancelado_em, 'Emissão com milhas do cliente cancelada', [x.cancelado_por ? 'por ' + (nomeTime(x.cancelado_por) || '') : '', rot].filter(Boolean).join(' · ')]);
   });
-  Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', m.cond || ''].filter(Boolean).join(' · ')]); });
+  Object.entries(M).forEach(([et, m]) => { if (m && m.em && ROT_MARCO[et]) ev.push([m.em, ROT_MARCO[et], [m.por ? 'por ' + (nomeTime(m.por) || '') : '', condProposta(m)].filter(Boolean).join(' · ')]); });
   ((M['Follow-up'] || {}).hist || []).forEach(h => ev.push([h.em, 'Follow-up: chamar em ' + (h.retorno ? dataBR(h.retorno) : '-'), [h.por ? 'por ' + (nomeTime(h.por) || '') : '', h.nota || ''].filter(Boolean).join(' · ')]));
   (M._adiamentos || []).forEach(a => { const n = Math.round((dia(a.para) - dia(a.padrao)) / 864e5); ev.push([a.em, 'Retorno marcado depois do padrão', [`padrão ${ddmm(a.padrao)}, marcado para ${ddmm(a.para)} (+${plural(n, 'dia', 'dias')})`, a.de && a.de !== a.padrao ? 'antes estava em ' + ddmm(a.de) : '', a.tipo ? rotPasso(a.tipo) : '', a.por ? 'por ' + (nomeTime(a.por) || '') : ''].filter(Boolean).join(' · ')]); });
   const tipoReu = (a) => /diagn/i.test(a.titulo || '') ? 'Diagnóstico' : /proposta/i.test(a.titulo || '') ? 'Reunião de proposta' : '';
@@ -3438,10 +3448,14 @@ async function gravarDiag(r, resp, extra = {}) {
   (D.diags = D.diags || {})[String(r.id)] = data; return { em: data.atualizado_em };
 }
 // perguntas do diagnóstico: no de viagem, sem as que o card já responde (bloco Viagem)
-const camposDiag = (r, v) => { const L = DG.campos(tipoDiag(r), D.cfg); return ehGestao(r) ? L : DG.camposComCard(L, !!VG.datasDe(v || VG.viagemDe(r, respDiag(r))).ida); };
+// na Gestão, "Como chegou" vem da ficha (origem do cliente), não é perguntado de novo
+const camposDiag = (r, v) => { const L = DG.campos(tipoDiag(r), D.cfg); return ehGestao(r) ? L.filter(c => c.k !== 'como_chegou') : DG.camposComCard(L, !!VG.datasDe(v || VG.viagemDe(r, respDiag(r))).ida); };
+// como o cliente chegou: a origem da ficha; sem origem na ficha, o que o diagnóstico antigo anotou
+function comoChegouDe(r) { const p = (D.pessoas || []).find(x => x.id === r.pessoa_id); if (p && p.origem_canal) return { t: IND.rotuloOrigem(p), ficha: true }; const a = String((respDiag(r) || {}).como_chegou || '').trim(); return { t: a, ficha: false }; }
 function copiarDiag(r, v) {
-  const L = camposDiag(r, v), vg = ehGestao(r) ? '' : VG.resumo(v || VG.viagemDe(r, respDiag(r)));
-  const t = DG.textoCopiar(tipoDiag(r), L, respDiag(r), r.cliente).replace('\n\n', vg ? `\n\n*Viagem:* ${vg}\n` : '\n\n');
+  const L = camposDiag(r, v), cc = ehGestao(r) ? comoChegouDe(r).t : '', vg = ehGestao(r) ? '' : VG.resumo(v || VG.viagemDe(r, respDiag(r)));
+  const extra = vg ? `*Viagem:* ${vg}` : cc ? `*Como chegou:* ${cc}` : '';
+  const t = DG.textoCopiar(tipoDiag(r), L, respDiag(r), r.cliente).replace('\n\n', extra ? `\n\n${extra}\n` : '\n\n');
   const ok = () => aviso('Diagnóstico copiado. Cole no WhatsApp.');
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => prompt('Copie o diagnóstico:', t)); else prompt('Copie o diagnóstico:', t);
 }
@@ -3462,7 +3476,7 @@ function montarDiag(P, r, G, f) {
       <div class="dg-topo"><span class="dg-salvo" data-dg-salvo>${diagDe(r) ? 'Salvo' : ''}</span></div>
       ${mot ? `<div class="dg-motivo">Em destaque: ${esc(mot)}.</div>` : !G ? '<div class="dg-motivo" style="color:var(--tinta-3)">Viagem sem os critérios de destaque: use só se quiser.</div>' : ''}
       <div class="dg-acoes"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button>${granola ? '<button type="button" class="sec" data-dgia>Sugerir pelo Granola</button>' : ''}</div>
-      ${G ? '' : `<div class="vg-card config" data-vgres>${htmlDoCard()}</div>`}
+      ${G ? (cc => `<div class="vg-card config"><span><b>Como chegou:</b> ${cc.ficha ? esc(cc.t) + ' (da ficha)' : (cc.t ? esc(cc.t) + ' (anotado no diagnóstico). ' : '') + 'Marque a origem em Contato e ficha.'}</span></div>`)(comoChegouDe(r)) : `<div class="vg-card config" data-vgres>${htmlDoCard()}</div>`}
       <div class="dg-lista">${L.map((c, i) => DG.htmlCampo(c, resp[c.k], i)).join('')}</div>
       <div class="dg-acoes" style="margin-top:8px"><button type="button" class="sec" data-dgcopia>Copiar diagnóstico</button></div></div>`;
     const H = DG.ligar({ el: box.querySelector('.dg-lista'), L, resp, status: box.querySelector('[data-dg-salvo]'), salvar: (x) => gravarDiag(r, x), aoMudar: (x) => { resp = x; atualizaTopo(); } });
@@ -3713,7 +3727,7 @@ async function gerarPropostaIA(r) {
   if (!h.error) { const vistos = new Set(); exemplos = (h.data || []).filter(x => { const c = D.reunioes.find(y => String(y.id) === String(x.atendimento_id)); if (!c || c.resultado !== 'Fechou' || vistos.has(x.atendimento_id) || String(x.atendimento_id) === String(r.id)) return false; vistos.add(x.atendimento_id); return true; }).slice(0, 2).map(x => x.proposta); }
   const { data, error } = await sb.functions.invoke('proposta-gestao', { body: {
     cliente: r.cliente, qualificacao: { gasto: q.gasto, cartoes: q.cartoes, programas: q.programas, viagens: q.viagens, objetivo: q.objetivo, decisor: q.decisor, diagnostico: q.diagnostico || '' },
-    granola_sdr: q.granola || '', granola_diagnostico: (dg && dg.resumo) || '', pauta: M.pauta || '', valor: r.valor_estimado || '', condicao: M.cond || '', metodo: metodo || '', exemplos } });
+    granola_sdr: q.granola || '', granola_diagnostico: (dg && dg.resumo) || '', pauta: M.pauta || '', valor: r.valor_estimado || '', condicao: condProposta(M) || '', metodo: metodo || '', exemplos } });
   if (error || !data || data.erro) {
     let msg = (data && data.erro) || (error && error.message) || 'sem resposta';
     try { if (error && error.context && error.context.json) { const j = await error.context.json(); if (j && j.erro) msg = j.erro; } } catch (e) {}
@@ -3903,6 +3917,7 @@ const RE_FRASES = { 'Preço': ['Achou caro', 'Achou mais barato em outro lugar',
   'Datas ou disponibilidade': ['Sem voo nas datas', 'Hotel sem disponibilidade', 'Tarifa acabou antes de fechar'], 'Outro': [] };
 let RE_ED = null, RE_FILTRO = 'todos', RE_MODO = 'mes', RE_PRE = null, RE_VISTA = 'viagens', RE_FOCO = null;
 const ETAPAS_V = ['Novo lead', 'Em cotação', 'Cotação enviada', 'Follow-up'];
+const ETAPAS_PROP = ['Reunião de proposta', 'Follow-up', 'Proposta enviada'];
 const ETAPAS_G = ['Novo lead', 'Qualificação', 'Diagnóstico agendado', 'Diagnóstico feito', 'Reunião de proposta', 'Follow-up'];
 const FUP_PRAZOS = [['3 dias', 3], ['7 dias', 7], ['15 dias', 15], ['1 mês', 30], ['3 meses', 90], ['6 meses', 180]];
 const FINAIS = ['Fechou', 'Não fechou', 'Não se aplica'];
@@ -4984,14 +4999,19 @@ function telaFormReuniao(P) {
   })() : {};
   const dl = (ts) => { if (!ts) return agora; if (String(ts).length === 16) return ts; const d = new Date(ts); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
   // campos de cada etapa da Gestão: quando aconteceu e o que precisa para avançar
+  // proposta: o mesmo bloco na Reunião de proposta e no Follow-up (valor, Pix ou cartão, parcelas e observação)
+  const htmlProp = () => { const p = (r.marcos || {})['Reunião de proposta'] || {}, fm = p.forma || '';
+    return `<div class="grupo">Proposta</div>${p.cond && !p.forma ? `<div class="sub" style="margin:0 0 8px">Condição anotada antes: ${esc(p.cond)}</div>` : ''}
+      <div class="vg-2">${campo('mg_valor', 'Valor da proposta (R$)', p.valor ?? r.valor_estimado, 'number', 'inputmode="decimal"')}<div class="fl"><span>Forma</span><div class="chips" id="mgForma">${[['pix', 'Pix'], ['cartao', 'Cartão']].map(([k, l]) => `<button type="button" data-mgforma="${k}" class="${fm === k ? 'on' : ''}">${l}</button>`).join('')}</div><input type="hidden" name="mg_forma" value="${esc(fm)}"></div></div>
+      <div class="vg-2"><div id="mgParcBl" ${fm === 'cartao' ? '' : 'hidden'}>${campo('mg_parc', 'Parcelas (de 2 a 12)', p.parcelas || '', 'number', 'min="2" max="12" inputmode="numeric"')}<div class="sub" id="mgParcConta" style="margin:-4px 0 8px"></div></div>${campo('mg_obs', 'Observação (opcional)', p.obs || '', 'text', 'placeholder="O que não couber acima"')}</div>`; };
   const ETG = (et) => {
     const m = (r.marcos || {})[et] || {}, ag = r.id ? agDiag(r) : null, dt = (k, rot, v) => `<input type="hidden" name="${k}" value="${esc(dl(v))}">`; // data automática: gravada, sem aparecer
     if (et === 'Qualificação') return dt('mg_em', 'Qualificado em', m.em);
     if (et === 'Diagnóstico agendado') return `${dt('mg_em', 'Agendado em', m.em)}${campo('mg_diag', 'Data e hora do diagnóstico ' + fusoRotulo(), ag ? dl(ag.data) : '', 'datetime-local')}<div class="sub">Ao salvar, o diagnóstico entra na agenda do app e no TickTick, com o closer escolhido acima.</div>`;
     if (et === 'Diagnóstico feito') return `${dt('mg_em', 'Diagnóstico feito em', m.em || (ag && ag.data))}<label class="fl"><span>Resumo do diagnóstico</span><textarea name="mg_resumo" rows="4" placeholder="Cole aqui o resumo do Granola.">${esc((ag && ag.resumo) || '')}</textarea></label>`;
-    if (et === 'Reunião de proposta') { const ap = r.id ? agProp(r) : null; return `${dt('mg_em', 'Marcada em', m.em)}${campo('mg_prop', 'Data e hora da reunião de proposta ' + fusoRotulo(), ap ? dl(ap.data) : '', 'datetime-local')}<label class="fl"><span>Como vai ser a apresentação</span><textarea name="mg_pauta" rows="3" placeholder="Ex.: mostrar o estudo dos cartões, a economia projetada e o plano de 12 meses">${esc(m.pauta || '')}</textarea></label>${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}<div class="sub">Ao salvar, a reunião entra na agenda e no TickTick do closer.</div>`; }
-    if (et === 'Follow-up') { const dfu = r.proximo_passo_data && r.proximo_passo_data > hojeISO() && etapaDe(r) === 'Follow-up' ? r.proximo_passo_data : ''; return `<div class="fl"><span style="display:block;font-size:12px;color:var(--tinta-2);margin-bottom:6px">Chamar o cliente de novo em</span><div class="chips" id="fupChips">${FUP_PRAZOS.map(([l, n]) => `<button type="button" data-fup="${n}">${l}</button>`).join('')}</div></div>${campo('mg_fup', 'Data do próximo contato', dfu, 'date')}<label class="fl"><span>O que ficou combinado</span><textarea name="mg_fupnota" rows="3" placeholder="Ex.: vai conversar com a esposa e me responde; pediu para chamar depois das férias">${esc(dfu ? ((r.marcos || {})['Follow-up'] || {}).nota || '' : '')}</textarea></label><div class="sub">No dia, chega aviso para o closer no celular e para os sócios no app e no Telegram. Ao salvar, o card vai para a coluna Follow-up.</div>`; }
-    if (et === 'Proposta enviada') return `${dt('mg_em', 'Proposta enviada em', m.em)}${campo('mg_valor', 'Valor da proposta (R$)', r.valor_estimado, 'number')}${campo('mg_cond', 'Condição (implantação, mensalidade, parcelas)', m.cond || '', 'text')}`;
+    if (et === 'Reunião de proposta') { const ap = r.id ? agProp(r) : null; return `${dt('mg_em', 'Marcada em', m.em)}${campo('mg_prop', 'Data e hora da reunião de proposta ' + fusoRotulo(), ap ? dl(ap.data) : '', 'datetime-local')}<label class="fl"><span>Como vai ser a apresentação</span><textarea name="mg_pauta" rows="3" placeholder="Ex.: mostrar o estudo dos cartões, a economia projetada e o plano de 12 meses">${esc(m.pauta || '')}</textarea></label>${htmlProp()}<div class="sub">Ao salvar, a reunião entra na agenda e no TickTick do closer.</div>`; }
+    if (et === 'Follow-up') { const dfu = r.proximo_passo_data && r.proximo_passo_data > hojeISO() && etapaDe(r) === 'Follow-up' ? r.proximo_passo_data : ''; return `${htmlProp()}<div class="grupo">Retorno</div><div class="fl"><span style="display:block;font-size:14px;color:var(--tinta-2);margin-bottom:6px">Chamar o cliente de novo em</span><div class="chips" id="fupChips">${FUP_PRAZOS.map(([l, n]) => `<button type="button" data-fup="${n}">${l}</button>`).join('')}</div></div>${campo('mg_fup', 'Data do próximo contato', dfu, 'date')}<label class="fl"><span>O que ficou combinado</span><textarea name="mg_fupnota" rows="3" placeholder="Ex.: vai conversar com a esposa e me responde; pediu para chamar depois das férias">${esc(dfu ? ((r.marcos || {})['Follow-up'] || {}).nota || '' : '')}</textarea></label><div class="sub">No dia, chega aviso para o closer no celular e para os sócios no app e no Telegram. Ao salvar, o card vai para a coluna Follow-up.</div>`; }
+    if (et === 'Proposta enviada') return `${dt('mg_em', 'Proposta enviada em', m.em)}${htmlProp()}`;
     const resProp = () => { const ap = r.id ? agProp(r) : null; return `<label class="fl"><span>Resumo da reunião de proposta (cole do Granola)</span><textarea name="mg_resprop" rows="4" placeholder="Como foi a apresentação e o que o cliente disse.">${esc((ap && ap.resumo) || '')}</textarea></label>`; };
     if (et === 'Fechou') return dt('mg_em', 'Fechado em', m.em) + resProp();
     if (et === 'Não fechou') return dt('mg_em', 'Decidido em', m.em) + resProp() + '<div class="sub">Logo abaixo, escolha o motivo principal e por que não fechou.</div>';
@@ -5027,7 +5047,7 @@ function telaFormReuniao(P) {
       ${G ? `${G ? `<details class="gsec" style="order:-3" ${nova ? 'open' : ''}><summary><span>Contato e ficha<small>Cliente, contato, origem e responsável</small></span></summary>` : ''}<div class="grupo">Atendimento</div><input type="hidden" name="data" value="${esc(dl(r.data))}">${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}${G ? '<input type="hidden" name="produto" value="Gestão de Milhas">' : `<div id="reServicos"><label class="fl" style="margin-bottom:4px"><span>Produtos (marque todos que entram)</span></label><div class="chips" id="reProd" style="flex-wrap:wrap">${RE_PRODUTOS.map(o => `<button type="button" data-p="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="reItens"></div></div>`}${ADMIN || GER() ? `<label class="fl"><span>Responsável</span><select name="responsavel_id"><option value="" ${!r.responsavel_id || !D.time.some(t => t.user_id === r.responsavel_id) ? 'selected' : ''}>Sem responsável</option>${D.time.map(t => `<option value="${t.user_id}" ${t.user_id === r.responsavel_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}</select></label>` : ''}<div class="grupo">Cliente</div>${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}<datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div>${campo('contato', 'WhatsApp ou e-mail', r.contato)}<div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${G ? '</details><div style="order:-4">' + (GB ? cbAbre('quem', 'Quem conduz', gbRes.quem) : '') + htmlGestaoSdr(r) + (GB ? cbFecha : '') + '</div><div style="order:-5">' + (GB ? cbAbre('etapa', 'Etapa e próximo passo', gbRes.etapa) : '') : ''}<div class="grupo">Etapa</div><div class="etapas" id="reRes">${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>` : `${CB ? cbAbre('cliente', 'Cliente', cbRes.cliente) : '<div class="grupo">Cliente</div>'}<div class="cli-lado">${campo('cliente', 'Nome do cliente ou empresa', r.cliente, 'text', 'required list="dlCli"')}${campo('contato', 'WhatsApp ou e-mail', r.contato)}</div><datalist id="dlCli">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist><input type="hidden" name="pessoa_id" value="${esc(r.pessoa_id || '')}"><div class="sub" id="fichaRe">${r.pessoa_id && podeAba('crm') ? `<button type="button" id="abrirFichaRe" style="color:var(--verde);font-weight:600;text-decoration:underline">Abrir a ficha do cliente ›</button>` : ''}</div><div id="cliResumo"></div><div id="cliNovo" hidden><div class="config" style="margin:6px 0">Cliente novo: a ficha é criada ao salvar. Já preencha o que tiver.</div><div class="duas-col">${campo('cn_nasc', 'Nascimento', '', 'date')}${campo('cn_email', 'E-mail', '', 'email')}</div></div>${temOrigemCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou</span></div><div id="reOrigem"></div><input type="hidden" name="origem" value="${esc(r.origem || '')}">` : `<label class="fl"><span>Como chegou</span><select name="origem"><option value="">-</option>${RE_ORIGENS.map(o => `<option ${o === r.origem ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`}${CB ? cbFecha + cbAbre('etapa', 'Etapa', cbRes.etapa) : ''}<label class="fl"><span>Etapa</span><select id="reEtapaSel">${[...etapasDe(false), ...FINAIS].map(x => `<option value="${esc(x)}" ${x === etapaDe(r) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="etapas" id="reRes" hidden>${[...etapasDe(G), ...FINAIS].map(x => `<button type="button" data-v="${x}" class="${x === etapaDe(r) ? 'on' : ''}">${x}</button>`).join('')}</div>${sel('tipo', 'Tipo', RE_TIPOS, r.tipo)}<input type="hidden" name="data" value="${esc(dl(r.data))}">`}
       <input type="hidden" name="etapa" value="${esc(etapaDe(r))}">
       ${G ? `<div id="blEtapaG">${ETG(etapaDe(r))}</div>` : ''}
-      <div id="blFechou">${G ? campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number') : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend">${r.resultado === 'Fechou' && VENDA.concluida(r) ? 'Venda lançada na planilha.' + (r.conferencia_status === 'a_conferir' ? ' Está em Vendas a conferir.' : r.conferencia_status === 'conferida' ? ` Conferida${r.conferida_por && nomeTime(r.conferida_por) ? ' por ' + esc(nomeTime(r.conferida_por)) : ''}${r.conferida_em ? ' em ' + dataBR(String(r.conferida_em).slice(0, 10)) : ''}.` : '') : 'Ao salvar como Fechou, a venda vai sozinha para a planilha. Se faltar algo do mínimo (valor, custo, pagamento, comprovante, localizador ou horário dos voos), o app mostra só o que falta.'}</div>${!nova && r.resultado === 'Fechou' && !VENDA.concluida(r) ? '<button class="sec grande" type="button" id="reLancar" style="width:100%;margin-top:8px">Fechar venda</button>' : ''}`}</div>
+      <div id="blFechou">${G ? (vf => campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado ?? (vf ? vf.v : ''), 'number') + (r.valor_fechado == null && vf ? `<div class="sub" style="margin:-4px 0 8px">Preenchido com o valor ${vf.de}. Dá para mudar.</div>` : ''))(valorFechouGestao(r)) : `<div class="grupo">Como o cliente fechou</div><div id="reDaCot"></div><div id="reResumoFech"></div><div id="reFech"></div>${campo('valor_fechado', 'Valor fechado (R$)', r.valor_fechado, 'number')}<div class="sub" id="reFechPend">${r.resultado === 'Fechou' && VENDA.concluida(r) ? 'Venda lançada na planilha.' + (r.conferencia_status === 'a_conferir' ? ' Está em Vendas a conferir.' : r.conferencia_status === 'conferida' ? ` Conferida${r.conferida_por && nomeTime(r.conferida_por) ? ' por ' + esc(nomeTime(r.conferida_por)) : ''}${r.conferida_em ? ' em ' + dataBR(String(r.conferida_em).slice(0, 10)) : ''}.` : '') : 'Ao salvar como Fechou, a venda vai sozinha para a planilha. Se faltar algo do mínimo (valor, custo, pagamento, comprovante, localizador ou horário dos voos), o app mostra só o que falta.'}</div>${!nova && r.resultado === 'Fechou' && !VENDA.concluida(r) ? '<button class="sec grande" type="button" id="reLancar" style="width:100%;margin-top:8px">Fechar venda</button>' : ''}`}</div>
       <div id="blPerdeu"><label class="fl"><span>Motivo principal</span><select name="motivo_perda"><option value="">-</option>${RE_MOTIVOS.map(o => `<option ${o === r.motivo_perda ? 'selected' : ''}>${o}</option>`).join('')}</select></label><div class="chips" id="frasesPerda" style="margin:2px 0 8px"></div><input type="hidden" name="motivo_frase" value=""><label class="fl"><span id="rotObsPerda">Observação (opcional)</span><textarea name="motivo_detalhe" rows="2" placeholder="Algo a mais que o cliente disse ou que podemos melhorar.">${esc(r.motivo_detalhe || '')}</textarea></label></div>
       ${G ? blAnd : ''}
       ${G ? (GB ? cbFecha : '') + '</div>' : ''}
@@ -5063,7 +5083,17 @@ function telaFormReuniao(P) {
   if (CB || GB) document.body.classList.add('cb-leitura');
   const f = $('fRe');
   if (CB) { const ref = $('salvarRe'); ['cliente', 'viagem', 'diag', 'atend', 'cots', 'notas', 'etapa', 'acomp', 'resp', 'reun', 'linha'].forEach(k => { const c = P.querySelector(`.cb[data-cb="${k}"]`); if (c) f.insertBefore(c, ref); }); }
-  const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech(); };
+  const mostrar = () => { const v = f.elements.etapa.value; $('blFechou').hidden = v !== 'Fechou'; $('blPerdeu').hidden = v !== 'Não fechou'; $('blAndamento').hidden = FINAIS.includes(v); if (f._modoFech) f._modoFech();
+    if (G && f.elements.valor_estimado) f.elements.valor_estimado.closest('label').hidden = ETAPAS_PROP.includes(v); };
+  // proposta da Gestão: Pix ou Cartão com um toque; no cartão, parcelas e a conta de cada uma (o bloco é redesenhado ao trocar de etapa)
+  if (G) {
+    const conta = () => { const el = $('mgParcConta'); if (!el) return; const v = +String((f.elements.mg_valor || {}).value || '').replace(',', '.') || 0, n = +((f.elements.mg_parc || {}).value) || 0; el.textContent = v > 0 && n >= 2 && n <= 12 ? `${n}x de ${brl2(v / n)}` : ''; };
+    f.addEventListener('click', (e) => { const b = e.target.closest('[data-mgforma]'); if (!b || !f.elements.mg_forma) return;
+      const v = f.elements.mg_forma.value === b.dataset.mgforma ? '' : b.dataset.mgforma; f.elements.mg_forma.value = v;
+      $('mgForma').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.mgforma === v)); $('mgParcBl').hidden = v !== 'cartao'; conta(); });
+    f.addEventListener('input', (e) => { if (e.target.name === 'mg_valor' || e.target.name === 'mg_parc') conta(); });
+    f._contaProp = conta; conta();
+  }
   // já esconde o que não é da etapa antes de montar o resto da tela (se algo abaixo falhar, a tela continua limpa)
   mostrar();
   // reunião abre sozinha na gestão de milhas, em viagem montada (Roteiro marcado ou 3+ produtos) ou quando o card já tem reunião; passagem avulsa fica limpa
@@ -5079,7 +5109,7 @@ function telaFormReuniao(P) {
   if (G && !nova) { ligarTopoGestao(P); ligarPropostaIA(P, base); }
   f.addEventListener('click', (e) => { const b = e.target.closest('[data-fup]'); if (!b || !f.elements.mg_fup) return; const d = new Date(); if (+b.dataset.fup % 30 === 0) d.setMonth(d.getMonth() + b.dataset.fup / 30); else d.setDate(d.getDate() + +b.dataset.fup); f.elements.mg_fup.value = isoLocal(d); [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b)); });
   if ($('reEtapaSel')) $('reEtapaSel').onchange = () => { const b = $('reRes').querySelector(`[data-v="${$('reEtapaSel').value}"]`); if (b) b.click(); };
-  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; if ($('reEtapaSel')) $('reEtapaSel').value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) $('blEtapaG').innerHTML = ETG(b.dataset.v); if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => { const e = $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
+  $('reRes').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; f.elements.etapa.value = b.dataset.v; if ($('reEtapaSel')) $('reEtapaSel').value = b.dataset.v; [...$('reRes').children].forEach(x => x.classList.toggle('on', x === b)); mostrar(); if (G && $('blEtapaG')) { $('blEtapaG').innerHTML = ETG(b.dataset.v); if (f._contaProp) f._contaProp(); } if (EDIT) EDIT.desenha(); if (f._prepFechou) f._prepFechou(); if (b.dataset.v === 'Fechou' && $('blFechou')) setTimeout(() => { const e = $('blFechou'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); if (b.dataset.v === 'Em cotação' && f.elements.cotacao_inicio && !f.elements.cotacao_inicio.value) f.elements.cotacao_inicio.value = hojeISO(); };
   // próximo passo: troca de etapa traz o padrão; atalhos mudam a data; aviso quando passa do padrão
   const passoInfo = () => {
     const el = $('passoPadrao'); if (!el || !f.elements.proximo_passo_tipo) return;
@@ -5493,7 +5523,6 @@ function telaFormReuniao(P) {
       }
       if (etN === 'Qualificação' && !row.sdr_id) row.sdr_id = D.meuId;
       if (etN === 'Reunião de proposta' && mudou && !g('mg_prop')) { $('msgRe').textContent = 'Informe a data e a hora da reunião de proposta.'; return; }
-      if (etN === 'Reunião de proposta' && g('mg_valor')) row.valor_estimado = n2(g('mg_valor'));
       // diagnóstico e reunião de proposta: o retorno fica na data da reunião (no dia seguinte, vira o retorno pós-reunião)
       if (etN === 'Diagnóstico agendado' && g('mg_diag') && PASSO_REUNIAO.includes(row.proximo_passo_tipo)) row.proximo_passo_data = isoLocal(new Date(g('mg_diag')));
       if (etN === 'Reunião de proposta' && g('mg_prop') && PASSO_REUNIAO.includes(row.proximo_passo_tipo)) row.proximo_passo_data = isoLocal(new Date(g('mg_prop')));
@@ -5503,7 +5532,15 @@ function telaFormReuniao(P) {
         const M = { ...(base.marcos || {}) }, ant = M['Follow-up'] || {}, hist = (ant.hist || []).concat([{ em: new Date().toISOString(), por: D.meuId, retorno: g('mg_fup'), nota: g('mg_fupnota') || null }]);
         M['Follow-up'] = { ...ant, em: ant.em || new Date().toISOString(), por: ant.por || D.meuId, nota: g('mg_fupnota') || null, retorno: g('mg_fup'), hist }; row.marcos = M;
       }
-      if (g('mg_em') && etN !== 'Follow-up') { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { cond: g('mg_cond') || null, pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
+      if (g('mg_em') && etN !== 'Follow-up') { const M = { ...(base.marcos || {}) }, ant = M[etN] || {}; M[etN] = { ...ant, em: new Date(g('mg_em')).toISOString(), por: ant.por || D.meuId, ...(etN === 'Reunião de proposta' ? { pauta: g('mg_pauta') || null } : {}) }; row.marcos = M; }
+      // proposta (Reunião de proposta e Follow-up): valor, forma, parcelas e observação num lugar só; a condição antiga (cond) fica guardada
+      if (ETAPAS_PROP.includes(etN) && f.elements.mg_valor) {
+        const fm = g('mg_forma'), np = g('mg_parc') ? Math.round(+g('mg_parc')) : null;
+        if (fm === 'cartao' && np != null && !(np >= 2 && np <= 12)) { $('msgRe').textContent = 'Parcelas de 2 a 12.'; f.elements.mg_parc.focus(); return; }
+        row.valor_estimado = n2(g('mg_valor'));
+        const M = { ...(row.marcos || base.marcos || {}) }, ant = M['Reunião de proposta'] || {};
+        M['Reunião de proposta'] = { ...ant, valor: n2(g('mg_valor')), forma: fm || null, parcelas: fm === 'cartao' ? np : null, obs: g('mg_obs') || null }; row.marcos = M;
+      }
     }
     if (res === 'Em andamento') registrarAdiamento(base, row, et);
     $('salvarRe').disabled = true; $('msgRe').textContent = 'Salvando...';
