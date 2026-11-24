@@ -1461,6 +1461,8 @@ let ABA = 'inicio', DIAS = 30, LSUB = 'leads', FILTRO = 'todos', BUSCA = '', CLI
   lerHash();
   marcarNav();
   carregar().then(() => setTimeout(() => recalcularPendentes().catch(() => {}), 3000)).catch(() => {});
+  // lista de aeroportos já carregada quando um card abre: origem e destino aparecem no código IATA
+  VG.preparar();
   if (!ADMIN) setTimeout(faixaPush, 1500);
 })();
 
@@ -4930,10 +4932,11 @@ function calAvisarNovo() {
 // bloco Viagem do card do Comercial: o único lugar de origem, destino, tipo, trechos, datas, passageiros e bagagem (viagem.js)
 function htmlViagemCard(r, V) {
   const t = V.tipo, dt = VG.datasDe(V);
-  const aero = 'data-aero="cidade" autocomplete="off" maxlength="120" placeholder="Cidade ou aeroporto"';
+  // origem e destino sempre no código IATA: digita a cidade, escolhe e fica o código (o nome da cidade aparece embaixo)
+  const aero = 'data-aero="cod" autocomplete="off" maxlength="60" placeholder="Cidade ou código" style="text-transform:uppercase"';
   return `<div class="grupo">Viagem</div><input type="hidden" name="trecho" value="${esc(r.trecho || '')}">
     <div class="seg" id="segIV" style="margin:6px 0 8px"><button type="button" data-iv="iv" class="${t === 'iv' ? 'on' : ''}">Ida e volta</button><button type="button" data-iv="so" class="${t === 'ida' ? 'on' : ''}">Só ida</button><button type="button" data-iv="multi" class="${t === 'multi' ? 'on' : ''}">Multitrecho</button></div>
-    <div id="vgSimples" ${t === 'multi' ? 'hidden' : ''}><div class="vg-2">${campo('vg_origem', 'Origem', V.origem, 'text', aero)}${campo('vg_destino', 'Destino', V.destino, 'text', aero)}</div></div>
+    <div id="vgSimples" ${t === 'multi' ? 'hidden' : ''}><div class="vg-2">${campo('vg_origem', 'Origem', VG.iata(V, 'origem'), 'text', aero)}${campo('vg_destino', 'Destino', VG.iata(V, 'destino'), 'text', aero)}</div><div class="sub" id="vgCidades" style="margin:-4px 0 8px"></div></div>
     <div id="vgMulti" ${t === 'multi' ? '' : 'hidden'}><div class="fl" style="margin-bottom:4px"><span>Trechos</span></div><div id="vgTrechos"></div><button type="button" class="vg-mais" id="vgMais">+ Adicionar trecho</button></div>
     <div class="duas-col" id="vgDatas" ${t === 'multi' ? 'hidden' : ''}>${campo('data_viagem', 'Data de ida', dt.ida, 'date')}<div id="blVolta" ${t === 'ida' ? 'hidden' : ''}>${campo('data_volta', 'Data de volta', dt.volta, 'date')}</div></div>
     <div class="sub" id="vgDur" style="margin:-2px 0 8px"></div>
@@ -5180,6 +5183,7 @@ function telaFormReuniao(P) {
       fe.vg_trechos.value = JSON.stringify(t === 'multi' ? TR.filter(x => x.o || x.d || x.data) : []);
       const v = f._vgAtual(), d = VG.datasDe(v), n = VG.dias(d.ida, d.volta);
       $('vgDur').textContent = n != null && n >= 0 ? `${n} ${n === 1 ? 'dia' : 'dias'} de viagem` : '';
+      $('vgCidades').textContent = [['origem', 'Origem'], ['destino', 'Destino']].map(([k, rot]) => { const c = VG.codDe(v[k], v[k + '_cod']); return c ? `${c}: ${VG.cidadeDe(c)}` : String(v[k] || '').trim() ? `${rot} sem código de aeroporto: escolha um da lista` : ''; }).filter(Boolean).join(' · ');
       if (mexeuTrecho) fe.trecho.value = VG.trechoTexto(v) || '';
       atualizarIndic();
       if (f._vgMudou) f._vgMudou(v);
@@ -5189,7 +5193,7 @@ function telaFormReuniao(P) {
     f._vgSincroniza = sincroniza;
     // a sugestão de aeroporto escolhida guarda também o código (o campo mostra a cidade)
     f.addEventListener('pointerdown', (e) => { const b = e.target.closest('.aero-sug button'); if (!b) return; const i = b.closest('label') && b.closest('label').querySelector('input[data-aero]'); const c = b.querySelector('b'); if (i && c) i._codEscolhido = c.textContent.trim(); }, true);
-    ['vg_origem', 'vg_destino'].forEach(k => fe[k].addEventListener('input', (e) => { const i = e.target; i._cod = i._aeroAplicando && i._codEscolhido ? i._codEscolhido : ''; i._codEscolhido = ''; mexeuTrecho = true; }));
+    ['vg_origem', 'vg_destino'].forEach(k => fe[k].addEventListener('input', (e) => { const i = e.target; i._cod = i._aeroAplicando && i._codEscolhido ? i._codEscolhido : VG.codDe(i.value); i._codEscolhido = ''; mexeuTrecho = true; }));
     ['vg_origem', 'vg_destino', 'data_viagem', 'data_volta'].forEach(k => fe[k].addEventListener('change', sincroniza));
     fe.vg_origem.addEventListener('input', () => { if (fe.vg_origem._aeroAplicando) sincroniza(); }); fe.vg_destino.addEventListener('input', () => { if (fe.vg_destino._aeroAplicando) sincroniza(); });
     $('vgTrechos').addEventListener('input', (e) => { const i = e.target.closest('[data-vt]'); if (!i) return; const t = TR[+i.dataset.vi]; if (!t) return; t[i.dataset.vt] = i.dataset.vt === 'data' ? i.value : i.value.trim().toUpperCase(); mexeuTrecho = true; if (i.dataset.vt === 'data' || i._aeroAplicando) sincroniza(); });
@@ -5206,7 +5210,7 @@ function telaFormReuniao(P) {
       if (t === 'multi' && !TR.some(x => x.o || x.d)) { const o = VG.codDe(fe.vg_origem.value, fe.vg_origem._cod), d = VG.codDe(fe.vg_destino.value, fe.vg_destino._cod);
         TR = [{ o, d, data: fe.data_viagem.value }, { o: d, d: o, data: antes === 'iv' ? fe.data_volta.value : '' }]; }
       // saiu do multitrecho: origem e destino vêm do primeiro trecho, se estiverem vazios
-      if (antes === 'multi') { const L = TR.filter(x => x.o || x.d); if (L.length && !fe.vg_origem.value && !fe.vg_destino.value) { fe.vg_origem.value = VG.cidadeDe(L[0].o); fe.vg_origem._cod = L[0].o; fe.vg_destino.value = VG.cidadeDe(L[0].d); fe.vg_destino._cod = L[0].d; } }
+      if (antes === 'multi') { const L = TR.filter(x => x.o || x.d); if (L.length && !fe.vg_origem.value && !fe.vg_destino.value) { fe.vg_origem.value = L[0].o; fe.vg_origem._cod = L[0].o; fe.vg_destino.value = L[0].d; fe.vg_destino._cod = L[0].d; } }
       mexeuTrecho = true; if (t === 'multi') desenhaTrechos(); sincroniza(); });
     if (tipoAt() === 'multi') desenhaTrechos();
     f._vgMexeu = () => mexeuTrecho;
