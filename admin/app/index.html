@@ -998,7 +998,7 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .vh-cab{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:16px;color:var(--verde)}.vh-cab span{font-size:14px;color:var(--tinta-2);letter-spacing:.04em}
 .vh-voo{border-top:1px solid var(--linha);padding:10px 0 4px;margin-top:8px}.vh-tr{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:16px;margin-bottom:8px}
 .vh-et{font-size:14px;border:1px solid var(--alerta);color:var(--alerta);border-radius:999px;padding:2px 10px}
-.vh-hr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.vh-hr .sec{min-height:48px}
+.vh-hr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.vh-hr .sec{min-height:48px}@media(min-width:760px){.vh-hr{grid-template-columns:220px auto;justify-content:start}}
 .vh-pe{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}.vh-pe small{font-size:14px;color:var(--tinta-3)}
 .vh-abrir{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0}
 .vh-faixa{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;text-align:left;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--alerta);border-radius:12px;background:var(--branco);color:var(--tinta);font:inherit;font-size:16px;cursor:pointer}.vh-faixa b{font-weight:600;color:var(--alerta)}.vh-faixa>span:last-child{white-space:nowrap;color:var(--verde);font-weight:600}
@@ -7052,13 +7052,13 @@ function htmlVoosHorario() {
   const dt = (f) => dataBR(f.iso);
   const trecho = (f) => `${f.de ? esc(String(f.de).toUpperCase()) : '?'} → ${f.para ? esc(String(f.para).toUpperCase()) : '?'}`;
   const etiqueta = (f) => f.de && f.para && String(f.de).trim().toUpperCase() === String(f.para).trim().toUpperCase() ? '<span class="vh-et">Conferir trecho</span>' : !f.de || !f.para ? '<span class="vh-et">Trecho sem origem ou destino</span>' : '';
-  return `<div class="secao">Voos sem horário · ${L.length}${n7 ? ` <span style="color:var(--alerta)">${n7} nos próximos 7 dias</span>` : ''}</div>
-    <div class="sub" style="margin:0 0 8px">Sem o horário de saída, o aviso de check-in não chega 24 h antes do voo. Complete como está no bilhete, no horário local do aeroporto de saída.</div>
+  return `<div class="secao">Voos sem horário · ${L.length}</div>
+    <div class="sub" style="margin:0 0 8px">${n7 ? `<b style="color:var(--alerta);font-weight:600">${n7 === 1 ? '1 emissão com voo' : n7 + ' emissões com voo'} nos próximos 7 dias.</b> ` : ''}Sem o horário de saída, o aviso de check-in não chega 24 h antes do voo. Complete como está no bilhete, no horário local do aeroporto de saída.</div>
     ${L.length ? L.map((x, i) => `<section class="bloco vh" style="margin-top:8px">
       <div class="vh-cab"><b>${esc((x.em && x.em.comprador) || x.v.passageiro || 'Passageiro')}</b>${x.v.localizador ? `<span>${esc(String(x.v.localizador).toUpperCase())}</span>` : ''}</div>
       ${x.falta.map((f, j) => `<div class="vh-voo"><div class="vh-tr"><span>${trecho(f)} · ${esc(f.rot)} ${dt(f)}${em7(f) ? ' <b style="color:var(--alerta);font-weight:600">em breve</b>' : ''}</span>${etiqueta(f)}</div>
         <div class="vh-hr"><label class="fl" style="margin:0"><span>Saída</span><input type="time" data-vhh="${i}|${j}"></label><button type="button" class="sec" data-vhs="${i}|${j}">Salvar</button></div></div>`).join('')}
-      <div class="vh-pe">${x.em && x.em.produto && !/@/.test(x.em.produto) ? `<small>${esc(x.em.produto)}</small>` : '<span></span>'}<button type="button" class="vh-abrir" data-vha="${i}">Abrir a emissão ›</button></div>
+      <div class="vh-pe">${x.falta.some(f => !f.de || !f.para || String(f.de).trim().toUpperCase() === String(f.para).trim().toUpperCase()) && x.em && x.em.produto && !/@/.test(x.em.produto) ? `<small>Produto na planilha: ${esc(x.em.produto)}</small>` : '<span></span>'}<button type="button" class="vh-abrir" data-vha="${i}">Abrir a emissão ›</button></div>
     </section>`).join('') : '<div class="vazio">Todos os voos de hoje em diante têm horário de saída.</div>'}`;
 }
 function ligarVoosHorario(P, redesenha) {
