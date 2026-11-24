@@ -336,7 +336,9 @@ export const naCotacao = (x, ctx) => !!(ctx && ctx.cotacao) && !ehCliente(x) && 
 const campoForn = (X, x, i, rot) => `<label class="fl"><span>${rot}</span><input data-it="${i}" data-k="fornecedor" value="${X.esc(x.fornecedor || '')}" list="dlFornV" autocomplete="off" placeholder="Buscar ou cadastrar"></label><button type="button" class="forn-novo" data-fornnovo="${i}" hidden></button>`;
 function htmlItemCotacao(X, x, i, ctx) {
   const voo = ehVoo(x), verCusto = X.verMargem !== false;
-  return `${voo ? inp(X, 'trecho', i, 'Trecho', x.trecho, 's', 'placeholder="Ex.: GRU-LIS ida e volta" autocomplete="off"') : ''}
+  const aero = 'maxlength="40" placeholder="Cidade ou código" data-aero="cod" autocomplete="off"';
+  return `${voo ? dupla(inp(X, 'origem', i, 'Origem', x.origem, 's', aero), inp(X, 'destino', i, 'Destino', x.destino, 's', aero)) + (x.trecho && !x.origem && !x.destino ? `<div class="sub" style="margin:-2px 0 6px">Trecho anotado antes: ${X.esc(x.trecho)}</div>` : '') : ''}
+    ${ehHotel(x) ? inp(X, 'destino', i, 'Cidade', x.destino) : ''}
     <div class="cli-lado">${inp(X, 'nome', i, 'Nome', x.nome, 's', `placeholder="${voo ? 'Companhia ou tarifa' : ehHotel(x) ? 'Nome do hotel' : 'Nome do serviço'}" ${voo ? '' : 'list="dlServV"'} autocomplete="off"`)}<div>${campoForn(X, x, i, 'Fornecedor (onde cotou)')}</div></div>
     ${dupla(inp(X, 'data_ida', i, voo ? 'Ida' : 'Check-in', x.data_ida ?? ctx.ida, 'd'), inp(X, 'data_volta', i, voo ? 'Volta' : 'Check-out', x.data_volta ?? ctx.volta, 'd'))}
     ${dupla(inp(X, 'venda', i, 'Valor de venda (R$)', x.venda, 'n'), verCusto ? inp(X, 'custo_dia', i, 'Valor de custo do dia (R$)', x.custo_dia, 'n') : '<div></div>')}
@@ -607,6 +609,16 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     const porProg = {}; L.forEach(x => { const k = String(x.programa || 'milhas').trim(); porProg[k] = (porProg[k] || 0) + (+x.milhas || 0); });
     return `<div class="lin"><span>Com milhas do cliente</span><span>${Object.entries(porProg).map(([k, v]) => v ? milFmt(v) + ' ' + X.esc(k) : 'a preencher').join(' + ')}</span></div><div class="sub" style="margin:0">Fora de metas, comissão e planilha.</div>`; };
   const resumo = () => { const t = tot(), soCot = IT.every(x => naCotacao(x, ctx)); const e = el.querySelector('#reTot'); if (e) e.innerHTML = (IT.length && (t.v || t.c) ? `<div class="lin"><span>Venda total</span><b>${X.brl2(t.v)}</b></div>${X.verMargem === false || soCot ? '' : `<div class="lin"><span>Custo total</span><span>${X.brl2(t.c)}</span></div><div class="lin"><span>Lucro bruto</span><b style="color:var(--verde)">${X.brl2(t.v - t.c)}</b></div>`}` : '') + linhaCliente(); if (aoMudar) aoMudar(t); };
+  // viagem do card (bloco Viagem): o serviço herda o que estiver vazio. O que veio da cotação escolhida já está preenchido e fica.
+  const herda = (x, C) => {
+    if (!C || x.emitido || x.grupo) return;
+    if (ehVoo(x)) { const c = C.voo;
+      if (!x.origem && !x.destino) { if (c.origem) x.origem = c.origem; if (c.destino) x.destino = c.destino; }
+      if (x.tipo_trecho === 'multi' && !x.trechos && c.trechos && c.tipo_trecho === 'multi') x.trechos = c.trechos;
+      if (x.passageiros == null && +c.passageiros > 0) x.passageiros = +c.passageiros;
+      if (x.bagagem == null && c.bagagem) x.bagagem = c.bagagem; }
+    else if (ehHotel(x) && !x.destino && C.hotel.destino) x.destino = C.hotel.destino;
+  };
   const padroes = () => IT.forEach(x => {
     if (enviado(x)) return;
     if (ehCliente(x)) { prepararCliente(x, ctx); cabecalhoCliente(x); return; }
@@ -614,7 +626,25 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
       const m = /\b([A-Za-z]{3})\s*[-–>→\/]+\s*([A-Za-z]{3})\b/.exec(x.trecho || ''); if (m && !x.origem && !x.destino) { x.origem = m[1].toUpperCase(); x.destino = m[2].toUpperCase(); } }
     if (x.data_ida == null && ctx.ida) x.data_ida = ctx.ida;
     if (x.data_volta == null && ctx.volta && (ehVoo(x) || ehHotel(x)) && x.tipo_trecho !== 'ida') x.data_volta = ctx.volta;
+    herda(x, ctx.card ? ctx.card() : null);
   });
+  // o card mudou: cada serviço acompanha nos campos que ainda estavam iguais ao que o card tinha.
+  // O que o vendedor mudou no serviço, o que já foi emitido ou enviado para a planilha fica como está.
+  const seguirCard = (ant) => {
+    const novo = ctx.card ? ctx.card() : null; if (!novo || !ant) return; let mudou = false;
+    const igual = (a, b) => String(a ?? '') === String(b ?? '');
+    IT.forEach(x => {
+      if (enviado(x) || x.emitido || ehCliente(x) || x.grupo) return;
+      const A = ehVoo(x) ? ant.voo : ehHotel(x) ? ant.hotel : { data_ida: ant.voo.data_ida }, N = ehVoo(x) ? novo.voo : ehHotel(x) ? novo.hotel : { data_ida: novo.voo.data_ida };
+      Object.keys(N).forEach(k => {
+        if (igual(A[k], N[k]) || !igual(x[k], A[k])) return;
+        // campo que ficou vazio no card só esvazia no serviço na volta da passagem que virou só ida
+        if ((N[k] ?? '') === '' && !(ehVoo(x) && k === 'data_volta' && N.tipo_trecho === 'ida')) return;
+        x[k] = k === 'passageiros' ? (+N[k] || null) : /^data_/.test(k) ? (N[k] || null) : N[k]; mudou = true;
+      });
+    });
+    if (mudou) desenha();
+  };
   // valor de cada bloco atualizado no lugar (sem redesenhar: o teclado não fecha)
   const mostraGrupo = (g) => {
     const B = blocosDe(IT, g); B.forEach(y => { const c = el.querySelector(`input[data-it="${IT.indexOf(y)}"][data-k="venda"]`); if (c && c !== document.activeElement) c.value = y.venda ?? ''; });
@@ -770,7 +800,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
     resumo();
   };
   desenha();
-  return { desenha, tot };
+  return { desenha, tot, seguirCard };
 }
 
 // arquivos (print da tarifa e comprovante) no bucket privado "vendas"
