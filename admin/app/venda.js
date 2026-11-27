@@ -37,7 +37,7 @@ export const emGrupo = (x) => !!(x && x.grupo);
 export const blocosDe = (IT, g) => (IT || []).filter(y => y && y.grupo === g && !y.cancelado_em);
 // forma de compra do bloco: as duas de milhas viram "milhas" e as duas compradas viram "pagante" (mesma regra de custo e de planilha)
 export const COMPRAS = [['maktub', 'Milhas da Maktub', 'milhas'], ['fornecedor', 'Milhas do fornecedor', 'milhas'], ['pronta', 'Passagem pronta', 'pagante'], ['pagante', 'Pagante', 'pagante']];
-export const compraDe = (x) => x.compra || (x.pago_em === 'pagante' ? 'pagante' : x.fornecedor ? 'fornecedor' : 'maktub');
+export const compraDe = (x) => x.compra || (x.pago_em === 'pagante' ? 'pagante' : x.fornecedor || (String(x.gestor || '').trim() && !/maktub/i.test(x.gestor)) ? 'fornecedor' : 'maktub');
 // quem vendeu o trecho (o que a equipe precisa saber no pós-venda)
 export const fornecedorDe = (x) => { const c = compraDe(x); return c === 'maktub' ? 'Maktub' : (x.fornecedor || (c === 'fornecedor' ? x.gestor : '') || ''); };
 // "IDA 12/11 GRU > MAD | Gol | Soberano | LOC ABC123" (texto puro, para Operação, check-in e ficha do cliente)
@@ -60,23 +60,29 @@ export function conferirGrupos(IT) {
 // divide o valor da passagem entre os blocos pelo custo de cada um; parte digitada à mão fica como está
 export function ratearGrupo(IT, g) {
   const B = blocosDe(IT, g), tot = +(B[0] || {}).grupo_venda || 0; if (!tot || !B.length) return;
-  const livres = B.filter(y => !y.venda_fixa && !enviado(y)); if (!livres.length) return;
+  const aberto = B.some(y => !enviado(y)), livres = B.filter(y => !y.venda_fixa && (aberto || !enviado(y))); if (!livres.length) return;
   const alvo = tot - B.filter(y => !livres.includes(y)).reduce((a, y) => a + (+y.venda || 0), 0);
   const pesos = livres.map(y => custoDe(y) || 0), sp = pesos.reduce((a, b) => a + b, 0);
   let resto = alvo; livres.forEach((y, k) => { const v = k === livres.length - 1 ? r2(resto) : r2((sp ? pesos[k] / sp : 1 / livres.length) * alvo); resto -= v; y.venda = v; });
 }
 // liga o interruptor: um bloco por trecho, cada um só ida, com os dados do voo daquele trecho
 export function dividirEmBlocos(IT, i) {
-  const x = IT[i], ls = voosDaEmissao(x).filter(l => l.o || l.d).slice(0, 4);
+  const x = IT[i], ls = voosDaEmissao(x).filter(l => l.o || l.d).slice(0, 4), ja = enviado(x);
+  // "Separar o custo por trecho" já preenchido: milhas, milheiro, taxas e valor pago de cada trecho vão para o bloco dele
+  const cts = x.ct_on && Array.isArray(x.ct) && x.ct.length === ls.length ? x.ct.map(l => ({ milhas: l.milhas, milheiro: l.milheiro != null && l.milheiro !== '' ? l.milheiro : x.milheiro, taxas: l.taxas, custo: l.custo })) : null;
   const L = ls.length >= 2 ? ls : [{ o: up3(x.origem), d: up3(x.destino), data: x.data_ida || '', hora: x.hora_ida || '', chegada: x.chegada_ida || '' }, { o: up3(x.destino), d: up3(x.origem), data: x.data_volta || '', hora: x.hora_volta || '', chegada: x.chegada_volta || '' }];
   const g = 'g' + Math.random().toString(36).slice(2, 8), partes = L.length === 2 ? ['ida', 'volta'] : L.map((_, k) => 't' + (k + 1));
   const total = r2(vendaDe(x)) || null;
   const blocos = L.map((l, k) => {
     const comum = { grupo: g, parte: partes[k], grupo_venda: total, tipo_trecho: 'ida', origem: l.o, destino: l.d, data_ida: l.data || (k === L.length - 1 && L.length === 2 ? x.data_volta || '' : k === 0 ? x.data_ida || '' : ''), hora_ida: l.hora || '', chegada_ida: l.chegada || '', data_volta: null, hora_volta: '', chegada_volta: '', ct_on: false, ct: null, trechos: '', hrs: null, chs: null, compra: compraDe(x), sugere_blocos: false };
     // o primeiro bloco fica com o que já foi preenchido; os outros começam com companhia, passageiros e bagagem e o resto em branco
-    if (!k) return Object.assign(x, comum);
+    const c = cts ? cts[k] : null, custo = c && (+c.milhas || +c.taxas || +c.custo) ? { milhas: +c.milhas || null, milheiro: +c.milheiro || null, taxas: +c.taxas || null, custo: +c.custo || null } : null;
+    if (!k) { if (!x.fornecedor && compraDe(x) === 'fornecedor' && x.gestor) x.fornecedor = x.gestor; return Object.assign(x, comum, custo || {}); }
+    // emissão que já foi para a planilha: a linha dela é corrigida e cada trecho novo entra como linha nova ao salvar
+    // (o voo e o check-in desse trecho mudam de emissão, nada é apagado). Os voos que sobram são renumerados, por isso n = 2.
     return { produto: x.produto, pago_em: x.pago_em || 'milhas', cia_emissora: x.cia_emissora || '', cia_voo: '', passageiros: x.passageiros ?? null, bagagem: x.bagagem ?? null,
-      ...(Array.isArray(x.pax) && x.pax.length ? { pax: JSON.parse(JSON.stringify(x.pax)) } : {}), custo: null, venda: null, ...comum };
+      ...(Array.isArray(x.pax) && x.pax.length ? { pax: JSON.parse(JSON.stringify(x.pax)) } : {}), custo: null, venda: null, ...comum, ...(custo || {}),
+      ...(ja ? { separada_de: { id: x.planilha_id, n: 2, venda: total || 0 } } : {}) };
   });
   IT.splice(i, 1, ...blocos);
   ratearGrupo(IT, g);
@@ -452,8 +458,8 @@ function htmlCliente(X, x, i, ctx) {
 // título de cada emissão quando a venda tem mais de uma: rota, companhia e localizador
 // interruptor "Ida e volta com fornecedores diferentes": em voo de ida e volta ou multitrecho que ainda não foi para a planilha
 function htmlInterruptor(X, x, i, trava, ctx) {
-  if (trava || ehCliente(x) || (x.tipo_trecho || ctx.tipoPadrao) === 'ida') return '';
-  return `<label class="fc" style="margin:2px 0 6px"><input type="checkbox" data-blocos="${i}"><span>Ida e volta com fornecedores diferentes</span></label>${x.sugere_blocos ? '<div class="config" style="margin:0 0 8px">A ida e a volta estão em companhias diferentes. Se cada uma foi comprada com um fornecedor, ligue Ida e volta com fornecedores diferentes.</div>' : ''}`;
+  if (ehCliente(x) || x.cancelado_em || (x.tipo_trecho || ctx.tipoPadrao) === 'ida') return '';
+  return `<label class="fc" style="margin:2px 0 6px"><input type="checkbox" data-blocos="${i}"><span>Ida e volta com fornecedores diferentes</span></label>${trava ? '<div class="sub" style="margin:-4px 0 8px">Venda já lançada: ao salvar, a linha da planilha é corrigida e cada trecho novo entra como uma linha nova.</div>' : ''}${x.sugere_blocos ? '<div class="config" style="margin:0 0 8px">A ida e a volta estão em companhias diferentes. Se cada uma foi comprada com um fornecedor, ligue Ida e volta com fornecedores diferentes.</div>' : ''}`;
 }
 // pago ao fornecedor do bloco: só depois que a linha chegou da planilha (é a mesma marcação do Financeiro)
 function htmlPagoFornecedor(X, x) {
@@ -471,7 +477,7 @@ function linhaTrechoHtml(X, x) {
 }
 // topo do grupo: interruptor ligado, uma linha por trecho e o valor da passagem dividido entre os blocos
 function htmlCabecalhoGrupo(X, IT, g, ctx) {
-  const B = blocosDe(IT, g), trava = B.some(enviado);
+  const B = blocosDe(IT, g), trava = B.every(enviado);
   if (ctx.vendaTotal) B.forEach(y => { y.grupo_venda = r2(B.reduce((a, z) => a + (+z.venda || 0), 0)) || null; });
   const tot = +B[0].grupo_venda || 0, soma = r2(B.reduce((a, y) => a + (+y.venda || 0), 0));
   return `<div style="border:1px solid var(--linha);border-radius:12px;padding:10px 12px;margin:6px 0 8px">
@@ -724,7 +730,7 @@ export function editorItens(X, el, IT, ctx, aoMudar) {
       X.aviso(ja ? 'Trecho virou outra emissão. Corrija custo e venda da que ficou, preencha os da nova e salve: a nova vai para a planilha e a que ficou é corrigida.' : 'Trecho virou outra emissão: preencha companhia, forma de pagamento, custo e localizador dela.');
     });
     // ida e volta com fornecedores diferentes: liga, desliga, valor da passagem, ficha do fornecedor e pago fornecedor
-    el.querySelectorAll('[data-blocos]').forEach(e => e.onchange = () => { if (!e.checked) return; dividirEmBlocos(IT, +e.dataset.blocos); desenha(); avisaMudou();
+    el.querySelectorAll('[data-blocos]').forEach(e => e.onchange = () => { if (!e.checked) return; const ja = enviado(IT[+e.dataset.blocos]); dividirEmBlocos(IT, +e.dataset.blocos); if (ja && ctx.aoSeparar) ctx.aoSeparar(); desenha(); avisaMudou();
       X.aviso('Cada trecho virou um bloco: preencha companhia, fornecedor, forma de compra, custo e localizador de cada um.'); });
     el.querySelectorAll('[data-blocos-g]').forEach(e => e.onchange = async () => {
       if (e.checked) return; const g = e.dataset.blocosG;
@@ -974,7 +980,7 @@ function dadosLinha(X, r, IT, x, F) {
   const milhas = usaMilhas(x), milhasInf = milhas && !!(+x.milhas || +x.taxas), p = r.pessoa_id ? (X.D.pessoas || []).find(y => y.id === r.pessoa_id) : null;
   return {
     // Gestor nunca vai vazio: as fórmulas de lucro da planilha e a sincronização com o app só leem linhas com Gestor
-    'Gestor': (milhas && (x.gestor || (x.grupo && compraDe(x) === 'fornecedor' ? x.fornecedor : ''))) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
+    'Gestor': (milhas && ((x.grupo && compraDe(x) === 'fornecedor' && x.fornecedor) || x.gestor || (x.grupo && compraDe(x) === 'fornecedor' ? x.fornecedor : ''))) || 'Maktub', 'Conta': milhas ? (x.conta || '') : (x.fornecedor || ''),
     'Email ou Produto': ehVoo(x) ? '' : (x.nome || x.produto), 'Cidade': x.destino || '',
     'Cia': ciaDe(x), 'Sobrenome': sobrenome(r.cliente), 'CPF (NF)': cpfNF(X, r, IT),
     'Origem': x.origem || '', 'Destino': x.destino || '', 'Comprador': r.cliente || '', 'Passageiros': +x.passageiros || 1,
