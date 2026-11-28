@@ -1003,7 +1003,7 @@ body.sem-valores .cb-valor{color:transparent!important;text-shadow:0 0 9px rgba(
 .vh-abrir{background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:16px;cursor:pointer;padding:6px 0}
 .vh-faixa{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;text-align:left;margin:12px 0 4px;padding:12px 14px;border:1px solid var(--alerta);border-radius:12px;background:var(--branco);color:var(--tinta);font:inherit;font-size:16px;cursor:pointer}.vh-faixa b{font-weight:600;color:var(--alerta)}.vh-faixa>span:last-child{white-space:nowrap;color:var(--verde);font-weight:600}
 .vg-pax{display:grid;grid-template-columns:48px 1fr 48px;gap:6px}.vg-pax button{border:1px solid var(--linha);background:var(--branco);border-radius:12px;font-size:22px;color:var(--verde);cursor:pointer;min-height:48px}.vg-pax input{text-align:center}
-.vg-bag{flex-wrap:wrap;margin-top:2px}.glib .lib-conf{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:6px 0;font-size:14px;color:rgba(249,246,241,.85)}.glib .lib-conf b{display:inline;font-size:14px}.glib .lib-conf button{background:none;border:0;color:var(--dourado-claro);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;padding:0}#vgSimples input::placeholder{text-transform:none}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
+.vg-bag{flex-wrap:wrap;margin-top:2px}.glib .lib-conf{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:6px 0;font-size:14px;color:rgba(249,246,241,.85)}.glib .lib-conf b{display:inline;font-size:14px}.glib .lib-conf button{background:none;border:0;color:var(--dourado-claro);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;padding:0}#vgSimples input::placeholder,#fCardNovo input::placeholder{text-transform:none}.vg-2{display:grid;grid-template-columns:1fr;gap:0 12px}@media(min-width:760px){.vg-2{grid-template-columns:1fr 1fr}}.vg-pax{max-width:240px}
 .vg-tr{display:grid;grid-template-columns:28px 1fr 18px 1fr;gap:6px;align-items:center;margin:0 0 6px}.vg-tr .vg-n{font-size:14px;color:var(--tinta-3)}.vg-tr .vg-seta{text-align:center;color:var(--tinta-3)}
 .vg-tr .vg-dt{grid-column:2 / 4}.vg-tr .vg-x{grid-column:4;justify-self:end;background:none;border:0;font-size:22px;color:var(--tinta-3);cursor:pointer;padding:4px 10px}
 .vg-tr input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--branco);color:var(--tinta);min-height:48px}
@@ -1338,7 +1338,7 @@ import * as CRM from '/admin/app/crm.js?v=28';
 import * as CAL from '/admin/app/calendario.js?v=2';
 import * as CTR from '/admin/app/contrato.js?v=7';
 import * as FORN from '/admin/app/fornecedores.js?v=14';
-import * as COT from '/admin/app/cotador.js?v=62';
+import * as COT from '/admin/app/cotador.js?v=64';
 import { ligarBuscaAero } from '/admin/app/cot-colar.js?v=6';
 import * as VENDA from '/admin/app/venda.js?v=38';
 import * as FCH from '/admin/app/fechou.js?v=2';
@@ -1350,7 +1350,7 @@ import * as DRE from '/admin/app/dre.js?v=9';
 import * as B2B from '/admin/app/b2b.js?v=11';
 import * as IND from '/admin/app/indicacoes.js?v=9';
 import * as DG from '/admin/app/diagnostico.js?v=2';
-import * as VG from '/admin/app/viagem.js?v=1';
+import * as VG from '/admin/app/viagem.js?v=2';
 import * as PER from '/admin/app/periodo.js?v=1';
 const EXIGIR_CODIGO = true;
 // gravação que deu certo no servidor (inserir, alterar, excluir ou uma função que salva): o que estava preenchido na tela já foi guardado
@@ -5001,6 +5001,7 @@ function htmlViagemCard(r, V) {
       <div class="fl"><span>Bagagem despachada</span><div class="chips vg-bag" id="vgBag">${VG.BAGAGEM.map(([v, l]) => `<button type="button" data-vgbag="${v}" class="${V.bagagem === v ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
     <label class="fl" hidden><span>Bagagem despachada</span><input type="hidden" name="vg_bag" value="${esc(V.bagagem || '')}"></label>
     <label class="fl" hidden><span>Trechos do multitrecho</span><input type="hidden" name="vg_trechos" value="${esc(JSON.stringify(V.trechos || []))}"></label>
+    ${V.doServico ? `<div class="sub" style="margin:0 0 8px">A rota veio do serviço de passagem, porque o card estava sem origem e destino. Fica gravada no card quando salvar.</div>` : ''}
     ${!V.novo && r.trecho && VG.trechoTexto(V) !== r.trecho ? `<div class="sub" style="margin:0 0 8px">Anotado antes no card: ${esc(r.trecho)}. Fica assim até alguém mudar a origem ou o destino.</div>` : ''}
     <div id="indicDestino"></div>`;
 }
@@ -5559,7 +5560,16 @@ function telaFormReuniao(P) {
     if (res === 'Fechou' && base.resultado !== 'Fechou' && !base.fechado_em) row.fechado_em = new Date().toISOString();
     if (f.elements.data_volta) row.data_volta = soIda ? null : (g('data_volta') || null);
     // viagem do card (002-card-viagem.sql): origem, destino, tipo, trechos, passageiros e bagagem
-    if (!G && f._vgAtual) row.viagem = VG.paraGravar(f._vgAtual());
+    // card sem rota no bloco Viagem: completa com a do serviço de passagem (só o que está vazio no card)
+    if (!G && f._vgAtual) {
+      let v = f._vgAtual();
+      if (IT && VG.semRota(v)) {
+        v = VG.completar(v, VG.doServico(IT));
+        if (v.doServico) { const dt = VG.datasDe(v); if (!row.data_viagem && dt.ida) row.data_viagem = dt.ida; if (!row.data_volta && dt.volta && v.tipo !== 'ida') row.data_volta = dt.volta; }
+      }
+      row.viagem = VG.paraGravar(v);
+      if (!row.trecho) row.trecho = VG.trechoTexto(v) || null;
+    }
     if (f.elements.responsavel_id) row.responsavel_id = g('responsavel_id') || null; else if (nova && !(ADMIN || GER())) row.responsavel_id = D.meuId;
     if (nova && r.lead_id) row.lead_id = r.lead_id;
     if (nova && r.solicitacao_id) row.solicitacao_id = r.solicitacao_id;
