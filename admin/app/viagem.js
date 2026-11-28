@@ -43,11 +43,45 @@ const norm = (v) => ({
 // a viagem que vale para o card: a gravada; no card antigo, a do diagnóstico e, faltando, o trecho antigo
 export function viagemDe(r, resp) {
   r = r || {}; resp = resp || {};
-  if (r.viagem && typeof r.viagem === 'object') return { ...norm({ ...r.viagem, ida: r.data_viagem, volta: r.data_volta }), novo: true };
+  if (r.viagem && typeof r.viagem === 'object') return completar({ ...norm({ ...r.viagem, ida: r.data_viagem, volta: r.data_volta }), novo: true }, doServico(r.itens));
   const t = partirTrecho(r.trecho), d = resp.data_pre || {}, p = resp.pax || {};
   const ida = r.data_viagem || d.ida || '', volta = r.data_viagem ? (r.data_volta || '') : (d.volta || '');
   const tipo = r.data_viagem ? (r.data_volta ? 'iv' : 'ida') : (d.ida && !d.volta ? 'ida' : 'iv');
-  return { ...norm({ origem: txt(resp.origem) || t.origem || '', destino: txt(resp.destino) || t.destino || '', tipo, pax: p.n, bagagem: resp.bagagem, ida, volta }), novo: false };
+  return completar({ ...norm({ origem: txt(resp.origem) || t.origem || '', destino: txt(resp.destino) || t.destino || '', tipo, pax: p.n, bagagem: resp.bagagem, ida, volta }), novo: false }, doServico(r.itens));
+}
+// card sem rota: nem origem nem destino (no multitrecho, nenhum trecho com origem ou destino)
+export function semRota(v) {
+  v = v || {};
+  if (v.tipo === 'multi') return !(v.trechos || []).some(t => t && (txt(t.o) || txt(t.d)));
+  return !txt(v.origem) && !txt(v.origem_cod) && !txt(v.destino) && !txt(v.destino_cod);
+}
+// a rota do primeiro serviço de passagem que vale como venda (sem o cancelado e sem a emissão com milhas do cliente)
+const ehPassagem = (x) => !!x && ['Passagens', 'Maktub Corporativo'].includes(x.produto) && !x.cancelado_em && x.pago_em !== 'cliente_gestao';
+const dataBr = (s, ref) => { const m = /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/.exec(s || ''); if (!m) return '';
+  const a = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : String((ref || '').slice(0, 4) || new Date().getFullYear()); return `${a}-${m[2]}-${m[1]}`; };
+export function doServico(itens) {
+  for (const x of Array.isArray(itens) ? itens : []) {
+    if (!ehPassagem(x)) continue;
+    let L = Array.isArray(x.ct) && x.ct.length ? x.ct.map(t => ({ o: txt(t && t.o).toUpperCase(), d: txt(t && t.d).toUpperCase(), data: txt(t && t.data).slice(0, 10) })) : [];
+    if (!L.length && txt(x.trechos)) L = txt(x.trechos).split('\n').map(l => { const m = /^\s*([A-Za-z]{3})\s*-\s*([A-Za-z]{3})\b(.*)$/.exec(l); return m ? { o: m[1].toUpperCase(), d: m[2].toUpperCase(), data: dataBr(m[3], x.data_ida) } : null; }).filter(Boolean);
+    L = L.filter(t => t.o || t.d);
+    const tipo = x.tipo_trecho === 'multi' && L.length ? 'multi' : x.tipo_trecho === 'ida' ? 'ida' : 'iv';
+    const o = codDe(x.origem) || (L[0] || {}).o || '', d = codDe(x.destino) || (tipo !== 'multi' && L.length ? L[0].d : (L[L.length - 1] || {}).d) || '';
+    if (tipo !== 'multi' && !o && !d) continue;
+    return { origem_cod: o, destino_cod: d, tipo, trechos: tipo === 'multi' ? L : [], ida: txt(x.data_ida).slice(0, 10), volta: tipo === 'ida' ? '' : txt(x.data_volta).slice(0, 10), pax: +x.passageiros > 0 ? Math.round(+x.passageiros) : null };
+  }
+  return null;
+}
+// completa só a rota que falta com a do serviço (datas e passageiros só quando o card não tem); o resto do card fica como está
+export function completar(v, s) {
+  if (!s || !semRota(v)) return v;
+  const o = { ...v, tipo: s.tipo, origem: s.origem_cod, origem_cod: s.origem_cod, destino: s.destino_cod, destino_cod: s.destino_cod, trechos: s.trechos.map(t => ({ ...t })), doServico: true };
+  if (!o.ida && !o.volta) { o.ida = s.ida; o.volta = s.volta; }
+  if (o.tipo === 'ida') o.volta = '';
+  // multitrecho sem data nos trechos: a ida e a volta do card vão para o primeiro e o último trecho (as datas do card vêm deles)
+  if (o.tipo === 'multi' && o.trechos.length) { const T = o.trechos; if (!T[0].data && o.ida) T[0].data = o.ida; if (T.length > 1 && !T[T.length - 1].data && o.volta) T[T.length - 1].data = o.volta; }
+  if (!o.pax && s.pax) o.pax = s.pax;
+  return o;
 }
 // o que vai para a coluna viagem (as datas ficam em data_viagem e data_volta)
 export function paraGravar(v) {

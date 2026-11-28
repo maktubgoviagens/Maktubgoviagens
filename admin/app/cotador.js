@@ -5,6 +5,7 @@
 import { lerColado, completarVoo, carregarAero, cidadeDe, carregarNomes, codigoDe } from '/admin/app/cot-colar.js?v=6';
 const pergunta = (t, o) => window.pergunta(t, o); // folha de confirmação do app (index.html)
 import { acharPessoa } from '/admin/app/venda.js?v=20';
+import * as VG from '/admin/app/viagem.js?v=2';
 export const prepararAero = carregarNomes;
 let LISTA = null, ED = null, S = null, MARCA = null, RAPM = null, PRE = null, PEDIR = null;
 // toda cotação pertence a um card do funil (S.reuniao_id). Sem card, o app pede para escolher um antes de abrir.
@@ -159,12 +160,16 @@ export async function tela(P, X) {
 /* ================= card do funil ================= */
 const cardDe = (X, id) => id ? (X.D.reunioes || []).find(r => r.id === id) : null;
 const numC = (r) => r && r.numero ? '#' + String(r.numero).padStart(3, '0') + ' ' : '';
-const preDe = (r) => ({ id: r.id, cliente: r.cliente, destino: r.trecho || '', ida: r.data_viagem || '', volta: r.data_volta || '' });
+// o card escolhido no Cotador leva o mesmo que a cotação aberta pelo card: códigos de origem e destino, trechos, datas e passageiros
+const preDe = (r) => { const base = { id: r.id, cliente: r.cliente, destino: r.trecho || '', ida: r.data_viagem || '', volta: r.data_volta || '' };
+  const v = VG.viagemDe(r); if (VG.semRota(v)) return base;
+  const c = VG.paraCotacao(v); return { ...base, ...c, destino: c.destino || base.destino, ida: c.ida || base.ida, volta: c.volta || base.volta }; };
 // garante um card antes de seguir: se a cotação já saiu de um card, segue direto
 function comCard(P, X, depois) { if (PRE) return depois(); escolherCard(P, X, (r) => { PRE = preDe(r); depois(); }); }
 // escolher o card (atendimento em aberto) ou criar um na hora, com o mínimo: nome e WhatsApp
 function escolherCard(P, X, escolhido, voltar) {
   const { esc, D } = X;
+  VG.preparar();
   const abertos = (D.reunioes || []).filter(r => r.resultado === 'Em andamento' && r.produto !== 'Gestão de Milhas')
     .sort((a, b) => String(b.created_at || b.data).localeCompare(String(a.created_at || a.data)));
   P.innerHTML = `<button class="voltar" id="voltarCard">‹ ${voltar ? 'Cotação' : 'Cotações'}</button>
@@ -176,7 +181,8 @@ function escolherCard(P, X, escolhido, voltar) {
     <form class="form" id="fCardNovo" autocomplete="off" onsubmit="return false">
       <label class="fl"><span>Nome do cliente ou empresa</span><input name="cliente" list="dlCliC"></label>
       <datalist id="dlCliC">${(D.pessoas || []).slice(0, 3000).map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
-      <div class="duas-col"><label class="fl"><span>WhatsApp ou e-mail</span><input name="contato"></label><label class="fl"><span>Trecho ou destino</span><input name="trecho" placeholder="Rio → Lisboa"></label></div>
+      <label class="fl"><span>WhatsApp ou e-mail</span><input name="contato"></label>
+      <div class="duas-col"><label class="fl"><span>Origem</span><input name="vg_origem" placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" maxlength="60" style="text-transform:uppercase"></label><label class="fl"><span>Destino</span><input name="vg_destino" placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" maxlength="60" style="text-transform:uppercase"></label></div>
       ${X.ind && X.ind.temCol() ? `<div class="fl" style="margin-bottom:4px"><span>Como chegou (cliente novo ou sem origem)</span></div>${X.ind.IND.htmlSeletor(X.ind, {})}` : ''}
       <button class="zap grande" id="criarCard" style="width:100%;margin-top:6px">Criar card e seguir para a cotação</button>
     </form>`;
@@ -208,10 +214,13 @@ function escolherCard(P, X, escolhido, voltar) {
     }
     if (p && ori && !p.origem_canal) { const ro = await X.ind.IND.gravarOrigem(X.ind, p.id, ori); if (ro.erro) X.aviso(ro.erro); }
     if (!p) { const pn = await X.sb.from('pessoas').insert({ nome, celular: !ehMail && ct ? ct : null, email: ehMail ? ct : null, papeis: [], interesse: ['viagens'], ...(ori ? { ...ori, origem: X.ind.IND.ROTULO[ori.origem_canal] } : {}) }).select().single(); if (!pn.error) { p = pn.data; (D.pessoas = D.pessoas || []).push(p); } }
-    const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: g('trecho') || null,
+    const row = { data: agora, tipo: 'Cotação', produto: 'Passagens', resultado: 'Em andamento', etapa: 'Em cotação', cliente: p ? p.nome : nome, contato: ct || (p && (p.celular || p.email)) || null, trecho: null,
       ...(p && p.origem_canal && X.ind ? { origem: X.ind.IND.ROTULO[p.origem_canal] } : {}),
       responsavel_id: D.meuId, assumido_por: D.meuId, assumido_em: agora, cotacao_inicio: hoje(), proximo_passo_tipo: 'enviar_cotacao', proximo_passo: 'Enviar cotação', proximo_passo_data: amanha() };
     if (p) row.pessoa_id = p.id;
+    // origem e destino em código IATA, como no bloco Viagem do card
+    const vg = { origem: g('vg_origem'), destino: g('vg_destino'), tipo: 'iv' };
+    if (!VG.semRota(vg)) { row.viagem = VG.paraGravar(vg); row.trecho = VG.trechoTexto(row.viagem) || null; }
     const r = await X.sb.from('atendimentos').insert(row).select().single();
     b.disabled = false; b.textContent = 'Criar card e seguir para a cotação';
     if (r.error) { X.aviso('Não criou o card: ' + r.error.message); return; }
