@@ -1015,12 +1015,26 @@ function resumoParc() {
 }
 // colar de novo com voos já na cotação: sempre soma os trechos (ex.: ida de 1 passageiro + ida e volta de 2); para tirar, o X de cada trecho
 let RAP_PAXN = '';
+// trecho aberto para editar ali mesmo na lista (data, horários, rota, tipo e passageiros); fecha no Pronto
+let RAP_ED = null;
 function editorRapida(P, X) {
   const { $ } = X;
   if (!S.voos) S.voos = []; if (!S.prints) S.prints = [];
   if (S.pessoas === undefined) S.pessoas = '1'; if (S.bagagem === undefined) S.bagagem = RAP_BAGAGEM;
   const vs = rapVoos(), paxTot = Math.max(1, parseInt(S.pessoas) || 1);
-  const listaVoos = () => { const l = rapVoos(), tot = Math.max(1, parseInt(S.pessoas) || 1); return l.length ? l.map(v => { const n = paxTrecho(v, tot); return linhaX(`<b>${h(v.rotulo)}</b> ${ddmm(v.data)} · ${h(v.ocod)} ${h(v.saida)} → ${h(v.dcod)} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}`, `data-xv="${S.voos.indexOf(v)}"`); }).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
+  const ed = S.voos.includes(RAP_ED) ? RAP_ED : (RAP_ED = null);
+  const textoVoo = (v, tot) => { const n = paxTrecho(v, tot); return `<b>${h(v.rotulo || 'Trecho')}</b> ${ddmm(v.data)} · ${h(v.ocod || 'sem origem')} ${h(v.saida)} → ${h(v.dcod || 'sem destino')} ${h(v.chegada)} · ${h(v.tipo)}${n ? ` · ${n} ${n === 1 ? 'passageiro' : 'passageiros'}` : ''}`; };
+  const linhaEd = (conteudo, j) => `<div style="display:flex;align-items:center;gap:10px;padding:2px 0"><div style="flex:1;min-width:0">${conteudo}</div><button type="button" data-ev="${j}" aria-label="Editar este trecho" style="flex:none;background:none;border:0;color:var(--verde);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;padding:6px 2px">Editar</button>${btnX(`data-xv="${j}"`)}</div>`;
+  const blocoEd = (v, tot) => { const j = S.voos.indexOf(v); return `<div id="rpEd" style="border:1px solid var(--dourado, #A88B4A);border-radius:12px;padding:10px 12px 12px;margin:6px 0;background:var(--papel, #fff)">
+    <div class="sub" style="margin:0 0 6px">Editando: <span id="rpEdLinha">${textoVoo(v, tot)}</span></div>
+    ${duas(inp(`voos.${j}.data`, 'Data', 'date'), inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'))}
+    ${duas(inp(`voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
+    ${duas(inp(`voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
+    ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões', '3 conexões', '4 conexões']), selDias(`voos.${j}.mais1`))}
+    ${inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${tot} (todos)"`)}
+    <button type="button" class="sec" data-edok style="width:100%;margin-top:4px">Pronto</button></div>`; };
+  const listaVoos = () => { const tot = Math.max(1, parseInt(S.pessoas) || 1), l = rapVoos().concat(S.voos.filter(v => !v.ocod));
+    return l.length ? l.map(v => v === ed ? blocoEd(v, tot) : linhaEd(textoVoo(v, tot), S.voos.indexOf(v))).join('') : 'Sem voos ainda. Cole a tela acima ou digite à mão abaixo.'; };
   const avisoEco = () => { const a = num(S.de), b = num(S.por); if (!a || !b) return ''; if (b >= a) return '<div class="config" style="margin:4px 0">O valor da Maktub não está abaixo do site. A cotação sai só com o valor, sem comparação.</div>';
     const pc = Math.round((a - b) / a * 100); return `<label class="fc" style="margin:4px 0"><input type="checkbox" id="rpEcoCk" ${mostraEco() ? 'checked' : ''}><span>Mostrar a comparação com o site (economia de ${brl(a - b)}, ${pc}%)${ecoAuto() ? '' : '. Economia pequena: sugerimos deixar desligado'}</span></label>`; };
   P.innerHTML = `<button class="voltar" id="voltar">‹ Cotações</button>
@@ -1028,17 +1042,11 @@ function editorRapida(P, X) {
     <div class="sub">Cole a tela da companhia e digite o valor. Serve para somente ida, ida e volta ou até 4 trechos: o visual se ajusta sozinho, em imagem ou em link.</div>
     <form class="form" id="fRap" autocomplete="off" onsubmit="return false">
       ${caixaColar('Copie o print e toque em Colar print, ou cole o texto da tela. Voos, paradas e valor do site vêm sozinhos.', 'ou curto: 02/12 GIG 12:20 SCL 17:00 direto · site 2.100 maktub 1.700')}
-      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Colar outra tela acrescenta os trechos novos. Para tirar um trecho, toque no X dele.</div>
+      ${vs.length ? `<div class="config" style="margin:6px 0"><div class="sub" style="margin:0 0 4px">Já tem ${vs.length} ${vs.length === 1 ? 'trecho' : 'trechos'} na cotação. Colar outra tela acrescenta os trechos novos. Para mudar data, horário ou rota, toque em Editar. Para tirar um trecho, toque no X.</div>
         <label class="fl" style="margin-top:6px"><span>Passageiros nos trechos novos</span><input id="rpPaxN" inputmode="numeric" value="${h(RAP_PAXN)}" placeholder="Ex.: 2"></label><div class="sub" style="margin:2px 0 0">O valor do site também soma. O valor da Maktub continua um total único.</div></div>` : ''}
       <button type="button" class="zap" id="rpColar" style="width:100%">${vs.length ? 'Preencher e somar' : 'Preencher'}</button>
       <div class="config" style="margin:6px 0" id="rpLista">${listaVoos()}</div>${vs.length ? '<button type="button" id="rpLimpa" style="background:none;border:0;color:var(--tinta-3);text-decoration:underline;font:inherit;font-size:12px;padding:0">tirar voos</button>' : ''}
-      ${dobra('rpVoosD', S.voos.length ? `Ajustar voos ou incluir trecho (${S.voos.length})` : 'Digitar voo à mão', `${S.voos.map((v, j) => `<div style="border-top:1px solid var(--linha);padding-top:6px;margin-top:6px">${btnTira('voos#' + j)}
-        ${duas(inp(`voos.${j}.rotulo`, 'Rótulo', 'text', 'data-rot="1" placeholder="Ida, Volta 1, Volta 2"'), inp(`voos.${j}.data`, 'Data', 'date'))}
-        ${duas(inp(`voos.${j}.ocod`, 'Origem', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.saida`, 'Saída', 'time'))}
-        ${duas(inp(`voos.${j}.dcod`, 'Destino', 'text', 'placeholder="Cidade ou código" data-aero="cod" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase"'), inp(`voos.${j}.chegada`, 'Chegada', 'time'))}
-        ${duas(sel(`voos.${j}.tipo`, 'Tipo', ['Direto', '1 conexão', '2 conexões', '3 conexões', '4 conexões']), selDias(`voos.${j}.mais1`))}
-        ${inp(`voos.${j}.pax`, 'Passageiros neste trecho', 'text', `inputmode="numeric" placeholder="${paxTot} (todos)"`)}</div>`).join('')}
-        <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : '+ Voo'}</button>`)}
+      <button type="button" class="sec" id="rpMais" style="width:100%;margin-top:6px">${S.voos.length ? '+ Trecho (já vem com a rota, só ajustar data e horário)' : 'Digitar voo à mão'}</button>
       <div class="duas-col">${inp('cliente', 'Cliente (não aparece na cotação)', 'text', 'placeholder="Victor Santiago"')}${inp('pessoas', 'Passageiros', 'text', 'inputmode="numeric"')}</div>
       <div class="duas-col">${inp('cia', 'Companhia', 'text', 'placeholder="LATAM"')}${sel('marca', 'Marca', ['Maktub Go', 'Maktub Corporativo'])}</div>
       <div class="config" style="margin:6px 0 8px"><div class="sub" style="margin:0 0 6px">Bagagem por passageiro · o item pessoal (mochila ou bolsa) já está sempre incluído</div>
@@ -1064,15 +1072,16 @@ function editorRapida(P, X) {
     const vk = k.match(/^voos\.(\d+)\.(\w+)$/);
     set(k, vk && /^(ocod|dcod)$/.test(vk[2]) ? e.target.value.toUpperCase().trim() : e.target.value);
     if (vk) { const v = S.voos[+vk[1]]; if (vk[2] === 'rotulo') v._rotM = !!e.target.value.trim(); if (/^(ocod|dcod|data|saida|chegada)$/.test(vk[2])) completarVoo(v); if (/^(ocod|dcod)$/.test(vk[2])) { rotular(S.voos); S.voos.forEach((x, i) => { const el = f.querySelector(`[data-k="voos.${i}.rotulo"]`); if (el && el !== e.target) el.value = x.rotulo; }); } }
-    if ((vk || k === 'pessoas') && $('rpLista')) $('rpLista').innerHTML = listaVoos();
+    // com um trecho aberto para editar, a lista não é redesenhada (o campo perderia o foco): só a linha do trecho atualiza
+    if ((vk || k === 'pessoas') && $('rpLista')) { if ($('rpEd')) { if ($('rpEdLinha') && ed) $('rpEdLinha').innerHTML = textoVoo(ed, Math.max(1, parseInt(S.pessoas) || 1)); } else $('rpLista').innerHTML = listaVoos(); }
     if (k === 'cliente' && !slugManual) $('slugC').value = sugerirSlug();
     if (k === 'por' && $('rpParc')) $('rpParc').innerHTML = resumoParc();
     previa(); });
   ligarEco();
   const lembrar = () => { try { localStorage.setItem('cotRapPadrao', JSON.stringify({ marca: S.marca, forma: S.forma })); } catch (e) {} };
   // data ou horário mudou à mão: põe os trechos de novo na ordem do calendário
-  f.addEventListener('change', (e) => { const k = e.target.dataset.k || ''; if (/^voos\.\d+\.(data|saida)$/.test(k)) { const antes = S.voos.slice(); rotular(S.voos); if (S.voos.some((v, i) => v !== antes[i])) { ABERTOS.add('rpVoosD'); editorRapida(P, X); } } });
-  f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
+  f.addEventListener('change', (e) => { const k = e.target.dataset.k || ''; if (/^voos\.\d+\.(data|saida)$/.test(k)) { const antes = S.voos.slice(); rotular(S.voos); if (S.voos.some((v, i) => v !== antes[i])) editorRapida(P, X); } });
+  f.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT' && /^voos\./.test(e.target.dataset.k || '')) set(e.target.dataset.k, e.target.value); if (/^voos\./.test(e.target.dataset.k || '') && $('rpLista') && !$('rpEd')) $('rpLista').innerHTML = listaVoos(); if (e.target.dataset.k === 'marca') set('marca', e.target.value); if (e.target.dataset.k === 'marca' || e.target.dataset.k === 'forma') lembrar(); previa(); });
   ligarPrint(P, X);
   $('rpColar').onclick = async () => {
     const txt = $('colaTxt').value.trim(); if (!txt) { X.aviso('Cole o texto primeiro.'); return; }
@@ -1105,7 +1114,14 @@ function editorRapida(P, X) {
     S.eco = undefined; rotular(S.voos); editorRapida(P, X);
     const cp = $('fRap') && $('fRap').querySelector('[data-k="por"]'); if (cp) cp.focus();
     X.aviso('Trecho removido. Digite o novo valor da Maktub.'); };
-  if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) tirarTrecho(+b.dataset.xv); };
+  // Editar abre o trecho ali mesmo; Pronto fecha (trecho novo deixado em branco sai da lista)
+  const abrirEd = (v) => { RAP_ED = v; editorRapida(P, X); const el = $('rpEd'); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); const i = el.querySelector('input'); if (i) i.focus({ preventScroll: true }); } };
+  const fecharEd = () => { const v = RAP_ED; RAP_ED = null;
+    if (v && !v.ocod && !v.dcod && !v.data && !v.saida) S.voos.splice(S.voos.indexOf(v), 1); else if (v) completarVoo(v);
+    rotular(S.voos); editorRapida(P, X); const l = $('rpLista'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'center' }); previa(); };
+  if ($('rpLista')) $('rpLista').onclick = (e) => { const b = e.target.closest('[data-xv]'); if (b) { tirarTrecho(+b.dataset.xv); return; }
+    const ev = e.target.closest('[data-ev]'); if (ev) { abrirEd(S.voos[+ev.dataset.ev]); return; }
+    if (e.target.closest('[data-edok]')) fecharEd(); };
   if ($('rpLimpa')) $('rpLimpa').onclick = async () => { if (!await pergunta('Tirar todos os voos desta cotação?\n\nO valor do site e o valor da Maktub também serão apagados.', { sim: 'Tirar todos', perigo: true })) return; S.voos = []; S.site_g = {}; S.de = ''; S.por = ''; S.eco = undefined; editorRapida(P, X); };
   if ($('rpForma')) $('rpForma').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.so_pix = b.dataset.f === 'pix'; editorRapida(P, X); };
   if ($('rpPaxN')) $('rpPaxN').oninput = (e) => { RAP_PAXN = e.target.value.replace(/\D/g, ''); };
@@ -1114,7 +1130,7 @@ function editorRapida(P, X) {
   if ($('bagMao')) $('bagMao').onchange = (e) => { S.bag_mao = e.target.checked; S.bag_desp = bagDesp(); bagTexto(); };
   P.querySelectorAll('[data-bagd]').forEach(bt => bt.onclick = () => { S.bag_mao = bagMao(); S.bag_desp = Math.max(0, Math.min(9, bagDesp() + +bt.dataset.bagd)); bagTexto(); });
   $('rpMais').onclick = () => { const ult = S.voos[S.voos.length - 1], uma = S.voos.length === 1, n = ult ? { ...VOO_RAP(), ocod: uma ? ult.dcod : ult.ocod, dcod: uma ? ult.ocod : ult.dcod, onome: uma ? ult.dnome : ult.onome, dnome: uma ? ult.onome : ult.dnome, tipo: ult.tipo, data: ult.data } : VOO_RAP();
-    S.voos.push(n); rotular(S.voos); ABERTOS.add('rpVoosD'); editorRapida(P, X); };
+    S.voos.push(n); rotular(S.voos); abrirEd(n); };
   P.querySelectorAll('#fRap [data-tira]').forEach(b => b.onclick = () => tirarTrecho(+b.dataset.tira.split('#')[1]));
   if ($('rpPrint')) $('rpPrint').onchange = async (e) => { const novas = (await Promise.all([...e.target.files].slice(0, 4).map(x => reduzir(x, 1400)))).filter(Boolean); S.prints = S.prints.concat(novas); ABERTOS.add('rpPrintD'); editorRapida(P, X); };
   P.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { S.prints.splice(+b.dataset.rm, 1); editorRapida(P, X); });
